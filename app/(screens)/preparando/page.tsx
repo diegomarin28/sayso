@@ -6,6 +6,7 @@ import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
+import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
 import { desbloquearAudio } from "@/lib/voice/hablar";
 
@@ -108,7 +109,7 @@ export default function Preparando() {
 
       {!listo && !error && (
         <div className="flex flex-col items-center gap-3 py-6">
-          <Orbe estado="pensando" tam={120} />
+          <AnimacionPreparando acto={!pack ? "manual" : "plano"} />
           <p className="font-mono text-xs text-texto-suave tabular-nums" aria-label="Tiempo">
             {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
           </p>
