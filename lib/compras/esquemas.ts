@@ -59,7 +59,6 @@ export const Costo = z.object({
   tokensEntrada: z.number().int().min(0),
   tokensSalida: z.number().int().min(0),
   busquedas: z.number().int().min(0),
-  lecturas: z.number().int().min(0),
   usd: z.number().min(0),
 });
 export type Costo = z.infer<typeof Costo>;

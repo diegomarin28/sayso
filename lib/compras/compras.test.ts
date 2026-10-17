@@ -135,7 +135,7 @@ describe("costo", () => {
       uso({ input_tokens: 20_000, output_tokens: 2_000, server_tool_use: { web_search_requests: 1, web_fetch_requests: 0 } }),
     ]);
     // 30K × 0,10/M + 3K × 0,50/M + 3 × 0,01
-    expect(c).toMatchObject({ tokensEntrada: 30_000, tokensSalida: 3_000, busquedas: 3, lecturas: 1, usd: 0.0345 });
+    expect(c).toMatchObject({ tokensEntrada: 30_000, tokensSalida: 3_000, busquedas: 3, usd: 0.0345 });
   });
 });
 

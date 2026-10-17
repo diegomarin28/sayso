@@ -2,7 +2,7 @@ import { MODELOS } from "../ia/claude";
 
 /**
  * Configuración del agente de compras (A6) en un solo lugar — dueño: Diego.
- * El modelo sale de MODELOS (lib/ia/claude.ts); acá solo lo propio de compras.
+ * El modelo y los precios salen de lib/ia/claude.ts (MODELOS, PRECIOS); acá solo lo propio de compras.
  */
 export const COMPRAS = {
   /** Haiku alcanza: buscar, leer avisos y copiar precios. */
@@ -23,20 +23,4 @@ export const COMPRAS = {
   minCoincidencia: 4,
   /** Texto de cada página leída que se guarda para verificar (el resto no hace falta). */
   maxTextoEvidencia: 60_000,
-} as const;
-
-/**
- * Precios de lista en USD (para registrar el costo de cada búsqueda). Si cambia COMPRAS.modelo, cambiar acá.
- * Haiku 5.5: 0,10 / 0,50 por millón de tokens hasta 100K de prompt; 0,50 / 2,50 más arriba.
- * Búsqueda web: 10 USD cada 1.000. Lectura web (web_fetch): sin cargo aparte, solo los tokens.
- */
-export const PRECIOS = {
-  /** Tokens de prompt a partir de los cuales rige la tarifa "largo". */
-  corte: 100_000,
-  normal: { entrada: 0.1, salida: 0.5 },
-  largo: { entrada: 0.5, salida: 2.5 },
-  /** Multiplicadores sobre el precio de entrada. */
-  cacheEscritura: 1.25,
-  cacheLectura: 0.1,
-  busquedaWeb: 10 / 1000,
 } as const;

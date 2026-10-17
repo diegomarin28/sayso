@@ -11,11 +11,11 @@ Dónde comprar un repuesto. Ruta: `POST /api/compras { pieza, numeroParte, model
    - Precio y envío `confirmado` solo si el número aparece en la página leída; si no, `probable`. Envío sin dato = `desconocido`.
    - La cotización solo vale si el número aparece en la página que la IA citó. Sin cotización, lo que está en dólares queda sin total en pesos.
    - Orden: primero lo compatible, después el total más barato (precio + envío en pesos). Se devuelven las 3 mejores.
-3. `costo.ts`: el costo de cada búsqueda (tokens + búsquedas web, a precio de lista) va en la respuesta, en el evento del feed y en el log del servidor (`[compras] …`).
+3. `costo.ts`: el costo total de cada búsqueda (tokens + búsquedas web, con los precios de `lib/ia/claude.ts`) va en la respuesta y en el log (`[compras] …`). Cada llamada además queda en el log `[costo]` y, con `casoId`, en el evento de costo del feed.
 
 Nunca compra ni paga: `<OpcionesCompra>` (en `components/compras`) solo abre la publicación.
 
-Configuración (modelo, límites, precios): `config.ts`.
+Configuración (límites del agente): `config.ts`. Modelo y precios: `lib/ia/claude.ts`.
 
 Prueba real: `npx tsx --env-file=.env.local lib/compras/probar.ts "ventilador" "5F10S13875" "ThinkPad E14 Gen 2" "Lenovo"` (~0,05 USD).
 

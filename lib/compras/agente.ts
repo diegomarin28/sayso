@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { enviarMensaje, ErrorIA, extraerJson, type EnviarMensaje } from "../ia/claude";
 import { COMPRAS } from "./config";
-import { costoDe } from "./costo";
+import { costoDe, ETAPA } from "./costo";
 import { Propuesta, ResultadoCompras, type PedidoCompra } from "./esquemas";
 import { elegirOpciones, recolectarEvidencia, type Evidencia } from "./verificar";
 
@@ -50,14 +50,10 @@ export async function buscarOpciones(pedido: PedidoCompra, deps: { enviar?: Envi
   let corregido = false;
 
   for (let vuelta = 0; vuelta < COMPRAS.vueltas; vuelta++) {
-    const r = await enviar({
-      model: COMPRAS.modelo,
-      max_tokens: COMPRAS.maxTokens,
-      output_config: { effort: COMPRAS.effort },
-      system: SYSTEM,
-      tools,
-      messages,
-    });
+    const r = await enviar(
+      { model: COMPRAS.modelo, max_tokens: COMPRAS.maxTokens, output_config: { effort: COMPRAS.effort }, system: SYSTEM, tools, messages },
+      ETAPA,
+    );
     respuestas.push(r);
     recolectarEvidencia(r.content, evidencia);
     messages.push({ role: "assistant", content: r.content });
@@ -76,7 +72,7 @@ export async function buscarOpciones(pedido: PedidoCompra, deps: { enviar?: Envi
     })();
     if (propuesta) {
       const costo = costoDe(respuestas);
-      console.info(`[compras] ${pedido.pieza} (${pedido.modelo}): ${costo.usd} USD, ${costo.busquedas} búsquedas, ${costo.lecturas} lecturas`);
+      console.info(`[compras] ${pedido.pieza} (${pedido.modelo}): ${costo.usd} USD en total, ${costo.busquedas} búsquedas`);
       return ResultadoCompras.parse({ ...elegirOpciones(propuesta, evidencia, pedido), costo });
     }
     if (corregido) break;
