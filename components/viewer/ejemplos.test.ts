@@ -37,7 +37,7 @@ describe("ejemplos del lab", () => {
     expect(estado.piezas.compresor.resaltada).toBe(true);
   });
 
-  it("los pasos que no nombran el compresor pasan el filtro de seguridad", () => {
-    for (const c of coreografiaHeladera.slice(0, 2)) expect(prepararPaso(c, ctx).evaluacion.bloqueado, `paso ${c.paso}`).toBe(false);
+  it("todos los pasos pasan el filtro de seguridad: mostrar el compresor no es tocarlo", () => {
+    for (const c of coreografiaHeladera) expect(prepararPaso(c, ctx).evaluacion.bloqueado, `paso ${c.paso}`).toBe(false);
   });
 });

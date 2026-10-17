@@ -58,7 +58,7 @@ const paso = (n: number, dice: string, acciones: Coreografia["acciones"]): Coreo
 /**
  * Mostrar el compresor: se ocultan las puertas, se gira la heladera (la carcasa es la madre de todas las
  * piezas, así que giran con ella) y la cámara va al compresor, que queda atrás, abajo.
- * El paso 3 nombra el compresor: la tabla de seguridad (lib/safety) hoy lo bloquea aunque solo lo muestre.
+ * Nombrar el compresor para mostrarlo no se bloquea; actuar sobre él sí (lib/safety).
  */
 export const coreografiaHeladera: Coreografia[] = [
   paso(1, "Saco las puertas para ver adentro.", [
