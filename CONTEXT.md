@@ -37,6 +37,16 @@ Rúbrica: producto funcionando 35 %, problema y valor 25 %, calidad de la IA 20 
 - **No usar datos ni documentos de CIR (empleador de Diego)**, ni de ninguna empresa, en el evento.
 - iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**.
 
+## Nada hardcodeado (regla de producto)
+El producto tiene que funcionar con **cualquier equipo que traiga el jurado**. Por eso:
+- **Ningún dato de un equipo, modelo, manual, página o posición de pieza escrito en el código.** Todo sale en tiempo real de los agentes (identificador, bibliotecario, cartógrafo, experto, seguridad) o de lo que esos agentes ya guardaron en Supabase.
+- **Si un paso necesita criterio, usá un agente** (Claude con herramientas y salida validada con Zod), no una lista de reglas ni un `if` por marca.
+- **Caché, no catálogo:** lo que un agente encuentra (manual, páginas de la vista explosionada, plano de piezas) se guarda en Supabase por marca+modelo, con su fuente y estado. La próxima vez se reusa. Nadie lo carga a mano.
+- **Fixtures solo para tests, `/lab` y desarrollo**, detrás de `NEXT_PUBLIC_DATOS=fixture`. En Vercel esa variable no existe: producción siempre usa IA real.
+- **Plantilla genérica solo como red de seguridad** cuando el agente falla, y la pantalla lo dice ("esquema genérico, no es tu modelo exacto").
+- **Configuración en un solo lugar:** modelos, umbrales y límites en `lib/ia/claude.ts` o en variables de entorno, nunca repetidos en el código.
+- **Pendiente conocido:** `lib/knowledge/manuales.ts` tiene una lista fija de manuales (`CONOCIDOS`). Carril A la reemplaza por la caché en Supabase llenada por el bibliotecario.
+
 ## Claves y `.env.local` (obligatorio)
 - Formato: `NOMBRE=valor`, sin espacios alrededor del `=` y sin comillas.
 - `NEXT_PUBLIC_SUPABASE_URL` es la URL completa (`https://<proyecto>.supabase.co`), no solo el código del proyecto.
