@@ -96,7 +96,7 @@ export function Encabezado({
 export function Pantalla({ children }: { children: ReactNode }) {
   return (
     // Celular: columna de ancho completo. Tablet y compu: más aire y un poco más ancha, centrada.
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-8 px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 md:max-w-2xl md:gap-10 md:px-8 md:pt-10 lg:max-w-3xl">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-8 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 md:max-w-2xl md:gap-10 md:px-8 md:pt-[max(2.5rem,env(safe-area-inset-top))] lg:max-w-3xl">
       {children}
     </main>
   );

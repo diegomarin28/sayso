@@ -41,6 +41,28 @@ body {
   color: var(--texto);
 }
 
+/* ---------- Solo vertical: aviso si un celular se pone horizontal ---------- */
+
+.solo-vertical { display: none; }
+
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .solo-vertical {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: var(--fondo);
+    color: var(--texto);
+    font-size: 1.125rem;
+    text-align: center;
+    padding: 2rem;
+  }
+}
+
 /* ---------- Orbe del experto ---------- */
 
 @keyframes orbe-respira {

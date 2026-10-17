@@ -53,7 +53,7 @@ export default function Experto() {
 
   return (
     <main className="flex h-dvh w-full flex-col bg-fondo">
-      <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-4 pb-3 sm:px-6 md:pt-6">
+      <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:px-6 md:pt-6">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
