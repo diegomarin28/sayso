@@ -269,7 +269,12 @@ export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
  * El cartógrafo ubica las piezas en el 3D leyendo la vista explosionada del manual (carril B).
  * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
  */
-export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
+export function generarPlano(
+  ficha: Ficha,
+  preparado: Preparado,
+  /** Lo que dijo la recepción (ej. "heladera no frost"): elige la plantilla de respaldo por tipo. */
+  tipoEquipo?: string | null,
+): Promise<z.infer<typeof RespPlano>> {
   if (USAR_FIXTURE)
     return unaVez(`plano-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(1200);
@@ -282,6 +287,7 @@ export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infe
         casoId: ficha.casoId,
         ficha,
         knowledgePack: preparado.pack,
+        tipoEquipo: tipoEquipo?.trim() || undefined,
         manualFileId: preparado.manualFileId,
         manualUrl: preparado.manualUrl,
         paginasVistaExplosionada: preparado.paginasVistaExplosionada,

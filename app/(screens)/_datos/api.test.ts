@@ -104,3 +104,16 @@ describe("pantallas: tipo de equipo y foto del frente (#63)", () => {
     expect(r.ficha.modelo.estado).toBe("desconocido");
   });
 });
+
+describe("plano: tipoEquipo para la plantilla por tipo (#78)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("generarPlano manda el tipoEquipo de la recepción", async () => {
+    const fetch = vi.fn(() =>
+      respuesta({ plano: { modelo: "m", unidades: "cm", piezas: [] }, origen: "plantilla", eventos: [] }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    await generarPlano({ ...ficha, casoId: "caso-plano-tipo" }, knowledge, "heladera no frost");
+    const cuerpo = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(cuerpo.tipoEquipo).toBe("heladera no frost");
+  });
+});
