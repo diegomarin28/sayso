@@ -8,10 +8,23 @@ export const maxDuration = 300;
 
 const Entrada = z.object({ ficha: Ficha, sintoma: z.string().min(1).max(2000) });
 
-/** POST { ficha (con modelo confirmado), sintoma } → { pack: KnowledgePack, manualUrl, manualFileId (para /api/chat), paginasVistaExplosionada, desdeCache, eventos } */
+/**
+ * POST { ficha (con modelo confirmado), sintoma }
+ *   → { pack, manualUrl, manualFileId, paginasVistaExplosionada, paginaVistaInterior, desdeCache, eventos }
+ * `manualFileId` va a /api/chat y /api/plano. `paginasVistaExplosionada` (lista) y `paginaVistaInterior`
+ * (número o null) van a /api/plano: páginas físicas del PDF (1 = primera hoja), como `gs -dFirstPage`.
+ */
 export function POST(req: Request) {
   return manejar(req, Entrada, async (entrada) => {
-    const { pack, manual, paginasVistaExplosionada, desdeCache, eventos } = await armarKnowledgePack(entrada);
-    return { pack, manualUrl: manual?.url ?? null, manualFileId: manual?.fileId ?? null, paginasVistaExplosionada, desdeCache, eventos };
+    const { pack, manual, vistas, desdeCache, eventos } = await armarKnowledgePack(entrada);
+    return {
+      pack,
+      manualUrl: manual?.url ?? null,
+      manualFileId: manual?.fileId ?? null,
+      paginasVistaExplosionada: vistas.explosionada ? [vistas.explosionada] : [],
+      paginaVistaInterior: vistas.interior,
+      desdeCache,
+      eventos,
+    };
   });
 }

@@ -11,6 +11,8 @@ import { normalizar } from "../intake/chapa";
  *   PASO|1|Quitá los 10 tornillos de la tapa inferior.|tapa_inferior|bajo
  *   REPUESTO|ventilador|5F10S13875
  *   ADVERTENCIA|Desconectá la batería antes de tocar la placa.
+ *   VISTA|explosionada|Vista explosionada general con la lista de piezas
+ *   VISTA|interior|Equipo dado vuelta sin la tapa inferior
  *
  * Las citas NO las escribe el modelo: las pone la API (`citations`) con el texto
  * literal del PDF y su página. Por eso un paso con cita de página es VERIFICADO.
@@ -55,20 +57,43 @@ function mejorCita(citas: Anthropic.TextCitation[], doc: string): Cita | undefin
   return convertidas.find((c) => c.estado === "VERIFICADO") ?? convertidas[0];
 }
 
+export type ClaseVista = "explosionada" | "interior";
+
+/**
+ * Páginas del manual que usa el cartógrafo (/api/plano): la vista explosionada y una vista
+ * del interior. Son páginas FÍSICAS del PDF (1 = primera hoja, la misma numeración que
+ * `gs -dFirstPage`), tomadas de la cita de la API, no del número que escribe el modelo.
+ */
+export type Vistas = Record<ClaseVista, number | null>;
+
 export type Contenido = {
   piezas: Pieza[];
   pasos: PasoReparacion[];
   repuestos: z.infer<typeof Repuesto>[];
   advertencias: string[];
-  /** Páginas citadas en líneas VISTA (vista explosionada / lista de piezas). */
-  vistas: number[];
+  vistas: Vistas;
   descartadas: string[];
 };
+
+/** "VISTA|explosionada|…" o "VISTA|interior|…" (tolera mayúsculas y tildes). */
+function claseVista(campo: string | undefined): ClaseVista | null {
+  const c = normalizar(campo ?? "");
+  if (c.startsWith("EXPLOSI")) return "explosionada";
+  if (c.startsWith("INTERIOR")) return "interior";
+  return null;
+}
 
 const ID_PIEZA = /^[a-z0-9_]+$/;
 
 export function parsearContenido(lineas: Linea[], doc: string): Contenido {
-  const r: Contenido = { piezas: [], pasos: [], repuestos: [], advertencias: [], vistas: [], descartadas: [] };
+  const r: Contenido = {
+    piezas: [],
+    pasos: [],
+    repuestos: [],
+    advertencias: [],
+    vistas: { explosionada: null, interior: null },
+    descartadas: [],
+  };
   const idsPiezas = new Set<string>();
 
   for (const l of lineas) {
@@ -118,13 +143,16 @@ export function parsearContenido(lineas: Linea[], doc: string): Contenido {
         r.repuestos.push({ pieza: pieza.toLowerCase(), numeroParte, cita });
       } else r.descartadas.push(l.texto);
     } else if (tipo === "VISTA") {
-      for (const c of l.citas) if (c.type === "page_location" && !r.vistas.includes(c.start_page_number)) r.vistas.push(c.start_page_number);
+      // La página sale de la cita de la API (texto de esa misma página), nunca del modelo.
+      const clase = claseVista(campos[1]);
+      const pagina = l.citas.find((c) => c.type === "page_location");
+      if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
+      else r.descartadas.push(l.texto);
     } else if (tipo === "ADVERTENCIA" && campos[1]) {
       r.advertencias.push(campos.slice(1).join(" | "));
     }
   }
 
   r.pasos.sort((a, b) => a.orden - b.orden);
-  r.vistas.sort((a, b) => a - b);
   return r;
 }

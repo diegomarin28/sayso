@@ -33,7 +33,7 @@ async function main() {
     confirmadaPorUsuario: true,
   };
   const t0 = Date.now();
-  const { pack, manual, eventos, paginasVistaExplosionada } = await armarKnowledgePack({ ficha, sintoma });
+  const { pack, manual, eventos, vistas } = await armarKnowledgePack({ ficha, sintoma });
   for (const e of eventos) console.log(`· ${e.mensaje}`);
   console.log(`\nManual: ${manual ? `${manual.url} (${(manual.bytes / 1e6).toFixed(1)} MB)` : "ninguno"}  verificado=${pack.verificado}`);
   console.log("\nPiezas:");
@@ -45,7 +45,7 @@ async function main() {
   }
   console.log("\nRepuestos:", pack.repuestos.map((r) => `${r.pieza}=${r.numeroParte} (p.${r.cita.pagina})`).join(", ") || "ninguno");
   console.log("Advertencias:", pack.advertencias.length);
-  console.log("Páginas con vista explosionada:", paginasVistaExplosionada.join(", ") || "ninguna");
+  console.log(`Vistas para /api/plano: explosionada p. ${vistas.explosionada ?? "—"}, interior p. ${vistas.interior ?? "—"}`);
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 
