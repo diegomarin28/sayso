@@ -29,6 +29,8 @@ export const LIMITES = {
   pdf: { maxBytes: 150 * 1024 * 1024, timeoutMs: 60_000, venceEnSeg: 7 * 24 * 3600 },
   bibliotecario: { busquedas: 6, paginas: 6, vueltas: 12 },
   pack: { maxPasos: 12 },
+  /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
+  lectura: { effort: "medium" as const, maxTokensPack: 16000, maxTokensVistas: 1500 },
   chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30 },
 } as const;
 
