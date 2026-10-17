@@ -1422,6 +1422,54 @@ FAMILIAS = {
     "carcasas": [carcasa_heladera, carcasa_split, carcasa_televisor, carcasa_lavarropas, carcasa_microondas],
 }
 
+# Cómo se ajusta cada forma a las medidas del plano (va al GLB como `extras.ajuste` y a indice.json).
+# La forma es de acá; dónde va y cuánto lugar ocupa lo dice el plano. Ejes del modelo en el GLB:
+# x derecha, y arriba, z hacia el frente (Blender X, Z y -Y). Reglas (lib/planogenerator/biblioteca.ts):
+#   libre          se estira por eje (cajas que de verdad cambian de proporción: placas, baterías, carcasas)
+#   proporcional   escala igual en los tres ejes y se centra en el lugar del plano (no se deforma nada)
+#   redondo:ab     los ejes a y b escalan igual (lo redondo sigue redondo); el tercero, libre
+#   tramo:a        se estira solo el medio a lo largo del eje a (las puntas no se deforman);
+#                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
+# Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
+AJUSTES = {
+    "ventilador": "redondo:xz",
+    "ventilador@axial": "redondo:xz",
+    "ventilador@tangencial": "tramo:x:redondo",
+    "turbina@centrifuga": "redondo:yz",  # jaula de ardilla: redonda vista de costado, el ancho es libre
+    "tornillo": "redondo:xz",
+    "pila": "redondo:xz",
+    "disipador": "redondo:xz",
+    "capacitor": "redondo:xz",
+    "compresor": "redondo:xz",
+    "filtro@cartucho": "redondo:xz",
+    "tambor": "redondo:xy",
+    "puerta@ojo_de_buey": "redondo:xy",
+    "camara": "proporcional",
+    "conector": "proporcional",
+    "motor": "proporcional",
+    "bomba": "proporcional",
+    "termostato": "proporcional",
+    "valvula": "proporcional",
+    "transformador": "proporcional",
+    "bisagra@puerta": "proporcional",
+    "cable": "tramo:x",
+    "heatpipe": "tramo:x",
+    "manguera": "tramo:x",
+    "resistencia": "tramo:x",
+    "bisagra": "tramo:x",
+    "tira_led": "tramo:x",  # la barra se alarga; las lentes se mueven enteras (no se estiran)
+}
+
+
+def ajuste_de(nombre, de=None):
+    """La regla de ajuste de un tipo o variante (ver AJUSTES)."""
+    if nombre in AJUSTES:
+        return AJUSTES[nombre]
+    if de:
+        return ajuste_de(de)
+    return AJUSTES.get(nombre.split("@")[0], "libre")
+
+
 # Variantes que son la misma forma que otro tipo (comparten mallas): (nombre, de, familia, equipos, descripción).
 ALIAS = [
     ("placa_madre@celular", "placa", "computo", EQUIPOS_CELULAR, "Placa madre de celular: la misma placa compacta en L."),
@@ -1453,7 +1501,7 @@ def exportar(archivo, vacios):
         export_texcoords=False,
         export_cameras=False,
         export_lights=False,
-        export_extras=True,  # solo los nodos de tipo llevan propiedades (`equipos`)
+        export_extras=True,  # solo los nodos de tipo llevan propiedades (`equipos`, `ajuste`)
     )
 
 
@@ -1576,12 +1624,15 @@ def main():
         grupos[familia] = []
         for f in hacer:
             v = f()
+            v["ajuste"] = ajuste_de(v.name)
             grupos[familia].append(v)
-            tipos[v.name] = {"familia": familia, "descripcion": descripcion(f.__doc__), "equipos": v.get("equipos", "")}
+            tipos[v.name] = {"familia": familia, "descripcion": descripcion(f.__doc__), "equipos": v.get("equipos", ""), "ajuste": v["ajuste"]}
     por_nombre = {v.name: v for vs in grupos.values() for v in vs}
     for nombre, de, familia, equipos, texto in ALIAS:
-        grupos[familia].append(alias(nombre, por_nombre[de], equipos))
-        tipos[nombre] = {"familia": familia, "descripcion": texto, "equipos": equipos or ""}
+        v = alias(nombre, por_nombre[de], equipos)
+        v["ajuste"] = ajuste_de(nombre, de)
+        grupos[familia].append(v)
+        tipos[nombre] = {"familia": familia, "descripcion": texto, "equipos": equipos or "", "ajuste": v["ajuste"]}
 
     os.makedirs(args.salida, exist_ok=True)
     familias = {}

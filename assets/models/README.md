@@ -46,4 +46,14 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
   (`cuerpo.<tipo>` o una de `RECETAS_DETALLE` en `lib/planogenerator/materiales.ts`).
 - Límite: cada GLB menos de 2 MB (lo controla un test; hoy entre 171 y 924 KB, 3 MB en total). Una variante
   idéntica a otro tipo comparte mallas (`ALIAS`). Sin texturas ni compresión Draco (no hace falta bajar decodificadores).
+- **Forma y lugar, separados:** la forma (y cómo se puede ajustar) es de Blender; dónde va la pieza y cuánto
+  lugar ocupa lo dice el plano. Cada tipo declara su regla en `AJUSTES` (`piezas.py`), que va al GLB
+  (`extras.ajuste`) y a `indice.json`; la aplica `partesAjustadas` (`lib/planogenerator/biblioteca.ts`):
+  - `libre`: se estira por eje (placas, baterías, pantallas, carcasas: cajas que sí cambian de proporción).
+  - `redondo:ab`: los ejes a y b escalan igual (ventiladores, tornillos, pilas, capacitores, tambor); el tercero, libre.
+  - `proporcional`: escala igual en los tres ejes y se centra (cámaras/lentes, conectores, motores, válvulas).
+  - `tramo:a`: se estira solo el medio a lo largo de a y las puntas no se deforman (cables, heatpipe, manguera).
+  Con una regla que no sea `libre` la pieza entra en su lugar del plano sin llenarlo en todos los ejes.
+  Un tipo sin entrada usa la de su tipo base, y un alias, la de su forma. Un test controla que lo
+  declarado redondo sea redondo en el modelo.
 - Planos de ejemplo de heladera y aire para `/lab/visor?plano=heladera` (o `aire`), y una coreografía de heladera (ocultar puertas, girar, ir al compresor): `components/viewer/ejemplos.ts` (solo lab y tests).

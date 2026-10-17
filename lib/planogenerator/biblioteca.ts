@@ -13,8 +13,42 @@ import type { Vec3 } from "../../shared";
 export const RECETA_CUERPO = "cuerpo";
 
 export type ParteModelo = { geometria: THREE.BufferGeometry; receta: string };
-/** `equipos`: palabras de los equipos para los que es la forma (del GLB); vacío = cualquiera. */
-export type ModeloPieza = { partes: ParteModelo[]; caja: THREE.Box3; equipos?: string[] };
+
+/** Eje del modelo en el GLB: 0 = x (derecha), 1 = y (arriba), 2 = z (frente). */
+export type Eje = 0 | 1 | 2;
+
+/**
+ * Cómo se ajusta una forma a las medidas del plano. Es propiedad de la FORMA (la declara el script
+ * de Blender en `AJUSTES` y viene en el GLB como `extras.ajuste`); dónde va la pieza y cuánto lugar
+ * ocupa lo dice el plano. Así un ventilador sigue redondo aunque el plano le dé un hueco de 6×9.
+ * - `libre`: se estira por eje (cajas que de verdad cambian de proporción: placas, baterías, carcasas).
+ * - `proporcional`: escala igual en los tres ejes, lo más grande que entre, centrada en el lugar del plano.
+ * - `redondo`: los dos ejes de `ejes` escalan igual (lo redondo sigue redondo); el tercero, libre.
+ * - `tramo`: a lo largo de `eje` se estira solo el medio y las puntas (conectores, codos) mantienen su
+ *   proporción; la sección escala libre, o igual en los dos ejes si `seccionRedonda`.
+ */
+export type Ajuste =
+  | { modo: "libre" }
+  | { modo: "proporcional" }
+  | { modo: "redondo"; ejes: [Eje, Eje] }
+  | { modo: "tramo"; eje: Eje; seccionRedonda: boolean };
+
+const EJES: Record<string, Eje> = { x: 0, y: 1, z: 2 };
+const AJUSTE_LIBRE: Ajuste = { modo: "libre" };
+
+/** Lee la regla del GLB (`"redondo:xz"`, `"tramo:x:redondo"`…). Lo que no se entiende es `libre`, como antes. */
+export function leerAjuste(texto: unknown): Ajuste {
+  if (typeof texto !== "string") return AJUSTE_LIBRE;
+  const [modo, ejes = "", extra] = texto.trim().split(":");
+  if (modo === "proporcional") return { modo };
+  if (modo === "redondo" && ejes.length === 2 && ejes[0] !== ejes[1] && ejes[0] in EJES && ejes[1] in EJES)
+    return { modo, ejes: [EJES[ejes[0]], EJES[ejes[1]]] };
+  if (modo === "tramo" && ejes in EJES) return { modo, eje: EJES[ejes], seccionRedonda: extra === "redondo" };
+  return AJUSTE_LIBRE;
+}
+
+/** `equipos`: palabras de los equipos para los que es la forma (del GLB); vacío = cualquiera. `ajuste`: ver `Ajuste`. */
+export type ModeloPieza = { partes: ParteModelo[]; caja: THREE.Box3; equipos?: string[]; ajuste?: Ajuste };
 export type BibliotecaPiezas = Map<string, ModeloPieza>;
 
 /**
@@ -41,7 +75,7 @@ export function bibliotecaDesdeEscena(escena: THREE.Object3D): BibliotecaPiezas 
       caja.union(p.geometria.boundingBox!);
     }
     const equipos = typeof tipo.userData.equipos === "string" ? palabras(tipo.userData.equipos) : [];
-    biblioteca.set(tipo.name, { partes, caja, equipos });
+    biblioteca.set(tipo.name, { partes, caja, equipos, ajuste: leerAjuste(tipo.userData.ajuste) });
   }
   return biblioteca;
 }
@@ -63,7 +97,10 @@ export function tipoPara(pieza: string, nombres: Iterable<string>): string | und
 /** `public/models/piezas/indice.json`, lo escribe el script de Blender: qué familia (GLB) tiene cada tipo. */
 export const IndicePiezas = z.object({
   familias: z.record(z.string(), z.string()),
-  tipos: z.record(z.string(), z.object({ familia: z.string(), descripcion: z.string(), equipos: z.string() })),
+  tipos: z.record(
+    z.string(),
+    z.object({ familia: z.string(), descripcion: z.string(), equipos: z.string(), ajuste: z.string().default("libre") }),
+  ),
 });
 export type IndicePiezas = z.infer<typeof IndicePiezas>;
 
@@ -157,16 +194,118 @@ export function deformacion(modelo: ModeloPieza, dim: Vec3): number {
   return costo(tam, d, orientacion(tam, d));
 }
 
+/** En `tramo`, cada punta es este tanto del largo del modelo: no se estira, solo escala como la sección. */
+const PUNTA_TRAMO = 0.25;
+
 /**
- * Copia las partes del modelo centradas en el origen y estiradas para que el conjunto mida
- * exactamente `dim`. Si el plano pone la pieza en otra posición que el modelo (una RAM más
- * profunda que ancha, un ventilador parado en vez de acostado), primero la gira para no deformarla.
+ * Escala de cada eje DEL MODELO según la regla de la forma. `s` es lo que haría falta para medir
+ * justo `dim` en cada eje; las reglas lo achican donde estirar deformaría (nunca agrandan: la
+ * pieza siempre entra en el lugar que le da el plano).
+ */
+export function escalasPorRegla(s: Vec3, ajuste: Ajuste = AJUSTE_LIBRE): Vec3 {
+  const r = [...s] as Vec3;
+  switch (ajuste.modo) {
+    case "proporcional":
+      return [Math.min(...s), Math.min(...s), Math.min(...s)];
+    case "redondo": {
+      const [a, b] = ajuste.ejes;
+      r[a] = r[b] = Math.min(s[a], s[b]);
+      return r;
+    }
+    case "tramo": {
+      if (ajuste.seccionRedonda) {
+        const [a, b] = ([0, 1, 2] as Eje[]).filter((e) => e !== ajuste.eje);
+        r[a] = r[b] = Math.min(s[a], s[b]);
+      }
+      return r; // el eje del tramo se resuelve aparte (`estirarTramo`)
+    }
+    default:
+      return r;
+  }
+}
+
+/** En `tramo`, un objeto suelto más corto que esto (del largo del modelo) se mueve entero: no se estira. */
+const CHICO_TRAMO = 0.15;
+
+/**
+ * Objetos sueltos de la malla (lentes, aros, fichas): cada vértice recibe el número de su objeto.
+ * Primero suelda los vértices en la misma posición (el GLB los duplica en las aristas vivas) y
+ * después une los de cada triángulo.
+ */
+function objetosSueltos(g: THREE.BufferGeometry): Int32Array {
+  const pos = g.getAttribute("position") as THREE.BufferAttribute;
+  const padre = new Int32Array(pos.count).map((_, i) => i);
+  const raiz = (i: number): number => (padre[i] === i ? i : (padre[i] = raiz(padre[i])));
+  const unir = (a: number, b: number) => {
+    const [ra, rb] = [raiz(a), raiz(b)];
+    if (ra !== rb) padre[ra] = rb;
+  };
+  const vistos = new Map<string, number>();
+  for (let i = 0; i < pos.count; i++) {
+    const clave = `${pos.getX(i).toFixed(4)},${pos.getY(i).toFixed(4)},${pos.getZ(i).toFixed(4)}`;
+    const otro = vistos.get(clave);
+    if (otro === undefined) vistos.set(clave, i);
+    else unir(i, otro);
+  }
+  const indice = g.getIndex();
+  const n = indice ? indice.count : pos.count;
+  const v = (k: number) => (indice ? indice.getX(k) : k);
+  for (let k = 0; k + 2 < n; k += 3) {
+    unir(v(k), v(k + 1));
+    unir(v(k), v(k + 2));
+  }
+  return padre.map((_, i) => raiz(i));
+}
+
+/**
+ * Estira solo el medio de la geometría a lo largo de `eje` (ya centrada, en coordenadas del plano):
+ * las puntas (`PUNTA_TRAMO` del largo del modelo, cada una) escalan `k` (como la sección) y el medio
+ * se alarga o acorta hasta que el total mida `largo`. Los objetos sueltos chicos (lentes de una tira de
+ * LED, aros, fichas) no se estiran: se mueven enteros a donde cae su centro. Si ni las puntas entran,
+ * escala todo parejo.
+ */
+function estirarTramo(g: THREE.BufferGeometry, eje: Eje, largoModelo: number, largo: number, k: number) {
+  const punta = PUNTA_TRAMO * largoModelo;
+  const medioModelo = largoModelo - 2 * punta;
+  const medio = largo - 2 * punta * k;
+  const llevar = (u: number) => {
+    if (medio <= 0 || medioModelo <= 0) return u * (largo / largoModelo);
+    if (Math.abs(u) <= medioModelo / 2) return u * (medio / medioModelo);
+    return Math.sign(u) * (medio / 2 + (Math.abs(u) - medioModelo / 2) * k);
+  };
+  const pos = g.getAttribute("position") as THREE.BufferAttribute;
+  const objeto = objetosSueltos(g);
+  const extremos = new Map<number, [number, number]>();
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getComponent(i, eje);
+    const [min, max] = extremos.get(objeto[i]) ?? [Infinity, -Infinity];
+    extremos.set(objeto[i], [Math.min(min, u), Math.max(max, u)]);
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getComponent(i, eje);
+    const [min, max] = extremos.get(objeto[i])!;
+    const centro = (min + max) / 2;
+    const entero = max - min < CHICO_TRAMO * largoModelo && medio > 0;
+    pos.setComponent(i, eje, entero ? llevar(centro) + (u - centro) * k : llevar(u));
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  g.computeBoundingBox();
+}
+
+/**
+ * Copia las partes del modelo centradas en el origen y ajustadas al lugar que les da el plano (`dim`),
+ * según la regla de la forma (`modelo.ajuste`): con `libre` el conjunto mide exactamente `dim`; con las
+ * demás nunca se deforma lo que no debe y queda centrada dentro de `dim`. Si el plano pone la pieza en
+ * otra posición que el modelo (una RAM más profunda que ancha, un ventilador parado en vez de
+ * acostado), primero la gira para no deformarla.
  */
 export function partesAjustadas(modelo: ModeloPieza, dim: Vec3): ParteModelo[] {
   const tam = ejes(modelo.caja.getSize(new THREE.Vector3()));
   const centro = modelo.caja.getCenter(new THREE.Vector3());
   const d = medidas(dim);
   const o = orientacion(tam, d);
+  const ajuste = modelo.ajuste ?? AJUSTE_LIBRE;
 
   // Rotación de 90° que lleva el eje o[i] del modelo al eje i del plano (sin espejar).
   const rot = new THREE.Matrix4().makeBasis(
@@ -174,8 +313,23 @@ export function partesAjustadas(modelo: ModeloPieza, dim: Vec3): ParteModelo[] {
   );
   if (rot.determinant() < 0) rot.premultiply(new THREE.Matrix4().makeScale(-1, 1, 1));
 
+  // Escala por eje del modelo: lo justo para `dim`, corregido por la regla de la forma.
+  const justo = [0, 0, 0] as Vec3;
+  o.forEach((eje, i) => (justo[eje] = d[i] / Math.max(tam[eje], 1e-6)));
+  const s = escalasPorRegla(justo, ajuste);
+  const tramo = ajuste.modo === "tramo" ? ajuste.eje : null;
+  if (tramo !== null) s[tramo] = 1;
+
   const m = new THREE.Matrix4().makeTranslation(-centro.x, -centro.y, -centro.z);
+  m.premultiply(new THREE.Matrix4().makeScale(...s));
   m.premultiply(rot);
-  m.premultiply(new THREE.Matrix4().makeScale(...(o.map((eje, i) => d[i] / Math.max(tam[eje], 1e-6)) as Vec3)));
-  return modelo.partes.map((p) => ({ receta: p.receta, geometria: p.geometria.clone().applyMatrix4(m) }));
+  return modelo.partes.map((p) => {
+    const geometria = p.geometria.clone().applyMatrix4(m);
+    if (tramo !== null) {
+      const otros = ([0, 1, 2] as Eje[]).filter((e) => e !== tramo);
+      const k = Math.sqrt(s[otros[0]] * s[otros[1]]); // las puntas escalan como la sección
+      estirarTramo(geometria, o.indexOf(tramo) as Eje, tam[tramo], d[o.indexOf(tramo)], k);
+    }
+    return { receta: p.receta, geometria };
+  });
 }

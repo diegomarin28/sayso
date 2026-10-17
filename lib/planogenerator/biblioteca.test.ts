@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PlanoDePiezas } from "../../shared";
+import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { planoAire, planoHeladera } from "../../components/viewer/ejemplos";
 import {
   IndicePiezas,
@@ -10,6 +10,7 @@ import {
   SEPARADOR_VARIANTE,
   archivosPara,
   bibliotecaDesdeEscena,
+  leerAjuste,
   modeloPara,
   palabras,
   partesAjustadas,
@@ -233,6 +234,95 @@ describe("modeloPara", () => {
   });
 });
 
+describe("reglas de ajuste (la forma no se deforma)", () => {
+  const tamDe = (partes: ReturnType<typeof partesAjustadas>, receta?: string) => {
+    const caja = new THREE.Box3();
+    for (const p of partes) {
+      if (receta && p.receta !== receta) continue;
+      p.geometria.computeBoundingBox();
+      caja.union(p.geometria.boundingBox!);
+    }
+    return caja.getSize(new THREE.Vector3()).toArray();
+  };
+
+  it("lee la regla del GLB; lo que no entiende es libre", () => {
+    expect(leerAjuste("redondo:xz")).toEqual({ modo: "redondo", ejes: [0, 2] });
+    expect(leerAjuste("tramo:x:redondo")).toEqual({ modo: "tramo", eje: 0, seccionRedonda: true });
+    expect(leerAjuste("proporcional")).toEqual({ modo: "proporcional" });
+    for (const raro of [undefined, 3, "", "redondo:xx", "tramo:w", "estirar"]) expect(leerAjuste(raro)).toEqual({ modo: "libre" });
+  });
+
+  it("cada tipo trae una regla válida, y lo que se declara redondo es redondo en el modelo", () => {
+    for (const [nombre, t] of Object.entries(indice.tipos)) {
+      const ajuste = leerAjuste(t.ajuste);
+      if (t.ajuste !== "libre") expect(ajuste.modo, nombre).not.toBe("libre");
+      expect(biblioteca.get(nombre)?.ajuste, nombre).toEqual(ajuste); // el GLB dice lo mismo que el índice
+      if (ajuste.modo === "redondo") {
+        const tam = biblioteca.get(nombre)!.caja.getSize(new THREE.Vector3()).toArray();
+        const [a, b] = ajuste.ejes;
+        expect(Math.max(tam[a], tam[b]) / Math.min(tam[a], tam[b]), nombre).toBeLessThan(1.15);
+      }
+    }
+  });
+
+  it("ventilador en un hueco de 6×9: sigue redondo, entra en el hueco y el alto es el del plano", () => {
+    const [x, y, z] = tamDe(partesAjustadas(biblioteca.get("ventilador")!, [6, 0.6, 9]));
+    expect(x / z).toBeCloseTo(6.36 / 6, 1); // misma proporción que el modelo
+    expect(x).toBeLessThanOrEqual(6 + 1e-6);
+    expect(z).toBeLessThanOrEqual(9 + 1e-6);
+    expect(y).toBeCloseTo(0.6, 5);
+  });
+
+  it("tornillo y lente: la cabeza y la cámara no se estiran", () => {
+    const [tx, , tz] = tamDe(partesAjustadas(biblioteca.get("tornillo")!, [0.9, 0.3, 2.2]));
+    expect(tx).toBeCloseTo(tz, 5);
+    const camara = biblioteca.get("camara")!;
+    const original = camara.caja.getSize(new THREE.Vector3()).toArray();
+    const ajustada = tamDe(partesAjustadas(camara, [0.9, 0.6, 2.6]));
+    ajustada.forEach((v, i) => expect(v / ajustada[0], `eje ${i}`).toBeCloseTo(original[i] / original[0], 5));
+  });
+
+  it("cable largo: el medio se alarga y los conectores de las puntas quedan del mismo tamaño", () => {
+    const cable = biblioteca.get("cable")!;
+    const largo = tamDe(partesAjustadas(cable, [18, 0.16, 1]));
+    expect(largo[0]).toBeCloseTo(18, 3);
+    const conectoresAntes = tamDe(cable.partes.map((p) => ({ ...p })), "plastico");
+    const ancho = (partes: ReturnType<typeof partesAjustadas>) => {
+      // Ancho (en x) del conector de la punta derecha: vértices de "plastico" con x > 0.
+      const xs = partes.filter((p) => p.receta === "plastico").flatMap((p) => {
+        const pos = p.geometria.getAttribute("position");
+        return Array.from({ length: pos.count }, (_, i) => pos.getX(i));
+      }).filter((x) => x > 0);
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    const normal = partesAjustadas(cable, cable.caja.getSize(new THREE.Vector3()).toArray() as Vec3);
+    expect(ancho(partesAjustadas(cable, [18, 0.16, 1]))).toBeCloseTo(ancho(normal), 3);
+    expect(conectoresAntes[0]).toBeGreaterThan(0);
+  });
+
+  it("tira de LED de 80 cm: la barra se alarga y las lentes se mueven enteras (siguen redondas)", () => {
+    const tira = biblioteca.get("tira_led")!;
+    // Ancho (en x) de la lente más cercana al centro: en el medio de la tira, que es lo que se alarga.
+    const lenteDelMedio = (partes: ReturnType<typeof partesAjustadas>) => {
+      const xs = partes.filter((p) => p.receta === "etiqueta").flatMap((p) => {
+        const pos = p.geometria.getAttribute("position");
+        return Array.from({ length: pos.count }, (_, i) => pos.getX(i));
+      });
+      const cerca = xs.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a));
+      const deLaLente = xs.filter((x) => Math.abs(x - cerca) < 2.4); // las lentes están a 5 cm o más
+      return Math.max(...deLaLente) - Math.min(...deLaLente);
+    };
+    const normal = partesAjustadas(tira, tira.caja.getSize(new THREE.Vector3()).toArray() as Vec3);
+    const larga = partesAjustadas(tira, [80, 1.2, 0.9]);
+    expect(tamDe(larga)[0]).toBeCloseTo(80, 3);
+    expect(lenteDelMedio(larga)).toBeCloseTo(lenteDelMedio(normal), 3);
+  });
+
+  it("las cajas libres se siguen estirando a la medida justa", () => {
+    tamDe(partesAjustadas(biblioteca.get("bateria")!, [20, 0.6, 9])).forEach((v, i) => expect(v).toBeCloseTo([20, 0.6, 9][i], 3));
+  });
+});
+
 describe("partesAjustadas", () => {
   const caja = (x: number, y: number, z: number) => ({
     partes: [{ receta: RECETA_CUERPO, geometria: new THREE.BoxGeometry(x, y, z).translate(5, 5, 5) }],
@@ -282,13 +372,19 @@ describe("construirEscena con biblioteca", () => {
     ["celular", planoCelular],
     ["heladera", planoHeladera],
     ["aire", planoAire],
-  ])("%s: cada pieza mide `dim` y queda centrada en `pos`, con nombres y materiales propios", (_, plano) => {
+  ])("%s: cada pieza entra en su `dim` (justo si es libre) y queda centrada en `pos`, con nombres y materiales propios", (_, plano) => {
     const { nodos } = construirEscena(plano, { biblioteca });
     const materiales = new Set<THREE.Material>();
     for (const p of plano.piezas) {
       const malla = nodos.get(p.pieza)!.getObjectByName(p.pieza + SUFIJO_MALLA) as THREE.Mesh;
       const caja = cajaDe(malla);
-      caja.getSize(new THREE.Vector3()).toArray().forEach((v, i) => expect(v, p.pieza).toBeCloseTo(p.dim[i], 3));
+      const tam = caja.getSize(new THREE.Vector3()).toArray();
+      const libre = (modeloPara(p.pieza, biblioteca, p.dim)?.ajuste?.modo ?? "libre") === "libre";
+      if (libre) tam.forEach((v, i) => expect(v, p.pieza).toBeCloseTo(p.dim[i], 3));
+      else {
+        tam.forEach((v, i) => expect(v, p.pieza).toBeLessThanOrEqual(p.dim[i] + 1e-3));
+        expect(Math.max(...tam.map((v, i) => v / p.dim[i])), p.pieza).toBeCloseTo(1, 3); // llena al menos un eje
+      }
       expect(caja.getCenter(new THREE.Vector3()).length(), p.pieza).toBeCloseTo(0, 3);
       if (modeloPara(p.pieza, biblioteca)) expect(malla.geometry.type, p.pieza).toBe("BufferGeometry"); // del GLB, no una primitiva
       malla.traverse((o) => {

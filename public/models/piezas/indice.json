@@ -11,362 +11,434 @@
   "base": {
    "familia": "computo",
    "descripcion": "Chasis (lado del teclado, boca abajo): bordes redondeados, puertos a los costados y rejilla atrás.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "tapa_inferior": {
    "familia": "computo",
    "descripcion": "Tapa inferior: placa con rejilla de ventilación, patas de goma y agujeros de los tornillos.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "placa_madre": {
    "familia": "computo",
    "descripcion": "Placa madre esquemática: agujeros de montaje, chips, componentes chicos y conectores. Todo bajo 0.18 cm.",
-   "equipos": "notebook laptop portatil netbook ultrabook"
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre"
   },
   "disipador": {
    "familia": "computo",
    "descripcion": "Placa de cobre sobre el procesador, con soporte en X y cuatro tornillos con resorte.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "heatpipe": {
    "familia": "computo",
    "descripcion": "Dos caños de cobre aplastados, con las puntas redondeadas.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "ram": {
    "familia": "computo",
    "descripcion": "Módulo SO-DIMM: placa con muesca, contactos dorados, chips en las dos caras y etiqueta.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "ssd": {
    "familia": "computo",
    "descripcion": "SSD M.2 2280: placa, contactos con muesca M, controlador, dos NAND, etiqueta y media luna del tornillo.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "wifi": {
    "familia": "computo",
    "descripcion": "Placa Wi-Fi M.2 2230: blindaje metálico, dos conectores de antena y media luna del tornillo.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "pila": {
    "familia": "computo",
    "descripcion": "Pila de botón (tipo CR2032) con el aro aislante.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "bateria": {
    "familia": "computo",
    "descripcion": "Batería de tres celdas planas, placa de protección con cinta, conector y orejas de fijación.",
-   "equipos": "notebook laptop portatil netbook ultrabook"
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre"
   },
   "disco_duro": {
    "familia": "computo",
    "descripcion": "Disco de 2,5\": carcasa de aluminio, etiqueta, tornillos de la tapa y conector SATA.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "soporte": {
    "familia": "computo",
    "descripcion": "Soporte metálico (bracket): chapa con alivianados, agujeros y orejas.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "pantalla": {
    "familia": "computo",
    "descripcion": "Módulo de pantalla: vidrio con esquinas redondeadas sobre el panel, chapa trasera, flex con conector y el agujero de la cámara frontal. Sirve también para la pantalla de una notebook (se estira).",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "bateria@celular": {
    "familia": "computo",
    "descripcion": "Batería de celular: celda plana (pouch) con etiqueta, placa de protección arriba, flex con conector y las tiras para despegarla.",
-   "equipos": "celular telefono smartphone movil"
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre"
   },
   "camara": {
    "familia": "computo",
    "descripcion": "Cámara (frontal o de una notebook): bloque con lente, aro metálico y un tramo de flex.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "camara@modulo": {
    "familia": "computo",
    "descripcion": "Módulo de cámaras traseras: soporte metálico con tres cámaras (dos grandes y una chica) y el flash.",
-   "equipos": "celular telefono smartphone movil"
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "proporcional"
   },
   "marco": {
    "familia": "computo",
    "descripcion": "Marco (chasis) de celular: aro de aluminio con placa media, botones, cortes de antena, boca del USB-C, agujeros del parlante y bandeja de la SIM.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "tapa_trasera": {
    "familia": "computo",
    "descripcion": "Tapa trasera de celular vista desde afuera: vidrio o plástico con bordes curvos, isla de las cámaras con su hueco y, del lado de adentro, la bobina de carga inalámbrica y el adhesivo del borde.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "placa": {
    "familia": "electronica",
    "descripcion": "Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores board-to-board, componentes chicos y agujeros de montaje.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "placa@control": {
    "familia": "electronica",
    "descripcion": "Placa de control de electrodoméstico: PCB con relés, capacitores, transformador chico, borneras y disipador.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "fuente": {
    "familia": "electronica",
    "descripcion": "Fuente de alimentación de placa abierta: capacitor grande, transformador de ferrite, disipadores, bobina y borneras.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "capacitor": {
    "familia": "electronica",
    "descripcion": "Capacitor electrolítico: lata con funda plástica, tapa de aluminio con la cruz de alivio y dos patas.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "capacitor@motor": {
    "familia": "electronica",
    "descripcion": "Capacitor de arranque o de marcha de un motor: lata grande con la etiqueta, tapa plástica y terminales faston.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "transformador": {
    "familia": "electronica",
    "descripcion": "Transformador de núcleo de hierro: chapas laminadas, bobinado de cobre con su papel, soporte con patas y terminales.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "panel": {
    "familia": "electronica",
    "descripcion": "Panel de control: frente de plástico con display, botones y una perilla.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "parlante": {
    "familia": "electronica",
    "descripcion": "Caja de parlante con rejilla, membrana y orejas con gomas.",
-   "equipos": "notebook laptop portatil netbook ultrabook"
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre"
   },
   "parlante@celular": {
    "familia": "electronica",
    "descripcion": "Parlante de celular: caja de plástico con la salida de sonido hacia -Y, rejilla y contactos de resorte.",
-   "equipos": "celular telefono smartphone movil"
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre"
   },
   "conector": {
    "familia": "electronica",
    "descripcion": "Puerto o conector (USB, alimentación): carcasa metálica con boca y lengüeta, patas para soldar.",
-   "equipos": "notebook laptop portatil netbook ultrabook"
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "proporcional"
   },
   "conector@usb_c": {
    "familia": "electronica",
    "descripcion": "Conector de carga USB-C: carcasa ovalada con la boca hacia -Y, lengüeta con contactos y alas para atornillar.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "conector@terminal": {
    "familia": "electronica",
    "descripcion": "Conector de cables (tipo Molex o ficha de bornes): carcasa de plástico con contactos y cables saliendo atrás.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "pantalla@panel": {
    "familia": "electronica",
    "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios, placa T-con, flex de los drivers arriba y el cable.",
-   "equipos": "televisor tv monitor"
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre"
   },
   "retroiluminacion": {
    "familia": "electronica",
    "descripcion": "Retroiluminación de televisor: chapa reflectora con tiras de LED (barras de aluminio con las lentes) y sus fichas.",
-   "equipos": "televisor tv monitor"
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre"
   },
   "tira_led": {
    "familia": "electronica",
    "descripcion": "Tira de LED suelta (retroiluminación, luz interior): barra de aluminio con lentes y una ficha en la punta.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "ventilador": {
    "familia": "movimiento",
    "descripcion": "Ventilador centrífugo (blower): carcasa en D, rotor con álabes, aletas de cobre en la salida.",
-   "equipos": "notebook laptop portatil netbook ultrabook"
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "redondo:xz"
   },
   "ventilador@axial": {
    "familia": "movimiento",
    "descripcion": "Ventilador axial (heladera, unidad exterior de aire, microondas): hélice de cinco aspas con su cubo, aro y motor.",
-   "equipos": "heladera refrigerador freezer congelador nevera aire split acondicionado climatizador televisor tv monitor lavarropas lavasecarropas lavadora secarropas microondas"
+   "equipos": "heladera refrigerador freezer congelador nevera aire split acondicionado climatizador televisor tv monitor lavarropas lavasecarropas lavadora secarropas microondas",
+   "ajuste": "redondo:xz"
   },
   "ventilador@tangencial": {
    "familia": "movimiento",
    "descripcion": "Turbina tangencial (unidad interior de aire split): jaula larga de álabes con discos de refuerzo y eje.",
-   "equipos": "aire split acondicionado climatizador"
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "tramo:x:redondo"
   },
   "turbina@centrifuga": {
    "familia": "movimiento",
    "descripcion": "Turbina centrífuga (jaula de ardilla: horno, secarropas, aire de conducto): rueda corta de álabes curvos con disco trasero y cubo.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:yz"
   },
   "motor": {
    "familia": "movimiento",
    "descripcion": "Motor eléctrico: carcasa con aletas de enfriamiento, tapas, eje, patas y caja de conexiones.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "bomba": {
    "familia": "movimiento",
    "descripcion": "Bomba de agua (desagote de lavarropas): voluta con el filtro y su tapa adelante, entrada y salida con espigas, motor sincrónico (núcleo, bobina y ficha) atrás y orejas para atornillarla.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "correa": {
    "familia": "movimiento",
    "descripcion": "Correa de transmisión (poly-V), parada como en un lavarropas: un lazo largo entre dos poleas.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "tambor": {
    "familia": "movimiento",
    "descripcion": "Tambor de lavarropas de carga frontal: cuba de acero perforada con nervios, abierta adelante, paletas, aro de balanceo atrás, cruceta de aluminio y eje.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xy"
   },
   "compresor": {
    "familia": "movimiento",
    "descripcion": "Compresor hermético (heladera o aire): cápsula con domo, costura soldada y chapa de datos, patas con gomas, caños de cobre (succión, descarga y el de proceso aplastado) y la caja del relé con el cable.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "serpentin": {
    "familia": "frio_calor",
    "descripcion": "Serpentín de aletas (evaporador o condensador de aire): aletas de aluminio atravesadas por caños de cobre con codos.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "condensador": {
    "familia": "frio_calor",
    "descripcion": "Condensador de heladera (tubo y alambre): caño negro en zigzag con varillas soldadas a los dos lados.",
-   "equipos": "heladera refrigerador freezer congelador nevera"
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre"
   },
   "evaporador": {
    "familia": "frio_calor",
    "descripcion": "Evaporador de heladera (placa roll-bond): chapa de aluminio con los canales del gas en relieve, el capilar y el caño de succión.",
-   "equipos": "heladera refrigerador freezer congelador nevera"
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre"
   },
   "termostato": {
    "familia": "frio_calor",
    "descripcion": "Termostato mecánico (heladera, horno): caja con eje y perilla, soporte, terminales y el tubo capilar enrollado.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "resistencia": {
    "familia": "frio_calor",
    "descripcion": "Resistencia calefactora tubular (lavarropas, horno, deshielo): caño doblado en U con brida y dos terminales.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "valvula": {
    "familia": "frio_calor",
    "descripcion": "Electroválvula de agua: cuerpo de plástico con la entrada roscada, bobina con terminales y dos salidas.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "tornillo": {
    "familia": "estructura",
    "descripcion": "Tornillo de cabeza redonda con cruz Phillips.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "manguera": {
    "familia": "estructura",
    "descripcion": "Manguera corrugada (desagote o carga de agua): tubo flexible en curva suave, con los extremos lisos.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "filtro": {
    "familia": "estructura",
    "descripcion": "Filtro de aire (aire split, campana): marco plástico con malla fina y dos nervios.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "filtro@cartucho": {
    "familia": "estructura",
    "descripcion": "Filtro de cartucho (agua, desagote): cilindro plisado con tapas y la rosca arriba.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "cable": {
    "familia": "estructura",
    "descripcion": "Cable plano (flex) con un conector en cada punta.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "cable@redondo": {
    "familia": "estructura",
    "descripcion": "Cable de alimentación o de conexión: cable redondo en curva suave con un conector en cada punta.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "bisagra": {
    "familia": "estructura",
    "descripcion": "Bisagra: hoja metálica con tres agujeros y el barril atrás.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "tramo:x"
   },
   "bisagra@puerta": {
    "familia": "estructura",
    "descripcion": "Bisagra de puerta de electrodoméstico: planchuela gruesa con agujeros y el perno hacia abajo.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "proporcional"
   },
   "puerta": {
    "familia": "estructura",
    "descripcion": "Puerta de heladera (o de horno, microondas): panel con burlete magnético, contrapuerta con estantes y manija.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "puerta@ojo_de_buey": {
    "familia": "estructura",
    "descripcion": "Puerta de lavarropas de carga frontal: aro con el vidrio abombado, la manija y la bisagra.",
-   "equipos": "lavarropas lavasecarropas lavadora secarropas"
+   "equipos": "lavarropas lavasecarropas lavadora secarropas",
+   "ajuste": "redondo:xy"
   },
   "bandeja": {
    "familia": "estructura",
    "descripcion": "Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "bandeja@goteo": {
    "familia": "estructura",
    "descripcion": "Bandeja de goteo o de condensado (aire split, heladera): batea larga y baja con nervios y el pico de desagote.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "bandeja@estante": {
    "familia": "estructura",
    "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "carcasa@heladera": {
    "familia": "carcasas",
    "descripcion": "Gabinete de heladera: caja alta abierta adelante, divisor del freezer, estantes, compartimento del compresor y patas.",
-   "equipos": "heladera refrigerador freezer congelador nevera"
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre"
   },
   "carcasa@split": {
    "familia": "carcasas",
    "descripcion": "Unidad interior de aire split: gabinete redondeado con la boca de salida abajo, aleta, rejilla arriba, display y placa de pared.",
-   "equipos": "aire split acondicionado climatizador"
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "libre"
   },
   "carcasa@televisor": {
    "familia": "carcasas",
    "descripcion": "Carcasa de televisor: marco frontal, tapa trasera con la joroba, rejillas, zona de puertos y patas.",
-   "equipos": "televisor tv monitor"
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre"
   },
   "carcasa@lavarropas": {
    "familia": "carcasas",
    "descripcion": "Gabinete de lavarropas de carga frontal: caja hueca con la boca redonda, panel de control, cajón de jabón y patas.",
-   "equipos": "lavarropas lavasecarropas lavadora secarropas"
+   "equipos": "lavarropas lavasecarropas lavadora secarropas",
+   "ajuste": "libre"
   },
   "carcasa@microondas": {
    "familia": "carcasas",
    "descripcion": "Gabinete de microondas: caja con la cavidad abierta adelante, columna de control, plato giratorio, rejillas y patas.",
-   "equipos": "microondas"
+   "equipos": "microondas",
+   "ajuste": "libre"
   },
   "placa_madre@celular": {
    "familia": "computo",
    "descripcion": "Placa madre de celular: la misma placa compacta en L.",
-   "equipos": "celular telefono smartphone movil"
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre"
   },
   "condensador@aletas": {
    "familia": "frio_calor",
    "descripcion": "Condensador de aletas (unidad exterior de aire): la forma del serpentín.",
-   "equipos": "aire split acondicionado climatizador"
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "libre"
   },
   "condensador@electrolitico": {
    "familia": "frio_calor",
    "descripcion": "Condensador electrónico (capacitor): la forma del capacitor electrolítico.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "redondo:xz"
   },
   "evaporador@aletas": {
    "familia": "frio_calor",
    "descripcion": "Evaporador de aletas (heladera no frost, aire split): la forma del serpentín.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   },
   "turbina": {
    "familia": "movimiento",
    "descripcion": "Turbina tangencial (unidad interior de aire split): la misma jaula larga de álabes.",
-   "equipos": "aire split acondicionado climatizador"
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "tramo:x:redondo"
   },
   "estante": {
    "familia": "estructura",
    "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
-   "equipos": ""
+   "equipos": "",
+   "ajuste": "libre"
   }
  }
 }
