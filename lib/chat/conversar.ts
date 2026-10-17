@@ -4,6 +4,7 @@ import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia,
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { AcumuladorUso, LIMITES, MODELOS, registrarUso, streamClaude, totalUsd, type StreamIA, type Uso } from "../ia/claude";
 import { eventoCosto } from "../intake/entrada";
+import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { Segmentador, type Segmento } from "./segmentos";
 
@@ -13,7 +14,8 @@ import { Segmentador, type Segmento } from "./segmentos";
  *
  * Para que la voz responda rápido, primero contesta solo con el knowledge pack
  * (chico, ya verificado). Si no alcanza, el modelo pide "[[manual]]" y se consulta
- * el PDF completo con citas de la API (más lento, ~20 s).
+ * el PDF completo con citas de la API (más lento, ~20 s). Esa consulta arranca igual que la
+ * lectura del pack (lib/knowledge/lector.ts): sale de la caché de prompts que dejó /api/knowledge.
  */
 
 export const EntradaChat = z.object({
@@ -221,25 +223,24 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
     }
     if (resultado === "manual" && manualFileId) {
       // 2b. El pack no alcanzó (o se pidió el manual): PDF completo con citas de la API.
+      // Mismo prefijo que la lectura del pack (modelo, system, effort y documento; el título es
+      // manual.titulo = pack.fuentes[0].doc) y las reglas del chat DESPUÉS del documento: si se
+      // cambia algo de eso, cada primera consulta vuelve a pagar el manual entero (~US$ 0,64).
       if (entrada.modo === "auto") yield { tipo: "buscando", texto: "Dejame buscarlo en el manual…" };
       yield* fase(
         stream,
         {
           model: MODELOS.vision,
           max_tokens: LIMITES.chat.maxTokensManual,
-          output_config: { effort: "low" },
-          system: [{ type: "text", text: reglasManual(piezas) }, bloquePack],
+          output_config: { effort: LIMITES.lectura.effort },
+          system: SYSTEM_LECTOR,
           messages: [
             {
               role: "user",
               content: [
-                {
-                  type: "document",
-                  source: { type: "file", file_id: manualFileId },
-                  title: doc,
-                  citations: { enabled: true },
-                  cache_control: { type: "ephemeral" },
-                },
+                bloqueManual({ fileId: manualFileId, titulo: doc }),
+                { type: "text", text: reglasManual(piezas) },
+                bloquePack,
                 textoPregunta,
               ],
             },

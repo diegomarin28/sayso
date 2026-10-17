@@ -28,6 +28,7 @@ const SYSTEM_BUSCAR = `Sos el bibliotecario de un servicio de reparación. Tu ta
 Cómo trabajar:
 1. Buscá con web_search. Probá variantes: "<modelo> hardware maintenance manual pdf", "<modelo> service manual filetype:pdf", y con site: en el dominio de descargas del fabricante.
 2. Si encontrás una página de soporte o de documentos, abrila con web_fetch y buscá el enlace directo al .pdf.
+   Nunca abras un PDF con web_fetch (es carísimo y no hace falta leerlo): los enlaces a PDF se prueban con probar_pdf.
 3. Probá cada enlace candidato con probar_pdf. Solo vale un enlace que probar_pdf confirme como PDF.
 4. Preferí el sitio del fabricante; después iFixit; después otros. Un manual que cubre varios modelos hermanos (ej. "E14 Gen 2 / E15 Gen 2") vale si nombra el modelo.
 Cuando termines, respondé SOLO con JSON, sin texto alrededor:
@@ -56,7 +57,12 @@ export async function buscarManual(
   const verificados = new Map<string, Pdf>();
   const tools: Anthropic.ToolUnion[] = [
     { type: "web_search_20260209", name: "web_search", max_uses: LIMITES.bibliotecario.busquedas },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: LIMITES.bibliotecario.paginas },
+    {
+      type: "web_fetch_20260209",
+      name: "web_fetch",
+      max_uses: LIMITES.bibliotecario.paginas,
+      max_content_tokens: LIMITES.bibliotecario.maxTokensPagina,
+    },
     PROBAR_PDF,
   ];
   const messages: Anthropic.MessageParam[] = [
@@ -67,7 +73,11 @@ export async function buscarManual(
   ];
 
   for (let vuelta = 0; vuelta < LIMITES.bibliotecario.vueltas; vuelta++) {
-    const r = await enviar({ model: MODELOS.vision, max_tokens: 8000, system: SYSTEM_BUSCAR, tools, messages }, "bibliotecario: buscar manual");
+    // Caché automática: cada vuelta reenvía todo lo anterior (búsquedas y páginas); así se lee de la caché.
+    const r = await enviar(
+      { model: MODELOS.vision, max_tokens: 8000, system: SYSTEM_BUSCAR, tools, messages, cache_control: { type: "ephemeral" } },
+      "bibliotecario: buscar manual",
+    );
     messages.push({ role: "assistant", content: r.content });
 
     if (r.stop_reason === "pause_turn") continue; // la búsqueda del servidor sigue en la próxima vuelta
