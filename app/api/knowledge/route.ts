@@ -20,13 +20,17 @@ export function POST(req: Request) {
   return manejar(req, Entrada, async (entrada) => {
     // Caché de packs en Supabase (por marca + modelo + síntoma); sin Supabase, memoria.
     const db = supabaseServidor();
-    const { pack, manual, vistas, desdeCache, eventos } = await armarKnowledgePack(entrada, db ? { cache: cachePacksSupabase<Armado>(db) } : {});
+    const { pack, manual, vistas, vistaInterior, imagenesPaginas, desdeCache, eventos } = await armarKnowledgePack(entrada, db ? { cache: cachePacksSupabase<Armado>(db) } : {});
     return {
       pack,
       manualUrl: manual?.url ?? null,
       manualFileId: manual?.fileId ?? null,
       paginasVistaExplosionada: vistas.explosionada ? [vistas.explosionada] : [],
       paginaVistaInterior: vistas.interior,
+      /** PNG de la vista interior del manual para mostrar al lado del 3D: { url, pagina, estado } o null. */
+      vistaInterior: vistaInterior ?? null,
+      /** PNG de páginas del manual (vista interior y páginas citadas): { número de página del manual: URL }. */
+      imagenesPaginas: imagenesPaginas ?? {},
       desdeCache,
       eventos,
     };
