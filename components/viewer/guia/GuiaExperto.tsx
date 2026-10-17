@@ -205,11 +205,11 @@ export function GuiaExperto({
           type="submit"
           disabled={!texto.trim()}
           aria-label={etiquetaBoton}
-          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[399px]:w-12 max-[399px]:px-0"
+          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
         >
-          {/* En celulares angostos, solo el ícono: así la caja de texto tiene lugar. */}
-          <span className="max-[399px]:hidden">{etiquetaBoton}</span>
-          <FlechaEnviar className="hidden max-[399px]:block" />
+          {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
+          <span className="max-[480px]:hidden">{etiquetaBoton}</span>
+          <FlechaEnviar className="hidden max-[480px]:block" />
         </button>
       </form>
     </div>
