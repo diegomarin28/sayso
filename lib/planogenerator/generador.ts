@@ -298,7 +298,7 @@ export function planoDesdePropuesta(
     }
     // El centro queda dentro de su soporte (base, placa o la pieza de abajo) y de la base.
     const soporte = padre === "base" ? { x: 0, z: 0, ancho: W, prof: D } : cajas.get(padre)!;
-    const lim = limites(soporte, capa === "sobre_pieza" ? 0 : ancho, capa === "sobre_pieza" ? 0 : prof, W, D, ancho, prof);
+    const lim = limitesSobre(soporte, capa, ancho, prof, W, D);
     cajas.set(p.pieza, {
       id: p.pieza,
       capa,
@@ -319,7 +319,7 @@ export function planoDesdePropuesta(
   }
 
   // 4. Resolver choques en la planta.
-  resolverChoques([...cajas.values()], avisos);
+  resolverChoques([...cajas.values()], avisos, W, D);
 
   // 5. Armar el plano: base, piezas y tapa inferior encima de todo.
   const doc = kp.fuentes[0]?.doc ?? kp.modelo;
@@ -380,6 +380,18 @@ type CajaPieza = {
   etiquetaManual?: string;
   pagina: number | null;
 };
+
+/** Límites del centro de una pieza sobre su soporte (lo que apoya sobre otra pieza solo necesita su centro adentro). */
+function limitesSobre(
+  soporte: { x: number; z: number; ancho: number; prof: number },
+  capa: Capa,
+  ancho: number,
+  prof: number,
+  W: number,
+  D: number,
+): Limites {
+  return limites(soporte, capa === "sobre_pieza" ? 0 : ancho, capa === "sobre_pieza" ? 0 : prof, W, D, ancho, prof);
+}
 
 /**
  * Límites del centro de una pieza: dentro del soporte (dejando `margenX/Z` para que entre
@@ -458,25 +470,80 @@ const solapan = (a: CajaPieza, b: CajaPieza) => {
 
 const PASO_BUSQUEDA_CM = 0.25;
 const AVISAR_DESDE_CM = 0.5;
+/** Hasta cuánto se corre una pieza antes de preferir achicar la grande que la tapa: 3 cm o un cuarto de su lado mayor. */
+const correrHasta = (c: CajaPieza) => Math.max(3, 0.25 * Math.max(c.ancho, c.prof));
+/** Una pieza achicada nunca queda por debajo de esta fracción de lo que propuso la IA (en cada eje). */
+const ACHICAR_HASTA = 0.6;
+const HOLGURA_ACHIQUE_CM = 0.1;
 
 /**
  * Coloca las piezas por capa y, dentro de cada capa, de la más confiable a la menos.
  * Si una choca con las ya colocadas, va al lugar libre más cercano a donde la puso la IA
- * (dentro de sus límites). Lo que apoya sobre otra pieza la acompaña si esa se mueve.
+ * (dentro de sus límites). Pero si ese lugar queda lejos (ej. la batería que pisa 1 cm la
+ * placa y terminaría 20 cm más adelante), achica del lado del choque la pieza más grande que
+ * la tapa y la deja donde la puso la IA. Lo que apoya sobre otra pieza la acompaña si esa se
+ * mueve, y se reacomoda dentro de ella si se achica.
  */
-function resolverChoques(cajas: CajaPieza[], avisos: string[]) {
+function resolverChoques(cajas: CajaPieza[], avisos: string[], W: number, D: number) {
   const emparentadas = (a: CajaPieza, b: CajaPieza) => a.padre === b.id || b.padre === a.id;
   const orden = [...cajas].sort(
     (a, b) => ordenCapa(a.capa) - ordenCapa(b.capa) || ORDEN_CONFIANZA[a.confianza] - ORDEN_CONFIANZA[b.confianza],
   );
+  const original = new Map(cajas.map((c) => [c.id, { ancho: c.ancho, prof: c.prof }]));
   const corrimiento = new Map<string, [number, number]>();
+  /** Lo que se movió una pieza todavía no colocada porque se achicó la de abajo. */
+  const ajuste = new Map<string, [number, number]>();
   const puestas: CajaPieza[] = [];
 
+  /** Achica las piezas ya puestas que tapan a `c` (si todas son más grandes) para que `c` entre donde está. */
+  const achicarParaQueEntre = (c: CajaPieza): boolean => {
+    const tapan = puestas.filter((o) => !emparentadas(c, o) && solapan(c, o));
+    if (!tapan.length || tapan.some((o) => o.ancho * o.prof < c.ancho * c.prof)) return false;
+    const cortes = tapan.map((o) => {
+      const { dx, dz } = solapan(c, o)!;
+      const enX = dx / o.ancho < dz / o.prof; // el eje donde hay que sacarle menos
+      const corte = (enX ? dx : dz) + HOLGURA_ACHIQUE_CM;
+      const tam = (enX ? o.ancho : o.prof) - corte;
+      const minimo = ACHICAR_HASTA * (enX ? original.get(o.id)!.ancho : original.get(o.id)!.prof);
+      // El borde opuesto a `c` queda fijo: el centro se aleja de `c` la mitad del corte.
+      const centro = (enX ? o.x : o.z) + (Math.sign(enX ? o.x - c.x : o.z - c.z) || 1) * (corte / 2);
+      return tam >= minimo ? { o, enX, corte, tam, centro } : null;
+    });
+    if (cortes.some((x) => x === null)) return false;
+    const antes = tapan.map((o) => ({ o, x: o.x, z: o.z, ancho: o.ancho, prof: o.prof }));
+    for (const { o, enX, tam, centro } of cortes as NonNullable<(typeof cortes)[number]>[]) {
+      if (enX) [o.ancho, o.x] = [tam, centro];
+      else [o.prof, o.z] = [tam, centro];
+    }
+    if (!puestas.every((o) => emparentadas(c, o) || !solapan(c, o))) {
+      for (const a of antes) Object.assign(a.o, { x: a.x, z: a.z, ancho: a.ancho, prof: a.prof });
+      return false;
+    }
+    for (const { o, corte } of cortes as NonNullable<(typeof cortes)[number]>[]) {
+      avisos.push(`Se achicó "${o.id}" ${corte.toFixed(1)} cm para que "${c.id}" quede donde la ubicó la IA.`);
+      // Lo que va encima (todavía sin colocar: está en una capa posterior) se reacomoda dentro de su nueva planta.
+      const [px, pz] = corrimiento.get(o.id) ?? [0, 0];
+      for (const k of cajas) {
+        if (k.padre !== o.id || puestas.includes(k)) continue;
+        const lim = limitesSobre(o, k.capa, k.ancho, k.prof, W, D);
+        // `lim` es absoluto; `k.lim` y `k.x` todavía no incluyen el corrimiento del padre (se suma en su turno).
+        k.lim = { minX: lim.minX - px, maxX: lim.maxX - px, minZ: lim.minZ - pz, maxZ: lim.maxZ - pz };
+        const [ax, az] = ajuste.get(k.id) ?? [0, 0];
+        ajuste.set(k.id, [
+          ax + clamp(k.x + ax, k.lim.minX, k.lim.maxX) - (k.x + ax),
+          az + clamp(k.z + az, k.lim.minZ, k.lim.maxZ) - (k.z + az),
+        ]);
+      }
+    }
+    return true;
+  };
+
   for (const c of orden) {
-    // Acompañar a la pieza de abajo si se movió.
+    // Acompañar a la pieza de abajo si se movió (y lo que se movió por un achique de esa pieza).
     const [dx, dz] = corrimiento.get(c.padre) ?? [0, 0];
-    c.x += dx;
-    c.z += dz;
+    const [ax, az] = ajuste.get(c.id) ?? [0, 0];
+    c.x += dx + ax;
+    c.z += dz + az;
     c.lim = { minX: c.lim.minX + dx, maxX: c.lim.maxX + dx, minZ: c.lim.minZ + dz, maxZ: c.lim.maxZ + dz };
     const [x0, z0] = [c.x, c.z];
     const libre = () => puestas.every((o) => emparentadas(c, o) || !solapan(c, o));
@@ -492,15 +559,19 @@ function resolverChoques(cajas: CajaPieza[], avisos: string[]) {
         c.z = z;
         return libre();
       });
-      if (!lugar) {
-        c.x = x0;
-        c.z = z0;
+      [c.x, c.z] = [x0, z0];
+      const lejos = !lugar || Math.sqrt(lugar[2]) > correrHasta(c);
+      if (lejos && achicarParaQueEntre(c)) {
+        // Queda donde la puso la IA.
+      } else if (!lugar) {
         avisos.push(`"${c.id}" no entra sin tocar otras piezas: quedó donde la puso la IA.`);
-      } else if (Math.sqrt(lugar[2]) > AVISAR_DESDE_CM) {
-        avisos.push(`"${c.id}" se corrió ${Math.sqrt(lugar[2]).toFixed(1)} cm para no atravesar otra pieza.`);
+      } else {
+        [c.x, c.z] = [lugar[0], lugar[1]];
+        if (Math.sqrt(lugar[2]) > AVISAR_DESDE_CM)
+          avisos.push(`"${c.id}" se corrió ${Math.sqrt(lugar[2]).toFixed(1)} cm para no atravesar otra pieza.`);
       }
     }
-    corrimiento.set(c.id, [c.x - x0 + dx, c.z - z0 + dz]);
+    corrimiento.set(c.id, [c.x - x0 + dx + ax, c.z - z0 + dz + az]);
     puestas.push(c);
   }
 }

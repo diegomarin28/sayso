@@ -139,6 +139,51 @@ describe("planoDesdePropuesta (el código calcula)", () => {
     expect(de(plano, "ram").pos[0]).toBeCloseTo(-0.3 * 17.5); // la confiable no se movió
   });
 
+  it("caso T480: si correr la pieza la lleva lejos, achica la grande que la tapa (la batería queda donde la puso la IA)", () => {
+    // Medidas reales que dio la IA para un ThinkPad T480: batería atrás, pisando ~0,7 cm la placa.
+    const kpT480: KnowledgePack = { ...kp, piezas: kp.piezas.filter((p) => ["base", "placa_madre", "bateria", "ventilador", "tornillos_ventilador"].includes(p.id)) };
+    const { plano, avisos } = planoDesdePropuesta(kpT480, {
+      base_ancho_cm: null,
+      base_prof_cm: null,
+      piezas: [
+        pieza({ pieza: "placa_madre", capa: "placa", x: 0, z: -0.1, ancho: 0.85, prof: 0.65 }),
+        pieza({ pieza: "bateria", capa: "sobre_base", x: 0, z: -0.85, ancho: 0.7, prof: 0.15, alto_cm: 1, forma: "extrusion" }),
+        pieza({ pieza: "ventilador", x: 0.45, z: 0.3, ancho: 0.18, prof: 0.25, alto_cm: 0.6, forma: "cilindro" }),
+        pieza({ pieza: "tornillos_ventilador", capa: "sobre_pieza", sobre: "ventilador", x: 0.27, z: 0.05, ancho: 0.04, prof: 0.04 }),
+      ],
+    });
+    const [W, , D] = de(plano, "base").dim;
+    const bateria = de(plano, "bateria");
+    const placa = de(plano, "placa_madre");
+    // La batería no viaja: queda a menos de 1 cm de donde la ubicó la IA (antes se iba 19,5 cm al frente).
+    expect(Math.abs(bateria.pos[2] - (-0.85 * D) / 2)).toBeLessThan(1);
+    // La placa se achicó solo lo necesario, del lado de la batería.
+    expect(placa.dim[2]).toBeLessThan(0.65 * D);
+    expect(placa.dim[2]).toBeGreaterThan(0.6 * 0.65 * D);
+    expect(placa.pos[2] + placa.dim[2] / 2).toBeCloseTo(-0.1 * (D / 2) + (0.65 * D) / 2, 3); // el borde de adelante no se mueve
+    expect(avisos.join(" ")).toMatch(/achicó "placa_madre".*"bateria"/);
+    // Sin choques, todo dentro de la base y el ventilador sigue sobre la placa.
+    expect(choques(plano)).toEqual([]);
+    for (const p of plano.piezas) {
+      expect(Math.abs(p.pos[0]) + p.dim[0] / 2).toBeLessThanOrEqual(W / 2 + 1e-6);
+      expect(Math.abs(p.pos[2]) + p.dim[2] / 2).toBeLessThanOrEqual(D / 2 + 1e-6);
+    }
+    const v = de(plano, "ventilador");
+    expect(Math.abs(v.pos[2] - placa.pos[2]) + v.dim[2] / 2).toBeLessThanOrEqual(placa.dim[2] / 2 + 1e-6);
+  });
+
+  it("si achicar la dejaría muy chica (menos del 60 %), corre la pieza como antes", () => {
+    const { plano, avisos } = planoDesdePropuesta(kp, {
+      ...propuestaBuena,
+      // La batería pisa ~7 cm de los 13,2 de la placa: achicarla le sacaría más del 40 %.
+      piezas: propuestaBuena.piezas.map((p) => (p.pieza === "bateria" ? { ...p, z: 0, prof: 0.38 } : p)),
+    });
+    expect(de(plano, "bateria").pos[2]).toBeGreaterThan(6.9); // se corrió hacia adelante, fuera de la placa
+    expect(avisos.join(" ")).not.toMatch(/achicó/);
+    expect(de(plano, "placa_madre").dim[2]).toBeCloseTo(0.55 * 24, 3);
+    expect(choques(plano)).toEqual([]);
+  });
+
   it("lo que apoya sobre otra pieza queda dentro de su planta (no flota)", () => {
     const { plano } = planoDesdePropuesta(kp, {
       ...propuestaBuena,
