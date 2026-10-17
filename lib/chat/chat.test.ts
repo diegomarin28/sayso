@@ -1,7 +1,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { Coreografia, knowledgePackEjemplo } from "../../shared";
-import type { StreamIA } from "../ia/claude";
+import type { EnviarMensaje, StreamIA } from "../ia/claude";
+import { leerManual } from "../knowledge/lector";
 import { conversar, type EventoChat } from "./conversar";
 import { parsearMarca, Segmentador } from "./segmentos";
 
@@ -136,6 +137,30 @@ describe("conversar", () => {
     expect(ev.map((e) => e.tipo)).toEqual(["buscando", "paso", "fin"]);
     expect(JSON.stringify(llamadas[1].messages)).toContain("file_1");
     expect(JSON.stringify(llamadas[0].messages)).not.toContain("file_1");
+  });
+
+  it("la consulta al manual arranca igual que la lectura del pack (reusa su caché de prompts)", async () => {
+    const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const stream: StreamIA = async function* (params) {
+      llamadas.push(params);
+      const texto = llamadas.length === 1 ? "[[manual]]" : "Según el manual, son tres tornillos. ";
+      yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: texto } } as Anthropic.RawMessageStreamEvent;
+    };
+    await todos(conversar({ ...base, pregunta: "¿Cuántos tornillos tiene la bisagra?" }, stream));
+    let lectura: Anthropic.MessageCreateParamsNonStreaming | undefined;
+    const enviar: EnviarMensaje = async (params) => {
+      lectura = params;
+      return { content: [], stop_reason: "end_turn" } as unknown as Anthropic.Message;
+    };
+    await leerManual({ fileId: "file_1", titulo: knowledgePackEjemplo.fuentes[0].doc }, "tarea", 100, enviar, "prueba");
+    const prefijo = (p: Anthropic.MessageCreateParamsNonStreaming) => ({
+      model: p.model,
+      system: p.system,
+      effort: p.output_config?.effort,
+      tools: p.tools,
+      documento: (p.messages[0].content as Anthropic.ContentBlockParam[])[0],
+    });
+    expect(prefijo(llamadas[1])).toEqual(prefijo(lectura!));
   });
 
   it("sin manual no hay segunda llamada", async () => {

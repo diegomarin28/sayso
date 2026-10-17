@@ -29,7 +29,13 @@ export const LIMITES = {
     chapaMaxImagenes: 3,
   },
   pdf: { maxBytes: 150 * 1024 * 1024, timeoutMs: 60_000, venceEnSeg: 7 * 24 * 3600 },
-  bibliotecario: { busquedas: 6, paginas: 6, vueltas: 12 },
+  bibliotecario: {
+    busquedas: 6,
+    paginas: 6,
+    vueltas: 12,
+    /** Tope de texto por página abierta con web_fetch (los PDF no se cortan: se prueban con probar_pdf). */
+    maxTokensPagina: 10_000,
+  },
   pack: { maxPasos: 12 },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
