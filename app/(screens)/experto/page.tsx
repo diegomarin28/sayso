@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GuiaExperto } from "@/components/viewer";
 import { callar, hablar } from "@/lib/voice/hablar";
 import { useFlujo } from "../_estado/flujo";
@@ -25,7 +25,13 @@ async function decir(texto: string, senal: AbortSignal) {
 export default function Experto() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { preparado, plano, agregarEventos } = useFlujo();
+  const { preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada } = useFlujo();
+  // La pregunta inicial se hace una sola vez por caso: al volver a esta pantalla no se repite
+  // (ni la llamada a /api/chat ni la voz).
+  const [preguntaInicial] = useState(() => (guiaIniciada ? undefined : caso?.sintoma));
+  useEffect(() => {
+    if (preparado && plano) marcarGuiaIniciada();
+  }, [preparado, plano, marcarGuiaIniciada]);
 
   useEffect(() => {
     if (caso && (!preparado || !plano)) router.replace("/preparando");
@@ -48,7 +54,7 @@ export default function Experto() {
         origenPlano={plano.origen}
         manualFileId={preparado.manualFileId}
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
-        preguntaInicial={caso.sintoma}
+        preguntaInicial={preguntaInicial}
         decir={decir}
         onEvento={(e) => agregarEventos([e])}
       />

@@ -9,7 +9,7 @@ import {
   PlanoDePiezas,
   fichaEjemplo,
   fotosEjemplo,
-} from "@/shared";
+} from "../../../shared";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -24,6 +24,24 @@ const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
 export class ErrorApi extends Error {}
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Las llamadas que cuestan IA se hacen una sola vez por clave mientras dure la sesión: si la
+ * pantalla se monta dos veces, o la persona va atrás y adelante (incluso con la respuesta en
+ * camino), se reusa la misma promesa. Si falla, se borra para poder reintentar.
+ */
+const yaPedidas = new Map<string, Promise<unknown>>();
+function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
+  const previa = yaPedidas.get(clave);
+  if (previa) return previa as Promise<T>;
+  const p = pedir();
+  yaPedidas.set(clave, p);
+  p.catch(() => yaPedidas.delete(clave));
+  return p;
+}
+
+/** El equipo de la ficha: si la persona corrige marca o modelo, es otro equipo y sí se vuelve a pedir. */
+const claveEquipo = (f: Ficha) => `${f.casoId}|${f.marca.valor ?? ""}|${f.modelo.valor ?? ""}`;
 
 async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> {
   let res: Response;
@@ -103,10 +121,8 @@ export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedi
       ],
     });
   }
-  return llamar(
-    "/api/intake/pedidos",
-    { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma },
-    RespPedidos,
+  return unaVez(`pedidos|${caso.id}|${caso.clase}`, () =>
+    llamar("/api/intake/pedidos", { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma }, RespPedidos),
   );
 }
 
@@ -155,10 +171,11 @@ export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.in
       ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
     });
   }
-  return llamar(
-    "/api/intake/chapa",
-    { casoId: caso.id, clase: caso.clase, imagenes: imagenes.slice(0, 3) },
-    RespChapa,
+  const paraLeer = imagenes.slice(0, 3);
+  // Misma foto = misma lectura; si la persona saca otra foto de la etiqueta, se lee de nuevo.
+  const huella = paraLeer.map((i) => `${i.base64.length}:${i.base64.slice(-24)}`).join(",");
+  return unaVez(`chapa|${caso.id}|${huella}`, () =>
+    llamar("/api/intake/chapa", { casoId: caso.id, clase: caso.clase, imagenes: paraLeer }, RespChapa),
   );
 }
 
@@ -191,17 +208,11 @@ const RespKnowledge = conEventos({
 });
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
-/** Una sola búsqueda por caso aunque la pantalla se monte dos veces: cada una cuesta ~1 USD. */
-const preparando = new Map<string, Promise<z.infer<typeof RespKnowledge>>>();
-
-/** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min. */
+/** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
 export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<typeof RespKnowledge>> {
-  const enCurso = preparando.get(ficha.casoId);
-  if (enCurso) return enCurso;
-  const p = llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge);
-  preparando.set(ficha.casoId, p);
-  p.catch(() => preparando.delete(ficha.casoId)); // si falla, se puede reintentar
-  return p;
+  return unaVez(`knowledge|${claveEquipo(ficha)}`, () =>
+    llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge),
+  );
 }
 
 const RespPlano = conEventos({
@@ -212,30 +223,24 @@ const RespPlano = conEventos({
 });
 export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
 
-const generando = new Map<string, Promise<z.infer<typeof RespPlano>>>();
-
 /**
  * El cartógrafo ubica las piezas en el 3D leyendo la vista explosionada del manual (carril B).
  * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
  */
 export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
-  const casoId = ficha.casoId;
-  const enCurso = generando.get(casoId);
-  if (enCurso) return enCurso;
-  const p = llamar(
-    "/api/plano",
-    {
-      casoId,
-      ficha,
-      knowledgePack: preparado.pack,
-      manualFileId: preparado.manualFileId,
-      manualUrl: preparado.manualUrl,
-      paginasVistaExplosionada: preparado.paginasVistaExplosionada,
-      paginaVistaInterior: preparado.paginaVistaInterior,
-    },
-    RespPlano,
+  return unaVez(`plano|${claveEquipo(ficha)}`, () =>
+    llamar(
+      "/api/plano",
+      {
+        casoId: ficha.casoId,
+        ficha,
+        knowledgePack: preparado.pack,
+        manualFileId: preparado.manualFileId,
+        manualUrl: preparado.manualUrl,
+        paginasVistaExplosionada: preparado.paginasVistaExplosionada,
+        paginaVistaInterior: preparado.paginaVistaInterior,
+      },
+      RespPlano,
+    ),
   );
-  generando.set(casoId, p);
-  p.catch(() => generando.delete(casoId));
-  return p;
 }

@@ -38,7 +38,7 @@ const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
 export default function FichaDelEquipo() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { fotos, imagenes, ficha, setFicha, agregarEventos } = useFlujo();
+  const { fotos, imagenes, ficha, setFicha, agregarEventos, preparado, setPreparado, setPlano } = useFlujo();
   const [editando, setEditando] = useState<ClaveCampo | null>(null);
   const [borrador, setBorrador] = useState("");
   const [correcciones, setCorrecciones] = useState<Partial<Record<ClaveCampo, string | null>>>({});
@@ -95,6 +95,11 @@ export default function FichaDelEquipo() {
       const r = await confirmarFicha(ficha, confirmados, correcciones);
       agregarEventos(r.eventos);
       setFicha(r.ficha);
+      // Solo si cambió el equipo hay que buscar otro manual; si no, se reusa lo ya preparado.
+      if (preparado && ("marca" in correcciones || "modelo" in correcciones)) {
+        setPreparado(null);
+        setPlano(null);
+      }
       if (r.listaParaPreparar) router.push("/preparando");
       else setFaltaModelo(true);
     } catch (e) {

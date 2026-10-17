@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { Caso, Evento, Ficha, Foto } from "@/shared";
+import type { Caso, Evento, Ficha, Foto, PedidoDeFoto } from "@/shared";
 import type { Plano, Preparado } from "../_datos/api";
 import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
@@ -9,7 +9,24 @@ import type { ImagenB64 } from "../_datos/imagen";
 /**
  * Estado del recorrido en memoria del navegador. Cada cambio también se guarda en
  * Supabase en segundo plano (`guardar`); al recargar se vuelve a la pantalla 1.
+ *
+ * Todo lo que cuesta una llamada a la IA se guarda acá y no en la pantalla, así ir atrás
+ * y adelante nunca la repite: solo un caso nuevo (o "Probar de nuevo") vuelve a llamar.
  */
+
+/** Una foto pedida en la captura guiada: lo que se sacó y qué dijo el control de calidad. */
+export type Toma = {
+  url?: string;
+  revisando: boolean;
+  intentos: number;
+  resultado?: Foto;
+  salteada?: boolean;
+  error?: string;
+};
+
+export type Captura = { pedidos: PedidoDeFoto[] | null; actual: number; tomas: Record<number, Toma> };
+const CAPTURA_VACIA: Captura = { pedidos: null, actual: 0, tomas: {} };
+
 type Flujo = {
   caso: Caso | null;
   fotos: Foto[];
@@ -24,6 +41,12 @@ type Flujo = {
   /** Plano 3D de las piezas (pantalla 4), lo que monta el visor. */
   plano: Plano | null;
   setPlano: (p: Plano | null) => void;
+  /** Pantalla 2: fotos pedidas (Haiku), en cuál va y cómo salió cada una. */
+  captura: Captura;
+  setCaptura: (cambio: (c: Captura) => Captura) => void;
+  /** La guía ya hizo la pregunta inicial (no repetirla al volver a la pantalla 5). */
+  guiaIniciada: boolean;
+  marcarGuiaIniciada: () => void;
   setCaso: (c: Caso | null) => void;
   agregarFoto: (f: Foto, imagen?: ImagenB64) => void;
   setFicha: (f: Ficha | null) => void;
@@ -40,6 +63,8 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [preparado, setPreparado] = useState<Preparado | null>(null);
   const [plano, setPlano] = useState<Plano | null>(null);
+  const [captura, setCaptura] = useState<Captura>(CAPTURA_VACIA);
+  const [guiaIniciada, setGuiaIniciada] = useState(false);
 
   return (
     <Contexto.Provider
@@ -53,6 +78,10 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         setPreparado,
         plano,
         setPlano,
+        captura,
+        setCaptura,
+        guiaIniciada,
+        marcarGuiaIniciada: () => setGuiaIniciada(true),
         setCaso: (c) => {
           // Un caso nuevo arranca de cero.
           if (c?.id !== caso?.id) {
@@ -62,6 +91,8 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
             setEventos([]);
             setPreparado(null);
             setPlano(null);
+            setCaptura(CAPTURA_VACIA);
+            setGuiaIniciada(false);
           }
           setCaso(c);
           if (c) guardar({ caso: c });

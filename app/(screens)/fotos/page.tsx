@@ -2,23 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Foto, PedidoDeFoto } from "@/shared";
+import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
-import { useFlujo } from "../_estado/flujo";
+import { useFlujo, type Toma } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BotonPrincipal, Camara, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 2 — Captura guiada: una foto por vez, con control de calidad. */
-
-type Toma = {
-  url?: string;
-  revisando: boolean;
-  intentos: number;
-  resultado?: Foto;
-  salteada?: boolean;
-  error?: string;
-};
 
 const NOMBRE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
   frente: "Frente",
@@ -31,16 +22,19 @@ const NOMBRE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
 export default function CapturaGuiada() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { agregarFoto, agregarEventos } = useFlujo();
-  const [pedidos, setPedidos] = useState<PedidoDeFoto[] | null>(null);
+  const { agregarFoto, agregarEventos, captura, setCaptura } = useFlujo();
+  // Lo de la captura vive en el flujo: al volver a esta pantalla sigue donde estaba.
+  const { pedidos, actual, tomas } = captura;
+  const setPedidos = (p: PedidoDeFoto[]) => setCaptura((c) => ({ ...c, pedidos: p }));
+  const setActual = (n: number) => setCaptura((c) => ({ ...c, actual: n }));
+  const setTomas = (f: (t: Record<number, Toma>) => Record<number, Toma>) =>
+    setCaptura((c) => ({ ...c, tomas: f(c.tomas) }));
   const [errorPedidos, setErrorPedidos] = useState<string | null>(null);
-  const [actual, setActual] = useState(0);
-  const [tomas, setTomas] = useState<Record<number, Toma>>({});
 
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
 
   useEffect(() => {
-    if (!caso) return;
+    if (!caso || pedidos) return;
     let vigente = true;
     pedidosDeFoto(caso)
       .then((r) => {
