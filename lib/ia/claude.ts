@@ -70,6 +70,11 @@ export const enviarMensaje: EnviarMensaje = async (params) => {
   return mensaje;
 };
 
+/** Stream de eventos crudos (texto y citas a medida que llegan). Se reemplaza en los tests. */
+export type StreamIA = (params: Anthropic.MessageCreateParamsNonStreaming) => AsyncIterable<Anthropic.RawMessageStreamEvent>;
+
+export const streamClaude: StreamIA = (params) => obtenerCliente().messages.stream(params);
+
 /** Sube un PDF a la Files API y devuelve su file_id (vence en 7 días). Se reemplaza en los tests. */
 export type SubirArchivo = (datos: Buffer, nombre: string) => Promise<string>;
 
