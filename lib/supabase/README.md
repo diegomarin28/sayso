@@ -4,7 +4,15 @@ Dueño: Iaio
 
 Cliente, esquema y migraciones de Supabase.
 
-- `migraciones/001_base.sql`: tablas `casos`, `fotos`, `fichas`, `eventos`, `knowledge_packs` y bucket público `fotos`. Se corre a mano en el SQL Editor del proyecto.
+- `migraciones/`: una sola carpeta para todos los carriles, numeradas en orden. Se aplican a mano en Supabase (**SQL Editor → New query → pegar → Run**), en orden, y se guarda la query con el nombre del archivo.
+
+  | Archivo | Carril | Qué hace | ¿Aplicada? |
+  |---|---|---|---|
+  | `001_base.sql` | C | tablas `casos`, `fotos`, `fichas`, `eventos`, `knowledge_packs` y bucket `fotos` | sí |
+  | `002_rls.sql` | C | permisos: el navegador solo lee `eventos` | sí |
+  | `003_manuales.sql` | A | tabla `manuales`: caché de manuales del bibliotecario (solo servidor) | ver Supabase |
+
+  Para una migración nueva: siguiente número (`004_…`), sumarla a esta tabla y avisar para que alguien la corra.
 - `cliente.ts`: `supabaseServidor()` (clave secreta, solo en rutas de API) y `supabaseNavegador()` (clave pública, solo lee `eventos`). Si faltan variables devuelven `null` y nada se guarda: Supabase nunca frena la demo.
 - `repo.ts`: `guardarCaso`, `guardarFoto`, `subirImagen`, `guardarFicha`, `guardarEventos`, `listarEventos`. Todo pasa por los esquemas de `shared/`.
 - Escritura desde las pantallas: `POST /api/casos { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? }`, que llaman en segundo plano desde `app/(screens)/_estado/flujo.tsx`.
