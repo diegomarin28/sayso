@@ -1,7 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
+import { tiposParaPrompt } from "../planogenerator/tipos";
 import { enviarMensaje, ErrorIA, LIMITES, MODELOS, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo } from "../ia/claude";
+import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
@@ -56,7 +58,9 @@ PASO|orden|instrucción corta para una persona sin experiencia|ids de piezas sep
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|texto
 ${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
-- Ids de pieza en minúsculas con guion bajo. Usá estos cuando correspondan: ${IDS_PLANTILLA.join(", ")}.
+- Ids de pieza en minúsculas con guion bajo, que EMPIECEN con el tipo de pieza (así el 3D sabe dibujarla), por ejemplo ventilador_evaporador o carcasa_heladera. En una notebook, si la pieza coincide, usá estos ids tal cual: ${IDS_PLANTILLA.join(", ")}.
+- Tipos de pieza que el 3D sabe dibujar:
+${tiposParaPrompt()}
 - Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
@@ -155,6 +159,8 @@ export async function armarKnowledgePack(
   }
 
   const eventos: Evento[] = [];
+  /** Si algo falló (API, red, PDF), el resultado NO se guarda en la caché: se vuelve a intentar la próxima vez. */
+  let huboFalla = false;
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
   eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
 
@@ -191,6 +197,8 @@ export async function armarKnowledgePack(
         }),
       );
     } catch (e) {
+      if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
+      huboFalla = true;
       console.error("[knowledge] no pude armar el extracto del manual:", (e as Error).message);
     }
   }
@@ -209,6 +217,8 @@ export async function armarKnowledgePack(
       lectura = await leerManual(manual, tareaPack(nombreEquipo, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
       contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
     } catch (e) {
+      if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
+      huboFalla = true;
       console.error("[knowledge] falló la lectura del manual:", (e as Error).message);
     }
     if (!contenido || contenido.pasos.length === 0) {
@@ -226,6 +236,8 @@ export async function armarKnowledgePack(
       lectura = await guiaPublica(nombreEquipo, sintoma, enviar);
       contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública");
     } catch (e) {
+      if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
+      huboFalla = true;
       console.error("[knowledge] falló la guía pública:", (e as Error).message);
       lectura = { bloques: [], motivo: null };
       contenido = parsearContenido([], "Fuente pública");
@@ -276,9 +288,9 @@ export async function armarKnowledgePack(
     });
   }
 
-  // El resultado se guarda aunque sea la guía pública o esté vacío: otro intento no vuelve a pagar.
   const armado: Armado = { pack, manual: conManual ? manual : null, vistas };
-  await cache.set(clave, armado);
+  // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
+  if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
 }
 

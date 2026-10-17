@@ -4,6 +4,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { fichaEjemplo, KnowledgePack } from "../../shared";
 import type { EnviarMensaje } from "../ia/claude";
+import { IAEnPausa } from "../ia/freno";
 import { armarKnowledgePack, type Armado, type CachePacks } from "./armar";
 import { buscarManual } from "./buscar";
 import { descargarPdf, tituloDelPdf } from "./descargar";
@@ -327,18 +328,26 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
     expect(diag?.datos).toMatchObject({ motivo: "max_tokens", lineas: 1 });
   });
 
-  it("si nada da pasos, devuelve un pack vacío sin error y guarda el resultado: otro intento no repaga", async () => {
+  it("si nada da pasos, devuelve un pack vacío sin error y NO lo guarda (no vuelve como \"ya tenía la guía\")", async () => {
     const c = claude([{ type: "text", text: "nada" }], [[{ type: "text", text: "tampoco" }]]);
     const mapa = new Map<string, Armado>();
     const cache: CachePacks = { get: async (k) => mapa.get(k), set: async (k, v) => void mapa.set(k, v) };
-    const deps = { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache };
-    const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, deps);
+    const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache });
     expect(r.pack).toMatchObject({ verificado: false, pasos: [] });
     expect(r.eventos.map((e) => e.tipo)).toContain("guia_vacia");
-    const antes = c.llamadas.length;
-    const otra = await armarKnowledgePack({ ficha, sintoma: "ruido" }, deps);
-    expect(otra.desdeCache).toBe(true);
-    expect(c.llamadas.length).toBe(antes);
+    expect(mapa.size).toBe(0);
+  });
+
+  it("si el freno de gasto corta a mitad de camino, sube el error y no guarda nada", async () => {
+    const base = enviarFalso();
+    const enviar: EnviarMensaje = async (p) => {
+      if (String(p.system).includes("bibliotecario")) return base.enviar(p);
+      throw new IAEnPausa("limite");
+    };
+    const mapa = new Map<string, Armado>();
+    const cache: CachePacks = { get: async (k) => mapa.get(k), set: async (k, v) => void mapa.set(k, v) };
+    await expect(armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache })).rejects.toBeInstanceOf(IAEnPausa);
+    expect(mapa.size).toBe(0);
   });
 
   it("la guía pública sigue después de un pause_turn y junta lo de todas las vueltas", async () => {
