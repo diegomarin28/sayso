@@ -283,3 +283,62 @@ describe("repoSupabase", () => {
     expect(vistasDe(r)).toEqual({ explosionada: null, interior: null });
   });
 });
+
+describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
+  const subir = async () => "file_1";
+  const ficha = fichaEjemplo;
+
+  /** Bibliotecario que encuentra el PDF; lectura del manual y guía pública con las respuestas dadas. */
+  function claude(manual: unknown[], publica: unknown[][]) {
+    const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const base = enviarFalso();
+    let vuelta = 0;
+    const enviar: EnviarMensaje = async (p) => {
+      llamadas.push(p);
+      if (String(p.system).includes("bibliotecario")) return base.enviar(p);
+      if (p.tools?.length) {
+        const r = publica[Math.min(vuelta, publica.length - 1)];
+        vuelta++;
+        return mensaje(r, vuelta < publica.length ? "pause_turn" : "end_turn");
+      }
+      return mensaje(manual, "max_tokens");
+    };
+    return { enviar, llamadas };
+  }
+
+  it("si el manual no da pasos, cae en la guía pública (NO VERIFICADO) y deja el diagnóstico", async () => {
+    const c = claude([{ type: "text", text: "Acá tenés un resumen del manual sin el formato pedido." }], [[{ type: "text", text: "PASO|1|Limpiá las rejillas.|ventilador|bajo" }]]);
+    const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
+    expect(r.pack.verificado).toBe(false);
+    expect(r.pack.pasos).toHaveLength(1);
+    expect(r.manual).toBeNull();
+    const diag = r.eventos.find((e) => e.tipo === "lectura_sin_pasos");
+    expect(diag?.datos).toMatchObject({ motivo: "max_tokens", lineas: 1 });
+  });
+
+  it("si nada da pasos, devuelve un pack vacío sin error y guarda el resultado: otro intento no repaga", async () => {
+    const c = claude([{ type: "text", text: "nada" }], [[{ type: "text", text: "tampoco" }]]);
+    const mapa = new Map<string, Armado>();
+    const cache: CachePacks = { get: async (k) => mapa.get(k), set: async (k, v) => void mapa.set(k, v) };
+    const deps = { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache };
+    const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, deps);
+    expect(r.pack).toMatchObject({ verificado: false, pasos: [] });
+    expect(r.eventos.map((e) => e.tipo)).toContain("guia_vacia");
+    const antes = c.llamadas.length;
+    const otra = await armarKnowledgePack({ ficha, sintoma: "ruido" }, deps);
+    expect(otra.desdeCache).toBe(true);
+    expect(c.llamadas.length).toBe(antes);
+  });
+
+  it("la guía pública sigue después de un pause_turn y junta lo de todas las vueltas", async () => {
+    const c = claude([{ type: "text", text: "nada" }], [[{ type: "text", text: "PASO|1|Primero esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|2|Después esto.|ventilador|bajo" }]]);
+    const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
+    expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2]);
+  });
+
+  it("acepta líneas con viñetas, numeración o negritas", () => {
+    const c = parsearContenido(lineasConCitas([{ text: "1. **PASO**|1|Sacá la tapa.|tapa_inferior|bajo\n- PIEZA|ssd|SSD|abajo|" }]), "HMM");
+    expect(c.pasos).toHaveLength(1);
+    expect(c.piezas.map((p) => p.id)).toEqual(["ssd"]);
+  });
+});

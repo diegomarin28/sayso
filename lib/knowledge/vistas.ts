@@ -39,7 +39,7 @@ export function combinar(base: Vistas, extra: Vistas): Vistas {
 export async function ubicarVistas(manual: ManualSubido, clases: ClaseVista[], enviar: EnviarMensaje): Promise<Vistas> {
   if (clases.length === 0) return SIN_VISTAS;
   const tarea = `Buscá en el manual adjunto estas páginas y escribí SOLO estas líneas, una por renglón, sin nada más:\n${instruccionesVistas(clases)}`;
-  const bloques = await leerManual(manual, tarea, LIMITES.lectura.maxTokensVistas, enviar, "bibliotecario: ubicar vistas");
+  const { bloques } = await leerManual(manual, tarea, LIMITES.lectura.maxTokensVistas, enviar, "bibliotecario: ubicar vistas");
   const { vistas } = parsearContenido(lineasConCitas(bloques), manual.titulo);
   // Solo las que se pidieron.
   return { explosionada: clases.includes("explosionada") ? vistas.explosionada : null, interior: clases.includes("interior") ? vistas.interior : null };

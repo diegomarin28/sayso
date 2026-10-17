@@ -27,6 +27,8 @@ export function bloqueManual(m: ManualSubido): Anthropic.DocumentBlockParam {
   };
 }
 
+export type Lectura = { bloques: Anthropic.TextBlock[]; /** Por qué cortó el modelo (ej. "max_tokens"). */ motivo: string | null };
+
 /** Lee el manual con una tarea y devuelve los bloques de texto (con sus citas). */
 export async function leerManual(
   m: ManualSubido,
@@ -34,7 +36,7 @@ export async function leerManual(
   maxTokens: number,
   enviar: EnviarMensaje,
   etapa: string,
-): Promise<Anthropic.TextBlock[]> {
+): Promise<Lectura> {
   const r = await enviar(
     {
       model: MODELOS.vision,
@@ -45,5 +47,5 @@ export async function leerManual(
     },
     etapa,
   );
-  return r.content.filter((b): b is Anthropic.TextBlock => b.type === "text");
+  return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
 }
