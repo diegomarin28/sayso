@@ -7,7 +7,7 @@ import { armarKnowledgePack, type Armado, type CachePacks } from "./armar";
 import { buscarManual } from "./buscar";
 import { descargarPdf, tituloDelPdf } from "./descargar";
 import { lineasConCitas, parsearContenido } from "./lineas";
-import { repoEnMemoria, repoSupabase } from "./manuales";
+import { repoEnMemoria, repoSupabase, vistasDe } from "./manuales";
 
 const pagina = (texto: string, pag: number): Anthropic.TextCitation => ({
   type: "page_location",
@@ -158,7 +158,7 @@ describe("armarKnowledgePack", () => {
     expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({
       url: "https://ej.com/hmm.pdf",
       verificado: true,
-      pagina_vista_explosionada: 51,
+      paginas_vista_explosionada: [51],
       pagina_vista_interior: 73,
     });
   });
@@ -188,7 +188,7 @@ describe("armarKnowledgePack", () => {
       modelo,
       url: "https://ej.com/hmm.pdf",
       titulo: "HMM NB-15",
-      pagina_vista_explosionada: 51,
+      paginas_vista_explosionada: [51],
       pagina_vista_interior: 73,
       verificado: true,
       fuente: "fabricante",
@@ -277,8 +277,9 @@ describe("repoSupabase", () => {
     expect(escritas[1]).toMatchObject({ url: "https://ej.com/hmm.pdf", clave: "EJ|NB15" });
   });
 
-  it("lee filas viejas sin las columnas nuevas (vistas en null)", async () => {
+  it("lee filas viejas sin la columna nueva y no usa sus páginas (se vuelven a ubicar)", async () => {
     const r = await repoSupabase(dbFalsa(false).db).buscar("EJ", "NB-15");
-    expect(r).toMatchObject({ verificado: true, pagina_vista_explosionada: null, pagina_vista_interior: null });
+    expect(r).toMatchObject({ verificado: true, paginas_vista_explosionada: [1, 2], pagina_vista_interior: null });
+    expect(vistasDe(r)).toEqual({ explosionada: null, interior: null });
   });
 });

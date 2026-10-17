@@ -10,23 +10,30 @@ import type { Vistas } from "./lineas";
  * Nadie la carga a mano. Si Supabase no está configurado, se usa memoria (se pierde al reiniciar).
  */
 
-const Pagina = z.number().int().positive().nullable();
+const Pagina = z.number().int().positive();
 
 export const RegistroManual = z.object({
   marca: z.string(),
   modelo: z.string(),
   url: z.url(),
   titulo: z.string(),
-  /** Páginas físicas del PDF para el cartógrafo (ver `Vistas`). null = no se encontró todavía. */
-  pagina_vista_explosionada: Pagina.default(null),
-  pagina_vista_interior: Pagina.default(null),
+  /** Páginas físicas del PDF (ver `Vistas`): la vista explosionada general (una) y una vista del interior. */
+  paginas_vista_explosionada: z.array(Pagina).default([]),
+  pagina_vista_interior: Pagina.nullable().default(null),
   verificado: z.boolean(),
   fuente: z.enum(["fabricante", "ifixit", "otro"]),
 });
 export type RegistroManual = z.output<typeof RegistroManual>;
 
+/** Vistas guardadas de un manual. Filas de antes de la vista interior: no se usan (se vuelven a ubicar gratis). */
 export function vistasDe(r: RegistroManual | null): Vistas {
-  return { explosionada: r?.pagina_vista_explosionada ?? null, interior: r?.pagina_vista_interior ?? null };
+  if (!r || r.pagina_vista_interior === null) return { explosionada: null, interior: null };
+  return { explosionada: r.paginas_vista_explosionada[0] ?? null, interior: r.pagina_vista_interior };
+}
+
+/** Columnas de la tabla a partir de las vistas. */
+export function columnasVistas(v: Vistas): Pick<RegistroManual, "paginas_vista_explosionada" | "pagina_vista_interior"> {
+  return { paginas_vista_explosionada: v.explosionada ? [v.explosionada] : [], pagina_vista_interior: v.interior };
 }
 
 export interface RepoManuales {
@@ -46,13 +53,13 @@ export function repoEnMemoria(): RepoManuales {
   };
 }
 
-/** Columnas de las vistas: si la migración todavía no se aplicó, se guarda sin ellas. */
-const COLUMNAS_VISTAS = ["pagina_vista_explosionada", "pagina_vista_interior"] as const;
+/** Columna nueva: si su migración todavía no se aplicó, se guarda sin ella. */
+const COLUMNA_INTERIOR = "pagina_vista_interior";
 
 export function repoSupabase(db: SupabaseClient): RepoManuales {
   return {
     async buscar(marca, modelo) {
-      // select("*"): si falta alguna columna nueva, la fila igual se lee (y la vista queda en null).
+      // select("*"): si falta la columna nueva, la fila igual se lee (y la vista interior queda en null).
       const { data, error } = await db.from("manuales").select("*").eq("clave", claveManual(marca, modelo)).maybeSingle();
       if (error) {
         console.error("[manuales] no pude leer la caché:", error.message);
@@ -65,9 +72,9 @@ export function repoSupabase(db: SupabaseClient): RepoManuales {
       const fila: Record<string, unknown> = { ...RegistroManual.parse(registro), clave: claveManual(registro.marca, registro.modelo) };
       let { error } = await db.from("manuales").upsert(fila, { onConflict: "clave" });
       if (error?.code === "PGRST204") {
-        // PGRST204 = columna inexistente: falta aplicar la migración de las vistas.
-        console.warn("[manuales] falta aplicar la migración de vistas en Supabase: guardo el manual sin las páginas.");
-        for (const c of COLUMNAS_VISTAS) delete fila[c];
+        // PGRST204 = columna inexistente: falta aplicar la migración de la vista interior.
+        console.warn("[manuales] falta aplicar la migración de la vista interior en Supabase: guardo el manual sin ella.");
+        delete fila[COLUMNA_INTERIOR];
         ({ error } = await db.from("manuales").upsert(fila, { onConflict: "clave" }));
       }
       if (error) console.error("[manuales] no pude guardar en la caché:", error.message);

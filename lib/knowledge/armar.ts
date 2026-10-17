@@ -8,7 +8,7 @@ import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
 import { leerManual, SYSTEM_LECTOR } from "./lector";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Vistas } from "./lineas";
-import { repoManuales, vistasDe, type RepoManuales } from "./manuales";
+import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
 import { combinar, faltantes, instruccionesVistas, SIN_VISTAS, ubicarVistas } from "./vistas";
 
 /**
@@ -188,8 +188,7 @@ export async function armarKnowledgePack(
       modelo,
       url: manual.url,
       titulo: manual.titulo,
-      pagina_vista_explosionada: vistas.explosionada,
-      pagina_vista_interior: vistas.interior,
+      ...columnasVistas(vistas),
       verificado: (manualDeCache && registro?.verificado === true) || pack.verificado,
       fuente: manual.fuente,
     });

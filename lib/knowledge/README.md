@@ -3,7 +3,7 @@
 Dueño: Juanma
 
 Armado y caché del knowledge pack; verificación de citas; vistas del manual para el cartógrafo.
-Ruta: `POST /api/knowledge { ficha, sintoma }` → `{ pack, manualUrl, manualFileId, vistas, desdeCache, eventos }` (tarda ~30–60 s; más si hay que buscar el manual).
+Ruta: `POST /api/knowledge { ficha, sintoma }` → `{ pack, manualUrl, manualFileId, paginasVistaExplosionada, paginaVistaInterior, desdeCache, eventos }` (tarda ~30–60 s; más si hay que buscar el manual).
 
 1. `manuales.ts`: caché en Supabase (tabla `manuales`, migración `lib/supabase/migraciones/003_manuales.sql`). Si el modelo ya tiene un manual verificado, se reusa con sus vistas. Nadie la carga a mano.
 2. Si no está, `buscar.ts` (bibliotecario) es un agente con `web_search`, `web_fetch` y `probar_pdf`: el código baja cada URL candidata y verifica que sea un PDF real; solo se acepta una URL verificada.
@@ -15,12 +15,12 @@ Ruta: `POST /api/knowledge { ficha, sintoma }` → `{ pack, manualUrl, manualFil
 
 ## Vistas (para `/api/plano`)
 
-`vistas = { explosionada, interior }`, cada una un número de página o `null`:
+`/api/knowledge` devuelve `paginasVistaExplosionada` (lista con la vista explosionada general, o vacía) y `paginaVistaInterior` (número o `null`). Se pasan tal cual a `/api/plano` junto con `manualFileId`:
 
 - **explosionada:** la vista explosionada general (piezas separadas y numeradas). Sirve para saber qué pieza es cada número.
 - **interior:** el interior completo con el equipo abierto (en una notebook: dada vuelta y sin la tapa inferior, como en la página del ventilador). Sirve para ubicar las piezas.
 - Son páginas **físicas** del PDF (1 = primera hoja; la misma numeración que `gs -dFirstPage`), tomadas de la cita de la API, no del número impreso en la hoja (en el HMM de la E14 Gen 2 la hoja impresa "45" es la física 51).
-- En la tabla `manuales`: columnas `pagina_vista_explosionada` y `pagina_vista_interior`. Si la migración todavía no se aplicó, el manual se guarda sin ellas (y se vuelven a ubicar en la próxima lectura, sin costo extra).
+- En la tabla `manuales`: columnas `paginas_vista_explosionada` (lista) y `pagina_vista_interior`. Si la migración de la vista interior todavía no se aplicó, el manual se guarda sin ella y las vistas se vuelven a ubicar en la próxima lectura (sin costo extra: van en la misma lectura del pack).
 
 Packs: caché por modelo + síntoma (`CachePacks`). Manuales: Supabase; si las claves o la tabla no están, memoria.
 Umbrales y límites: `LIMITES` en `lib/ia/claude.ts`.
