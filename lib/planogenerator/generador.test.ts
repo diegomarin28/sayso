@@ -274,3 +274,35 @@ describe("paginaDelManual (recorte)", () => {
     expect(paginaDelManual(null, [51, 12])).toBeNull();
   });
 });
+
+describe("origen de cada ubicación", () => {
+  it("con página y confianza = manual (con cita); sin página = estimada; completada = plantilla", () => {
+    const { plano } = planoDesdePropuesta(kp, {
+      ...propuestaBuena,
+      medidas_fuente: "manual",
+      piezas: propuestaBuena.piezas.filter((p) => p.pieza !== "wifi"),
+    });
+    const origen = (id: string) => plano.piezas.find((p) => p.pieza === id)?.origen;
+    expect(origen("ventilador")).toBe("manual"); // página 54, confianza alta
+    expect(plano.piezas.find((p) => p.pieza === "ventilador")?.cita).toMatchObject({ pagina: 54 });
+    expect(origen("ssd")).toBe("estimada"); // sin página
+    expect(origen("wifi")).toBe("plantilla"); // la IA no la ubicó
+    expect(origen("base")).toBe("manual"); // medidas del manual
+    expect(plano.medidas).toEqual({ ancho: "manual", prof: "manual" });
+  });
+
+  it("confianza baja aunque cite página = estimada; medidas sin fuente = carcasa estimada", () => {
+    const { plano } = planoDesdePropuesta(kp, {
+      ...propuestaBuena,
+      piezas: propuestaBuena.piezas.map((p) => (p.pieza === "ventilador" ? { ...p, confianza: "baja" as const } : p)),
+    });
+    expect(plano.piezas.find((p) => p.pieza === "ventilador")?.origen).toBe("estimada");
+    expect(plano.piezas.find((p) => p.pieza === "base")?.origen).toBe("estimada");
+  });
+
+  it("sin IA (plantilla) todo es plantilla, también las medidas", () => {
+    const { plano } = planoDesdePlantilla(kp);
+    expect(new Set(plano.piezas.map((p) => p.origen))).toEqual(new Set(["plantilla"]));
+    expect(plano.medidas).toEqual({ ancho: "plantilla", prof: "plantilla" });
+  });
+});

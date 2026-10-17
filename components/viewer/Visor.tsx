@@ -31,6 +31,7 @@ import {
   type ModoVista,
   type NodoAnimable,
 } from "./escena";
+import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import { bajarCalidad, calidadInicial, esNegro, soporteDe, Vigia, type Calidad } from "./salud";
 import { OBJETIVO_GENERAL, aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
@@ -104,6 +105,12 @@ export function Visor({
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
   const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
   const soportaWebGL2 = useSoportaWebGL2();
+  // Un plano mixto no se muestra como verificado entero (ver origen.ts).
+  const origen = useMemo(() => {
+    const r = resumenOrigen(plano);
+    const medidas = r.medidasEstimadas && r.manual + r.estimada + r.plantilla > 0 && !todoDelManual(r) ? " · medidas estimadas" : "";
+    return { texto: textoResumen(r) + medidas, verificado: todoDelManual(r) };
+  }, [plano]);
 
   useEffect(() => {
     onEfectos?.(efectosActivos);
@@ -217,6 +224,15 @@ export function Visor({
         </Canvas>
       </Resguardo>
       {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
+      {!falla && (
+        <p
+          className="pointer-events-none absolute bottom-16 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11px] text-white/80 backdrop-blur"
+          title="De dónde sale la ubicación de las piezas del 3D"
+        >
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${origen.verificado ? "bg-confirmado" : "bg-probable"}`} />
+          <span className="truncate">{origen.texto}</span>
+        </p>
+      )}
       <button
         type="button"
         onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
@@ -436,6 +452,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000));
 
   const delKp = useMemo(() => new Map(piezas?.map((p) => [p.id, p]) ?? []), [piezas]);
+  const delPlano = useMemo(() => new Map(plano.piezas.map((p) => [p.pieza, p])), [plano]);
 
   return (
     <>
@@ -444,7 +461,14 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
         const a = escena.nodos.get(id);
         const kp = delKp.get(id);
         return a ? (
-          <Etiqueta key={id} animable={a} nombre={kp?.nombre} numeroKp={kp?.etiquetaManual} reservado={reservado} />
+          <Etiqueta
+            key={id}
+            animable={a}
+            nombre={kp?.nombre}
+            numeroKp={kp?.etiquetaManual}
+            origen={textoOrigenPieza(delPlano.get(id) ?? {})}
+            reservado={reservado}
+          />
         ) : null;
       })}
       <ContactShadows
@@ -466,6 +490,8 @@ type EtiquetaProps = {
   animable: NodoAnimable;
   nombre?: string;
   numeroKp?: string;
+  /** De dónde sale la ubicación (ej. "Manual · HMM p. 54", "Estimada", "Genérica"). */
+  origen: string;
   /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
   reservado: { current: number };
 };
@@ -475,7 +501,7 @@ type EtiquetaProps = {
  * hacia el lado donde entran (`ladoEtiqueta`): arriba a la derecha si se puede; abajo si arriba
  * se encimaría con la frase; a la izquierda si a la derecha se sale del lienzo.
  */
-function Etiqueta({ animable, nombre, numeroKp, reservado }: EtiquetaProps) {
+function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaProps) {
   const datos = animable.nodo.userData as DatosPieza;
   const numero = datos.etiquetaManual ?? numeroKp;
   const base = animable.principal.position;
@@ -529,7 +555,10 @@ function Etiqueta({ animable, nombre, numeroKp, reservado }: EtiquetaProps) {
               {numero}
             </span>
           )}
-          <span className={numero ? "" : "pl-1"}>{nombre ?? nombreLegible(datos.pieza)}</span>
+          <span className={`flex flex-col leading-tight ${numero ? "" : "pl-1"}`}>
+            <span>{nombre ?? nombreLegible(datos.pieza)}</span>
+            <span className="text-[10px] font-normal text-white/60">{origen}</span>
+          </span>
         </div>
       </div>
     </Html>,

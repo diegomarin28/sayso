@@ -50,10 +50,15 @@ export function POST(req: Request) {
     const leido = r.paginasLeidas
       ? `${r.paginasLeidas.length === 1 ? "la página" : "las páginas"} ${r.paginasLeidas.join(", ")} del manual`
       : "el manual";
+    // Un plano mixto no se anuncia como leído entero del manual.
+    const cuantas = (o: string) => r.plano.piezas.filter((p) => p.origen === o).length;
+    const desglose = r.plano.piezas.some((p) => p.origen)
+      ? `: ${cuantas("manual")} del manual, ${cuantas("estimada")} estimadas, ${cuantas("plantilla")} genéricas`
+      : "";
     const mensaje = r.desdeCache
-      ? `Reusé el plano 3D de este modelo (${r.plano.piezas.length} piezas).`
+      ? `Reusé el plano 3D de este modelo (${r.plano.piezas.length} piezas${desglose}).`
       : r.origen === "ia"
-        ? `Ubiqué ${r.plano.piezas.length} piezas leyendo ${leido}${r.avisos.length ? ` (${r.avisos.length} correcciones)` : ""}.`
+        ? `Ubiqué ${r.plano.piezas.length} piezas leyendo ${leido}${desglose}${r.avisos.length ? ` (${r.avisos.length} correcciones)` : ""}.`
         : "No pude ubicar las piezas con el manual: muestro un esquema genérico, no es tu modelo exacto.";
     return { ...r, eventos: [evento(e.casoId, "cartografo", "plano_generado", mensaje, { origen: r.origen, desdeCache: r.desdeCache, paginasLeidas: r.paginasLeidas })] };
   });

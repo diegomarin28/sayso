@@ -136,6 +136,13 @@ export type KnowledgePack = z.infer<typeof KnowledgePack>;
 
 export const FormaPieza = z.enum(["caja", "cilindro", "extrusion"]);
 
+/**
+ * De dónde sale un dato del plano 3D: "manual" = la IA lo vio en una página del manual (con cita);
+ * "estimada" = lo dedujo sin página o con poca confianza; "plantilla" = valor genérico.
+ */
+export const OrigenDato3D = z.enum(["manual", "estimada", "plantilla"]);
+export type OrigenDato3D = z.infer<typeof OrigenDato3D>;
+
 export const PiezaPlano = z.object({
   pieza: z.string(), // id de Pieza
   forma: FormaPieza,
@@ -145,6 +152,8 @@ export const PiezaPlano = z.object({
   padre: z.string().optional(),
   etiquetaManual: z.string().optional(),
   cita: Cita.optional(),
+  /** De dónde sale la ubicación. Sin dato (planos viejos, fixtures) = no verificada. */
+  origen: OrigenDato3D.optional(),
 });
 export type PiezaPlano = z.infer<typeof PiezaPlano>;
 
@@ -153,6 +162,8 @@ export const PlanoDePiezas = z.object({
   modelo: z.string(),
   unidades: z.literal("cm"),
   piezas: z.array(PiezaPlano),
+  /** De dónde salen las medidas de la carcasa (la "estimada" se muestra como tal). */
+  medidas: z.object({ ancho: OrigenDato3D, prof: OrigenDato3D }).optional(),
 });
 export type PlanoDePiezas = z.infer<typeof PlanoDePiezas>;
 
