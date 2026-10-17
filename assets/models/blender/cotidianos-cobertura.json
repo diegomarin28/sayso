@@ -1,0 +1,211 @@
+{
+  "air_fryer": {
+    "nuevas": [
+      "canasta_freidora",
+      "rejilla_crujiente",
+      "interruptor_basculante",
+      "perilla_mando"
+    ],
+    "reutilizadas": [
+      "resistencia",
+      "termostato",
+      "ventilador",
+      "motor",
+      "panel",
+      "fuente",
+      "tornillo"
+    ]
+  },
+  "licuadora": {
+    "nuevas": [
+      "jarra_licuadora",
+      "tapa_jarra",
+      "cuchillas_licuadora",
+      "acople_transmision",
+      "junta_jarra"
+    ],
+    "reutilizadas": [
+      "motor",
+      "selector_deslizante",
+      "placa@control",
+      "cable@redondo",
+      "tornillo"
+    ]
+  },
+  "tostadora": {
+    "nuevas": [
+      "soporte_pan",
+      "elevador_tostadora",
+      "perilla_mando"
+    ],
+    "reutilizadas": [
+      "resistencia",
+      "soporte_mica",
+      "termostato",
+      "bandeja@goteo",
+      "cable@redondo"
+    ]
+  },
+  "pava": {
+    "nuevas": [
+      "jarra_pava",
+      "base_contactos",
+      "interruptor_basculante",
+      "tapa_pava",
+      "filtro_pico"
+    ],
+    "reutilizadas": [
+      "resistencia",
+      "termostato",
+      "cable@redondo",
+      "tornillo"
+    ]
+  },
+  "microondas": {
+    "nuevas": [
+      "magnetron",
+      "guia_ondas",
+      "plato_microondas",
+      "aro_rodillos",
+      "acople_plato",
+      "fusible_cartucho"
+    ],
+    "reutilizadas": [
+      "carcasa@microondas",
+      "capacitor",
+      "transformador",
+      "motor",
+      "ventilador",
+      "panel",
+      "puerta",
+      "soporte_mica",
+      "conector@terminal"
+    ]
+  },
+  "plancha": {
+    "nuevas": [
+      "interruptor_basculante",
+      "suela_plancha",
+      "deposito_plancha",
+      "boton_pulverizador",
+      "perilla_mando"
+    ],
+    "reutilizadas": [
+      "resistencia",
+      "termostato",
+      "cable@redondo",
+      "tornillo"
+    ]
+  },
+  "ventilador_pie": {
+    "nuevas": [
+      "helice_ventilador",
+      "rejilla_ventilador",
+      "pedestal_ventilador",
+      "tubo_telescopico",
+      "perilla_mando"
+    ],
+    "reutilizadas": [
+      "motor",
+      "capacitor@motor",
+      "selector_deslizante",
+      "cable@redondo",
+      "tornillo"
+    ]
+  },
+  "smartwatch": {
+    "nuevas": [
+      "caja_reloj",
+      "correa_reloj",
+      "corona_reloj",
+      "pantalla@reloj",
+      "tapa_reloj",
+      "sensor_optico",
+      "bobina_carga",
+      "contacto_resorte",
+      "microfono_mems"
+    ],
+    "reutilizadas": [
+      "bateria@celular",
+      "placa",
+      "conector",
+      "tornillo"
+    ]
+  },
+  "reloj": {
+    "nuevas": [
+      "caja_reloj",
+      "correa_reloj",
+      "corona_reloj",
+      "mecanismo_reloj",
+      "agujas_reloj",
+      "esfera_reloj",
+      "tapa_reloj"
+    ],
+    "reutilizadas": [
+      "pila",
+      "tornillo"
+    ]
+  },
+  "auriculares": {
+    "nuevas": [
+      "bobina_carga",
+      "carcasa_auricular",
+      "almohadilla_silicona",
+      "estuche_auriculares",
+      "contacto_resorte",
+      "microfono_mems",
+      "malla_acustica"
+    ],
+    "reutilizadas": [
+      "bateria@celular",
+      "parlante@celular",
+      "placa",
+      "conector@usb_c"
+    ]
+  },
+  "parlante_bluetooth": {
+    "nuevas": [
+      "microfono_mems",
+      "radiador_pasivo",
+      "malla_acustica"
+    ],
+    "reutilizadas": [
+      "parlante",
+      "bateria@celular",
+      "placa",
+      "conector@usb_c",
+      "boton_reset"
+    ]
+  },
+  "control_remoto": {
+    "nuevas": [
+      "membrana_botones",
+      "portapilas",
+      "pila_aa",
+      "led_infrarrojo"
+    ],
+    "reutilizadas": [
+      "placa",
+      "tornillo"
+    ]
+  },
+  "cargador": {
+    "nuevas": [
+      "fusible_cartucho",
+      "bobina_carga",
+      "contacto_resorte",
+      "carcasa_cargador",
+      "clavija_red",
+      "nucleo_ferrita"
+    ],
+    "reutilizadas": [
+      "fuente",
+      "transformador",
+      "capacitor",
+      "conector@usb_c",
+      "conector_usb_a",
+      "cable@redondo"
+    ]
+  }
+}

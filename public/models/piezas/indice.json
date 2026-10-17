@@ -6,7 +6,8 @@
   "frio_calor": "frio_calor.glb",
   "estructura": "estructura.glb",
   "carcasas": "carcasas.glb",
-  "dispositivos": "dispositivos.glb"
+  "dispositivos": "dispositivos.glb",
+  "cotidianos": "cotidianos.glb"
  },
  "tipos": {
   "base": {
@@ -691,6 +692,318 @@
    "familia": "dispositivos",
    "descripcion": "Canastillo de café: copa metálica abierta con perforaciones ilustrativas en el fondo.",
    "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
+  },
+  "canasta_freidora": {
+   "familia": "cotidianos",
+   "descripcion": "Canasta de freidora de aire: cuba abierta, ranuras laterales y mango aislante.",
+   "equipos": "air_fryer airfryer freidora aire",
+   "ajuste": "libre"
+  },
+  "rejilla_crujiente": {
+   "familia": "cotidianos",
+   "descripcion": "Inserto perforado de canasta: placa extraíble con ranuras y cuatro patas de silicona.",
+   "equipos": "air_fryer airfryer freidora aire",
+   "ajuste": "libre"
+  },
+  "jarra_licuadora": {
+   "familia": "cotidianos",
+   "descripcion": "Jarra cónica abierta con pico, nervaduras y asa lateral; recipiente ilustrativo.",
+   "equipos": "licuadora batidora blender",
+   "ajuste": "proporcional"
+  },
+  "tapa_jarra": {
+   "familia": "cotidianos",
+   "descripcion": "Tapa circular de jarra con tapón central extraíble y reborde inferior.",
+   "equipos": "licuadora batidora blender",
+   "ajuste": "redondo:xz"
+  },
+  "cuchillas_licuadora": {
+   "familia": "cotidianos",
+   "descripcion": "Conjunto de cuatro cuchillas inclinadas y cubo central; sin filo funcional.",
+   "equipos": "licuadora batidora blender",
+   "ajuste": "proporcional"
+  },
+  "acople_transmision": {
+   "familia": "cotidianos",
+   "descripcion": "Acople de transmisión dentado de licuadora: disco, seis dientes y alojamiento central.",
+   "equipos": "licuadora batidora blender",
+   "ajuste": "redondo:xz"
+  },
+  "junta_jarra": {
+   "familia": "cotidianos",
+   "descripcion": "Junta anular de jarra de licuadora, con labio interior; sin medidas de compatibilidad.",
+   "equipos": "licuadora batidora blender",
+   "ajuste": "redondo:xz"
+  },
+  "soporte_pan": {
+   "familia": "cotidianos",
+   "descripcion": "Jaula de soporte para tostada: dos marcos de alambre y travesaños separados.",
+   "equipos": "tostadora toaster",
+   "ajuste": "proporcional"
+  },
+  "elevador_tostadora": {
+   "familia": "cotidianos",
+   "descripcion": "Elevador de tostadora: carro, guía vertical, resorte y palanca aislante.",
+   "equipos": "tostadora toaster",
+   "ajuste": "proporcional"
+  },
+  "jarra_pava": {
+   "familia": "cotidianos",
+   "descripcion": "Cuerpo abierto de pava eléctrica con pico y asa aislante, sin contenido.",
+   "equipos": "pava hervidor kettle electrica",
+   "ajuste": "proporcional"
+  },
+  "base_contactos": {
+   "familia": "cotidianos",
+   "descripcion": "Base de alimentación de pava: disco y contactos concéntricos, sin circuito eléctrico.",
+   "equipos": "pava hervidor kettle electrica",
+   "ajuste": "redondo:xz"
+  },
+  "interruptor_basculante": {
+   "familia": "cotidianos",
+   "descripcion": "Interruptor basculante: marco, tecla inclinada y terminales inferiores.",
+   "equipos": "pava hervidor kettle electrica plancha iron vapor air_fryer airfryer freidora aire",
+   "ajuste": "proporcional"
+  },
+  "tapa_pava": {
+   "familia": "cotidianos",
+   "descripcion": "Tapa de pava eléctrica: disco con reborde y pomo aislante.",
+   "equipos": "pava hervidor kettle electrica",
+   "ajuste": "redondo:xz"
+  },
+  "filtro_pico": {
+   "familia": "cotidianos",
+   "descripcion": "Filtro antisarro del pico: marco trapezoidal y malla de alambre.",
+   "equipos": "pava hervidor kettle electrica",
+   "ajuste": "proporcional"
+  },
+  "magnetron": {
+   "familia": "cotidianos",
+   "descripcion": "Magnetrón ilustrativo: bloque de aletas, brida, antena cerámica y terminales. Sin interior funcional.",
+   "equipos": "microondas microwave",
+   "ajuste": "proporcional"
+  },
+  "guia_ondas": {
+   "familia": "cotidianos",
+   "descripcion": "Guía de ondas esquemática: conducto metálico rectangular con bridas abiertas.",
+   "equipos": "microondas microwave",
+   "ajuste": "proporcional"
+  },
+  "plato_microondas": {
+   "familia": "cotidianos",
+   "descripcion": "Plato giratorio de microondas: disco de vidrio con borde y tres apoyos inferiores.",
+   "equipos": "microondas microwave",
+   "ajuste": "redondo:xz"
+  },
+  "aro_rodillos": {
+   "familia": "cotidianos",
+   "descripcion": "Soporte del plato de microondas: anillo y tres ruedas radiales.",
+   "equipos": "microondas microwave",
+   "ajuste": "redondo:xz"
+  },
+  "acople_plato": {
+   "familia": "cotidianos",
+   "descripcion": "Acople de plato giratorio: cubo y tres brazos de arrastre.",
+   "equipos": "microondas microwave",
+   "ajuste": "proporcional"
+  },
+  "fusible_cartucho": {
+   "familia": "cotidianos",
+   "descripcion": "Fusible de cartucho: tubo cerámico y casquillos metálicos, sin valor eléctrico asignado.",
+   "equipos": "microondas microwave cargador celular telefono adaptador",
+   "ajuste": "tramo:x:redondo"
+  },
+  "suela_plancha": {
+   "familia": "cotidianos",
+   "descripcion": "Suela de plancha con punta redondeada y orificios de vapor ilustrativos.",
+   "equipos": "plancha iron vapor",
+   "ajuste": "proporcional"
+  },
+  "deposito_plancha": {
+   "familia": "cotidianos",
+   "descripcion": "Depósito de agua de plancha: cuerpo afilado, boca de carga y conexión inferior.",
+   "equipos": "plancha iron vapor",
+   "ajuste": "proporcional"
+  },
+  "boton_pulverizador": {
+   "familia": "cotidianos",
+   "descripcion": "Botón mecánico pulverizador de plancha: cabezal, vástago y tubo de entrada.",
+   "equipos": "plancha iron vapor",
+   "ajuste": "proporcional"
+  },
+  "helice_ventilador": {
+   "familia": "cotidianos",
+   "descripcion": "Hélice de ventilador de pie: cubo y tres palas curvas de espesor uniforme.",
+   "equipos": "ventilador_pie ventilador pedestal",
+   "ajuste": "proporcional"
+  },
+  "rejilla_ventilador": {
+   "familia": "cotidianos",
+   "descripcion": "Rejilla circular de ventilador: aros concéntricos y alambres radiales, separada de la hélice.",
+   "equipos": "ventilador_pie ventilador pedestal",
+   "ajuste": "redondo:xz"
+  },
+  "pedestal_ventilador": {
+   "familia": "cotidianos",
+   "descripcion": "Base de ventilador de pie: disco lastrado, cuatro apoyos y zócalo central.",
+   "equipos": "ventilador_pie ventilador pedestal",
+   "ajuste": "redondo:xz"
+  },
+  "tubo_telescopico": {
+   "familia": "cotidianos",
+   "descripcion": "Columna telescópica de ventilador: tubos concéntricos y collar de altura.",
+   "equipos": "ventilador_pie ventilador pedestal",
+   "ajuste": "tramo:y:redondo"
+  },
+  "perilla_mando": {
+   "familia": "cotidianos",
+   "descripcion": "Perilla circular de mando con estrías, indicador y eje inferior.",
+   "equipos": "ventilador_pie ventilador pedestal air_fryer airfryer freidora aire plancha iron vapor tostadora toaster",
+   "ajuste": "redondo:xz"
+  },
+  "caja_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Caja circular de reloj: anillo abierto con asas para pasadores de correa.",
+   "equipos": "smartwatch reloj_inteligente wearable reloj reloj_pulsera analogico cuarzo",
+   "ajuste": "proporcional"
+  },
+  "correa_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Dos mitades de correa de pulsera con perforaciones, hebilla y pasadores; distinta de una correa de transmisión.",
+   "equipos": "smartwatch reloj_inteligente wearable reloj reloj_pulsera analogico cuarzo",
+   "ajuste": "proporcional"
+  },
+  "corona_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Corona de ajuste de reloj: cilindro estriado con tija, separado de la caja.",
+   "equipos": "reloj reloj_pulsera analogico cuarzo smartwatch reloj_inteligente wearable",
+   "ajuste": "redondo:xz"
+  },
+  "mecanismo_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Movimiento ilustrativo de reloj de cuarzo: platina, ruedas y bobina, sin engrane calibrado.",
+   "equipos": "reloj reloj_pulsera analogico cuarzo",
+   "ajuste": "redondo:xz"
+  },
+  "agujas_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Conjunto de agujas analógicas con eje central; orientación meramente ilustrativa.",
+   "equipos": "reloj reloj_pulsera analogico cuarzo",
+   "ajuste": "proporcional"
+  },
+  "esfera_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Esfera de reloj analógico con doce índices y alojamiento central.",
+   "equipos": "reloj reloj_pulsera analogico cuarzo",
+   "ajuste": "redondo:xz"
+  },
+  "pantalla@reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Display circular de reloj inteligente con vidrio, marco y flex lateral.",
+   "equipos": "smartwatch reloj_inteligente wearable",
+   "ajuste": "proporcional"
+  },
+  "tapa_reloj": {
+   "familia": "cotidianos",
+   "descripcion": "Tapa trasera circular de reloj con junta anular y cuatro alojamientos de tornillo.",
+   "equipos": "reloj reloj_pulsera analogico cuarzo smartwatch reloj_inteligente wearable",
+   "ajuste": "redondo:xz"
+  },
+  "sensor_optico": {
+   "familia": "cotidianos",
+   "descripcion": "Módulo óptico trasero de smartwatch: ventana, dos emisores y receptor; sin medición médica.",
+   "equipos": "smartwatch reloj_inteligente wearable",
+   "ajuste": "proporcional"
+  },
+  "bobina_carga": {
+   "familia": "cotidianos",
+   "descripcion": "Bobina plana de carga inductiva: espiral de cobre, respaldo de ferrita y terminales.",
+   "equipos": "smartwatch reloj_inteligente wearable auriculares inalambricos earbuds tws cargador celular telefono adaptador",
+   "ajuste": "proporcional"
+  },
+  "carcasa_auricular": {
+   "familia": "cotidianos",
+   "descripcion": "Carcasa genérica de auricular inalámbrico: cápsula hueca y tallo con contactos.",
+   "equipos": "auriculares inalambricos earbuds tws",
+   "ajuste": "proporcional"
+  },
+  "almohadilla_silicona": {
+   "familia": "cotidianos",
+   "descripcion": "Almohadilla in-ear de silicona: campana abierta y conducto central.",
+   "equipos": "auriculares inalambricos earbuds tws",
+   "ajuste": "redondo:xz"
+  },
+  "estuche_auriculares": {
+   "familia": "cotidianos",
+   "descripcion": "Estuche abierto de auriculares con dos alojamientos y bisagra trasera, sin baterías modeladas dentro.",
+   "equipos": "auriculares inalambricos earbuds tws",
+   "ajuste": "proporcional"
+  },
+  "contacto_resorte": {
+   "familia": "cotidianos",
+   "descripcion": "Contacto de carga de resorte (pogo): camisa, vástago y base; ampliable por el plano.",
+   "equipos": "auriculares inalambricos earbuds tws smartwatch reloj_inteligente wearable cargador celular telefono adaptador",
+   "ajuste": "proporcional"
+  },
+  "microfono_mems": {
+   "familia": "cotidianos",
+   "descripcion": "Micrófono MEMS genérico: cápsula rectangular, puerto acústico y contactos inferiores.",
+   "equipos": "auriculares inalambricos earbuds tws smartwatch reloj_inteligente wearable parlante_bluetooth parlante altavoz bluetooth",
+   "ajuste": "proporcional"
+  },
+  "radiador_pasivo": {
+   "familia": "cotidianos",
+   "descripcion": "Radiador acústico pasivo: membrana central y suspensión anular; sin bobina ni respuesta calibrada.",
+   "equipos": "parlante_bluetooth parlante altavoz bluetooth",
+   "ajuste": "redondo:xz"
+  },
+  "malla_acustica": {
+   "familia": "cotidianos",
+   "descripcion": "Malla protectora acústica: marco y tejido de alambres cruzados; ajustable por eje.",
+   "equipos": "parlante_bluetooth parlante altavoz bluetooth auriculares inalambricos earbuds tws",
+   "ajuste": "libre"
+  },
+  "membrana_botones": {
+   "familia": "cotidianos",
+   "descripcion": "Membrana elastomérica de control remoto con teclas y pastillas conductoras inferiores.",
+   "equipos": "control_remoto control remoto mando",
+   "ajuste": "libre"
+  },
+  "portapilas": {
+   "familia": "cotidianos",
+   "descripcion": "Portapilas doble AA vacío: separador, contactos y resortes de compresión.",
+   "equipos": "control_remoto control remoto mando",
+   "ajuste": "proporcional"
+  },
+  "pila_aa": {
+   "familia": "cotidianos",
+   "descripcion": "Pila cilíndrica AA esquemática con terminal positivo saliente; sin química ni voltaje asignados.",
+   "equipos": "control_remoto control remoto mando",
+   "ajuste": "redondo:xz"
+  },
+  "led_infrarrojo": {
+   "familia": "cotidianos",
+   "descripcion": "Emisor infrarrojo de control: cápsula redondeada y dos terminales, sin longitud de onda especificada.",
+   "equipos": "control_remoto control remoto mando",
+   "ajuste": "proporcional"
+  },
+  "carcasa_cargador": {
+   "familia": "cotidianos",
+   "descripcion": "Carcasa vacía de cargador de celular con alojamiento USB; sin clavija ni circuito dentro.",
+   "equipos": "cargador celular telefono adaptador",
+   "ajuste": "proporcional"
+  },
+  "clavija_red": {
+   "familia": "cotidianos",
+   "descripcion": "Clavija ilustrativa de dos espigas con soporte aislante; no declara norma ni compatibilidad local.",
+   "equipos": "cargador celular telefono adaptador",
+   "ajuste": "proporcional"
+  },
+  "nucleo_ferrita": {
+   "familia": "cotidianos",
+   "descripcion": "Núcleo toroidal de ferrita con bobinado de cobre simplificado, sin valor de inductancia.",
+   "equipos": "cargador celular telefono adaptador",
    "ajuste": "redondo:xz"
   }
  }
