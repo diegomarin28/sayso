@@ -52,8 +52,8 @@ export default function Experto() {
   if (!caso || !preparado || !plano) return null;
 
   return (
-    <main className="flex h-dvh w-full flex-col bg-black">
-      <div className="mx-auto w-full max-w-xl shrink-0 px-5 pt-6 pb-3">
+    <main className="flex h-dvh w-full flex-col bg-fondo">
+      <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-4 pb-3 sm:px-6 md:pt-6">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <Encabezado paso={5} alVolver={() => router.push("/preparando")} />

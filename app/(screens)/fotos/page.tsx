@@ -181,7 +181,7 @@ export default function CapturaGuiada() {
           )}
 
           <label
-            className={`relative block aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-3xl bg-superficie ${
+            className={`relative block aspect-[4/3] max-h-[55dvh] w-full cursor-pointer overflow-hidden rounded-3xl bg-superficie ${
               toma.revisando ? "pointer-events-none" : ""
             }`}
           >

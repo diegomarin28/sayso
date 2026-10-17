@@ -62,7 +62,7 @@ export function Repuestos({
         onClick={() => setAbierto(true)}
         className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-borde bg-superficie px-4 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
       >
-        Repuestos{" "}
+        <span className="max-[400px]:sr-only">Repuestos</span>
         <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
       </button>
 
@@ -96,11 +96,11 @@ export function Repuestos({
         aria-modal="true"
         aria-label="Repuestos"
         aria-hidden={!abierto}
-        className={`fixed inset-0 z-50 items-end justify-center bg-black/70 ${abierto ? "flex" : "hidden"}`}
+        className={`fixed inset-0 z-50 items-end justify-center bg-black/60 md:items-center md:p-6 ${abierto ? "flex" : "hidden"}`}
         onClick={() => setAbierto(false)}
       >
         <div
-          className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col gap-6 overflow-y-auto rounded-t-3xl border border-borde bg-fondo px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+          className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col gap-6 overflow-y-auto rounded-t-3xl border border-borde bg-fondo px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-2xl md:rounded-3xl md:pb-6"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-4">
