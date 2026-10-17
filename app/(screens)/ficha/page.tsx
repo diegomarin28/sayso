@@ -122,7 +122,7 @@ export default function FichaDelEquipo() {
 
   return (
     <Pantalla>
-      <Encabezado paso={3} orbe={ficha ? "quieto" : "pensando"} />
+      <Encabezado paso={3} orbe={ficha ? "quieto" : "pensando"} alVolver={() => router.push("/fotos")} />
 
       <DiceExperto texto={dice} />
 

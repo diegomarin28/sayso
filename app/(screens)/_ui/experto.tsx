@@ -49,10 +49,10 @@ export function Encabezado({
       {alVolver && (
         <button
           onClick={alVolver}
-          aria-label="Volver"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-texto-suave transition hover:bg-superficie hover:text-texto active:scale-95"
+          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
         >
           <FlechaAtras />
+          Atrás
         </button>
       )}
       <Link href="/" aria-label="Volver al inicio">

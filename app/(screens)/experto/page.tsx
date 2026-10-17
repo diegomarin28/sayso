@@ -44,7 +44,7 @@ export default function Experto() {
   return (
     <main className="flex h-dvh w-full flex-col bg-black">
       <div className="mx-auto w-full max-w-xl shrink-0 px-5 pt-6 pb-3">
-        <Encabezado paso={5} />
+        <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
       </div>
       <GuiaExperto
         className="min-h-0 flex-1"
