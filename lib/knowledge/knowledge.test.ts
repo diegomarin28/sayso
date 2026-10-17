@@ -212,6 +212,9 @@ describe("armarKnowledgePack", () => {
     );
     expect(r.vistaInterior).toEqual({ url: expect.stringContaining("_p12.png"), pagina: 12, estado: "VERIFICADO" });
     expect(Buffer.from(pngs[0].png.subarray(1, 4)).toString("latin1")).toBe("PNG");
+    // Vista interior y páginas citadas en los pasos, todas del manual (no fotos).
+    expect(Object.keys(r.imagenesPaginas ?? {}).map(Number)).toContain(12);
+    expect(Object.values(r.imagenesPaginas ?? {}).every((u) => u.startsWith("https://img/"))).toBe(true);
   });
 
   it("con el manual en caché y sus vistas, no las vuelve a pedir ni busca el manual", async () => {

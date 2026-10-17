@@ -39,22 +39,36 @@ export type SubirPng = (nombre: string, png: Uint8Array) => Promise<string | nul
 export const subirPngSupabase: SubirPng = async (nombre, png) =>
   subirImagen(supabaseServidor(), "manuales", nombre, Buffer.from(png).toString("base64"), "image/png");
 
-export async function imagenVistaInterior(
+/**
+ * PNG de varias páginas del manual (solo páginas del manual, nunca fotos de la persona), abriendo el PDF una vez.
+ * `hojas`: { hoja dentro de `datos`, página del manual completo }. Devuelve { página del manual: URL }.
+ * Lo que falle se saltea: nunca rompe la guía.
+ */
+export async function imagenesDePaginas(
   datos: Uint8Array,
   equipo: { marca: string | null; modelo: string },
-  /** Página a dibujar dentro de `datos` (el extracto o el manual completo). */
-  hoja: number,
-  /** La misma página en el manual completo (la que se muestra). */
-  pagina: number,
-  estado: VistaInteriorImagen["estado"],
+  hojas: { hoja: number; pagina: number }[],
   subir: SubirPng = subirPngSupabase,
-): Promise<VistaInteriorImagen | null> {
+): Promise<Record<number, string>> {
+  const salida: Record<number, string> = {};
+  if (hojas.length === 0) return salida;
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | null = null;
   try {
-    const png = await paginaComoPng(datos, hoja);
-    const url = await subir(`${normalizar(equipo.marca ?? "")}_${normalizar(equipo.modelo)}_p${pagina}`, png);
-    return url ? { url, pagina, estado } : null;
+    pdf = await getDocumentProxy(datos.slice());
+    for (const { hoja, pagina } of hojas) {
+      try {
+        const ancho = (await pdf.getPage(hoja)).getViewport({ scale: 1 }).width;
+        const png = await renderPageAsImage(pdf, hoja, { canvasImport: () => import("@napi-rs/canvas"), scale: ANCHO_PX / ancho });
+        const url = await subir(`${normalizar(equipo.marca ?? "")}_${normalizar(equipo.modelo)}_p${pagina}`, new Uint8Array(png));
+        if (url) salida[pagina] = url;
+      } catch (e) {
+        console.error(`[knowledge] no pude dibujar la página ${pagina}:`, (e as Error).message);
+      }
+    }
   } catch (e) {
-    console.error("[knowledge] no pude armar la imagen de la vista interior:", (e as Error).message);
-    return null;
+    console.error("[knowledge] no pude abrir el PDF para dibujar páginas:", (e as Error).message);
+  } finally {
+    await pdf?.loadingTask.destroy();
   }
+  return salida;
 }

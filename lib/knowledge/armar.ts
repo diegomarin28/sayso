@@ -9,7 +9,7 @@ import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
 import { nombreExtracto, paginaEnExtracto, paginaOriginal, prepararExtracto, type Extracto } from "./extracto";
-import { imagenVistaInterior, type SubirPng, type VistaInteriorImagen } from "./imagen";
+import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
 import { leerManual, SYSTEM_LECTOR, type Lectura } from "./lector";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
@@ -30,7 +30,14 @@ export type Manual = { url: string; fileId: string; bytes: number; titulo: strin
 
 /** `vistas`: páginas físicas del PDF con la vista explosionada y una vista interior (para /api/plano). */
 /** `vistaInterior`: PNG de la página interior del manual (referencia real al lado del 3D), o null. */
-export type Armado = { pack: KnowledgePack; manual: Manual | null; vistas: Vistas; vistaInterior?: VistaInteriorImagen | null };
+/** `imagenesPaginas`: { página del manual: URL del PNG } (vista interior y páginas citadas). */
+export type Armado = {
+  pack: KnowledgePack;
+  manual: Manual | null;
+  vistas: Vistas;
+  vistaInterior?: VistaInteriorImagen | null;
+  imagenesPaginas?: Record<number, string>;
+};
 
 /** Caché de packs. En la ruta se usa la de Supabase (`cachePacksSupabase`); acá, memoria por defecto. */
 export interface CachePacks {
@@ -159,6 +166,7 @@ export async function armarKnowledgePack(
       ...guardado,
       vistas: guardado.vistas ?? SIN_VISTAS,
       vistaInterior: guardado.vistaInterior ?? null,
+      imagenesPaginas: guardado.imagenesPaginas ?? {},
       desdeCache: true,
       eventos: [evento(casoId, "bibliotecario", "pack_en_cache", "Ya tenía la guía de este modelo.")],
     };
@@ -168,6 +176,7 @@ export async function armarKnowledgePack(
   /** Si algo falló (API, red, PDF), el resultado NO se guarda en la caché: se vuelve a intentar la próxima vez. */
   let huboFalla = false;
   let vistaInterior: VistaInteriorImagen | null = null;
+  let imagenesPaginas: Record<number, string> = {};
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
   /** Para la IA: marca y modelo más el tipo de equipo, si se sabe. */
   const equipoDescrito = tipoEquipo ? `${nombreEquipo} (${tipoEquipo})` : nombreEquipo;
@@ -285,18 +294,19 @@ export async function armarKnowledgePack(
   if (manual && conManual) {
     eventos.push(evento(casoId, "bibliotecario", "vistas_ubicadas", mensajeVistas(vistas), { vistas }));
 
-    // Imagen real de la vista interior (sin IA): VERIFICADO si la cita de la lectura confirmó esa página.
-    if (vistas.interior !== null) {
-      const enExtracto = paginaEnExtracto(manual.paginas, vistas.interior);
-      const datos = enExtracto && extracto ? extracto.datos : new Uint8Array(encontrado?.pdf.datos ?? []);
-      vistaInterior = await imagenVistaInterior(
-        datos,
-        { marca: ficha.marca.valor, modelo },
-        enExtracto ?? vistas.interior,
-        vistas.interior,
-        contenido.vistas.interior === vistas.interior ? "VERIFICADO" : "NO_VERIFICADO",
-        deps.subirPng,
-      );
+    // Imágenes reales de páginas del manual (sin IA): la vista interior y las páginas citadas en los pasos.
+    // Se dibujan desde el extracto (todas están ahí). VERIFICADO si la cita de la lectura confirmó la vista interior.
+    if (extracto) {
+      const citadas = pack.pasos.map((p) => (p.cita?.estado === "VERIFICADO" ? p.cita.pagina : undefined));
+      const paginas = [...new Set([vistas.interior, ...citadas].filter((n): n is number => typeof n === "number"))];
+      const hojas = paginas
+        .map((pagina) => ({ pagina, hoja: paginaEnExtracto(manual.paginas, pagina) }))
+        .filter((h): h is { pagina: number; hoja: number } => h.hoja !== null);
+      imagenesPaginas = await imagenesDePaginas(extracto.datos, { marca: ficha.marca.valor, modelo }, hojas, deps.subirPng);
+      const url = vistas.interior !== null ? imagenesPaginas[vistas.interior] : undefined;
+      if (url && vistas.interior !== null) {
+        vistaInterior = { url, pagina: vistas.interior, estado: contenido.vistas.interior === vistas.interior ? "VERIFICADO" : "NO_VERIFICADO" };
+      }
     }
 
     // 5. Se guarda el manual para la próxima vez. Un manual ya verificado no pierde esa marca.
@@ -311,7 +321,7 @@ export async function armarKnowledgePack(
     });
   }
 
-  const armado: Armado = { pack, manual: conManual ? manual : null, vistas, vistaInterior };
+  const armado: Armado = { pack, manual: conManual ? manual : null, vistas, vistaInterior, imagenesPaginas };
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };

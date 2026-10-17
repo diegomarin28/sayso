@@ -16,6 +16,8 @@ const ipsDeRed =
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ipsDeRed,
+  // Binario nativo (dibuja páginas del manual a PNG en /api/knowledge): no se empaqueta, se carga de node_modules.
+  serverExternalPackages: ["@napi-rs/canvas"],
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
