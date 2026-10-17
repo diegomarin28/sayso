@@ -1,0 +1,93 @@
+{
+  "modelo": "ThinkPad T480",
+  "clase": "notebook",
+  "verificado": true,
+  "fuentes": [
+    {
+      "doc": "T480 Hardware Maintenance Manual",
+      "url": "https://download.lenovo.com/pccbbs/mobiles_pdf/t480_hmm_en.pdf"
+    }
+  ],
+  "piezas": [
+    {
+      "id": "base",
+      "nombre": "Keyboard bezel assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "4"
+    },
+    {
+      "id": "tapa_inferior",
+      "nombre": "Base cover assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "16"
+    },
+    {
+      "id": "placa_madre",
+      "nombre": "System board",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "20"
+    },
+    {
+      "id": "ventilador",
+      "nombre": "Thermal fan assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "19"
+    },
+    {
+      "id": "ssd",
+      "nombre": "M.2 solid-state drive and adapter",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "11"
+    },
+    {
+      "id": "ram",
+      "nombre": "Memory modules",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "22"
+    },
+    {
+      "id": "bateria",
+      "nombre": "Built-in battery",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "17"
+    },
+    {
+      "id": "bateria_extraible",
+      "nombre": "Removable battery",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "14"
+    },
+    {
+      "id": "wifi",
+      "nombre": "Wireless-LAN/Bluetooth card",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "8"
+    },
+    {
+      "id": "parlantes",
+      "nombre": "Speaker assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "18"
+    },
+    {
+      "id": "pila_bios",
+      "nombre": "Coin-cell battery",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "21"
+    }
+  ],
+  "pasos": [],
+  "advertencias": [],
+  "repuestos": []
+}

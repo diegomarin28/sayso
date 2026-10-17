@@ -1,0 +1,153 @@
+{
+  "_nota": "Referencia leída a ojo (una persona) sobre la vista interior del manual: vista inferior sin tapa, bisagras arriba. Píxeles sobre la imagen recortada (manuales/<modelo>/paginas/interior.png, no se sube). Esquinas de la carcasa: BL atrás-izq, BR atrás-der, FR frente-der, FL frente-izq. Solo piezas identificables sin dudas.",
+  "t480": {
+    "paginas": [
+      57,
+      89
+    ],
+    "esquinas": {
+      "BL": [
+        290,
+        92
+      ],
+      "BR": [
+        800,
+        345
+      ],
+      "FR": [
+        490,
+        525
+      ],
+      "FL": [
+        30,
+        262
+      ]
+    },
+    "piezas": {
+      "ssd": [
+        175,
+        265
+      ],
+      "ram": [
+        370,
+        330
+      ],
+      "ventilador": [
+        565,
+        385
+      ],
+      "bateria": [
+        400,
+        430
+      ],
+      "bateria_extraible": [
+        605,
+        225
+      ],
+      "wifi": [
+        255,
+        190
+      ]
+    },
+    "excluidas": {
+      "parlantes": "dos parlantes en las esquinas del frente: no hay un centro único",
+      "pila_bios": "no se distingue en el dibujo",
+      "placa_madre": "queda debajo de todo: su centro no se ve en el dibujo"
+    }
+  },
+  "e14-gen4": {
+    "paginas": [
+      55,
+      78
+    ],
+    "esquinas": {
+      "BL": [
+        330,
+        55
+      ],
+      "BR": [
+        830,
+        320
+      ],
+      "FR": [
+        545,
+        495
+      ],
+      "FL": [
+        55,
+        215
+      ]
+    },
+    "piezas": {
+      "ventilador": [
+        400,
+        165
+      ],
+      "ram": [
+        520,
+        290
+      ],
+      "placa_io": [
+        770,
+        350
+      ]
+    },
+    "excluidas": {
+      "parlantes": "dos parlantes",
+      "pila_bios": "no se distingue",
+      "wifi": "no se distingue de la SSD",
+      "ssd": "no se distingue de la Wi-Fi",
+      "placa_madre": "queda debajo de todo: su centro no se ve en el dibujo",
+      "bateria": "tapada por la burbuja de zoom"
+    }
+  },
+  "l14-gen2": {
+    "paginas": [
+      57,
+      88
+    ],
+    "esquinas": {
+      "BL": [
+        195,
+        150
+      ],
+      "BR": [
+        800,
+        335
+      ],
+      "FR": [
+        470,
+        530
+      ],
+      "FL": [
+        40,
+        275
+      ]
+    },
+    "piezas": {
+      "ventilador": [
+        330,
+        200
+      ],
+      "bateria": [
+        430,
+        420
+      ],
+      "ram": [
+        500,
+        330
+      ],
+      "wifi": [
+        640,
+        325
+      ]
+    },
+    "excluidas": {
+      "parlantes": "dos parlantes",
+      "pila_bios": "no se distingue",
+      "ssd": "no se distingue",
+      "placa_usb_audio": "tapada por la burbuja de zoom",
+      "placa_madre": "queda debajo de todo: su centro no se ve en el dibujo"
+    }
+  }
+}

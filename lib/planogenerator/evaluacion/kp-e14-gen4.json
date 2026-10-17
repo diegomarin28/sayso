@@ -1,0 +1,93 @@
+{
+  "modelo": "ThinkPad E14 Gen 4",
+  "clase": "notebook",
+  "verificado": true,
+  "fuentes": [
+    {
+      "doc": "ThinkPad E14 Gen 4 / E15 Gen 4 Hardware Maintenance Manual",
+      "url": "https://download.lenovo.com/pccbbs/mobiles_pdf/e14_e15_gen4_hmm_en.pdf"
+    }
+  ],
+  "piezas": [
+    {
+      "id": "base",
+      "nombre": "Keyboard assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "2"
+    },
+    {
+      "id": "tapa_inferior",
+      "nombre": "Base cover assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "12"
+    },
+    {
+      "id": "placa_madre",
+      "nombre": "System board",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "15"
+    },
+    {
+      "id": "ventilador",
+      "nombre": "Thermal fan assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "5"
+    },
+    {
+      "id": "ssd",
+      "nombre": "M.2 2242 solid-state drive",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "7"
+    },
+    {
+      "id": "ram",
+      "nombre": "Memory module",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "14"
+    },
+    {
+      "id": "bateria",
+      "nombre": "Built-in battery",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "13"
+    },
+    {
+      "id": "wifi",
+      "nombre": "Wireless LAN card",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "8"
+    },
+    {
+      "id": "placa_io",
+      "nombre": "I/O board",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "9"
+    },
+    {
+      "id": "parlantes",
+      "nombre": "Speaker assembly",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "6"
+    },
+    {
+      "id": "pila_bios",
+      "nombre": "Coin-cell battery",
+      "descripcion": "",
+      "ubicacion": "Ver diagrama del manual.",
+      "etiquetaManual": "11"
+    }
+  ],
+  "pasos": [],
+  "advertencias": [],
+  "repuestos": []
+}
