@@ -37,6 +37,12 @@ Rúbrica: producto funcionando 35 %, problema y valor 25 %, calidad de la IA 20 
 - **No usar datos ni documentos de CIR (empleador de Diego)**, ni de ninguna empresa, en el evento.
 - iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**.
 
+## Claves y `.env.local` (obligatorio)
+- Formato: `NOMBRE=valor`, sin espacios alrededor del `=` y sin comillas.
+- `NEXT_PUBLIC_SUPABASE_URL` es la URL completa (`https://<proyecto>.supabase.co`), no solo el código del proyecto.
+- **Nunca** hagas `source` de `.env.local`, ni `cat`, ni imprimas su contenido. Para scripts usá Next.js o `dotenv`. Para comprobar una clave mostrá solo si está cargada y su largo, nunca el valor.
+- Si una clave aparece en la terminal o en el chat, avisá a la persona: hay que rotarla (Anthropic: Diego; Supabase y Vercel: Iaio).
+
 ## Stack
 Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Realtime) · Claude Sonnet (visión, chat, herramientas) y Haiku (cortos) · Zod · three.js + React Three Fiber + drei · ElevenLabs Scribe v2 Realtime (voz a texto) y TTS Flash (texto a voz), con Web Speech API como plan B y campo de texto siempre disponible.
 
