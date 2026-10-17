@@ -37,6 +37,14 @@ Rúbrica: producto funcionando 35 %, problema y valor 25 %, calidad de la IA 20 
 - **No usar datos ni documentos de CIR (empleador de Diego)**, ni de ninguna empresa, en el evento.
 - iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**.
 
+## 🛑 Regla de gasto de IA (obligatoria, por encima de todo)
+Los créditos de la API se terminaron dos veces. Desde ahora:
+- **Prohibido llamar a la IA real** (Anthropic) en desarrollo, tests o scripts de medición **sin que la persona lo autorice en ese momento, con un monto máximo en USD**. Pedí el OK así: "Esto va a gastar ~X USD, ¿lo corro?".
+- Para desarrollar y probar pantallas: **`NEXT_PUBLIC_DATOS=fixture`** y respuestas simuladas. Los tests nunca llaman a la IA real.
+- Nada de reintentos automáticos que vuelvan a pagar. Un fallo se guarda en la caché y se reusa.
+- Siempre los mismos modelos de prueba, para que salgan de la caché.
+- Si ves que algo gasta más de lo esperado, **pará y avisá**.
+
 ## Nada hardcodeado (regla de producto)
 El producto tiene que funcionar con **cualquier equipo que traiga el jurado**. Por eso:
 - **Ningún dato de un equipo, modelo, manual, página o posición de pieza escrito en el código.** Todo sale en tiempo real de los agentes (identificador, bibliotecario, cartógrafo, experto, seguridad) o de lo que esos agentes ya guardaron en Supabase.
