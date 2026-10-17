@@ -193,6 +193,27 @@ describe("armarKnowledgePack", () => {
     expect(r.eventos.map((e) => e.tipo)).toContain("extracto_armado");
   });
 
+  it("arma la imagen PNG de la vista interior: VERIFICADO si la cita confirma la página", async () => {
+    const interiorEnExtracto: Bloque = { text: "\nVISTA|interior|Base sin tapa", citations: [pagina("Removing the fan", 1)] };
+    const f = enviarFalso({ enPack: [interiorEnExtracto] });
+    const pngs: { nombre: string; png: Uint8Array }[] = [];
+    const llamar = async () => JSON.stringify({ indice: [], explosionada: [30], interior: [12], sintoma: [] });
+    const r = await armarKnowledgePack(
+      { ficha: fichaEjemplo, sintoma: "se apaga" },
+      {
+        enviar: f.enviar,
+        llamar,
+        fetch: (async () => new Response(PDF_GRANDE.slice())) as typeof fetch,
+        cache: sinCache,
+        manuales: repoEnMemoria(),
+        subir,
+        subirPng: async (nombre, png) => (pngs.push({ nombre, png }), `https://img/${nombre}.png`),
+      },
+    );
+    expect(r.vistaInterior).toEqual({ url: expect.stringContaining("_p12.png"), pagina: 12, estado: "VERIFICADO" });
+    expect(Buffer.from(pngs[0].png.subarray(1, 4)).toString("latin1")).toBe("PNG");
+  });
+
   it("con el manual en caché y sus vistas, no las vuelve a pedir ni busca el manual", async () => {
     const manuales = repoEnMemoria();
     await manuales.guardar({
@@ -210,7 +231,8 @@ describe("armarKnowledgePack", () => {
     expect(r.vistas).toEqual({ explosionada: 51, interior: 73 });
     expect(f.de("bibliotecario")).toHaveLength(0);
     expect(f.de("vistas")).toHaveLength(0);
-    expect(tarea(f.de("pack")[0])).not.toMatch(/VISTA\|/);
+    // Las vistas se vuelven a pedir en la misma lectura (sin costo extra) para poder verificarlas.
+    expect(tarea(f.de("pack")[0])).toMatch(/VISTA\|interior/);
     expect(r.eventos.map((e) => e.tipo)).toContain("manual_en_cache");
   });
 
