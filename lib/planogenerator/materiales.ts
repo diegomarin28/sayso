@@ -34,6 +34,11 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["bisagra", { color: "#8f979f", metalness: 0.85, roughness: 0.35 }],
   ["conector", { color: "#c6ccd2", metalness: 0.85, roughness: 0.3 }],
   ["soporte", { color: "#b0b7be", metalness: 0.85, roughness: 0.35 }],
+  // Celular (y piezas parecidas de notebook). `placa` va después de `placa_madre`: placa_carga, placa_usb…
+  ["pantalla", { color: "#10141b", metalness: 0.3, roughness: 0.25 }],
+  ["placa", { color: "#173f35", metalness: 0.15, roughness: 0.5 }],
+  ["camara", { color: "#2a2e34", metalness: 0.6, roughness: 0.35 }],
+  ["marco", { color: "#9aa2ab", metalness: 0.9, roughness: 0.35 }],
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };
@@ -53,6 +58,7 @@ export const RECETAS_DETALLE = {
   goma: { color: "#141517", metalness: 0, roughness: 0.9 },
   plastico: { color: "#1b1d20", metalness: 0.1, roughness: 0.6 },
   conector: { color: "#e6e2d6", metalness: 0, roughness: 0.6 },
+  vidrio: { color: "#07090d", metalness: 0.4, roughness: 0.06 },
 } satisfies Record<string, Receta>;
 
 export function recetaPara(pieza: string): Receta {

@@ -1,5 +1,5 @@
 """
-Biblioteca de piezas genéricas de notebook, modelada por script en Blender (sin abrirlo).
+Biblioteca de piezas genéricas de notebook y de celular, modelada por script en Blender (sin abrirlo).
 
     npm run modelos:piezas
     # = blender -b --factory-startup --python assets/models/blender/piezas.py -- \
@@ -10,6 +10,9 @@ Qué exporta (public/models/piezas.glb):
   prefijo del id de la pieza del plano (`tornillos_ventilador` → `tornillo`) y ajusta la malla
   a las medidas del plano. Posiciones y medidas siguen saliendo del plano (IA o plantilla):
   acá no hay datos de ningún modelo de equipo, solo formas típicas.
+- Un tipo puede tener VARIANTES (`bateria` de notebook y `bateria@celular`): mismo tipo y misma
+  receta, otra forma. La app elige la que menos se deforma al ajustarla a las medidas del plano
+  (todas están en cm reales), así que una batería de 26 cm usa la de notebook y una de 6 cm la de celular.
 - Dentro de cada tipo, una malla por material. El nombre del material es la receta que usa la
   app (`lib/planogenerator/materiales.ts`): `cuerpo.<tipo>` es la receta propia de la pieza, el
   resto (`contactos`, `chip`, `cobre`…) son recetas de detalle. Los colores de acá son solo
@@ -50,6 +53,10 @@ COLORES = {
     "cuerpo.bisagra": ("#8f979f", 0.85, 0.35),
     "cuerpo.conector": ("#c6ccd2", 0.85, 0.3),
     "cuerpo.soporte": ("#b0b7be", 0.85, 0.35),
+    "cuerpo.pantalla": ("#10141b", 0.3, 0.25),
+    "cuerpo.placa": ("#173f35", 0.15, 0.5),
+    "cuerpo.camara": ("#2a2e34", 0.6, 0.35),
+    "cuerpo.marco": ("#9aa2ab", 0.9, 0.35),
     "aspas": ("#3b4048", 0.2, 0.5),
     "cubo": ("#1c1f23", 0.3, 0.4),
     "chip": ("#141619", 0.3, 0.45),
@@ -62,6 +69,7 @@ COLORES = {
     "goma": ("#141517", 0.0, 0.9),
     "plastico": ("#1b1d20", 0.1, 0.6),
     "conector": ("#e6e2d6", 0.0, 0.6),
+    "vidrio": ("#07090d", 0.4, 0.06),
 }
 
 
@@ -201,13 +209,15 @@ def redondeado(ancho, prof, r, seg=6):
     return pts
 
 
-def armar(tipo):
-    """Junta las partes de la pieza por material y las cuelga de un nodo vacío con el nombre del tipo."""
+def armar(nombre):
+    """Junta las partes de la pieza por material y las cuelga de un nodo vacío con el nombre del tipo
+    (o `tipo@variante`). El material del cuerpo es el del tipo: las variantes comparten receta."""
+    tipo = nombre.split("@")[0]
     bpy.context.view_layer.update()
     grupos = {}
     for o in _partes:
         grupos.setdefault(o["mat"], []).append(o)
-    vacio = bpy.data.objects.new(tipo, None)
+    vacio = bpy.data.objects.new(nombre, None)
     bpy.context.scene.collection.objects.link(vacio)
     for mat, objs in grupos.items():
         bm = bmesh.new()
@@ -218,13 +228,13 @@ def armar(tipo):
             bpy.data.meshes.remove(me)
             bpy.data.objects.remove(o)
         nombre_mat = f"cuerpo.{tipo}" if mat == "cuerpo" else mat
-        me = bpy.data.meshes.new(f"{tipo}__{mat}")
+        me = bpy.data.meshes.new(f"{nombre}__{mat}")
         bm.to_mesh(me)
         bm.free()
         me.shade_smooth()
         me.set_sharp_from_angle(angle=math.radians(35))
         me.materials.append(material(nombre_mat))
-        o = bpy.data.objects.new(f"{tipo}__{mat}", me)
+        o = bpy.data.objects.new(f"{nombre}__{mat}", me)
         bpy.context.scene.collection.objects.link(o)
         o.parent = vacio
     _partes.clear()
@@ -515,9 +525,151 @@ def soporte():
     return armar("soporte")
 
 
+# ---------- Piezas de celular (boca arriba, la parte de abajo del equipo hacia -Y) ----------
+
+def pantalla():
+    """Módulo de pantalla: vidrio con esquinas redondeadas sobre el panel, chapa trasera, flex con conector
+    y el agujero de la cámara frontal. Sirve también para la pantalla de una notebook (se estira)."""
+    W, D, R = 7.2, 15.6, 0.9
+    caja((0.9, 0.45, 0.1), (0, -D / 2 + 2.6, 0.05), "plastico", bisel=0.02)
+    caja((0.7, 0.3, 0.01), (0, -D / 2 + 2.6, 0.105), "contactos")
+    caja((1.6, 2.2, 0.02), (0, -D / 2 + 1.6, 0.11), "plastico")
+    prisma(redondeado(W - 0.3, D - 0.4, R - 0.15, 8), 0.04, (0, 0, 0.14), "metal")
+    prisma(redondeado(W - 0.06, D - 0.06, R - 0.03, 8), 0.12, (0, 0, 0.22))
+    prisma(redondeado(W, D, R, 8), 0.07, (0, 0, 0.315), "vidrio", bisel=0.025)
+    cilindro(0.17, 0.012, (0, D / 2 - 0.65, 0.355), "goma", seg=24)
+    aro = cilindro(0.21, 0.008, (0, D / 2 - 0.65, 0.354), "metal", seg=24)
+    restar(aro, cilindro(0.17, 0.1, (0, D / 2 - 0.65, 0.354), mat=None, seg=24))
+    return armar("pantalla")
+
+
+def placa_compacta():
+    """Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores
+    board-to-board, componentes chicos y agujeros de montaje."""
+    contorno = [(-3.0, -5.6), (3.0, -5.6), (3.0, 5.6), (-0.4, 5.6), (-0.4, 2.6), (-3.0, 2.6)]
+    placa = prisma(contorno, 0.08, (0, 0, 0.04))
+    agujeros = [(-2.6, -5.2), (2.6, -5.2), (2.6, 5.2), (-0.8, 5.2), (-2.6, 2.2)]
+    restar(placa, varios([("cil", (0.12, 0.5), (x, y, 0.04)) for x, y in agujeros]))
+    for x, y in agujeros:
+        aro = cilindro(0.22, 0.01, (x, y, 0.085), "contactos", seg=16)
+        restar(aro, cilindro(0.12, 0.5, (x, y, 0.08), mat=None, seg=12))
+    # Blindajes: el grande tapa el procesador y la memoria.
+    for (w, d), (x, y) in [((4.6, 3.4), (0.4, -1.4)), ((2.2, 2.0), (1.5, 1.6)), ((4.4, 1.6), (0.3, -4.4))]:
+        caja((w, d, 0.12), (x, y, 0.14), "metal", bisel=0.02)
+    caja((1.2, 0.6, 0.004), (0.4, -1.4, 0.202), "etiqueta")
+    for (w, d), (x, y) in [((0.9, 0.35), (-2.3, 1.6)), ((0.9, 0.35), (2.3, 4.7)), ((0.7, 0.3), (1.2, 4.6)), ((0.9, 0.35), (-2.2, -2.8))]:
+        caja((w, d, 0.1), (x, y, 0.13), "plastico", bisel=0.015)
+        caja((w - 0.15, d - 0.15, 0.006), (x, y, 0.183), "contactos")
+    azar = random.Random(11)  # fijo: la placa sale igual cada vez
+    for _ in range(40):
+        x, y = azar.uniform(-2.8, 2.8), azar.uniform(-5.4, 5.4)
+        if x < -0.4 and y > 2.6:
+            continue  # el hueco de la L (ahí va la cámara)
+        w = azar.uniform(0.08, 0.22)
+        caja((w, w * 0.55, 0.04), (x, y, 0.1), azar.choice(["metal", "chip", "conector"]))
+    return armar("placa")
+
+
+def alias(nombre, de):
+    """Otro nodo con las mismas mallas que `de` (el GLB las guarda una sola vez)."""
+    vacio = bpy.data.objects.new(nombre, None)
+    bpy.context.scene.collection.objects.link(vacio)
+    for hijo in de.children:
+        o = bpy.data.objects.new(f"{nombre}__{hijo.name.split('__')[1]}", hijo.data)
+        bpy.context.scene.collection.objects.link(o)
+        o.parent = vacio
+    return vacio
+
+
+def bateria_celular():
+    """Batería de celular: celda plana (pouch) con etiqueta, placa de protección arriba, flex con
+    conector y las tiras para despegarla."""
+    W, D = 5.8, 8.6
+    prisma(redondeado(W, D, 0.3, 6), 0.45, (0, 0, 0.225), bisel=0.08)
+    caja((4.4, 5.2, 0.006), (0, -0.4, 0.452), "etiqueta")
+    caja((4.6, 0.55, 0.12), (0, D / 2 + 0.3, 0.2), "pcb")
+    caja((4.4, 0.5, 0.02), (0, D / 2 + 0.3, 0.27), "plastico")
+    caja((1.8, 0.4, 0.02), (1.4, D / 2 + 0.3, 0.29), "plastico")
+    caja((0.8, 0.38, 0.1), (2.5, D / 2 + 0.3, 0.33), "plastico", bisel=0.015)
+    caja((0.65, 0.25, 0.006), (2.5, D / 2 + 0.3, 0.383), "contactos")
+    for x in (-1.6, 1.6):
+        caja((0.7, 0.9, 0.01), (x, -D / 2 - 0.3, 0.005), "goma")
+    return armar("bateria@celular")
+
+
+def camara():
+    """Cámara (frontal o de una notebook): bloque con lente, aro metálico y un tramo de flex."""
+    caja((0.9, 0.9, 0.42), (0, 0, 0.21), bisel=0.04)
+    cilindro(0.34, 0.2, (0, 0, 0.52), "metal", seg=32, bisel=0.02)
+    cilindro(0.25, 0.02, (0, 0, 0.625), "vidrio", seg=32)
+    caja((0.5, 0.45, 0.02), (0, -0.67, 0.03), "plastico")
+    return armar("camara")
+
+
+def camara_modulo():
+    """Módulo de cámaras traseras: soporte metálico con tres cámaras (dos grandes y una chica) y el flash."""
+    caja((2.7, 2.7, 0.1), (0, 0, 0.05), "metal", bisel=0.03)
+    for (x, y), r in [((-0.65, 0.65), 0.5), ((-0.65, -0.65), 0.5), ((0.65, 0.65), 0.38)]:
+        cilindro(r + 0.1, 0.5, (x, y, 0.35), seg=32, bisel=0.03)
+        cilindro(r, 0.08, (x, y, 0.64), "metal", seg=32)
+        cilindro(r - 0.08, 0.02, (x, y, 0.685), "vidrio", seg=32)
+    cilindro(0.18, 0.06, (0.65, -0.65, 0.13), "etiqueta", seg=24)
+    return armar("camara@modulo")
+
+
+def conector_usb_c():
+    """Conector de carga USB-C: carcasa ovalada con la boca hacia -Y, lengüeta con contactos y alas para atornillar."""
+    carcasa = caja((0.9, 0.75, 0.32), (0, 0, 0.16), bisel=0.15, seg=4)
+    restar(carcasa, caja((0.8, 0.8, 0.22), (0, -0.2, 0.16), mat=None))
+    caja((0.66, 0.5, 0.07), (0, -0.05, 0.16), "plastico")
+    for z in (0.197, 0.123):
+        caja((0.55, 0.35, 0.004), (0, -0.12, z), "contactos")
+    for sx in (-1, 1):
+        ala = caja((0.3, 0.32, 0.03), (sx * 0.6, 0.12, 0.015), "metal")
+        restar(ala, cilindro(0.06, 0.2, (sx * 0.62, 0.12, 0.015), mat=None, seg=12))
+    caja((0.7, 0.12, 0.03), (0, 0.42, 0.015), "metal")
+    return armar("conector@usb_c")
+
+
+def parlante_celular():
+    """Parlante de celular: caja de plástico con la salida de sonido hacia -Y, rejilla y contactos de resorte."""
+    prisma(redondeado(1.8, 1.0, 0.15), 0.35, (0, 0, 0.175), bisel=0.03)
+    caja((1.2, 0.06, 0.14), (0, -0.52, 0.18), "metal")
+    caja((0.9, 0.5, 0.004), (-0.2, 0.05, 0.352), "etiqueta")
+    for x in (0.55, 0.75):
+        caja((0.12, 0.25, 0.06), (x, 0.25, 0.38), "contactos", bisel=0.01)
+    return armar("parlante@celular")
+
+
+def marco():
+    """Marco (chasis) de celular: aro de aluminio con placa media, botones, cortes de antena,
+    boca del USB-C, agujeros del parlante y bandeja de la SIM."""
+    W, D, R, H = 7.4, 15.8, 1.0, 0.8
+    aro = prisma(redondeado(W, D, R, 8), H, (0, 0, H / 2), bisel=0.12)
+    cortes = [
+        ("caja", (0.95, 0.6, 0.34), (0, -D / 2, 0.4)),
+        ("caja", (0.6, 0.6, 0.12), (-1.6, -D / 2, 0.4)),
+    ]
+    cortes += [("caja", (0.12, 0.6, 0.12), (1.3 + i * 0.25, -D / 2, 0.4)) for i in range(5)]
+    cortes += [("caja", (0.6, 1.6, 0.22), (-W / 2, 3.6, 0.4))]
+    restar(aro, prisma(redondeado(W - 0.4, D - 0.4, R - 0.2, 8), H + 0.2, (0, 0, H / 2), mat=None), varios(cortes))
+    placa = prisma(redondeado(W - 0.36, D - 0.36, R - 0.18, 8), 0.06, (0, 0, 0.35), "metal")
+    restar(placa, caja((2.8, 3.0, 0.3), (-1.6, 5.4, 0.35), mat=None))
+    for x, y, largo in [(W / 2 + 0.03, 2.4, 1.3), (-W / 2 - 0.03, 1.2, 2.2)]:
+        caja((0.08, largo, 0.18), (x, y, 0.4), bisel=0.03)
+    caja((0.05, 1.5, 0.18), (-W / 2 + 0.02, 3.6, 0.4), "metal")
+    for y in (-D / 2 + 2.0, D / 2 - 2.0):
+        for sx in (-1, 1):
+            caja((0.22, 0.12, H - 0.04), (sx * (W / 2 - 0.1), y, H / 2), "plastico")
+    return armar("marco")
+
+
 PIEZAS = [
     base, tapa_inferior, placa_madre, ventilador, disipador, heatpipe, tornillo, ram, ssd, wifi, pila,
     bateria, parlante, disco_duro, cable, bisagra, conector, soporte,
+    # Celular: tipos nuevos y variantes de tipos que ya existían.
+    pantalla, placa_compacta, bateria_celular,
+    camara, camara_modulo, conector_usb_c, parlante_celular, marco,
 ]
 
 
@@ -604,7 +756,7 @@ def renders(carpeta, vacios):
         bpy.ops.render.render(write_still=True)
 
     # Hoja con todas: cada pieza escalada para que su lado mayor mida 7 y en una celda de 10.
-    columnas = 5
+    columnas = 6
     for i, v in enumerate(vacios):
         for o in [v] + list(v.children):
             o.hide_render = False
@@ -639,6 +791,8 @@ def main():
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     vacios = [hacer() for hacer in PIEZAS]
+    # La placa madre de un celular es la misma placa compacta: variante sin duplicar mallas.
+    vacios.append(alias("placa_madre@celular", next(v for v in vacios if v.name == "placa")))
     exportar(args.salida)
     print(f"Exportado {args.salida}: {os.path.getsize(args.salida) / 1024:.0f} KB, {len(vacios)} tipos")
     if args.renders:
