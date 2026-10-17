@@ -3,10 +3,10 @@ import { z } from "zod";
 import { Caso, Ficha, Foto, PedidoDeFoto } from "../../shared";
 import { ErrorIA, pedirJson, type LlamarIA } from "../ia/claude";
 import { decidirAceptacion, evaluarFoto } from "./calidad";
-import { estadoCampo, leerChapa } from "./chapa";
-import { EntradaCalidad } from "./entrada";
+import { estadoCampo, fichaConFoto, fichaVacia, leerChapa, reconocerPorFoto } from "./chapa";
+import { EntradaCalidad, EntradaChapa } from "./entrada";
 import { entender } from "./entender";
-import { decidirPedidos, MAX_EXTRA, pedidosBase } from "./pedidos";
+import { decidirPedidos, pedidosBase } from "./pedidos";
 
 /** Simula al modelo devolviendo, en orden, cada respuesta de la lista. */
 function falso(...respuestas: unknown[]): LlamarIA & { llamadas: number } {
@@ -46,27 +46,40 @@ describe("decidirPedidos", () => {
     expect(tipos).toEqual(["etiqueta", "frente", "puertos"]);
   });
 
-  it("agrega extras de la IA, sin duplicar tipos base y con tope", async () => {
-    const llamar = falso({
-      extras: [
-        { tipo: "etiqueta", instruccion: "otra etiqueta", advertencia: null },
-        { tipo: "otro", instruccion: "Foto del cargador y su ficha", advertencia: null },
-        { tipo: "interior", instruccion: "Foto por la rejilla", advertencia: "Apagala antes" },
-        { tipo: "otro", instruccion: "Una más", advertencia: null },
-      ],
-    });
-    const { pedidos, extrasDeIA } = await decidirPedidos("notebook", "no carga la batería", llamar);
-    expect(extrasDeIA).toBe(MAX_EXTRA);
-    expect(pedidos.filter((p) => p.tipo === "etiqueta")).toHaveLength(1);
-    expect(pedidos[4].advertencia).toBe("Apagala antes");
+  it("la IA arma la lista según el tipo de equipo, sin repetir tipos y con tope", async () => {
+    let pedido = "";
+    const llamar: LlamarIA = async (p) => {
+      pedido = JSON.stringify(p.contenido);
+      return JSON.stringify({
+        pedidos: [
+          { tipo: "etiqueta", instruccion: "Abrí la puerta y sacale una foto a la etiqueta de la pared lateral.", advertencia: null },
+          { tipo: "etiqueta", instruccion: "otra etiqueta", advertencia: null },
+          { tipo: "frente", instruccion: "Foto de la heladera entera.", advertencia: null },
+          { tipo: "otro", instruccion: "Foto del motor de atrás.", advertencia: "Desenchufala antes" },
+          { tipo: "otro", instruccion: "Foto del congelador.", advertencia: null },
+          { tipo: "interior", instruccion: "Foto adentro.", advertencia: null },
+          { tipo: "puertos", instruccion: "una de más", advertencia: null },
+        ],
+      });
+    };
+    const { pedidos, porIA } = await decidirPedidos("otro", "no enfría", llamar, "heladera no frost");
+    expect(porIA).toBe(true);
+    expect(pedido).toContain("heladera no frost");
+    expect(pedidos.map((p) => p.tipo)).toEqual(["etiqueta", "frente", "otro", "otro", "interior"]);
+    expect(pedidos[2].advertencia).toBe("Desenchufala antes");
     pedidos.forEach((p) => PedidoDeFoto.parse(p));
   });
 
-  it("si la IA falla, devuelve solo la base", async () => {
-    const llamar = falso("basura");
-    const { pedidos, extrasDeIA } = await decidirPedidos("notebook", "x", llamar);
-    expect(extrasDeIA).toBe(0);
-    expect(pedidos).toHaveLength(3);
+  it("si la IA no pide la etiqueta, el código la agrega", async () => {
+    const llamar = falso({ pedidos: [{ tipo: "frente", instruccion: "Foto del microondas.", advertencia: null }] });
+    const { pedidos } = await decidirPedidos("otro", "no calienta", llamar, "microondas");
+    expect(pedidos.map((p) => p.tipo)).toEqual(["etiqueta", "frente"]);
+  });
+
+  it("si la IA falla, va la lista fija de la clase", async () => {
+    const { pedidos, porIA } = await decidirPedidos("notebook", "x", falso("basura"));
+    expect(porIA).toBe(false);
+    expect(pedidos.map((p) => p.tipo)).toEqual(["etiqueta", "frente", "puertos"]);
   });
 });
 
@@ -136,10 +149,11 @@ describe("chapa", () => {
 
 describe("entender", () => {
   it("saca clase y síntoma de la IA y arma un Caso válido", async () => {
-    const llamar = falso({ clase: "notebook", sintoma: "Se apaga sola." });
+    const llamar = falso({ clase: "notebook", tipoEquipo: "Notebook gamer", sintoma: "Se apaga sola." });
     const r = await entender("mi compu portátil se apaga sola", llamar, "c9");
     expect(Caso.parse(r.caso)).toMatchObject({ id: "c9", clase: "notebook", sintoma: "Se apaga sola.", estado: "captura" });
     expect(r.porIA).toBe(true);
+    expect(r.tipoEquipo).toBe("notebook gamer");
     expect(r.seguridad.bloqueado).toBe(false);
   });
 
@@ -151,7 +165,30 @@ describe("entender", () => {
   });
 
   it("bloquea por el texto de la persona aunque la IA lo resuma suave", async () => {
-    const r = await entender("huele a gas cerca del calefón", falso({ clase: "otro", sintoma: "Hay un olor." }));
+    const r = await entender("huele a gas cerca del calefón", falso({ clase: "otro", tipoEquipo: "calefón", sintoma: "Hay un olor." }));
     expect(r.seguridad.bloqueado).toBe(true);
+  });
+});
+
+describe("reconocer por foto", () => {
+  it("lo que sale de la foto queda probable (fuente foto) y solo llena lo desconocido", async () => {
+    const llamar = falso({ marca: "Samsung", modelo: "Galaxy A54", confianza: "media" });
+    const r = await reconocerPorFoto({ clase: "otro", tipoEquipo: "celular", imagenes: [imagen] }, llamar);
+    const conMarca = { ...fichaVacia("c1", "otro"), marca: { valor: "Samsung", estado: "confirmado" as const, fuente: "chapa" } };
+    const f = fichaConFoto(conMarca, r);
+    expect(f.marca.estado).toBe("confirmado");
+    expect(f.modelo).toEqual({ valor: "Galaxy A54", estado: "probable", fuente: "foto" });
+    expect(f.confirmadaPorUsuario).toBe(false);
+  });
+
+  it("con confianza baja no se usa el modelo", () => {
+    const f = fichaConFoto(fichaVacia("c1", "otro"), { marca: "LG", modelo: "XYZ-123", confianza: "baja" });
+    expect(f.marca.estado).toBe("probable");
+    expect(f.modelo.estado).toBe("desconocido");
+  });
+
+  it("la entrada de chapa acepta solo fotos del frente, pero no ninguna foto", () => {
+    expect(EntradaChapa.safeParse({ casoId: "c1", clase: "otro", imagenesFrente: [imagen] }).success).toBe(true);
+    expect(EntradaChapa.safeParse({ casoId: "c1", clase: "otro" }).success).toBe(false);
   });
 });

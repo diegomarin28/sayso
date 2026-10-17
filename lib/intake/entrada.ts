@@ -18,10 +18,14 @@ export const ImagenSchema = z.object({
   mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
 });
 
+/** Tipo de equipo en texto libre (cualquier dispositivo), como lo devuelve /api/intake/entender. */
+export const TipoEquipo = z.string().trim().min(1).max(60);
+
 export const EntradaPedidos = z.object({
   casoId: z.string().min(1),
   clase: ClaseEquipo,
   sintoma: z.string().min(1).max(2000),
+  tipoEquipo: TipoEquipo.optional(),
 });
 
 export const EntradaCalidad = z.object({
@@ -31,11 +35,17 @@ export const EntradaCalidad = z.object({
   url: z.string().optional(),
 });
 
-export const EntradaChapa = z.object({
-  casoId: z.string().min(1),
-  clase: ClaseEquipo,
-  imagenes: z.array(ImagenSchema).min(1).max(LIMITES.foto.chapaMaxImagenes),
-});
+export const EntradaChapa = z
+  .object({
+    casoId: z.string().min(1),
+    clase: ClaseEquipo,
+    tipoEquipo: TipoEquipo.optional(),
+    /** Fotos de la etiqueta (pueden faltar si no se encontró). */
+    imagenes: z.array(ImagenSchema).max(LIMITES.foto.chapaMaxImagenes).default([]),
+    /** Fotos del equipo entero: si la etiqueta no se lee, se reconoce la marca y el modelo por acá (siempre "probable"). */
+    imagenesFrente: z.array(ImagenSchema).max(2).default([]),
+  })
+  .refine((e) => e.imagenes.length + e.imagenesFrente.length > 0, "Mandá al menos una foto de la etiqueta o del equipo");
 
 export function evento(
   casoId: string,

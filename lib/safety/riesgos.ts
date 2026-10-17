@@ -24,9 +24,13 @@ export const TABLA_RIESGOS: readonly ClaseRiesgo[] = [
       /\brefrigerante/,
       /\b(carg|recarg|purg|solt|liber|vaci)\w*\b.{0,20}\bgas\b/,
       /\br-?(22|32|134a?|290|410a?|600a?)\b/,
-      /\bcompresor/,
-      /\b(cano|canos|caneria|tuberia)s?\b.{0,25}\b(cobre|gas|soldar|cortar|abrir)/,
-      /\bsoldar\b.{0,25}\b(cano|caneria|tuberia)/,
+      // Nombrar el compresor no bloquea ("el compresor hace ruido"); actuar sobre él sí.
+      // Verbo y compresor en la misma frase (sin cruzar un punto); "el compresor. No lo abras" no cuenta como pedido.
+      /\b(abr|cambi|reemplaz|desarm|desmont|desconect|cort|sold|carg|recarg|sac|quit|repar|arregl|manipul)\w*\b[^.;!?:]{0,30}\bcompresor/,
+      /\bcompresor\b(?:(?!\b(?:no|nunca|jamas)\b)[^.;!?:]){0,30}\b(abr|cambi|reemplaz|desarm|desmont|desconect|cort|sold|carg|recarg|sac|quit|repar|arregl)\w*/,
+      // Caños de gas: igual que el compresor, bloquea la acción ("cortar los caños"), no la mención ("los caños tienen gas").
+      /\b(cort|sold|abr|desconect|cambi|reemplaz|desarm|perfor|dobl)\w*\b[^.;!?:]{0,25}\b(cano|caneria|tuberia)s?\b/,
+      /\b(cano|caneria|tuberia)s?\b(?:(?!\b(?:no|nunca|jamas)\b)[^.;!?:]){0,25}\b(cort|sold|abr|desconect|cambi|reemplaz|desarm|perfor|dobl)\w*/,
     ],
     derivacion:
       "Esto toca el circuito de gas refrigerante: está a presión y manipularlo requiere un técnico matriculado. Te recomiendo llamar a un técnico de refrigeración.",

@@ -54,6 +54,8 @@ export type Segmento = {
   citas: Anthropic.TextCitation[];
   /** Pasos del knowledge pack citados con [[paso:N]]. */
   pasos: number[];
+  /** Pieza que hay que reemplazar según el manual ([[cambiar:PIEZA]]), solo si existe en el plano. */
+  cambiar?: string;
 };
 
 /** Corta texto que llega de a pedazos en frases completas (fuera de las marcas). */
@@ -62,6 +64,7 @@ export class Segmentador {
   private citas: Anthropic.TextCitation[] = [];
   private pendientes: Accion[] = [];
   private pasosPendientes: number[] = [];
+  private cambiarPendiente: string | undefined;
 
   constructor(private readonly piezas: ReadonlySet<string>) {}
 
@@ -118,6 +121,12 @@ export class Segmentador {
         pasos.push(Number(ref[1]));
         continue;
       }
+      const cambio = /^cambiar\s*:\s*([a-z0-9_]+)$/i.exec(m[1].trim());
+      if (cambio) {
+        const pieza = cambio[1].toLowerCase();
+        if (this.piezas.has(pieza)) this.cambiarPendiente = pieza;
+        continue;
+      }
       const a = parsearMarca(m[1], this.piezas);
       if (a) acciones.push(a);
     }
@@ -130,9 +139,11 @@ export class Segmentador {
     }
     this.pendientes = [];
     this.pasosPendientes = [];
+    const cambiar = this.cambiarPendiente;
+    this.cambiarPendiente = undefined;
     if (!texto && acciones.length === 0) return null;
     const citas = this.citas;
     this.citas = [];
-    return { texto, acciones, citas, pasos };
+    return { texto, acciones, citas, pasos, ...(cambiar ? { cambiar } : {}) };
   }
 }

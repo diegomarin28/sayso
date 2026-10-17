@@ -33,8 +33,8 @@ export const LIMITES = {
   foto: {
     /** Nitidez mínima (0–1) para aceptar una foto. */
     nitidezMinima: 0.6,
-    /** Máximo de fotos que la IA puede agregar a la lista base. */
-    extrasMax: 2,
+    /** Máximo de fotos que se le piden a la persona. */
+    maxPedidos: 5,
     /** ~5 MB de imagen en base64 (límite de Claude por imagen). */
     maxBase64: 7_000_000,
     chapaMaxImagenes: 3,
