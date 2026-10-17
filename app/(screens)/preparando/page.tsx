@@ -47,7 +47,7 @@ export default function Preparando() {
     (async () => {
       let guia = preparado;
       if (!guia) {
-        const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma);
+        const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma, tipoEquipo);
         if (!vigente) return;
         agregarEventos(nuevos);
         setPreparado(listo);

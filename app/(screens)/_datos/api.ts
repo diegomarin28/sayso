@@ -240,7 +240,12 @@ const RespKnowledge = conEventos({
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
-export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<typeof RespKnowledge>> {
+export function prepararExperto(
+  ficha: Ficha,
+  sintoma: string,
+  /** Lo que dijo la recepción (ej. "heladera no frost"): orienta la búsqueda del manual (#79). */
+  tipoEquipo?: string | null,
+): Promise<z.infer<typeof RespKnowledge>> {
   if (USAR_FIXTURE)
     return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(2500);
@@ -252,8 +257,9 @@ export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<
         desdeCache: true,
       });
     });
+  const tipo = tipoEquipo?.trim().slice(0, 60) || undefined;
   return unaVez(`knowledge|${claveEquipo(ficha)}`, () =>
-    llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge),
+    llamar("/api/knowledge", { ficha, sintoma, tipoEquipo: tipo }, RespKnowledge),
   );
 }
 
