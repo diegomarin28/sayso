@@ -147,6 +147,23 @@ function prepararMalla(m: THREE.Mesh): MallaAnimable {
   };
 }
 
+/**
+ * Las piezas reales llegaron tarde y reemplazan a las primitivas: la escena nueva sigue la
+ * animación donde iba la vieja (mismos tramos y despiece), así nada salta ni se repite.
+ */
+export function continuarAnimacion(desde: EscenaPreparada, hacia: EscenaPreparada): void {
+  Object.assign(hacia.despiece, desde.despiece);
+  for (const [id, a] of hacia.nodos) {
+    const b = desde.nodos.get(id);
+    if (!b) continue;
+    for (const k of Object.keys(a.tw) as (keyof NodoAnimable["tw"])[]) {
+      a.tw[k] = { ...b.tw[k], desde: [...b.tw[k].desde], hasta: [...b.tw[k].hasta] };
+    }
+    a.nodo.position.copy(b.nodo.position);
+    a.nodo.rotation.copy(b.nodo.rotation);
+  }
+}
+
 export function liberar(raiz: THREE.Object3D) {
   raiz.traverse((o) => {
     if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
