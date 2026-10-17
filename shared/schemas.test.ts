@@ -53,4 +53,11 @@ describe("fixtures validan contra los contratos", () => {
       Coreografia.parse({ paso: 1, dice: "x", acciones: [{ t: "explotar" }], riesgo: "bajo" }),
     ).toThrow();
   });
+
+  it("coreografía acepta 'cambiar' opcional con id de pieza", () => {
+    const base = { paso: 1, dice: "x", acciones: [], riesgo: "bajo" as const };
+    expect(() => Coreografia.parse({ ...base, cambiar: "ventilador" })).not.toThrow();
+    expect(() => Coreografia.parse(base)).not.toThrow();
+    expect(() => Coreografia.parse({ ...base, cambiar: "Ventilador Grande" })).toThrow();
+  });
 });

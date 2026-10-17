@@ -29,6 +29,8 @@ export type GuiaExpertoProps = {
   accesorioEntrada?: ReactNode;
   /** Lo que dictó la persona (C3). Cada `id` nuevo se pregunta como si lo hubiera escrito. */
   preguntaDictada?: { texto: string; id: number };
+  /** Se llama cuando un paso dice que una pieza hay que cambiarla (coreografía con "cambiar"). Solo ids del plano y nunca en un paso bloqueado. */
+  onCambiarPieza?: (pieza: string) => void;
   /** Para /lab y tests: de dónde salen las respuestas (por defecto, /api/chat). */
   fuente?: FuenteChat;
   efectos?: ModoEfectos;
@@ -38,6 +40,12 @@ export type GuiaExpertoProps = {
 /** Por debajo del máximo que acepta /api/chat (LIMITES.chat.maxHistorial, en el servidor). */
 const HISTORIAL_MAX = 20;
 const FUNDIDO_MS = 900;
+
+/** La pieza a cambiar de un paso, solo si existe en el plano y el paso no está bloqueado. */
+export function piezaACambiar(c: Coreografia, plano: PlanoDePiezas): string | null {
+  if (!c.cambiar || c.riesgo === "alto") return null;
+  return plano.piezas.some((p) => p.pieza === c.cambiar) ? c.cambiar : null;
+}
 
 const decirConTiempoDeLectura = (texto: string, senal: AbortSignal) => esperar(tiempoDeLectura(texto), senal);
 
@@ -52,6 +60,7 @@ export function GuiaExperto({
   onEvento,
   accesorioEntrada,
   preguntaDictada,
+  onCambiarPieza,
   fuente = fuenteApi,
   efectos,
   className = "",
@@ -78,7 +87,11 @@ export function GuiaExperto({
         fuente(pedido, ctl.signal),
         {
           estado: (e, d) => (setEstado(e), setDetalle(d)),
-          paso: (c) => setCoreografia({ ...c }),
+          paso: (c) => {
+            setCoreografia({ ...c });
+            const pieza = piezaACambiar(c, plano);
+            if (pieza) onCambiarPieza?.(pieza);
+          },
           decir: async (t, senal) => {
             await decir(t, senal);
             // La frase se desvanece al terminar de decirla (salvo un bloqueo: queda a la vista).
@@ -97,7 +110,7 @@ export function GuiaExperto({
       });
       if (dicho) historial.current = [...historial.current, dicho];
     },
-    [casoId, pack, plano, manualFileId, fuente, decir],
+    [casoId, pack, plano, manualFileId, fuente, decir, onCambiarPieza],
   );
 
   // Arranque automático y cancelación al salir de la pantalla.

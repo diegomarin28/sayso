@@ -177,6 +177,8 @@ export const Coreografia = z.object({
   cita: Cita.optional(),
   acciones: z.array(Accion),
   riesgo: Riesgo,
+  /** Opcional: id de la pieza que conviene reemplazar (lo decide la IA con el manual). Abre las opciones de compra. */
+  cambiar: z.string().regex(/^[a-z0-9_]+$/).optional(),
 });
 export type Coreografia = z.infer<typeof Coreografia>;
 

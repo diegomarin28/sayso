@@ -50,6 +50,7 @@ import { GuiaExperto } from "@/components/viewer";
   decir={hablar}                  // C3: TTS; resolver cuando termina. Sin esto, tiempo de lectura.
   accesorioEntrada={<BotonMicrofono />}
   preguntaDictada={dictada}       // C3: { texto, id }; cada id nuevo se pregunta solo
+  onCambiarPieza={(pieza) => abrirCompras(pieza)} // cuando la IA dice que una pieza hay que cambiarla
   onEvento={agregarEvento}
 />
 ```
@@ -58,3 +59,5 @@ import { GuiaExperto } from "@/components/viewer";
 - Bloqueo (riesgo alto): la derivación queda a la vista en rojo, el 3D vuelve al reposo y no se anima nada más.
 - **Micrófono:** pasá lo transcripto en `preguntaDictada` con un `id` nuevo cada vez (ej. un contador). Se pregunta como si se hubiera escrito y corta la respuesta en curso.
 - Ejemplo: `/lab/guia` (con `npm run dev`), con respuestas simuladas (sin gastar IA) o la API real.
+
+- **Cambiar una pieza:** si un paso de `/api/chat` trae `cambiar: "<id de pieza>"`, `<GuiaExperto>` llama a `onCambiarPieza(id)`. Solo con ids del plano y nunca en un paso bloqueado. La pantalla 6 abre `<OpcionesCompra>` con esa pieza.
