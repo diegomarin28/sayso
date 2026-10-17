@@ -9,6 +9,9 @@
 
 export type Hablando = { detener: () => void; termino: Promise<void> };
 
+/** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): voz del navegador, no gasta ElevenLabs. */
+const SIN_ELEVENLABS = process.env.NEXT_PUBLIC_DATOS === "fixture";
+
 let actual: Hablando | null = null;
 let reproductor: HTMLAudioElement | null = null;
 
@@ -65,6 +68,7 @@ export function hablar(texto: string): Hablando {
   let detenido = false;
 
   const termino = (async () => {
+    if (SIN_ELEVENLABS) return hablarConNavegador(texto, () => detenido);
     try {
       const res = await fetch("/api/voz/hablar", {
         method: "POST",

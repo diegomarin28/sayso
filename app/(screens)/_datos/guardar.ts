@@ -16,7 +16,11 @@ type Cambio = {
 
 let cola: Promise<unknown> = Promise.resolve();
 
+/** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): no se llenan las tablas con casos de ejemplo. */
+const NO_GUARDAR = process.env.NEXT_PUBLIC_DATOS === "fixture";
+
 export function guardar(cambio: Cambio): void {
+  if (NO_GUARDAR) return;
   cola = cola
     .then(async () => {
       const res = await fetch("/api/casos", {
