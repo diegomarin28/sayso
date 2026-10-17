@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { PedidoDeFoto, TipoFoto, type ClaseEquipo } from "../../shared";
-import { MODELOS, pedirJson, type LlamarIA } from "../ia/claude";
+import { LIMITES, MODELOS, pedirJson, type LlamarIA } from "../ia/claude";
 
 /**
  * Qué fotos pedir. La base es una lista fija por clase de equipo (código);
  * la IA solo puede agregar hasta MAX_EXTRA pedidos según el síntoma.
  */
 
-export const MAX_EXTRA = 2;
+export const MAX_EXTRA = LIMITES.foto.extrasMax;
 
 const BASE: Record<ClaseEquipo, PedidoDeFoto[]> = {
   notebook: [

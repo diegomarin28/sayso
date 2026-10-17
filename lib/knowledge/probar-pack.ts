@@ -7,7 +7,6 @@
 import type { Ficha } from "../../shared";
 import { armarKnowledgePack } from "./armar";
 import { buscarManual } from "./buscar";
-import { descargarPdf } from "./descargar";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -19,11 +18,8 @@ async function main() {
   }
 
   if (soloBuscar) {
-    const candidatos = await buscarManual({ marca, modelo, clase: "notebook" });
-    for (const c of candidatos) {
-      const pdf = await descargarPdf(c.url);
-      console.log(`${pdf ? "PDF ✔" : "no PDF"}  [${c.fuente}${c.modeloExacto ? ", exacto" : ""}] ${c.titulo}\n        ${c.url}`);
-    }
+    const m = await buscarManual({ marca, modelo, clase: "notebook" });
+    console.log(m ? `PDF ✔ [${m.fuente}] ${m.titulo}\n        ${m.url} (${(m.pdf.bytes / 1e6).toFixed(1)} MB)` : "No encontró el manual.");
     return;
   }
 
@@ -37,7 +33,7 @@ async function main() {
     confirmadaPorUsuario: true,
   };
   const t0 = Date.now();
-  const { pack, manual, eventos } = await armarKnowledgePack({ ficha, sintoma });
+  const { pack, manual, eventos, paginasVistaExplosionada } = await armarKnowledgePack({ ficha, sintoma });
   for (const e of eventos) console.log(`· ${e.mensaje}`);
   console.log(`\nManual: ${manual ? `${manual.url} (${(manual.bytes / 1e6).toFixed(1)} MB)` : "ninguno"}  verificado=${pack.verificado}`);
   console.log("\nPiezas:");
@@ -49,6 +45,7 @@ async function main() {
   }
   console.log("\nRepuestos:", pack.repuestos.map((r) => `${r.pieza}=${r.numeroParte} (p.${r.cita.pagina})`).join(", ") || "ninguno");
   console.log("Advertencias:", pack.advertencias.length);
+  console.log("Páginas con vista explosionada:", paginasVistaExplosionada.join(", ") || "ninguna");
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 

@@ -15,6 +15,23 @@ export const MODELOS = {
   corto: "claude-haiku-5-5",
 } as const;
 
+/** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */
+export const LIMITES = {
+  foto: {
+    /** Nitidez mínima (0–1) para aceptar una foto. */
+    nitidezMinima: 0.6,
+    /** Máximo de fotos que la IA puede agregar a la lista base. */
+    extrasMax: 2,
+    /** ~5 MB de imagen en base64 (límite de Claude por imagen). */
+    maxBase64: 7_000_000,
+    chapaMaxImagenes: 3,
+  },
+  pdf: { maxBytes: 150 * 1024 * 1024, timeoutMs: 60_000, venceEnSeg: 7 * 24 * 3600 },
+  bibliotecario: { busquedas: 6, paginas: 6, vueltas: 12 },
+  pack: { maxPasos: 12 },
+  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30 },
+} as const;
+
 export type PedidoIA = {
   modelo: string;
   system: string;
@@ -80,7 +97,7 @@ export type SubirArchivo = (datos: Buffer, nombre: string) => Promise<string>;
 
 export const subirArchivo: SubirArchivo = async (datos, nombre) => {
   const archivo = await toFile(datos, nombre, { type: "application/pdf" });
-  const meta = await obtenerCliente().files.upload({ file: archivo, expires_in_seconds: 7 * 24 * 3600 });
+  const meta = await obtenerCliente().files.upload({ file: archivo, expires_in_seconds: LIMITES.pdf.venceEnSeg });
   return meta.id;
 };
 

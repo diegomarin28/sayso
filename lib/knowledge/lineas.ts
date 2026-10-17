@@ -60,13 +60,15 @@ export type Contenido = {
   pasos: PasoReparacion[];
   repuestos: z.infer<typeof Repuesto>[];
   advertencias: string[];
+  /** Páginas citadas en líneas VISTA (vista explosionada / lista de piezas). */
+  vistas: number[];
   descartadas: string[];
 };
 
 const ID_PIEZA = /^[a-z0-9_]+$/;
 
 export function parsearContenido(lineas: Linea[], doc: string): Contenido {
-  const r: Contenido = { piezas: [], pasos: [], repuestos: [], advertencias: [], descartadas: [] };
+  const r: Contenido = { piezas: [], pasos: [], repuestos: [], advertencias: [], vistas: [], descartadas: [] };
   const idsPiezas = new Set<string>();
 
   for (const l of lineas) {
@@ -115,11 +117,14 @@ export function parsearContenido(lineas: Linea[], doc: string): Contenido {
       if (cita?.estado === "VERIFICADO" && enManual && numeroParte.length >= 4) {
         r.repuestos.push({ pieza: pieza.toLowerCase(), numeroParte, cita });
       } else r.descartadas.push(l.texto);
+    } else if (tipo === "VISTA") {
+      for (const c of l.citas) if (c.type === "page_location" && !r.vistas.includes(c.start_page_number)) r.vistas.push(c.start_page_number);
     } else if (tipo === "ADVERTENCIA" && campos[1]) {
       r.advertencias.push(campos.slice(1).join(" | "));
     }
   }
 
   r.pasos.sort((a, b) => a.orden - b.orden);
+  r.vistas.sort((a, b) => a - b);
   return r;
 }
