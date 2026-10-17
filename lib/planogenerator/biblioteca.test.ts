@@ -8,6 +8,7 @@ import {
   SEPARADOR_VARIANTE,
   bibliotecaDesdeEscena,
   modeloPara,
+  palabras,
   partesAjustadas,
   type BibliotecaPiezas,
   type ModeloPieza,
@@ -71,6 +72,19 @@ describe("piezas.glb", () => {
     expect(elegida("conector_carga")).toBe("conector@usb_c");
     expect(elegida("camara_trasera")).toBe("camara@modulo");
     expect(elegida("camara_frontal")).toBe("camara");
+    expect(elegida("tapa_trasera")).toBe("tapa_trasera");
+  });
+
+  it("las variantes traen del GLB para qué equipo son", () => {
+    expect(biblioteca.get("bateria@celular")!.equipos).toContain("celular");
+    expect(biblioteca.get("bateria")!.equipos).toContain("notebook");
+    expect(biblioteca.get("conector@usb_c")!.equipos).toEqual([]); // la usan los dos
+  });
+
+  it("con el tipo de equipo de la recepción usa la versión de celular aunque las medidas digan otra cosa", () => {
+    const bateria = planoNotebookBase.piezas.find((p) => p.pieza === "bateria")!;
+    expect(nombreDe(modeloPara("bateria", biblioteca, bateria.dim, "Teléfono celular Motorola"))).toBe("bateria@celular");
+    expect(nombreDe(modeloPara("bateria", biblioteca, bateria.dim, "lavarropas"))).toBe("bateria");
   });
 });
 
@@ -89,6 +103,7 @@ const planoCelular: PlanoDePiezas = {
       ["camara_frontal", [0.8, 0.5, 0.8]],
       ["conector_carga", [0.9, 0.32, 0.75]],
       ["parlante_inferior", [1.8, 0.35, 1]],
+      ["tapa_trasera", [7.3, 0.18, 15.7]],
     ] as const
   ).map(([pieza, dim]) => ({ pieza, forma: "caja", dim: [...dim], pos: [0, 0, 0], pivote: [0, 0, 0] })),
 };
@@ -117,6 +132,30 @@ describe("modeloPara", () => {
     expect(modeloPara("bateria_principal", b, [5, 0.4, 8])).toBe(b.get("bateria@celular"));
     expect(modeloPara("bateria", b, [9, 0.5, 6])).toBe(b.get("bateria@celular")); // girada
     expect(modeloPara("bateria", b)).toBe(b.get("bateria"));
+  });
+
+  it("el tipo de equipo descarta las variantes de otro equipo; las que no dicen equipo sirven para todos", () => {
+    const de = (x: number, y: number, z: number, equipos: string[] = []) => ({
+      partes: [],
+      caja: new THREE.Box3(new THREE.Vector3(), new THREE.Vector3(x, y, z)),
+      equipos,
+    });
+    const b: BibliotecaPiezas = new Map([
+      ["bateria", de(26, 0.8, 7, ["notebook", "laptop"])],
+      ["bateria@celular", de(6, 0.5, 9, ["celular", "telefono"])],
+      ["conector", de(1.3, 0.6, 1.5, ["notebook"])],
+      ["conector@usb_c", de(0.9, 0.3, 0.75)],
+    ]);
+    expect(modeloPara("bateria", b, [25, 1, 8], "celulares Samsung")).toBe(b.get("bateria@celular"));
+    expect(modeloPara("bateria", b, undefined, "un teléfono")).toBe(b.get("bateria@celular"));
+    expect(modeloPara("bateria", b, [5, 0.4, 8], "Notebook Lenovo")).toBe(b.get("bateria"));
+    expect(modeloPara("bateria", b, [5, 0.4, 8], "lavarropas")).toBe(b.get("bateria@celular")); // no nombra a ninguna: decide la medida
+    expect(modeloPara("conector_carga", b, [1.3, 0.6, 1.5], "celular")).toBe(b.get("conector@usb_c"));
+    expect(modeloPara("conector_carga", b, [1.3, 0.6, 1.5], "MacBook Pro")).toBe(b.get("conector")); // equipo desconocido: medidas
+  });
+
+  it("palabras: sin tildes ni mayúsculas", () => {
+    expect(palabras("Teléfono MÓVIL, iPhone-13")).toEqual(["telefono", "movil", "iphone", "13"]);
   });
 });
 

@@ -57,6 +57,7 @@ COLORES = {
     "cuerpo.placa": ("#173f35", 0.15, 0.5),
     "cuerpo.camara": ("#2a2e34", 0.6, 0.35),
     "cuerpo.marco": ("#9aa2ab", 0.9, 0.35),
+    "cuerpo.tapa_trasera": ("#2b3440", 0.4, 0.2),
     "aspas": ("#3b4048", 0.2, 0.5),
     "cubo": ("#1c1f23", 0.3, 0.4),
     "chip": ("#141619", 0.3, 0.45),
@@ -209,15 +210,18 @@ def redondeado(ancho, prof, r, seg=6):
     return pts
 
 
-def armar(nombre):
+def armar(nombre, equipos=None):
     """Junta las partes de la pieza por material y las cuelga de un nodo vacío con el nombre del tipo
-    (o `tipo@variante`). El material del cuerpo es el del tipo: las variantes comparten receta."""
+    (o `tipo@variante`). El material del cuerpo es el del tipo: las variantes comparten receta.
+    `equipos` (EQUIPOS_*) dice para qué equipos es la forma: va al GLB como `extras.equipos`."""
     tipo = nombre.split("@")[0]
     bpy.context.view_layer.update()
     grupos = {}
     for o in _partes:
         grupos.setdefault(o["mat"], []).append(o)
     vacio = bpy.data.objects.new(nombre, None)
+    if equipos:
+        vacio["equipos"] = equipos
     bpy.context.scene.collection.objects.link(vacio)
     for mat, objs in grupos.items():
         bm = bmesh.new()
@@ -242,6 +246,12 @@ def armar(nombre):
 
 
 # ---------- Piezas ----------
+
+# Para qué equipos es cada forma, en palabras (sin tildes). Solo se marcan los tipos que tienen
+# variantes: si la recepción dice "celular", la app descarta las variantes marcadas para otro equipo.
+# Una variante sin marca (ej. el USB-C, que usan los dos) sirve para cualquiera.
+EQUIPOS_NOTEBOOK = "notebook laptop portatil netbook ultrabook"
+EQUIPOS_CELULAR = "celular telefono smartphone movil"
 
 def ventilador():
     """Ventilador centrífugo (blower): carcasa en D, rotor con álabes, aletas de cobre en la salida."""
@@ -394,7 +404,7 @@ def bateria():
             x, y = sx * 12.95, -0.45 + sy * 2.4
             oreja = caja((0.8, 0.8, 0.05), (x, y, 0.06), "metal", bisel=0.05)
             restar(oreja, cilindro(0.17, 0.5, (x, y, 0.06), mat=None, seg=16))
-    return armar("bateria")
+    return armar("bateria", EQUIPOS_NOTEBOOK)
 
 
 def parlante():
@@ -410,7 +420,7 @@ def parlante():
         goma = cilindro(0.17, 0.18, (x, 0, 0.1), "goma", seg=20, bisel=0.03)
         restar(goma, cilindro(0.07, 0.5, (x, 0, 0.1), mat=None, seg=12))
     caja((0.5, 0.3, 0.2), (0.8, -1.05, 0.15), "conector", bisel=0.02)
-    return armar("parlante")
+    return armar("parlante", EQUIPOS_NOTEBOOK)
 
 
 def placa_madre():
@@ -431,7 +441,7 @@ def placa_madre():
         caja((w, w * 0.55, 0.04), (azar.uniform(-15.5, 15.5), azar.uniform(-6.2, 6.2), 0.12), mat)
     for x, y, w in [(-12, -6.0, 2.0), (3, 6.0, 1.4), (10, -6.0, 1.0), (-3, -6.1, 1.6)]:
         caja((w, 0.5, 0.08), (x, y, 0.14), "conector", bisel=0.01)
-    return armar("placa_madre")
+    return armar("placa_madre", EQUIPOS_NOTEBOOK)
 
 
 def base():
@@ -511,7 +521,7 @@ def conector():
     caja((0.9, 0.7, 0.1), (0, -0.4, 0.3), "plastico")
     for x in (-0.55, 0.55):
         caja((0.15, 0.3, 0.05), (x * 1.25, 0.4, 0.025), "metal")
-    return armar("conector")
+    return armar("conector", EQUIPOS_NOTEBOOK)
 
 
 def soporte():
@@ -570,9 +580,11 @@ def placa_compacta():
     return armar("placa")
 
 
-def alias(nombre, de):
+def alias(nombre, de, equipos=None):
     """Otro nodo con las mismas mallas que `de` (el GLB las guarda una sola vez)."""
     vacio = bpy.data.objects.new(nombre, None)
+    if equipos:
+        vacio["equipos"] = equipos
     bpy.context.scene.collection.objects.link(vacio)
     for hijo in de.children:
         o = bpy.data.objects.new(f"{nombre}__{hijo.name.split('__')[1]}", hijo.data)
@@ -594,7 +606,7 @@ def bateria_celular():
     caja((0.65, 0.25, 0.006), (2.5, D / 2 + 0.3, 0.383), "contactos")
     for x in (-1.6, 1.6):
         caja((0.7, 0.9, 0.01), (x, -D / 2 - 0.3, 0.005), "goma")
-    return armar("bateria@celular")
+    return armar("bateria@celular", EQUIPOS_CELULAR)
 
 
 def camara():
@@ -614,7 +626,7 @@ def camara_modulo():
         cilindro(r, 0.08, (x, y, 0.64), "metal", seg=32)
         cilindro(r - 0.08, 0.02, (x, y, 0.685), "vidrio", seg=32)
     cilindro(0.18, 0.06, (0.65, -0.65, 0.13), "etiqueta", seg=24)
-    return armar("camara@modulo")
+    return armar("camara@modulo", EQUIPOS_CELULAR)
 
 
 def conector_usb_c():
@@ -638,7 +650,7 @@ def parlante_celular():
     caja((0.9, 0.5, 0.004), (-0.2, 0.05, 0.352), "etiqueta")
     for x in (0.55, 0.75):
         caja((0.12, 0.25, 0.06), (x, 0.25, 0.38), "contactos", bisel=0.01)
-    return armar("parlante@celular")
+    return armar("parlante@celular", EQUIPOS_CELULAR)
 
 
 def marco():
@@ -664,12 +676,29 @@ def marco():
     return armar("marco")
 
 
+def tapa_trasera():
+    """Tapa trasera de celular vista desde afuera: vidrio o plástico con bordes curvos, isla de las
+    cámaras con su hueco y, del lado de adentro, la bobina de carga inalámbrica y el adhesivo del borde."""
+    W, D, R = 7.3, 15.7, 0.95
+    cx, cy = -1.6, 5.4  # mismo lugar que el hueco de la placa media del marco
+    tapa = prisma(redondeado(W, D, R, 8), 0.1, (0, 0, 0.09), bisel=0.045)
+    restar(tapa, prisma(redondeado(2.9, 2.9, 0.5, 6), 0.4, (cx, cy, 0.09), mat=None))
+    isla = prisma(redondeado(3.3, 3.3, 0.65, 6), 0.06, (cx, cy, 0.17), "metal", bisel=0.02)
+    restar(isla, prisma(redondeado(2.9, 2.9, 0.5, 6), 0.4, (cx, cy, 0.17), mat=None))
+    for r in (1.7, 1.4, 1.1):
+        espira = cilindro(r, 0.02, (0, -1.2, 0.03), "cobre", seg=40)
+        restar(espira, cilindro(r - 0.16, 0.1, (0, -1.2, 0.03), mat=None, seg=40))
+    adhesivo = prisma(redondeado(W - 0.1, D - 0.1, R - 0.05, 8), 0.02, (0, 0, 0.03), "goma")
+    restar(adhesivo, prisma(redondeado(W - 0.5, D - 0.5, R - 0.25, 8), 0.1, (0, 0, 0.03), mat=None))
+    return armar("tapa_trasera")
+
+
 PIEZAS = [
     base, tapa_inferior, placa_madre, ventilador, disipador, heatpipe, tornillo, ram, ssd, wifi, pila,
     bateria, parlante, disco_duro, cable, bisagra, conector, soporte,
     # Celular: tipos nuevos y variantes de tipos que ya existían.
     pantalla, placa_compacta, bateria_celular,
-    camara, camara_modulo, conector_usb_c, parlante_celular, marco,
+    camara, camara_modulo, conector_usb_c, parlante_celular, marco, tapa_trasera,
 ]
 
 
@@ -686,7 +715,7 @@ def exportar(salida):
         export_texcoords=False,
         export_cameras=False,
         export_lights=False,
-        export_extras=False,
+        export_extras=True,  # solo los nodos de tipo llevan propiedades (`equipos`)
     )
 
 
@@ -792,7 +821,7 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     vacios = [hacer() for hacer in PIEZAS]
     # La placa madre de un celular es la misma placa compacta: variante sin duplicar mallas.
-    vacios.append(alias("placa_madre@celular", next(v for v in vacios if v.name == "placa")))
+    vacios.append(alias("placa_madre@celular", next(v for v in vacios if v.name == "placa"), EQUIPOS_CELULAR))
     exportar(args.salida)
     print(f"Exportado {args.salida}: {os.path.getsize(args.salida) / 1024:.0f} KB, {len(vacios)} tipos")
     if args.renders:

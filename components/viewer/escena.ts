@@ -55,8 +55,8 @@ export type EscenaPreparada = {
   despiece: { ultimo: number; subiendo: boolean };
 };
 
-export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas): EscenaPreparada {
-  const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca });
+export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
+  const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca, tipoEquipo });
   const animables = new Map<string, NodoAnimable>();
   const ids = [...nodos.keys()];
   const profundidad = (id: string) => ancestrosDe(nodos.get(id)!, raiz).length;
