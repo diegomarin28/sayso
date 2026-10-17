@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { toFile } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 
@@ -60,6 +60,32 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
     .map((b) => b.text)
     .join("");
 };
+
+/** Llamada completa (con streaming para pedidos largos, ej. un PDF). Se reemplaza en los tests. */
+export type EnviarMensaje = (params: Anthropic.MessageCreateParamsNonStreaming) => Promise<Anthropic.Message>;
+
+export const enviarMensaje: EnviarMensaje = async (params) => {
+  const mensaje = await obtenerCliente().messages.stream(params).finalMessage();
+  if (mensaje.stop_reason === "refusal") throw new ErrorIA("El modelo rechazó el pedido", mensaje.stop_details);
+  return mensaje;
+};
+
+/** Sube un PDF a la Files API y devuelve su file_id (vence en 7 días). Se reemplaza en los tests. */
+export type SubirArchivo = (datos: Buffer, nombre: string) => Promise<string>;
+
+export const subirArchivo: SubirArchivo = async (datos, nombre) => {
+  const archivo = await toFile(datos, nombre, { type: "application/pdf" });
+  const meta = await obtenerCliente().files.upload({ file: archivo, expires_in_seconds: 7 * 24 * 3600 });
+  return meta.id;
+};
+
+/** Primer objeto JSON dentro de un texto (por si el modelo agrega algo alrededor). */
+export function extraerJson(texto: string): unknown {
+  const ini = texto.indexOf("{");
+  const fin = texto.lastIndexOf("}");
+  if (ini < 0 || fin <= ini) throw new ErrorIA("No hay JSON en la respuesta");
+  return JSON.parse(texto.slice(ini, fin + 1));
+}
 
 /**
  * Pide JSON al modelo y lo valida con `esquema`. Un reintento si no valida.
