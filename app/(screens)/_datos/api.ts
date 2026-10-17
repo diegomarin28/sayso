@@ -104,7 +104,6 @@ export async function evaluarFoto(
   casoId: string,
   tipo: PedidoDeFoto["tipo"],
   imagen: ImagenB64,
-  url: string,
   intento: number,
 ): Promise<z.infer<typeof RespCalidad>> {
   if (USAR_FIXTURE) {
@@ -117,11 +116,11 @@ export async function evaluarFoto(
         id: `foto-${tipo}-${intento}`,
         casoId,
         tipoPedido: tipo,
-        url,
+        url: `pendiente:${tipo}`,
       },
     });
   }
-  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen, url }, RespCalidad);
+  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen }, RespCalidad);
 }
 
 export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {

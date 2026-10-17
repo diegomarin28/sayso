@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
 import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
+import { vistaPrevia } from "../_datos/imagen";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
@@ -138,7 +139,7 @@ export default function FichaDelEquipo() {
           {fotoEtiqueta && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={fotoEtiqueta.url}
+              src={vistaPrevia(imagenes[fotoEtiqueta.id])}
               alt="Etiqueta del equipo"
               className="h-full w-full object-cover opacity-70"
             />
