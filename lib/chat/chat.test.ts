@@ -191,8 +191,8 @@ describe("conversar", () => {
     const ev = await todos(conversar({ ...base, pregunta: "¿Dónde está el SSD?" }, stream));
     const fin = ev.at(-1);
     if (fin?.tipo !== "fin" || !fin.costo) throw new Error("sin costo");
-    // Sonnet: 1000 × 2 + 4000 × 0,2 (caché) + 200 × 10, por millón.
-    expect(fin.costo.usd).toBeCloseTo((1000 * 2 + 4000 * 0.2 + 200 * 10) / 1e6, 8);
+    // Haiku: 1000 × 0,1 + 4000 × 0,01 (caché) + 200 × 0,5, por millón.
+    expect(fin.costo.usd).toBeCloseTo((1000 * 0.1 + 4000 * 0.01 + 200 * 0.5) / 1e6, 10);
     expect(fin.costo.evento).toMatchObject({ casoId: "c1", agente: "experto", tipo: "costo" });
     expect(fin.costo.evento.mensaje).toMatch(/4000 leídos de la caché/);
   });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Ficha, type Campo, type ClaseEquipo } from "../../shared";
-import { bloqueImagen, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { bloqueImagen, pedirJson, type ImagenEntrada, type LlamarIA, MODELO_DE } from "../ia/claude";
 
 /**
  * Lectura de la chapa. La IA transcribe y propone valores; el código asigna el
@@ -61,7 +61,7 @@ export async function leerChapa(
   const lectura = await pedirJson(
     SalidaChapa,
     {
-      modelo: MODELOS.vision,
+      modelo: MODELO_DE.chapa,
       system: SYSTEM_CHAPA,
       contenido: [
         ...entrada.imagenes.map(bloqueImagen),
@@ -109,7 +109,7 @@ export async function reconocerPorFoto(
   return pedirJson(
     SalidaReconocer,
     {
-      modelo: MODELOS.vision,
+      modelo: MODELO_DE.reconocer,
       system: SYSTEM_RECONOCER,
       contenido: [
         ...entrada.imagenes.map(bloqueImagen),
