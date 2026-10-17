@@ -13,11 +13,11 @@ import { BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_u
 
 type ClaveCampo = "marca" | "modelo" | "serie" | "anio";
 
-const CAMPOS: { clave: ClaveCampo; etiqueta: string }[] = [
-  { clave: "marca", etiqueta: "Marca" },
-  { clave: "modelo", etiqueta: "Modelo" },
-  { clave: "serie", etiqueta: "N.º de serie" },
-  { clave: "anio", etiqueta: "Año" },
+const CAMPOS: { clave: ClaveCampo; etiqueta: string; ejemplo: string }[] = [
+  { clave: "marca", etiqueta: "Marca", ejemplo: "Ej.: Lenovo" },
+  { clave: "modelo", etiqueta: "Modelo", ejemplo: "Ej.: ThinkPad E14 Gen 2" },
+  { clave: "serie", etiqueta: "N.º de serie", ejemplo: "Como figura en la etiqueta" },
+  { clave: "anio", etiqueta: "Año", ejemplo: "Ej.: 2021" },
 ];
 
 const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
@@ -117,7 +117,7 @@ export default function FichaDelEquipo() {
       : !ficha
         ? "Leyendo la chapa…"
         : dudosos > 0
-          ? "Esto leí en la chapa. Si algo está mal, tocalo y corregilo."
+          ? "Esto leí en la chapa. Revisalo: podés corregir o completar cualquier dato."
           : "Esto leí en la chapa. ¿Es tu equipo?";
 
   return (
@@ -152,66 +152,108 @@ export default function FichaDelEquipo() {
           <div className="linea-escaneo" />
         </div>
       ) : (
-        <div className="chapa relative rounded-3xl border border-white/10 p-6 pt-8">
-          {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
-            <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
-          ))}
-          <p className="mb-4 font-mono text-xs tracking-[0.3em] text-texto-suave uppercase">{ficha.clase}</p>
-          <dl className="flex flex-col divide-y divide-white/10">
-            {CAMPOS.map(({ clave, etiqueta }) => {
-              const campo = ficha[clave];
-              const estilo = ESTILO_ESTADO[campo.estado];
-              return (
-                <div key={clave} className="py-3">
-                  <dt className="text-xs text-texto-suave">{etiqueta}</dt>
-                  {editando === clave ? (
-                    <form
-                      className="mt-1 flex gap-2"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        guardar(clave);
-                      }}
-                    >
-                      <input
-                        autoFocus
-                        value={borrador}
-                        onChange={(e) => setBorrador(e.target.value)}
-                        className="min-w-0 flex-1 rounded-lg border border-acento bg-black/40 px-3 py-2 font-mono text-lg focus:outline-none"
-                      />
-                      <button className="rounded-lg bg-acento px-4 font-semibold text-black">OK</button>
-                    </form>
-                  ) : (
-                    <dd>
-                      <button
-                        onClick={() => {
-                          setEditando(clave);
-                          setBorrador(campo.valor ?? "");
-                        }}
-                        className="mt-1 flex w-full items-center justify-between gap-3 text-left"
+        <div className="flex flex-col gap-3">
+          <p className="flex items-center gap-2 text-sm text-texto-suave">
+            <Lapiz /> Podés corregir o completar cualquier dato.
+          </p>
+          <div className="chapa relative rounded-3xl border border-white/10 p-5 pt-7 sm:p-6 sm:pt-8">
+            {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
+              <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
+            ))}
+            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-texto-suave uppercase">
+              {ficha.clase}
+            </p>
+            <dl className="flex flex-col gap-2">
+              {CAMPOS.map(({ clave, etiqueta, ejemplo }) => {
+                const campo = ficha[clave];
+                const estilo = ESTILO_ESTADO[campo.estado];
+                const vacio = !campo.valor;
+                return (
+                  <div key={clave}>
+                    <dt className="mb-1 flex items-center justify-between gap-2 text-xs text-texto-suave">
+                      {etiqueta}
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${estilo.clase}`}
                       >
-                        <span className={`font-mono text-xl ${campo.valor ? "" : "text-texto-suave"}`}>
-                          {campo.valor ?? "—"}
-                        </span>
-                        <span
-                          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs ${estilo.clase}`}
+                        {estilo.texto}
+                      </span>
+                    </dt>
+                    {editando === clave ? (
+                      <form
+                        className="flex flex-col gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          guardar(clave);
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          value={borrador}
+                          onChange={(e) => setBorrador(e.target.value)}
+                          placeholder={ejemplo}
+                          enterKeyHint="done"
+                          aria-label={etiqueta}
+                          className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 font-mono text-lg placeholder:font-sans placeholder:text-base placeholder:text-texto-suave/60 focus:outline-none"
+                        />
+                        <div className="flex gap-2">
+                          <button className="h-11 flex-1 rounded-xl bg-acento font-semibold text-black active:scale-[0.98]">
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditando(null)}
+                            className="h-11 rounded-xl border border-borde px-4 text-sm"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <dd>
+                        <button
+                          onClick={() => {
+                            setEditando(clave);
+                            setBorrador(campo.valor ?? "");
+                          }}
+                          aria-label={`${vacio ? "Completar" : "Editar"} ${etiqueta}`}
+                          className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition hover:border-texto-suave active:scale-[0.99] ${
+                            vacio
+                              ? "border-dashed border-acento/60 bg-acento/5"
+                              : "border-white/10 bg-black/20"
+                          }`}
                         >
-                          {estilo.texto}
-                        </span>
-                      </button>
-                    </dd>
-                  )}
-                </div>
-              );
-            })}
-          </dl>
+                          <span
+                            className={`min-w-0 break-words ${vacio ? "text-sm text-texto-suave" : "font-mono text-lg"}`}
+                          >
+                            {campo.valor ?? "Tocá para escribirlo"}
+                          </span>
+                          <span
+                            className={`flex shrink-0 items-center gap-1 text-xs font-semibold ${
+                              vacio ? "text-acento" : "text-texto-suave"
+                            }`}
+                          >
+                            {vacio ? (
+                              "+ Completar"
+                            ) : (
+                              <>
+                                <Lapiz /> Editar
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      </dd>
+                    )}
+                  </div>
+                );
+              })}
+            </dl>
+          </div>
         </div>
       )}
 
       {ficha && (
         <div className="mt-auto flex flex-col gap-3">
-          <p className="text-center text-xs text-texto-suave">
-            Tocá un dato para corregirlo. Lo que corregís vos queda como confirmado.
-          </p>
+          <p className="text-center text-xs text-texto-suave">Lo que escribís vos queda como confirmado.</p>
           <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
             {enviando ? "Guardando…" : "Sí, es este"} <Flecha />
           </BotonPrincipal>
@@ -223,4 +265,22 @@ export default function FichaDelEquipo() {
 
 function mensajeDeError(e: unknown) {
   return e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.";
+}
+
+function Lapiz() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+    </svg>
+  );
 }
