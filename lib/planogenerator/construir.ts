@@ -19,7 +19,7 @@ import { materialDeParte, materialPara } from "./materiales";
  *          └─ Meshes de detalle (`${id}__malla__detalle_N`: aspas, chips…), opcionales
  *
  * Con `biblioteca` (piezas.glb), cada pieza cuyo id empieza con un tipo de la biblioteca usa esa
- * forma ajustada a `dim`: la malla principal es el cuerpo y las demás partes son detalles.
+ * forma (la variante que menos se deforma) ajustada a `dim`: la malla principal es el cuerpo y las demás partes son detalles.
  * Sin biblioteca (o tipo desconocido) se usa la primitiva de `forma` con detalles hechos en código.
  *     └─ Groups de las piezas hijas
  */
@@ -124,7 +124,7 @@ function crearNodo(p: PiezaPlano, biblioteca?: BibliotecaPiezas): THREE.Group {
   };
   nodo.userData = datos;
 
-  const modelo = modeloPara(p.pieza, biblioteca);
+  const modelo = modeloPara(p.pieza, biblioteca, p.dim);
   const malla = modelo ? mallaDeBiblioteca(p, partesAjustadas(modelo, p.dim)) : new THREE.Mesh(crearGeometria(p), materialPara(p.pieza));
   malla.name = p.pieza + SUFIJO_MALLA;
   malla.position.set(-p.pivote[0], -p.pivote[1], -p.pivote[2]);

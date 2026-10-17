@@ -3,7 +3,15 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PlanoDePiezas } from "../../shared";
-import { RECETA_CUERPO, bibliotecaDesdeEscena, modeloPara, partesAjustadas, type BibliotecaPiezas } from "./biblioteca";
+import {
+  RECETA_CUERPO,
+  SEPARADOR_VARIANTE,
+  bibliotecaDesdeEscena,
+  modeloPara,
+  partesAjustadas,
+  type BibliotecaPiezas,
+  type ModeloPieza,
+} from "./biblioteca";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
 import { RECETAS_DETALLE, recetaPara } from "./materiales";
 import { planoNotebookBase } from "./plantillas/notebook";
@@ -47,10 +55,45 @@ describe("piezas.glb", () => {
     for (const tipo of biblioteca.keys()) expect(recetaPara(tipo), tipo).not.toBe(recetaPara("pieza_sin_tipo"));
   });
 
-  it("cubre todas las piezas de la plantilla de notebook", () => {
-    for (const p of planoNotebookBase.piezas) expect(modeloPara(p.pieza, biblioteca), p.pieza).toBeDefined();
+  it("cubre todas las piezas de la plantilla de notebook, con las variantes de notebook", () => {
+    for (const p of planoNotebookBase.piezas) {
+      expect(modeloPara(p.pieza, biblioteca), p.pieza).toBeDefined();
+      expect(nombreDe(modeloPara(p.pieza, biblioteca, p.dim)), p.pieza).not.toContain(SEPARADOR_VARIANTE);
+    }
+  });
+
+  it("cubre las piezas de un celular y elige la variante de celular por las medidas", () => {
+    for (const p of planoCelular.piezas) expect(modeloPara(p.pieza, biblioteca, p.dim), p.pieza).toBeDefined();
+    const elegida = (id: string) => nombreDe(modeloPara(id, biblioteca, planoCelular.piezas.find((p) => p.pieza === id)!.dim));
+    expect(elegida("bateria")).toBe("bateria@celular");
+    expect(elegida("placa_madre")).toBe("placa_madre@celular");
+    expect(elegida("parlante_inferior")).toBe("parlante@celular");
+    expect(elegida("conector_carga")).toBe("conector@usb_c");
+    expect(elegida("camara_trasera")).toBe("camara@modulo");
+    expect(elegida("camara_frontal")).toBe("camara");
   });
 });
+
+/** Medidas típicas de un celular (cm). Solo para tests: el plano real lo arma la IA desde el manual. */
+const planoCelular: PlanoDePiezas = {
+  modelo: "celular de prueba",
+  unidades: "cm",
+  piezas: (
+    [
+      ["marco", [7.4, 0.8, 15.8]],
+      ["pantalla", [7.1, 0.35, 15.5]],
+      ["bateria", [5.6, 0.45, 8.6]],
+      ["placa_madre", [6, 0.25, 11]],
+      ["placa_carga", [6, 0.2, 2]],
+      ["camara_trasera", [2.6, 0.7, 2.6]],
+      ["camara_frontal", [0.8, 0.5, 0.8]],
+      ["conector_carga", [0.9, 0.32, 0.75]],
+      ["parlante_inferior", [1.8, 0.35, 1]],
+    ] as const
+  ).map(([pieza, dim]) => ({ pieza, forma: "caja", dim: [...dim], pos: [0, 0, 0], pivote: [0, 0, 0] })),
+};
+
+const nombreDe = (modelo?: ModeloPieza) => [...biblioteca].find(([, m]) => m === modelo)?.[0];
 
 describe("modeloPara", () => {
   it("elige el prefijo más largo y no inventa", () => {
@@ -62,6 +105,18 @@ describe("modeloPara", () => {
     expect(modeloPara("tapa_bisagra", b)).toBe(b.get("tapa"));
     expect(modeloPara("condensador_de_flujo", b)).toBeUndefined();
     expect(modeloPara("tapa", undefined)).toBeUndefined();
+  });
+
+  it("entre variantes elige la que menos se deforma; sin medidas, la base", () => {
+    const de = (x: number, y: number, z: number) => ({ partes: [], caja: new THREE.Box3(new THREE.Vector3(), new THREE.Vector3(x, y, z)) });
+    const b: BibliotecaPiezas = new Map([
+      ["bateria", de(26, 0.8, 7)],
+      ["bateria@celular", de(6, 0.5, 9)],
+    ]);
+    expect(modeloPara("bateria", b, [25, 1, 8])).toBe(b.get("bateria"));
+    expect(modeloPara("bateria_principal", b, [5, 0.4, 8])).toBe(b.get("bateria@celular"));
+    expect(modeloPara("bateria", b, [9, 0.5, 6])).toBe(b.get("bateria@celular")); // girada
+    expect(modeloPara("bateria", b)).toBe(b.get("bateria"));
   });
 });
 
@@ -95,10 +150,13 @@ describe("partesAjustadas", () => {
 });
 
 describe("construirEscena con biblioteca", () => {
-  it("cada pieza mide `dim` y queda centrada en `pos`, con nombres y materiales propios", () => {
-    const { nodos } = construirEscena(planoNotebookBase, { biblioteca });
+  it.each([
+    ["notebook", planoNotebookBase],
+    ["celular", planoCelular],
+  ])("%s: cada pieza mide `dim` y queda centrada en `pos`, con nombres y materiales propios", (_, plano) => {
+    const { nodos } = construirEscena(plano, { biblioteca });
     const materiales = new Set<THREE.Material>();
-    for (const p of planoNotebookBase.piezas) {
+    for (const p of plano.piezas) {
       const malla = nodos.get(p.pieza)!.getObjectByName(p.pieza + SUFIJO_MALLA) as THREE.Mesh;
       const caja = cajaDe(malla);
       caja.getSize(new THREE.Vector3()).toArray().forEach((v, i) => expect(v, p.pieza).toBeCloseTo(p.dim[i], 3));
@@ -117,9 +175,14 @@ describe("construirEscena con biblioteca", () => {
     const plano: PlanoDePiezas = {
       modelo: "prueba",
       unidades: "cm",
-      piezas: [{ pieza: "condensador", forma: "cilindro", dim: [1, 2, 1], pos: [0, 0, 0], pivote: [0, 0, 0] }],
+      piezas: [
+        { pieza: "condensador", forma: "cilindro", dim: [1, 2, 1], pos: [0, 0, 0], pivote: [0, 0, 0] },
+        { pieza: "motor_vibrador", forma: "cilindro", dim: [0.4, 0.4, 1], pos: [0, 0, 0], pivote: [0, 0, 0] },
+      ],
     };
-    const malla = construirEscena(plano, { biblioteca }).nodos.get("condensador")!.children[0] as THREE.Mesh;
-    expect(malla.geometry).toBeInstanceOf(THREE.CylinderGeometry);
+    const { nodos } = construirEscena(plano, { biblioteca });
+    for (const id of ["condensador", "motor_vibrador"]) {
+      expect((nodos.get(id)!.children[0] as THREE.Mesh).geometry, id).toBeInstanceOf(THREE.CylinderGeometry);
+    }
   });
 });

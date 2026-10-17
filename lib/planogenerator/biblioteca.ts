@@ -43,14 +43,39 @@ export function bibliotecaDesdeEscena(escena: THREE.Object3D): BibliotecaPiezas 
   return biblioteca;
 }
 
-/** El tipo cuyo nombre es el prefijo más largo del id (`tornillos_ventilador` → `tornillo`). */
-export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas): ModeloPieza | undefined {
+/** Un tipo puede tener variantes en el GLB: `bateria` (notebook) y `bateria@celular` son el mismo tipo. */
+export const SEPARADOR_VARIANTE = "@";
+export const tipoDe = (nombre: string) => nombre.split(SEPARADOR_VARIANTE)[0];
+
+/**
+ * Cuánto hay que estirar el modelo para que mida `dim`: suma de |log(escala)| por eje, con la planta
+ * girada o no (lo mismo que puede hacer `partesAjustadas`). Los modelos están en cm reales, así que
+ * cuenta el tamaño y la proporción: 0 = calza justo.
+ */
+export function deformacion(modelo: ModeloPieza, dim: Vec3): number {
+  const t = modelo.caja.getSize(new THREE.Vector3());
+  const [a, h, p] = dim.map((v) => Math.max(v, 0.01));
+  const log = (d: number, m: number) => Math.abs(Math.log(d / Math.max(m, 0.01)));
+  const alto = log(h, t.y);
+  return alto + Math.min(log(a, t.x) + log(p, t.z), log(a, t.z) + log(p, t.x));
+}
+
+/**
+ * El tipo cuyo nombre es el prefijo más largo del id (`tornillos_ventilador` → `tornillo`).
+ * Si el tipo tiene variantes y viene `dim`, la que menos se deforma (una batería de 26 cm usa la
+ * de notebook; una de 6 cm, la de celular). Sin `dim`, la variante base.
+ */
+export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: Vec3): ModeloPieza | undefined {
   if (!biblioteca) return undefined;
   let mejor: string | undefined;
-  for (const tipo of biblioteca.keys()) {
+  for (const nombre of biblioteca.keys()) {
+    const tipo = tipoDe(nombre);
     if (pieza.startsWith(tipo) && (!mejor || tipo.length > mejor.length)) mejor = tipo;
   }
-  return mejor ? biblioteca.get(mejor) : undefined;
+  if (!mejor) return undefined;
+  const variantes = [...biblioteca].filter(([nombre]) => tipoDe(nombre) === mejor);
+  if (!dim || variantes.length === 1) return biblioteca.get(mejor) ?? variantes[0][1];
+  return variantes.reduce((a, b) => (deformacion(b[1], dim) < deformacion(a[1], dim) ? b : a))[1];
 }
 
 /** Si los dos lados de la planta difieren en más que esto, se respeta la orientación. */
