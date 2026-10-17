@@ -33,13 +33,17 @@ export async function leerManual(
   tarea: string,
   maxTokens: number,
   enviar: EnviarMensaje,
+  etapa: string,
 ): Promise<Anthropic.TextBlock[]> {
-  const r = await enviar({
-    model: MODELOS.vision,
-    max_tokens: maxTokens,
-    output_config: { effort: LIMITES.lectura.effort },
-    system: SYSTEM_LECTOR,
-    messages: [{ role: "user", content: [bloqueManual(m), { type: "text", text: tarea }] }],
-  });
+  const r = await enviar(
+    {
+      model: MODELOS.vision,
+      max_tokens: maxTokens,
+      output_config: { effort: LIMITES.lectura.effort },
+      system: SYSTEM_LECTOR,
+      messages: [{ role: "user", content: [bloqueManual(m), { type: "text", text: tarea }] }],
+    },
+    etapa,
+  );
   return r.content.filter((b): b is Anthropic.TextBlock => b.type === "text");
 }

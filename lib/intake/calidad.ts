@@ -66,6 +66,7 @@ export async function evaluarFoto(
         { type: "text", text: `Se le pidió una foto de: ${QUE_DEBE_MOSTRAR[entrada.tipoPedido]}.` },
       ],
       maxTokens: 1000,
+      etapa: "recepción: calidad de foto",
     },
     llamar,
   );

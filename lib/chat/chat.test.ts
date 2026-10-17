@@ -96,7 +96,7 @@ describe("conversar", () => {
     expect(pasos[0].coreografia.cita).toEqual({ doc: "HMM", pagina: 54, estado: "VERIFICADO" });
     // la segunda frase no tiene marcas: mantiene el resaltado
     expect(pasos[1].coreografia.acciones).toEqual([{ t: "resaltar", pieza: "ssd" }]);
-    expect(ev.at(-1)).toEqual({ tipo: "fin", pasos: 2 });
+    expect(ev.at(-1)).toMatchObject({ tipo: "fin", pasos: 2 });
   });
 
   it("bloquea una pregunta peligrosa sin llamar a la IA", async () => {
@@ -152,6 +152,24 @@ describe("conversar", () => {
     const p = ev[0];
     if (p.tipo !== "paso") throw new Error();
     expect(p.coreografia.acciones).toEqual([{ t: "resaltar", pieza: "ventilador" }]);
+  });
+
+  it("el fin trae el costo de la respuesta como evento del feed (con lo leído de la caché)", async () => {
+    const stream: StreamIA = async function* () {
+      yield {
+        type: "message_start",
+        message: { usage: { input_tokens: 1000, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 4000 } },
+      } as unknown as Anthropic.RawMessageStreamEvent;
+      yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "El SSD está abajo. " } } as Anthropic.RawMessageStreamEvent;
+      yield { type: "message_delta", delta: {}, usage: { output_tokens: 200 } } as unknown as Anthropic.RawMessageStreamEvent;
+    };
+    const ev = await todos(conversar({ ...base, pregunta: "¿Dónde está el SSD?" }, stream));
+    const fin = ev.at(-1);
+    if (fin?.tipo !== "fin" || !fin.costo) throw new Error("sin costo");
+    // Sonnet: 1000 × 2 + 4000 × 0,2 (caché) + 200 × 10, por millón.
+    expect(fin.costo.usd).toBeCloseTo((1000 * 2 + 4000 * 0.2 + 200 * 10) / 1e6, 8);
+    expect(fin.costo.evento).toMatchObject({ casoId: "c1", agente: "experto", tipo: "costo" });
+    expect(fin.costo.evento.mensaje).toMatch(/4000 leídos de la caché/);
   });
 
   it("un error del stream sale como evento de error", async () => {

@@ -87,6 +87,7 @@ export async function decidirPedidos(
         system: SYSTEM_EXTRAS.replace("{BASE}", base.map((p) => p.tipo).join(", ")),
         contenido: [{ type: "text", text: `<sintoma>${sintoma}</sintoma>` }],
         maxTokens: 1000,
+        etapa: "recepción: elegir fotos",
       },
       llamar,
     );

@@ -39,6 +39,7 @@ export async function entender(texto: string, llamar?: LlamarIA, id: string = cr
         system: SYSTEM_ENTENDER,
         contenido: [{ type: "text", text: `<texto_persona>${limpio}</texto_persona>` }],
         maxTokens: 500,
+        etapa: "recepción: entender el problema",
       },
       llamar,
     );

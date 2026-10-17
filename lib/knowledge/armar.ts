@@ -69,15 +69,18 @@ async function leerPack(
   vistas: ClaseVista[],
   enviar: EnviarMensaje,
 ): Promise<Anthropic.TextBlock[]> {
-  if (manual) return leerManual(manual, tareaPack(equipo, sintoma, true, vistas), LIMITES.lectura.maxTokensPack, enviar);
-  const r = await enviar({
-    model: MODELOS.vision,
-    max_tokens: LIMITES.lectura.maxTokensPack,
-    output_config: { effort: LIMITES.lectura.effort },
-    system: SYSTEM_LECTOR,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
-    messages: [{ role: "user", content: tareaPack(equipo, sintoma, false, []) }],
-  });
+  if (manual) return leerManual(manual, tareaPack(equipo, sintoma, true, vistas), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
+  const r = await enviar(
+    {
+      model: MODELOS.vision,
+      max_tokens: LIMITES.lectura.maxTokensPack,
+      output_config: { effort: LIMITES.lectura.effort },
+      system: SYSTEM_LECTOR,
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+      messages: [{ role: "user", content: tareaPack(equipo, sintoma, false, []) }],
+    },
+    "bibliotecario: guía pública",
+  );
   return r.content.filter((b): b is Anthropic.TextBlock => b.type === "text");
 }
 
