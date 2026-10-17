@@ -2,14 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ErrorApi, prepararExperto } from "../_datos/api";
+import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
+import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
 import { FeedActividad } from "../_ui/feed";
 
 /**
- * Pantalla 4 — Preparando: el bibliotecario busca y lee el manual del modelo (30 s – 2 min).
+ * Pantalla 4 — Preparando: el bibliotecario busca y lee el manual del modelo (30 s – 2 min)
+ * y después el cartógrafo ubica las piezas en el 3D.
  * No es una pantalla de manual: el manual es fuente interna y acá solo se resume qué se encontró.
  */
 
@@ -24,7 +25,7 @@ const ETAPAS: { desde: number; texto: (equipo: string) => string }[] = [
 export default function Preparando() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { ficha, eventos, preparado, setPreparado, agregarEventos } = useFlujo();
+  const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos } = useFlujo();
   const [segundos, setSegundos] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
@@ -36,16 +37,24 @@ export default function Preparando() {
   }, [caso, listaParaPreparar, router]);
 
   useEffect(() => {
-    if (!caso || !ficha || !listaParaPreparar || preparado) return;
+    if (!caso || !ficha || !listaParaPreparar || (preparado && plano)) return;
     let vigente = true;
     const inicio = Date.now();
     const reloj = setInterval(() => setSegundos(Math.floor((Date.now() - inicio) / 1000)), 1000);
-    prepararExperto(ficha, caso.sintoma)
-      .then(({ eventos: nuevos, ...listo }) => {
+    (async () => {
+      let pack = preparado?.pack;
+      if (!pack) {
+        const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma);
         if (!vigente) return;
         agregarEventos(nuevos);
         setPreparado(listo);
-      })
+        pack = listo.pack;
+      }
+      const { eventos: nuevos, ...p } = await generarPlano(caso.id, pack);
+      if (!vigente) return;
+      agregarEventos(nuevos);
+      setPlano(p);
+    })()
       .catch(
         (e) => vigente && setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo."),
       )
@@ -64,21 +73,32 @@ export default function Preparando() {
   const pack = preparado?.pack;
   const verificados = pack?.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length ?? 0;
 
+  const listo = pack && plano;
+
   const dice = error
     ? error
     : !pack
       ? etapa.texto(equipo)
-      : pack.verificado
-        ? `Listo. Tengo el manual de tu ${equipo}.`
-        : `No encontré el manual oficial de tu ${equipo}. Te guío con una guía pública, sin verificar.`;
+      : !plano
+        ? "Ahora ubico cada pieza en el 3D…"
+        : pack.verificado
+          ? `Listo. Tengo el manual de tu ${equipo} y las piezas ubicadas.`
+          : `No encontré el manual oficial de tu ${equipo}. Te guío con una guía pública, sin verificar.`;
 
   return (
     <Pantalla>
-      <Encabezado paso={4} orbe={pack || error ? "quieto" : "pensando"} />
+      <Encabezado paso={4} orbe={listo || error ? "quieto" : "pensando"} />
 
       <DiceExperto texto={dice} />
 
-      {!pack && !error && (
+      <ol className="flex flex-col gap-2 text-sm" aria-label="Progreso">
+        <Etapa estado={pack ? "hecha" : error ? "error" : "en-curso"}>Guía del equipo con el manual</Etapa>
+        <Etapa estado={plano ? "hecha" : !pack ? "pendiente" : error ? "error" : "en-curso"}>
+          Piezas ubicadas en el 3D
+        </Etapa>
+      </ol>
+
+      {!listo && !error && (
         <div className="flex flex-col items-center gap-3 py-6">
           <Orbe estado="pensando" tam={120} />
           <p className="font-mono text-xs text-texto-suave tabular-nums" aria-label="Tiempo">
@@ -105,6 +125,14 @@ export default function Preparando() {
             <Dato valor={pack.pasos.length} etiqueta="pasos" />
             <Dato valor={verificados} etiqueta="con página citada" />
           </dl>
+          {plano && (
+            <p className="mt-4 text-xs text-texto-suave">
+              3D:{" "}
+              {plano.origen === "ia"
+                ? "piezas ubicadas según el manual."
+                : "modelo genérico del equipo (no pude ubicar las piezas con el manual)."}
+            </p>
+          )}
           {pack.advertencias.length > 0 && (
             <p className="mt-5 rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm text-probable">
               ⚠ {pack.advertencias[0]}
@@ -126,7 +154,7 @@ export default function Preparando() {
             Probar de nuevo
           </BotonPrincipal>
         )}
-        {pack && (
+        {listo && (
           <BotonPrincipal onClick={() => router.push("/experto")}>
             Ver al experto <Flecha />
           </BotonPrincipal>
@@ -142,5 +170,29 @@ function Dato({ valor, etiqueta }: { valor: number; etiqueta: string }) {
       <dd className="font-mono text-3xl font-semibold">{valor}</dd>
       <dt className="mt-1 text-xs text-texto-suave">{etiqueta}</dt>
     </div>
+  );
+}
+
+type EstadoEtapa = "pendiente" | "en-curso" | "hecha" | "error";
+
+function Etapa({ estado, children }: { estado: EstadoEtapa; children: React.ReactNode }) {
+  return (
+    <li className={`flex items-center gap-3 ${estado === "pendiente" ? "text-texto-suave/50" : ""}`}>
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+          estado === "hecha"
+            ? "bg-confirmado text-black"
+            : estado === "error"
+              ? "bg-peligro"
+              : estado === "en-curso"
+                ? "border-2 border-acento border-t-transparent motion-safe:animate-spin"
+                : "border border-borde"
+        }`}
+        aria-hidden
+      >
+        {estado === "hecha" && <Check size={12} />}
+      </span>
+      <span>{children}</span>
+    </li>
   );
 }

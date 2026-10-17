@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
-import type { Preparado } from "../_datos/api";
+import type { Plano, Preparado } from "../_datos/api";
 import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
 
@@ -21,6 +21,9 @@ type Flujo = {
   /** Guía del equipo armada en la pantalla 4 (pack, manual para /api/chat). */
   preparado: Preparado | null;
   setPreparado: (p: Preparado | null) => void;
+  /** Plano 3D de las piezas (pantalla 4), lo que monta el visor. */
+  plano: Plano | null;
+  setPlano: (p: Plano | null) => void;
   setCaso: (c: Caso | null) => void;
   agregarFoto: (f: Foto, imagen?: ImagenB64) => void;
   setFicha: (f: Ficha | null) => void;
@@ -36,6 +39,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [preparado, setPreparado] = useState<Preparado | null>(null);
+  const [plano, setPlano] = useState<Plano | null>(null);
 
   return (
     <Contexto.Provider
@@ -47,6 +51,8 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         eventos,
         preparado,
         setPreparado,
+        plano,
+        setPlano,
         setCaso: (c) => {
           // Un caso nuevo arranca de cero.
           if (c?.id !== caso?.id) {
@@ -55,6 +61,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
             setFicha(null);
             setEventos([]);
             setPreparado(null);
+            setPlano(null);
           }
           setCaso(c);
           if (c) guardar({ caso: c });

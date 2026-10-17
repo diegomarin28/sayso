@@ -1,9 +1,19 @@
 import { z } from "zod";
-import { Caso, Evento, Ficha, Foto, KnowledgePack, PedidoDeFoto, fichaEjemplo, fotosEjemplo } from "@/shared";
+import {
+  Caso,
+  Evento,
+  Ficha,
+  Foto,
+  KnowledgePack,
+  PedidoDeFoto,
+  PlanoDePiezas,
+  fichaEjemplo,
+  fotosEjemplo,
+} from "@/shared";
 import type { ImagenB64 } from "./imagen";
 
 /**
- * Fuente de datos de las pantallas: llama a `/api/intake/*`, `/api/ficha` y `/api/knowledge` (carril A).
+ * Fuente de datos de las pantallas: llama a `/api/intake/*`, `/api/ficha`, `/api/knowledge` (carril A) y `/api/plano` (carril B).
  * Con `NEXT_PUBLIC_DATOS=fixture` responde con los fixtures de `shared/` sin gastar IA
  * (sirve para trabajar sin claves y como plan B de la demo).
  */
@@ -190,5 +200,28 @@ export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<
   const p = llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge);
   preparando.set(ficha.casoId, p);
   p.catch(() => preparando.delete(ficha.casoId)); // si falla, se puede reintentar
+  return p;
+}
+
+const RespPlano = conEventos({
+  plano: PlanoDePiezas,
+  /** "ia" = piezas ubicadas con el manual; "plantilla" = modelo genérico de la clase. */
+  origen: z.enum(["ia", "plantilla"]),
+  avisos: z.array(z.string()).default([]),
+});
+export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
+
+const generando = new Map<string, Promise<z.infer<typeof RespPlano>>>();
+
+/** El cartógrafo ubica las piezas de la guía en el 3D (carril B). Una vez por caso. */
+export function generarPlano(
+  casoId: string,
+  knowledgePack: KnowledgePack,
+): Promise<z.infer<typeof RespPlano>> {
+  const enCurso = generando.get(casoId);
+  if (enCurso) return enCurso;
+  const p = llamar("/api/plano", { casoId, knowledgePack }, RespPlano);
+  generando.set(casoId, p);
+  p.catch(() => generando.delete(casoId));
   return p;
 }
