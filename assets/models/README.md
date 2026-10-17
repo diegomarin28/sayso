@@ -62,3 +62,9 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
 
 [42 componentes de aspiradora, secador, impresora, consola, router/módem y cafetera](blender/DISPOSITIVOS.md),
 con generador, GLB y renders propios. Se regenera con `npm run modelos:dispositivos`.
+
+## Pequeños electrodomésticos y wearables
+
+Familia independiente `cotidianos.glb`: 52 formas nuevas para 13 equipos, con reglas de ajuste,
+52 renders individuales y 13 hojas. Reutiliza los tipos existentes por nombre.
+[Generación, cobertura y galería](blender/COTIDIANOS.md).

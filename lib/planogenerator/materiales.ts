@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RECETAS_COTIDIANOS } from "./materiales-cotidianos";
 import { RECETAS_DISPOSITIVOS } from "./materiales-dispositivos";
 
 /**
@@ -70,6 +71,7 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["bandeja", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
   ["estante", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
   ...RECETAS_DISPOSITIVOS,
+  ...RECETAS_COTIDIANOS,
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };
