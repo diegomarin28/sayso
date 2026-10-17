@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { firmaCasos, listarCasos } from "./_datos/mis-casos";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
@@ -56,6 +57,10 @@ export default function QueSeRompio() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [bloqueo, setBloqueo] = useState<Bloqueo | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // "Mis casos" (solo en el navegador: en el servidor no hay casos y no hay desajuste).
+  const firma = useSyncExternalStore(sinSuscripcion, firmaCasos, () => "[]");
+  const cantidadCasos = useMemo(() => (firma === "[]" ? 0 : listarCasos().length), [firma]);
 
   const dictado = useDictado((frase) => setTexto((t) => (t.trim() ? `${t.trim()} ${frase}` : frase)));
 
@@ -172,6 +177,15 @@ export default function QueSeRompio() {
                 </button>
               ))}
             </div>
+            {cantidadCasos > 0 && (
+              <button
+                type="button"
+                onClick={() => router.push("/casos")}
+                className="flex h-11 items-center justify-center gap-2 self-start rounded-full border border-acento/60 bg-acento/10 px-4 text-sm font-medium"
+              >
+                Mis casos ({cantidadCasos})
+              </button>
+            )}
           </div>
           <BotonPrincipal onClick={enviar} disabled={!texto.trim() || pensando}>
             {pensando ? "Pensando…" : "Seguir"} <Flecha />
@@ -225,3 +239,5 @@ export default function QueSeRompio() {
     </Pantalla>
   );
 }
+
+const sinSuscripcion = () => () => {};

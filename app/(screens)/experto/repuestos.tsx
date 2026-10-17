@@ -26,6 +26,7 @@ export function Repuestos({
   casoId,
   onEvento,
   piezaACambiar,
+  onCompra,
 }: {
   pack: KnowledgePack;
   ficha: Ficha;
@@ -33,6 +34,8 @@ export function Repuestos({
   onEvento: (e: Evento) => void;
   /** La pieza que el experto dijo que hay que cambiar (puede no tener número de parte). */
   piezaACambiar?: string | null;
+  /** Se llama cuando la persona abre una publicación para comprar (para el cierre "Pedí el repuesto"). */
+  onCompra?: (c: { pieza: string; url: string }) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   /** El aviso se cierra por pieza: si el experto pide cambiar otra, vuelve a aparecer. */
@@ -119,7 +122,15 @@ export function Repuestos({
             </button>
           </div>
           {items.map((r) => (
-            <div key={r.pieza} className="flex flex-col gap-3 border-t border-borde pt-5">
+            <div
+              key={r.pieza}
+              className="flex flex-col gap-3 border-t border-borde pt-5"
+              // El link de "Comprar" lo arma <OpcionesCompra>: se toma del clic, sin tocar ese componente.
+              onClickCapture={(e) => {
+                const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
+                if (a && /^https?:/.test(a.href)) onCompra?.({ pieza: r.pieza, url: a.href });
+              }}
+            >
               <div>
                 {r.pieza === piezaACambiar && (
                   <p className="mb-1 text-xs font-semibold tracking-widest text-acento uppercase">

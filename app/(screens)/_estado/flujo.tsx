@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Caso, Evento, Ficha, Foto, PedidoDeFoto } from "@/shared";
 import type { Plano, Preparado } from "../_datos/api";
 import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
+import { guardarLocal, idDispositivo, type CasoGuardado, type Cierre } from "../_datos/mis-casos";
 
 /**
  * Estado del recorrido en memoria del navegador. Cada cambio también se guarda en
@@ -54,6 +55,14 @@ type Flujo = {
   agregarFoto: (f: Foto, imagen?: ImagenB64) => void;
   setFicha: (f: Ficha | null) => void;
   agregarEventos: (e: Evento[]) => void;
+  /** Cómo terminó el caso (resuelto / esperando repuesto / derivado). */
+  cierre: Cierre | null;
+  cerrarCaso: (c: Cierre) => void;
+  /** Última compra que abrió la persona desde "Repuestos" (para "Pedí el repuesto"). */
+  ultimaCompra: { pieza: string; url: string } | null;
+  setUltimaCompra: (c: { pieza: string; url: string } | null) => void;
+  /** Carga un caso de "Mis casos" tal como quedó, sin volver a llamar a la IA. */
+  retomar: (c: CasoGuardado) => void;
 };
 
 const Contexto = createContext<Flujo | null>(null);
@@ -69,6 +78,14 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
   const [plano, setPlano] = useState<Plano | null>(null);
   const [captura, setCaptura] = useState<Captura>(CAPTURA_VACIA);
   const [guiaIniciada, setGuiaIniciada] = useState(false);
+  const [cierre, setCierre] = useState<Cierre | null>(null);
+  const [ultimaCompra, setUltimaCompra] = useState<{ pieza: string; url: string } | null>(null);
+  // Las pantallas llaman a los setters desde promesas que empezaron antes (ej. la guía y después el
+  // plano): para guardar en "Mis casos" se usan siempre los valores más nuevos, no los de ese render.
+  const ultimo = useRef({ caso, preparado, plano });
+  useEffect(() => {
+    ultimo.current = { caso, preparado, plano };
+  }, [caso, preparado, plano]);
 
   return (
     <Contexto.Provider
@@ -79,9 +96,20 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         ficha,
         eventos,
         preparado,
-        setPreparado,
+        setPreparado: (p) => {
+          setPreparado(p);
+          ultimo.current.preparado = p;
+          // La guía y el plano se guardan juntos en "Mis casos" (para retomar sin IA).
+          const { caso: c, plano: pl } = ultimo.current;
+          if (c && p && pl) guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
+        },
         plano,
-        setPlano,
+        setPlano: (p) => {
+          setPlano(p);
+          ultimo.current.plano = p;
+          const { caso: c, preparado: pr } = ultimo.current;
+          if (c && p && pr) guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
+        },
         captura,
         setCaptura,
         guiaIniciada,
@@ -100,9 +128,16 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
             setPlano(null);
             setCaptura(CAPTURA_VACIA);
             setGuiaIniciada(false);
+            setCierre(null);
+            setUltimaCompra(null);
           }
           setCaso(c);
-          if (c) guardar({ caso: c });
+          ultimo.current.caso = c;
+          if (c) {
+            const t = tipo !== undefined ? tipo : c.id === caso?.id ? tipoEquipo : null;
+            guardarLocal({ caso: c, tipoEquipo: t });
+            guardar({ caso: c, dispositivo: idDispositivo(), tipoEquipo: t });
+          }
         },
         agregarFoto: (f, imagen) => {
           setFotos((prev) => [...prev, f]);
@@ -112,10 +147,41 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         setFicha: (f) => {
           setFicha(f);
           if (f) guardar({ ficha: f });
+          if (f && ultimo.current.caso) guardarLocal({ caso: ultimo.current.caso, ficha: f });
         },
         agregarEventos: (e) => {
           setEventos((prev) => [...prev, ...e]);
           guardar({ eventos: e });
+        },
+        cierre,
+        cerrarCaso: (c) => {
+          setCierre(c);
+          const actual = ultimo.current.caso;
+          if (!actual) return;
+          const cerrado = {
+            ...actual,
+            estado: c.estado === "esperando_repuesto" ? actual.estado : ("cerrado" as const),
+          };
+          setCaso(cerrado);
+          guardarLocal({ caso: cerrado, cierre: c });
+          guardar({ caso: cerrado, cierre: c, dispositivo: idDispositivo() });
+        },
+        ultimaCompra,
+        setUltimaCompra,
+        retomar: (g) => {
+          setCaso(g.caso);
+          setTipoEquipo(g.tipoEquipo);
+          setFicha(g.ficha);
+          setPreparado(g.guia?.preparado ?? null);
+          setPlano(g.guia?.plano ?? null);
+          setCierre(g.cierre);
+          setFotos([]);
+          setImagenes({});
+          setEventos([]);
+          setCaptura(CAPTURA_VACIA);
+          // Al retomar, la guía no repite la pregunta inicial (la pantalla decide si sigue desde un paso).
+          setGuiaIniciada(true);
+          setUltimaCompra(null);
         },
       }}
     >
