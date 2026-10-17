@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GuiaExperto } from "@/components/viewer";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
-import { callar, hablar } from "@/lib/voice/hablar";
+import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
@@ -84,6 +84,7 @@ export default function Experto() {
             type="button"
             onClick={() => {
               callar(); // si el experto está hablando, se calla para escuchar
+              desbloquearAudio();
               dictado.alternar();
             }}
             disabled={dictado.conectando}
