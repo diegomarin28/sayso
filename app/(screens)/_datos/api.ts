@@ -186,6 +186,7 @@ const RespKnowledge = conEventos({
   manualUrl: z.string().nullable(),
   manualFileId: z.string().nullable(),
   paginasVistaExplosionada: z.array(z.number()).default([]),
+  paginaVistaInterior: z.number().nullable().default(null),
   desdeCache: z.boolean(),
 });
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
@@ -230,6 +231,7 @@ export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infe
       manualFileId: preparado.manualFileId,
       manualUrl: preparado.manualUrl,
       paginasVistaExplosionada: preparado.paginasVistaExplosionada,
+      paginaVistaInterior: preparado.paginaVistaInterior,
     },
     RespPlano,
   );
