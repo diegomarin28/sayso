@@ -53,7 +53,7 @@ export default function Preparando() {
         setPreparado(listo);
         guia = listo;
       }
-      const { eventos: nuevos, ...p } = await generarPlano(ficha, guia);
+      const { eventos: nuevos, ...p } = await generarPlano(ficha, guia, tipoEquipo);
       if (!vigente) return;
       agregarEventos(nuevos);
       setPlano(p);
