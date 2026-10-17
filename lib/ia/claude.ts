@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic, { toFile } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
+import { frenar, sumarGasto } from "./freno";
 
 /**
  * Llamadas a Claude del carril A — dueño: Juanma.
@@ -135,6 +136,7 @@ const medicion = new AsyncLocalStorage<Uso[]>();
 /** Registra el uso de una llamada: en el log siempre, y en la medición en curso si hay una. */
 export function registrarUso(uso: Uso): void {
   medicion.getStore()?.push(uso);
+  sumarGasto(uso.usd);
   console.info(
     `[costo] ${uso.etapa} · ${uso.modelo} · entrada ${uso.entrada} · salida ${uso.salida} · caché escrita ${uso.cacheEscrita} / leída ${uso.cacheLeida}` +
       `${uso.busquedas ? ` · ${uso.busquedas} búsquedas` : ""} · US$ ${uso.usd.toFixed(4)}`,
@@ -185,7 +187,10 @@ function obtenerCliente(): Anthropic {
   return cliente;
 }
 
+// Las tres llamadas a Claude pasan por el freno de gasto (lib/ia/freno.ts) antes de gastar.
+
 export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, formato, maxTokens, etapa }) => {
+  await frenar();
   const respuesta = await obtenerCliente().messages.create({
     model: modelo,
     max_tokens: maxTokens ?? 4000,
@@ -207,6 +212,7 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
 export type EnviarMensaje = (params: Anthropic.MessageCreateParamsNonStreaming, etapa?: string) => Promise<Anthropic.Message>;
 
 export const enviarMensaje: EnviarMensaje = async (params, etapa) => {
+  await frenar();
   const mensaje = await obtenerCliente().messages.stream(params).finalMessage();
   registrarUso(calcularUso(etapa ?? "sin etapa", params.model, mensaje.usage));
   if (mensaje.stop_reason === "refusal") throw new ErrorIA("El modelo rechazó el pedido", mensaje.stop_details);
@@ -219,7 +225,10 @@ export const enviarMensaje: EnviarMensaje = async (params, etapa) => {
  */
 export type StreamIA = (params: Anthropic.MessageCreateParamsNonStreaming) => AsyncIterable<Anthropic.RawMessageStreamEvent>;
 
-export const streamClaude: StreamIA = (params) => obtenerCliente().messages.stream(params);
+export const streamClaude: StreamIA = async function* (params) {
+  await frenar();
+  yield* obtenerCliente().messages.stream(params);
+};
 
 /** Sube un PDF a la Files API y devuelve su file_id (vence en 7 días). Se reemplaza en los tests. */
 export type SubirArchivo = (datos: Buffer, nombre: string) => Promise<string>;

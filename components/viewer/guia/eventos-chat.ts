@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Coreografia, type KnowledgePack, type PlanoDePiezas } from "../../../shared";
+import { mensajePausa } from "../../../lib/ia/pausa";
 
 /**
  * Stream de /api/chat (NDJSON, una línea por evento; ver app/api/chat/README.md).
@@ -72,7 +73,8 @@ export const fuenteApi: FuenteChat = async function* (pedido, senal) {
     signal: senal,
   });
   if (!res.ok || !res.body) {
-    yield { tipo: "error", mensaje: "El experto no pudo responder. Probá de nuevo." };
+    const pausa = mensajePausa(res.status, await res.json().catch(() => null));
+    yield { tipo: "error", mensaje: pausa ?? "El experto no pudo responder. Probá de nuevo." };
     return;
   }
   yield* leerNdjson(res.body);

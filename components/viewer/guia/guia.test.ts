@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { coreografiaEjemplo, type Coreografia } from "../../../shared";
-import { leerNdjson, type EventoChat } from "./eventos-chat";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { coreografiaEjemplo, knowledgePackEjemplo, planoEjemplo, type Coreografia } from "../../../shared";
+import { fuenteApi, leerNdjson, type EventoChat } from "./eventos-chat";
 import { reproducir, tiempoDeLectura, type EstadoGuia } from "./reproducir";
 
 const flujoDeBytes = (trozos: string[]) =>
@@ -110,5 +110,18 @@ describe("reproducir", () => {
   it("tiempo de lectura acotado", () => {
     expect(tiempoDeLectura("Hola")).toBe(2500);
     expect(tiempoDeLectura("x".repeat(1000))).toBe(9000);
+  });
+});
+
+describe("fuenteApi: IA en pausa", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("un 503 ia_en_pausa se muestra como error con el mensaje de la pausa", async () => {
+    const mensaje = "IA en pausa: el equipo la apagó por un rato. Probá de nuevo más tarde.";
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(Response.json({ error: mensaje, codigo: "ia_en_pausa" }, { status: 503 }))));
+    const eventos: EventoChat[] = [];
+    const pedido = { casoId: "c", pack: knowledgePackEjemplo, plano: planoEjemplo, historial: [], pregunta: "hola" };
+    for await (const ev of fuenteApi(pedido, new AbortController().signal)) eventos.push(ev);
+    expect(eventos).toEqual([{ tipo: "error", mensaje }]);
   });
 });

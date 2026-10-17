@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo } from "../../../shared";
-import { generarPlano, pedidosDeFoto, prepararExperto } from "./api";
+import { ErrorApi, generarPlano, pedidosDeFoto, prepararExperto } from "./api";
 
 /** Bajar costos: cada llamada a la IA se hace una sola vez por caso, aunque se vaya atrás y adelante. */
 
@@ -51,5 +51,17 @@ describe("pantallas: una llamada por caso", () => {
     await generarPlano(f, knowledge);
     await generarPlano(f, knowledge);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("pantallas: IA en pausa (freno de gasto)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("un 503 ia_en_pausa llega como ErrorApi con el mensaje para mostrar", async () => {
+    const mensaje = "IA en pausa: se llegó al límite de gasto de hoy. Probá de nuevo más tarde.";
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(Response.json({ error: mensaje, codigo: "ia_en_pausa" }, { status: 503 }))));
+    const p = pedidosDeFoto({ ...casoEjemplo, id: "caso-pausa" });
+    await expect(p).rejects.toBeInstanceOf(ErrorApi);
+    await expect(p).rejects.toThrow(mensaje);
   });
 });

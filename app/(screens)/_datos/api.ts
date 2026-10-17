@@ -12,6 +12,7 @@ import {
   knowledgePackEjemplo,
   planoEjemplo,
 } from "../../../shared";
+import { mensajePausa } from "../../../lib/ia/pausa";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -57,6 +58,8 @@ async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): 
     throw new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
   }
   const datos: unknown = await res.json().catch(() => null);
+  const pausa = mensajePausa(res.status, datos);
+  if (pausa) throw new ErrorApi(pausa); // freno de gasto: no es un error de la app
   if (!res.ok) {
     // Aviso y no error: es un fallo esperable que la pantalla ya muestra con "Probar de nuevo".
     console.warn(`[api] ${ruta} ${res.status}`, datos);

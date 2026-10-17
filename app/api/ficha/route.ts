@@ -20,5 +20,5 @@ export function POST(req: Request) {
           }),
     ];
     return { ...r, eventos };
-  });
+  }, { ia: false });
 }
