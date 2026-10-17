@@ -4,6 +4,7 @@ import { bloqueImagen, enviarMensaje, ErrorIA, MODELO_DE, pedirJson, type Enviar
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
+import { elegirPlantilla, planoDesdePlantillaDeTipo } from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
 
 /**
@@ -82,6 +83,8 @@ export const MAX_IMAGENES_PLANO = 4;
 export type EntradaGenerador = {
   casoId: string;
   knowledgePack: KnowledgePack;
+  /** Tipo de equipo que dijo la recepción (texto libre): elige la plantilla si la IA no puede ubicar las piezas. */
+  tipoEquipo?: string;
   /** Páginas del manual con la vista explosionada / inferior, en orden. */
   imagenes?: ImagenEntrada[];
   /** Número de página de cada imagen (para que la IA cite). */
@@ -171,10 +174,14 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     return { plano, avisos, origen: "ia", camino, modelo, propuesta };
   } catch (e) {
     if (!(e instanceof ErrorIA)) throw e;
-    const { plano, avisos } = planoDesdePlantilla(kp);
+    // La plantilla del tipo de equipo (heladera, aire, TV…); la de notebook o, sin tipo, la caja genérica de siempre.
+    const plantilla = elegirPlantilla(kp, entrada.tipoEquipo);
+    const deTipo = plantilla && plantilla.id !== "notebook" ? plantilla : undefined;
+    const { plano, avisos } = deTipo ? planoDesdePlantillaDeTipo(kp, deTipo) : planoDesdePlantilla(kp);
+    const cual = deTipo ? `la plantilla genérica de ${deTipo.nombre} (esquema genérico, no es tu modelo exacto)` : "la plantilla genérica";
     return {
       plano,
-      avisos: [`La IA no pudo ubicar las piezas (${e.message}): se usa la plantilla genérica.`, ...avisos],
+      avisos: [`La IA no pudo ubicar las piezas (${e.message}): se usa ${cual}.`, ...avisos],
       origen: "plantilla",
       camino,
       modelo,

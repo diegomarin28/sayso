@@ -14,6 +14,8 @@ const EntradaPlano = z.object({
   knowledgePack: KnowledgePack,
   /** Ficha confirmada: marca + modelo son la clave de la caché. */
   ficha: Ficha.optional(),
+  /** Tipo de equipo de la recepción (texto libre): si la IA no puede ubicar las piezas, elige la plantilla de ese tipo. */
+  tipoEquipo: z.string().max(120).optional(),
   /** De /api/knowledge: el manual ya subido a la Files API y las páginas de la vista explosionada. */
   manualFileId: z.string().nullable().optional(),
   manualUrl: z.string().nullable().optional(),
@@ -26,7 +28,7 @@ const EntradaPlano = z.object({
 });
 
 /**
- * POST { casoId, knowledgePack, ficha?, manualFileId?, manualUrl?, paginasVistaExplosionada?, paginaVistaInterior?, imagenes?, paginas? }
+ * POST { casoId, knowledgePack, ficha?, tipoEquipo?, manualFileId?, manualUrl?, paginasVistaExplosionada?, paginaVistaInterior?, imagenes?, paginas? }
  * → { plano, origen: "ia" | "plantilla", desdeCache, paginasLeidas, avisos, eventos }
  * origen "plantilla" = esquema genérico: la pantalla tiene que decirlo.
  */
@@ -37,6 +39,7 @@ export function POST(req: Request) {
       {
         casoId: e.casoId,
         knowledgePack: e.knowledgePack,
+        tipoEquipo: e.tipoEquipo,
         ficha: e.ficha,
         manualUrl: e.manualUrl,
         imagenes: e.imagenes,

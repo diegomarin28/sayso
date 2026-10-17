@@ -55,6 +55,13 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 - **Medidas de la carcasa** (`medidas.ts`): la IA las lee del manual o las estima para ese modelo (`medidas_fuente`). El código exige números finitos y positivos dentro de los límites de la clase (`LIMITES_MEDIDA_CM`: un celular de 7,4 cm es válido, una notebook de 7,4 cm no). La que falta se estima con la proporción o la medida típica de la clase y queda **"estimada"** en `plano.medidas`. La carcasa de notebook solo es respaldo de notebooks.
 - **Origen de cada ubicación** (`PiezaPlano.origen`): `manual` = la IA la vio en una página (con confianza alta o media; lleva `cita` con documento y página), `estimada` = sin página o con confianza baja, `plantilla` = posición genérica. La carcasa vale lo que valen sus medidas. El visor lo muestra en cada etiqueta y con un resumen (`components/viewer/origen.ts`): un plano mixto nunca aparece como verificado entero. Planos sin `origen` (viejos o fixtures) = "sin verificar".
 - **Si la IA falla** → `origen: "plantilla"`: la pantalla tiene que mostrar "esquema genérico, no es tu modelo exacto".
+  - **Plantilla por tipo de equipo** (`plantillas/por-tipo.ts`, planos en `plantillas/equipos.ts`): notebook, celular,
+    heladera, aire, televisor, lavarropas, microondas, aspiradora, secador, impresora, consola, router y cafetera. Se
+    elige por el `tipoEquipo` de la recepción (opcional en `/api/plano`), si no por la clase del pack, si no por sus
+    piezas (solo las que distinguen un equipo, ej. compresor + puerta de freezer → heladera). Del plano de la
+    plantilla quedan la raíz y, para cada pieza del pack, la de igual id o del mismo tipo (con el id del pack);
+    todas con origen `plantilla`. Sin señal suficiente: la caja genérica de siempre (`planoDesdePlantilla`).
+  - Nunca se guarda en la caché (solo se guarda `origen: "ia"`): la próxima vez se vuelve a probar con la IA.
 - Medición (3 manuales de prueba, escala 0–2): leyendo el PDF completo 65 % (1 corrida por manual); con imágenes recortadas 60 % (58–62, 3 corridas); plantilla sin IA 27 %. **Decisión (Diego):** se usa el recorte aunque pierda hasta 5 puntos de coincidencia; el costo importa más.
 - Ahorro del recorte: `npx tsx --env-file=.env.local lib/planogenerator/evaluacion/medir-recorte.ts` (tokens del manual entero vs. recorte con un manual de la caché, y una corrida real con el recorte).
 - Evaluación contra manuales reales (casos locales, fuera del repo): ver `evaluacion/README.md`.
