@@ -9,6 +9,8 @@ import {
   PlanoDePiezas,
   fichaEjemplo,
   fotosEjemplo,
+  knowledgePackEjemplo,
+  planoEjemplo,
 } from "../../../shared";
 import type { ImagenB64 } from "./imagen";
 
@@ -18,7 +20,7 @@ import type { ImagenB64 } from "./imagen";
  * (sirve para trabajar sin claves y como plan B de la demo).
  */
 
-const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
+export const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
 
 /** Error que se le puede mostrar a la persona tal cual. */
 export class ErrorApi extends Error {}
@@ -211,6 +213,17 @@ export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
 export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<typeof RespKnowledge>> {
+  if (USAR_FIXTURE)
+    return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
+      await esperar(2500);
+      return RespKnowledge.parse({
+        pack: knowledgePackEjemplo,
+        manualUrl: null,
+        manualFileId: null,
+        paginasVistaExplosionada: [],
+        desdeCache: true,
+      });
+    });
   return unaVez(`knowledge|${claveEquipo(ficha)}`, () =>
     llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge),
   );
@@ -229,6 +242,11 @@ export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
  * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
  */
 export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
+  if (USAR_FIXTURE)
+    return unaVez(`plano-fixture|${claveEquipo(ficha)}`, async () => {
+      await esperar(1200);
+      return RespPlano.parse({ plano: planoEjemplo, origen: "ia" });
+    });
   return unaVez(`plano|${claveEquipo(ficha)}`, () =>
     llamar(
       "/api/plano",

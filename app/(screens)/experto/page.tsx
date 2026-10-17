@@ -3,10 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GuiaExperto } from "@/components/viewer";
+import { fuenteSimulada } from "@/components/viewer/guia/simulada";
 import { callar, hablar } from "@/lib/voice/hablar";
+import { useDictado } from "@/lib/voice/useDictado";
+import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { Encabezado } from "../_ui/experto";
+import { Encabezado, Microfono } from "../_ui/experto";
 
 /**
  * Pantallas 5 y 6 — Experto en 3D y conversación. Todo lo hace <GuiaExperto> (carril B):
@@ -39,6 +42,10 @@ export default function Experto() {
 
   useEffect(() => callar, []);
 
+  // Preguntar con la voz: cada frase dictada se manda como si la hubiera escrito.
+  const [dictada, setDictada] = useState<{ texto: string; id: number }>();
+  const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
+
   if (!caso || !preparado || !plano) return null;
 
   return (
@@ -56,6 +63,27 @@ export default function Experto() {
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
         preguntaInicial={preguntaInicial}
         decir={decir}
+        preguntaDictada={dictada}
+        // Con NEXT_PUBLIC_DATOS=fixture el experto responde con el chat simulado de Diego: no gasta IA.
+        fuente={USAR_FIXTURE ? fuenteSimulada : undefined}
+        accesorioEntrada={
+          <button
+            type="button"
+            onClick={() => {
+              callar(); // si el experto está hablando, se calla para escuchar
+              dictado.alternar();
+            }}
+            disabled={dictado.conectando}
+            aria-pressed={dictado.escuchando}
+            aria-label={dictado.escuchando ? "Dejar de escuchar" : "Preguntar con la voz"}
+            title={dictado.error ?? (dictado.parcial || undefined)}
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition active:scale-95 disabled:opacity-40 ${
+              dictado.escuchando ? "animate-pulse bg-peligro text-white" : "border border-borde text-texto"
+            }`}
+          >
+            <Microfono />
+          </button>
+        }
         onEvento={(e) => agregarEventos([e])}
       />
     </main>
