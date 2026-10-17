@@ -14,13 +14,14 @@ import { Canvas, createPortal, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
-import { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
 import { useBibliotecaPiezas } from "./biblioteca";
 import {
   COLOR_ACTIVO,
   animar,
+  continuarAnimacion,
   encuadre,
   ladoEtiqueta,
   LINEA_ETIQUETA,
@@ -28,6 +29,7 @@ import {
   piezasResaltadas,
   prepararEscenaSegura,
   type LadoEtiqueta,
+  type EscenaPreparada,
   type ModoVista,
   type NodoAnimable,
 } from "./escena";
@@ -406,16 +408,41 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     };
   }, [escena, camara, tam]);
 
-  // Plano nuevo: estado en reposo, avisos al feed y liberar la escena anterior al desmontar.
-  useEffect(() => {
-    acciones.current.actualizar(estadoInicial(escena.nodos.keys()));
-    for (const aviso of escena.avisos) onEventoRef.current?.(eventoAviso(aviso, casoId));
+  // ¿Qué cambió? El plano (o el equipo), o solo las piezas: las reales llegaron después del plazo
+  // y reemplazan a las primitivas. En ese caso la escena nueva sigue la animación donde iba y no
+  // se tocan el estado, la cámara ni el paso. Corre antes que los efectos de abajo.
+  const ultima = useRef<{ escena: EscenaPreparada; plano: PlanoDePiezas; tipoEquipo?: string } | null>(null);
+  const soloPiezas = useRef(false);
+  useLayoutEffect(() => {
+    const previa = ultima.current;
+    soloPiezas.current = !!previa && previa.plano === plano && previa.tipoEquipo === tipoEquipo;
+    if (previa && soloPiezas.current) continuarAnimacion(previa.escena, escena);
+    ultima.current = { escena, plano, tipoEquipo };
     return () => liberar(escena.raiz);
+  }, [escena, plano, tipoEquipo]);
+
+  // Plano nuevo: estado en reposo y avisos al feed (con las piezas nuevas, solo los avisos que falten).
+  const avisosDados = useRef(new Set<string>());
+  useEffect(() => {
+    if (!soloPiezas.current) {
+      acciones.current.actualizar(estadoInicial(escena.nodos.keys()));
+      avisosDados.current = new Set();
+    }
+    for (const aviso of escena.avisos) {
+      if (avisosDados.current.has(aviso)) continue;
+      avisosDados.current.add(aviso);
+      onEventoRef.current?.(eventoAviso(aviso, casoId));
+    }
   }, [escena, casoId]);
 
   // Cámara nueva (cambio de vista) o plano nuevo: reencuadrar sin tocar el estado de las piezas.
+  // Si solo llegaron las piezas reales, la cámara queda donde está (incluso si la persona la giró).
   // (El ref de CameraControls ya está asignado cuando corren los efectos.)
+  const camaraPrevia = useRef(camara);
   useEffect(() => {
+    const cambioCamara = camaraPrevia.current !== camara;
+    camaraPrevia.current = camara;
+    if (soloPiezas.current && !cambioCamara) return;
     const { objetivo, zoom } = estado.current.camara;
     acciones.current.mirar(objetivo, zoom, false);
   }, [camara, escena]);
@@ -447,7 +474,8 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
       }, i * ESPACIO_ENTRE_ACCIONES_MS),
     );
     return () => timers.forEach(clearTimeout);
-  }, [coreografia, casoId, escena]);
+    // Sin `escena`: si llegan las piezas reales a mitad de un paso, el paso sigue (no se repite ni se corta).
+  }, [coreografia, casoId, plano, tipoEquipo]);
 
   useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000));
 
@@ -472,6 +500,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
         ) : null;
       })}
       <ContactShadows
+        key={escena.raiz.uuid} // con las piezas nuevas, la sombra se vuelve a calcular
         position={[0, escena.piso - 0.05, 0]}
         scale={escena.radio * 3}
         opacity={0.6}

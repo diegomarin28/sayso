@@ -6,7 +6,10 @@ import { IndicePiezas, archivosPara, bibliotecaDesdeEscena, type BibliotecaPieza
 
 /** Piezas genéricas modeladas en Blender (`npm run modelos:piezas`): un GLB por familia + el índice. */
 export const URL_PIEZAS = "/models/piezas/";
-/** Si tarda más, se arranca con las primitivas: el 3D nunca espera a la red. */
+/**
+ * Si tarda más, se arranca con las primitivas: el 3D nunca espera a la red. Cuando la descarga
+ * termina, las piezas reales reemplazan a las primitivas (el visor no pierde cámara ni paso).
+ */
 const ESPERA_MAXIMA_MS = 4000;
 
 let indice: Promise<IndicePiezas | null> | null = null;
@@ -49,15 +52,26 @@ export async function cargarBiblioteca(ids: string[]): Promise<BibliotecaPiezas 
   return biblioteca;
 }
 
-/** `undefined` mientras carga lo de estos ids; después la biblioteca o `null`. */
+type EstadoBiblioteca = { clave: string; biblioteca: BibliotecaPiezas | null };
+
+/**
+ * Qué usa el visor cuando llega algo para `clave`: lo primero que llega (la biblioteca o el plazo);
+ * si antes llegó el plazo (primitivas) y después la biblioteca, la biblioteca reemplaza. Una
+ * descarga fallida no reemplaza nada.
+ */
+export function siguienteBiblioteca(actual: EstadoBiblioteca | undefined, clave: string, nueva: BibliotecaPiezas | null): EstadoBiblioteca | undefined {
+  if (actual?.clave !== clave) return { clave, biblioteca: nueva };
+  if (actual.biblioteca === null && nueva !== null) return { clave, biblioteca: nueva };
+  return actual;
+}
+
+/** `undefined` mientras carga lo de estos ids (hasta el plazo); después la biblioteca o `null` (primitivas). */
 export function useBibliotecaPiezas(ids: string[]): BibliotecaPiezas | null | undefined {
   const clave = [...new Set(ids)].sort().join(",");
-  const [estado, setEstado] = useState<{ clave: string; biblioteca: BibliotecaPiezas | null }>();
+  const [estado, setEstado] = useState<EstadoBiblioteca>();
   useEffect(() => {
     let vivo = true;
-    // Lo primero que llega gana (la biblioteca o el plazo): no se arma la escena dos veces.
-    const resolver = (b: BibliotecaPiezas | null) =>
-      vivo && setEstado((actual) => (actual?.clave === clave ? actual : { clave, biblioteca: b }));
+    const resolver = (b: BibliotecaPiezas | null) => vivo && setEstado((actual) => siguienteBiblioteca(actual, clave, b));
     const plazo = setTimeout(() => resolver(null), ESPERA_MAXIMA_MS);
     void cargarBiblioteca(clave ? clave.split(",") : []).then((b) => {
       clearTimeout(plazo);
