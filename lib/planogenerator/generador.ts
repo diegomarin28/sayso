@@ -49,6 +49,11 @@ export type PropuestaPlano = z.infer<typeof PropuestaPlano>;
 const SYSTEM_PLANO = `Sos el cartógrafo de un servicio de reparación: ubicás las piezas internas de un equipo para armar un modelo 3D esquemático.
 Te doy la lista de piezas (ids) del knowledge pack y, si hay, imágenes de la vista explosionada o de la vista inferior del manual.
 
+Cómo leer las imágenes:
+- Las vistas del interior (equipo dado vuelta, sin la tapa inferior) son las que dicen DÓNDE está cada pieza: usalas para x, z y tamaños.
+- La vista explosionada sirve para saber QUÉ pieza es cada número; sus posiciones están desplazadas a propósito, no las uses para ubicar.
+- No asumas que las piezas están centradas: medí el centro de cada pieza respecto de los cuatro bordes de la carcasa en el dibujo (en perspectiva, los bordes no son paralelos a la imagen).
+
 Para cada pieza que puedas ubicar devolvé:
 - "pieza": el id EXACTO de la lista. Nunca inventes ids ni piezas que no estén en la lista.
 - "x", "z": centro de la pieza en la planta del equipo, de -1 a 1. Mirá el equipo como en la vista inferior del manual con la tapa inferior sacada y el borde frontal (el del touchpad / donde se apoyan las muñecas) hacia abajo de la imagen: x = -1 borde izquierdo de la imagen, x = 1 borde derecho; z = -1 borde trasero (bisagras), z = 1 borde frontal. Si la imagen está rotada, rotala mentalmente.
