@@ -39,8 +39,8 @@ const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
 
 /**
  * Encabezado común: orbe + progreso del recorrido (1–6) + botón "Atrás" a la derecha.
- * El orbe queda siempre en el mismo lugar (pegado a la izquierda); sin `alVolver` el
- * progreso ocupa todo el ancho, sin hueco. `volverApagado` lo muestra deshabilitado
+ * El orbe queda siempre pegado a la izquierda y la barra de pasos mide siempre lo mismo
+ * (sin `alVolver` el botón queda invisible). `volverApagado` lo muestra deshabilitado
  * (ej. mientras se revisa una foto) para que no aparezca y desaparezca.
  */
 export function Encabezado({
@@ -74,17 +74,21 @@ export function Encabezado({
           {paso}/6 · {PASOS[paso - 1]}
         </p>
       </div>
-      {alVolver && (
-        <button
-          onClick={alVolver}
-          disabled={volverApagado}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 max-[380px]:px-3"
-        >
-          <FlechaAtras />
-          {/* En celulares muy angostos queda solo la flecha, para que entre el progreso. */}
-          <span className="max-[380px]:sr-only">Atrás</span>
-        </button>
-      )}
+      {/* Sin `alVolver` el botón queda invisible pero ocupa su lugar: la barra de pasos mide
+          lo mismo en todas las pantallas. */}
+      <button
+        onClick={alVolver}
+        disabled={!alVolver || volverApagado}
+        aria-hidden={!alVolver}
+        tabIndex={alVolver ? undefined : -1}
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 max-[380px]:px-3 ${
+          alVolver ? "" : "invisible"
+        }`}
+      >
+        <FlechaAtras />
+        {/* En celulares muy angostos queda solo la flecha, para que entre el progreso. */}
+        <span className="max-[380px]:sr-only">Atrás</span>
+      </button>
     </header>
   );
 }
