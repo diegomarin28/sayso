@@ -6,8 +6,8 @@ import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
-import { leerManual, SYSTEM_LECTOR } from "./lector";
-import { lineasConCitas, parsearContenido, type ClaseVista, type Vistas } from "./lineas";
+import { leerManual, SYSTEM_LECTOR, type Lectura } from "./lector";
+import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
 import { combinar, faltantes, instruccionesVistas, SIN_VISTAS, ubicarVistas } from "./vistas";
 
@@ -61,27 +61,40 @@ ${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
 <sintoma>${sintoma}</sintoma>`;
 }
 
-/** Con manual: lectura con prefijo compartido (caché de prompts). Sin manual: guía pública con búsqueda web. */
-async function leerPack(
-  equipo: string,
-  sintoma: string,
-  manual: Manual | null,
-  vistas: ClaseVista[],
-  enviar: EnviarMensaje,
-): Promise<Anthropic.TextBlock[]> {
-  if (manual) return leerManual(manual, tareaPack(equipo, sintoma, true, vistas), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
-  const r = await enviar(
-    {
-      model: MODELOS.vision,
-      max_tokens: LIMITES.lectura.maxTokensPack,
-      output_config: { effort: LIMITES.lectura.effort },
-      system: SYSTEM_LECTOR,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
-      messages: [{ role: "user", content: tareaPack(equipo, sintoma, false, []) }],
-    },
-    "bibliotecario: guía pública",
-  );
-  return r.content.filter((b): b is Anthropic.TextBlock => b.type === "text");
+/** Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`). */
+async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje): Promise<Lectura> {
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: tareaPack(equipo, sintoma, false, []) }];
+  const bloques: Anthropic.TextBlock[] = [];
+  let motivo: string | null = null;
+  for (let i = 0; i <= LIMITES.guiaPublica.continuaciones; i++) {
+    const r = await enviar(
+      {
+        model: MODELOS.vision,
+        max_tokens: LIMITES.lectura.maxTokensPack,
+        output_config: { effort: LIMITES.lectura.effort },
+        system: SYSTEM_LECTOR,
+        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: LIMITES.guiaPublica.busquedas }],
+        messages,
+      },
+      "bibliotecario: guía pública",
+    );
+    bloques.push(...r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"));
+    motivo = r.stop_reason;
+    if (r.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: r.content });
+  }
+  return { bloques, motivo };
+}
+
+/** Datos para entender por qué una lectura no dio pasos, sin volver a pagarla. */
+function diagnostico(l: Lectura, c: Contenido) {
+  return {
+    motivo: l.motivo,
+    lineas: lineasConCitas(l.bloques).length,
+    caracteres: l.bloques.reduce((n, b) => n + b.text.length, 0),
+    descartadas: c.descartadas.slice(0, 5),
+    inicio: l.bloques.map((b) => b.text).join("").slice(0, 300),
+  };
 }
 
 function mensajeVistas(v: Vistas): string {
@@ -149,31 +162,62 @@ export async function armarKnowledgePack(
   );
 
   // 3. Lectura del pack. Las vistas que faltan se piden en la misma lectura (sin llamada extra).
-  const bloques = await leerPack(nombreEquipo, sintoma, manual, manual ? faltantes(vistas) : [], enviar);
-  const contenido = parsearContenido(lineasConCitas(bloques), manual?.titulo ?? "Fuente pública");
-  // Las páginas solo tienen sentido con un PDF del manual.
-  vistas = manual ? combinar(vistas, contenido.vistas) : SIN_VISTAS;
+  //    Nunca se reintenta la misma lectura: si el manual no da pasos, se cae en la guía pública.
+  let lectura: Lectura | null = null;
+  let contenido: Contenido | null = null;
+  if (manual) {
+    try {
+      lectura = await leerManual(manual, tareaPack(nombreEquipo, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
+      contenido = parsearContenido(lineasConCitas(lectura.bloques), manual.titulo);
+    } catch (e) {
+      console.error("[knowledge] falló la lectura del manual:", (e as Error).message);
+    }
+    if (!contenido || contenido.pasos.length === 0) {
+      eventos.push(
+        evento(casoId, "bibliotecario", "lectura_sin_pasos", "El manual no me dio pasos que pueda usar; armo una guía pública (NO VERIFICADO).", {
+          ...(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }),
+        }),
+      );
+      console.warn("[knowledge] lectura sin pasos:", JSON.stringify(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }));
+    }
+  }
+  const conManual = manual !== null && contenido !== null && contenido.pasos.length > 0;
+  if (!conManual) {
+    try {
+      lectura = await guiaPublica(nombreEquipo, sintoma, enviar);
+      contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública");
+    } catch (e) {
+      console.error("[knowledge] falló la guía pública:", (e as Error).message);
+      lectura = { bloques: [], motivo: null };
+      contenido = parsearContenido([], "Fuente pública");
+    }
+  }
+  if (!contenido || !lectura) throw new Error("inalcanzable");
+  // Las páginas solo tienen sentido con lo que se leyó del PDF del manual.
+  vistas = conManual ? combinar(vistas, contenido.vistas) : SIN_VISTAS;
 
   const pack = KnowledgePack.parse({
     modelo: nombreEquipo,
     clase: ficha.clase,
-    verificado: manual !== null && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO"),
-    fuentes: manual ? [{ doc: manual.titulo, url: manual.url }] : fuentesWeb(bloques),
+    verificado: conManual && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO"),
+    fuentes: conManual && manual ? [{ doc: manual.titulo, url: manual.url }] : fuentesWeb(lectura.bloques),
     piezas: contenido.piezas,
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
     repuestos: contenido.repuestos,
   });
-  if (pack.pasos.length === 0) throw new ErrorIA("No salió ningún paso válido del manual", contenido.descartadas);
-
+  // Sin pasos igual se sigue: la persona llega al 3D (plantilla) con la guía marcada NO VERIFICADO.
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
   eventos.push(
-    evento(casoId, "bibliotecario", "pack_armado", `Armé la guía: ${pack.piezas.length} piezas y ${pack.pasos.length} pasos (${verificados} con cita verificada).`, {
-      descartadas: contenido.descartadas.length,
-    }),
+    pack.pasos.length
+      ? evento(casoId, "bibliotecario", "pack_armado", `Armé la guía: ${pack.piezas.length} piezas y ${pack.pasos.length} pasos (${verificados} con cita verificada).`, {
+          descartadas: contenido.descartadas.length,
+          verificado: pack.verificado,
+        })
+      : evento(casoId, "bibliotecario", "guia_vacia", "No conseguí pasos para este equipo: te muestro el esquema genérico (NO VERIFICADO).", diagnostico(lectura, contenido)),
   );
 
-  if (manual) {
+  if (manual && conManual) {
     // 4. Si alguna vista no salió en la lectura, búsqueda dedicada (reusa la caché de prompts del manual).
     const faltan = faltantes(vistas);
     if (faltan.length) {
@@ -197,7 +241,8 @@ export async function armarKnowledgePack(
     });
   }
 
-  const armado: Armado = { pack, manual, vistas };
+  // El resultado se guarda aunque sea la guía pública o esté vacío: otro intento no vuelve a pagar.
+  const armado: Armado = { pack, manual: conManual ? manual : null, vistas };
   await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
 }

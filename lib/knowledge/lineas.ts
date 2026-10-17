@@ -97,7 +97,9 @@ export function parsearContenido(lineas: Linea[], doc: string): Contenido {
   const idsPiezas = new Set<string>();
 
   for (const l of lineas) {
-    const campos = l.texto.replace(/^[-*\s`]+|`+$/g, "").split("|").map((c) => c.trim());
+    // Tolera viñetas, numeración, negritas y comillas de código alrededor de la línea.
+    const limpia = l.texto.replace(/\*\*/g, "").replace(/^[\s`>]*(?:[-*•]+|\d+[.)])?\s*/, "").replace(/`+$/, "");
+    const campos = limpia.split("|").map((c) => c.trim());
     const tipo = campos[0]?.toUpperCase();
     const cita = mejorCita(l.citas, doc);
 

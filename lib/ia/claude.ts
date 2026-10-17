@@ -32,7 +32,10 @@ export const LIMITES = {
   bibliotecario: { busquedas: 6, paginas: 6, vueltas: 12 },
   pack: { maxPasos: 12 },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
-  lectura: { effort: "medium" as const, maxTokensPack: 16000, maxTokensVistas: 1500 },
+  // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
+  lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
+  /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
+  guiaPublica: { busquedas: 4, continuaciones: 3 },
   chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30 },
 } as const;
 

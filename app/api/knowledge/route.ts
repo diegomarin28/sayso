@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { Ficha } from "../../../shared";
-import { armarKnowledgePack } from "../../../lib/knowledge/armar";
+import { armarKnowledgePack, type Armado } from "../../../lib/knowledge/armar";
+import { supabaseServidor } from "../../../lib/supabase/cliente";
+import { cachePacksSupabase } from "../../../lib/supabase/repo";
 import { manejar } from "../../../lib/intake/entrada";
 
 /** Buscar y leer un manual puede tardar 1–2 minutos. */
@@ -16,7 +18,9 @@ const Entrada = z.object({ ficha: Ficha, sintoma: z.string().min(1).max(2000) })
  */
 export function POST(req: Request) {
   return manejar(req, Entrada, async (entrada) => {
-    const { pack, manual, vistas, desdeCache, eventos } = await armarKnowledgePack(entrada);
+    // Caché de packs en Supabase (por marca + modelo + síntoma); sin Supabase, memoria.
+    const db = supabaseServidor();
+    const { pack, manual, vistas, desdeCache, eventos } = await armarKnowledgePack(entrada, db ? { cache: cachePacksSupabase<Armado>(db) } : {});
     return {
       pack,
       manualUrl: manual?.url ?? null,
