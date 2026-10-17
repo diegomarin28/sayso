@@ -88,6 +88,22 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
   return { raiz, nodos: animables, avisos, radio, piso: caja.min.y, despiece: { ultimo: 0, subiendo: true } };
 }
 
+/**
+ * Como `prepararEscena`, pero si las piezas de Blender rompen algo, arma la escena con las
+ * primitivas (cajas y cilindros) y lo avisa: el 3D nunca queda vacío por culpa del GLB.
+ */
+export function prepararEscenaSegura(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas | null, tipoEquipo?: string): EscenaPreparada {
+  if (!biblioteca) return prepararEscena(plano, undefined, tipoEquipo);
+  try {
+    return prepararEscena(plano, biblioteca, tipoEquipo);
+  } catch (e) {
+    console.warn("[visor] las piezas de Blender fallaron, uso primitivas:", e);
+    const escena = prepararEscena(plano, undefined, tipoEquipo);
+    escena.avisos.unshift("Las piezas detalladas no cargaron en este equipo: se muestran formas simples.");
+    return escena;
+  }
+}
+
 function ancestrosDe(nodo: THREE.Object3D, raiz: THREE.Object3D): string[] {
   const res: string[] = [];
   for (let p = nodo.parent; p && p !== raiz; p = p.parent) res.push(p.name);
