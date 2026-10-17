@@ -11,6 +11,7 @@ const knowledge = {
   manualUrl: null,
   manualFileId: null,
   paginasVistaExplosionada: [],
+  paginaVistaInterior: null,
   desdeCache: false,
   eventos: [],
 };
