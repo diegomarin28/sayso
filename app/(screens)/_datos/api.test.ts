@@ -12,6 +12,8 @@ const knowledge = {
   manualFileId: null,
   paginasVistaExplosionada: [],
   paginaVistaInterior: null,
+  imagenesPaginas: {},
+  vistaInterior: null,
   desdeCache: false,
   eventos: [],
 };
@@ -126,5 +128,17 @@ describe("knowledge: tipoEquipo (#79)", () => {
     await prepararExperto({ ...ficha, casoId: "caso-knowledge-tipo" }, "no enfría", "heladera no frost");
     const cuerpo = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(cuerpo.tipoEquipo).toBe("heladera no frost");
+  });
+});
+
+describe("Ver en el manual (#84)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("las imágenes de páginas llegan con claves de texto y se buscan con el número", async () => {
+    const fetch = vi.fn(() => respuesta({ ...knowledge, imagenesPaginas: { "54": "https://ej.com/p54.png" } }));
+    vi.stubGlobal("fetch", fetch);
+    const r = await prepararExperto({ ...ficha, casoId: "caso-imagenes" }, "ruido");
+    const pagina = 54;
+    expect(r.imagenesPaginas[pagina]).toBe("https://ej.com/p54.png");
+    expect(r.vistaInterior).toBeNull();
   });
 });

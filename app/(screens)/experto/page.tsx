@@ -110,6 +110,8 @@ export default function Experto() {
         // El 3D elige la versión de cada pieza según el equipo (notebook, celular, heladera…).
         tipoEquipo={tipoEquipo ?? undefined}
         manualFileId={preparado.manualFileId}
+        // "Ver en el manual": la página citada en grande (las claves llegan como texto en el JSON).
+        imagenPagina={(p) => preparado.imagenesPaginas?.[p] ?? null}
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
         preguntaInicial={preguntaInicial}
         decir={decir}
