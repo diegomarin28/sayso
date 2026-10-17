@@ -43,13 +43,15 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 
 ## Generador desde el manual (B4) — `generador.ts`, `obtener.ts`, `cache.ts`
 
-`POST /api/plano { casoId, knowledgePack, ficha?, manualFileId?, manualUrl?, paginasVistaExplosionada?, imagenes?, paginas? }`
-→ `{ plano, origen: "ia" | "plantilla", desdeCache, avisos, eventos }`
+`POST /api/plano { casoId, knowledgePack, ficha?, manualFileId?, manualUrl?, paginasVistaExplosionada?, paginaVistaInterior?, imagenes?, paginas? }`
+→ `{ plano, origen: "ia" | "plantilla", desdeCache, paginasLeidas, avisos, eventos }`
 
-- **Flujo en la pantalla 4:** `/api/knowledge` devuelve `manualFileId` y `paginasVistaExplosionada`; se pasan tal cual a `/api/plano` junto con el pack y la ficha. Después, el mismo `plano` va al `<Visor>` y a `/api/chat` (el chat solo usa ids de ese plano).
-- **La IA interpreta:** lee el manual completo por `file_id` (sin renderizar páginas), identifica las piezas con la vista explosionada y las ubica con las ilustraciones del interior que busca ella misma. Propone zona, capa, tamaño relativo, n.º del diagrama y página. Modelo `MODELOS.vision`, salida validada con Zod (un reintento).
+- **Flujo en la pantalla 4:** `/api/knowledge` devuelve `manualFileId`, `manualUrl`, `paginasVistaExplosionada` y `paginaVistaInterior`; se pasan tal cual a `/api/plano` junto con el pack y la ficha. Después, el mismo `plano` va al `<Visor>` y a `/api/chat` (el chat solo usa ids de ese plano).
+- **Solo las páginas que hacen falta** (`recorte.ts`): si hay vista interior y `manualUrl`, el código baja el manual y arma con `pdf-lib` un PDF chico con la vista interior y la vista explosionada (máx. `MAX_PAGINAS_RECORTE`). La IA lee eso en vez del manual entero: unas pocas páginas en lugar de cientos. Si la IA cita el número de hoja del recorte, se traduce a la página del manual. Si no hay vista interior, la descarga falla o el PDF está cifrado, lee el manual entero como antes. `paginasLeidas` dice qué pasó (null = manual entero o caché).
+- **La IA interpreta:** identifica las piezas con la vista explosionada y las ubica con la vista interior (con el manual entero, busca ella misma las ilustraciones del interior). Propone zona, capa, tamaño relativo, n.º del diagrama y página. Modelo `MODELOS.vision`, salida validada con Zod (un reintento).
 - **El código calcula** (`planoDesdePropuesta`, pura y testeada): medidas en cm, alturas por capas, padres, límites, choques (lugar libre más cercano por confianza), tapa inferior. Descarta ids fuera del pack y completa con la plantilla; todo queda en `avisos`. Citas de posición: `NO_VERIFICABLE`.
 - **Caché** (`cache.ts`, tabla `planos`, migración `lib/supabase/migraciones/004_planos.sql`): un plano por marca + modelo (misma clave que la tabla `manuales`). Se reusa si al generarlo ya se pidieron todas las piezas del pack actual. La plantilla genérica nunca se guarda. Sin Supabase, caché en memoria.
 - **Si la IA falla** → `origen: "plantilla"`: la pantalla tiene que mostrar "esquema genérico, no es tu modelo exacto".
-- Medición (3 manuales de prueba, escala 0–2): leyendo el PDF completo 65 % (1 corrida por manual); con imágenes recortadas 60 % (58–62, 3 corridas); plantilla sin IA 27 %.
+- Medición (3 manuales de prueba, escala 0–2): leyendo el PDF completo 65 % (1 corrida por manual); con imágenes recortadas 60 % (58–62, 3 corridas); plantilla sin IA 27 %. **Decisión (Diego):** se usa el recorte aunque pierda hasta 5 puntos de coincidencia; el costo importa más.
+- Ahorro del recorte: `npx tsx --env-file=.env.local lib/planogenerator/evaluacion/medir-recorte.ts` (tokens del manual entero vs. recorte con un manual de la caché, y una corrida real con el recorte).
 - Evaluación contra manuales reales (casos locales, fuera del repo): ver `evaluacion/README.md`.

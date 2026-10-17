@@ -1,3 +1,4 @@
+import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { fichaEjemplo, knowledgePackEjemplo, type KnowledgePack } from "../../shared";
 import type { LlamarIA, PedidoIA } from "../ia/claude";
@@ -16,6 +17,11 @@ const contador = () => {
   return { llamadas, llamar };
 };
 const entrada = { casoId: "c", knowledgePack: kp, ficha: fichaEjemplo };
+const pdfDePrueba = async (hojas: number) => {
+  const doc = await PDFDocument.create();
+  for (let n = 0; n < hojas; n++) doc.addPage();
+  return doc.save();
+};
 
 describe("obtenerPlano (caché por marca + modelo)", () => {
   it("la primera vez genera y guarda; la segunda reusa sin llamar a la IA", async () => {
@@ -69,5 +75,28 @@ describe("obtenerPlano (caché por marca + modelo)", () => {
     );
     expect(llamadas[0].contenido[0]).toMatchObject({ type: "document", source: { type: "file", file_id: "file_123" } });
     expect(JSON.stringify(llamadas[0].contenido)).toContain("páginas 51, 52");
+  });
+
+  it("con la vista interior y la URL, la IA lee solo esas páginas (no el manual entero)", async () => {
+    const { llamadas, llamar } = contador();
+    const pdf = Buffer.from(await pdfDePrueba(60));
+    const r = await obtenerPlano(
+      { ...entrada, manualUrl: "https://ej.com/hmm.pdf", manual: { fileId: "file_123", paginasVistaExplosionada: [12], paginaVistaInterior: 51 } },
+      { cache: cachePlanosEnMemoria(), llamar, descargar: async () => new Response(pdf) },
+    );
+    expect(r.paginasLeidas).toEqual([51, 12]);
+    expect(llamadas[0].contenido[0]).toMatchObject({ type: "document", source: { type: "base64", media_type: "application/pdf" } });
+    expect(JSON.stringify(llamadas[0].contenido)).not.toContain("file_123");
+    expect(JSON.stringify(llamadas[0].contenido)).toContain("la hoja 1 es la página 51");
+  });
+
+  it("si no se puede bajar el manual para recortarlo, lee el manual entero", async () => {
+    const { llamadas, llamar } = contador();
+    const r = await obtenerPlano(
+      { ...entrada, manualUrl: "https://ej.com/hmm.pdf", manual: { fileId: "file_123", paginaVistaInterior: 51 } },
+      { cache: cachePlanosEnMemoria(), llamar, descargar: async () => new Response("no", { status: 404 }) },
+    );
+    expect(r.paginasLeidas).toBeNull();
+    expect(llamadas[0].contenido[0]).toMatchObject({ type: "document", source: { type: "file", file_id: "file_123" } });
   });
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { FormaPieza, PlanoDePiezas, type KnowledgePack, type PiezaPlano } from "../../shared";
 import { bloqueImagen, ErrorIA, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
 import { planoNotebookBase } from "./plantillas/notebook";
+import type { ManualRecortado } from "./recorte";
 
 /**
  * B4 — Generador del plano 3D desde el manual.
@@ -86,7 +87,12 @@ export type EntradaGenerador = {
    * directo: no hace falta renderizar páginas. Las páginas de la vista explosionada las
    * encontró el bibliotecario; las vistas interiores las busca la IA.
    */
-  manual?: { fileId: string; titulo?: string; paginasVistaExplosionada?: number[] };
+  manual?: { fileId: string; titulo?: string; paginasVistaExplosionada?: number[]; paginaVistaInterior?: number | null };
+  /**
+   * Solo las páginas de las vistas (ver `recorte.ts`): si está, va en lugar del manual
+   * completo. Mucho más barato y con casi la misma coincidencia.
+   */
+  recorte?: ManualRecortado;
 };
 
 export type ResultadoGenerador = {
@@ -104,8 +110,11 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
     .map((p) => `- ${p.id}: ${p.nombre}. Ubicación según el manual: ${p.ubicacion}.${p.etiquetaManual ? ` N.º en el diagrama: ${p.etiquetaManual}.` : ""}`)
     .join("\n");
   const paginas = entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
-  const manual = entrada.manual;
-  const guiaManual = manual
+  const { recorte } = entrada;
+  const manual = recorte ? undefined : entrada.manual;
+  const guiaManual = recorte
+    ? guiaRecorte(recorte.paginas)
+    : manual
     ? `Te adjunto el manual completo.${
         manual.paginasVistaExplosionada?.length
           ? ` La vista explosionada con los números de pieza está en las páginas ${manual.paginasVistaExplosionada.join(", ")}.`
@@ -120,6 +129,14 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
         modelo: MODELOS.vision,
         system: SYSTEM_PLANO,
         contenido: [
+          ...(recorte
+            ? [
+                {
+                  type: "document" as const,
+                  source: { type: "base64" as const, media_type: "application/pdf" as const, data: recorte.base64 },
+                },
+              ]
+            : []),
           ...(manual
             ? [
                 {
@@ -140,6 +157,7 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
       },
       llamar,
     );
+    if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
     const { plano, avisos } = planoDesdePropuesta(kp, propuesta);
     return { plano, avisos, origen: "ia", propuesta };
   } catch (e) {
@@ -149,7 +167,21 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
   }
 }
 
+/** La primera hoja del recorte es la vista interior; las demás, vistas explosionadas (ver `paginasRecorte`). */
+function guiaRecorte(paginas: number[]): string {
+  const hojas = paginas.map(
+    (p, i) => `la hoja ${i + 1} es la página ${p} (${i === 0 ? "vista interior: usala para ubicar las piezas" : "vista explosionada: usala para saber qué pieza es cada número"})`,
+  );
+  return `Te adjunto solo ${paginas.length === 1 ? "una página" : `${paginas.length} páginas`} del manual: ${hojas.join("; ")}. En "pagina" poné el número de página del manual, no el de la hoja.`;
+}
+
 // ---------- Cálculo (sin IA) ----------
+
+/** Si la IA citó la hoja del recorte en vez de la página del manual, la traduce; si no es ninguna, null. */
+export function paginaDelManual(pagina: number | null, paginas: number[]): number | null {
+  if (pagina === null || paginas.includes(pagina)) return pagina;
+  return paginas[pagina - 1] ?? null;
+}
 
 /** Piezas que arma el sistema, no la IA. */
 const ES_ESTRUCTURA = new Set(["base", "tapa_inferior"]);

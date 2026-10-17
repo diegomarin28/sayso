@@ -5,6 +5,7 @@ import type { LlamarIA, PedidoIA } from "../ia/claude";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
 import {
   generarPlano,
+  paginaDelManual,
   planoDesdePlantilla,
   planoDesdePropuesta,
   type PiezaPropuesta,
@@ -217,5 +218,14 @@ describe("generarPlano (con la IA simulada)", () => {
   it("si la IA devuelve JSON que no valida, también cae a la plantilla", async () => {
     const r = await generarPlano({ casoId: "c", knowledgePack: kp }, respuesta(JSON.stringify({ piezas: "muchas" })));
     expect(r.origen).toBe("plantilla");
+  });
+});
+
+describe("paginaDelManual (recorte)", () => {
+  it("deja la página del manual; traduce el número de hoja; descarta lo demás", () => {
+    expect(paginaDelManual(51, [51, 12])).toBe(51);
+    expect(paginaDelManual(2, [51, 12])).toBe(12);
+    expect(paginaDelManual(7, [51, 12])).toBeNull();
+    expect(paginaDelManual(null, [51, 12])).toBeNull();
   });
 });
