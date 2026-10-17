@@ -15,7 +15,7 @@ const CRITERIO: Record<ClaseVista, string> = {
   explosionada:
     "VISTA|explosionada|qué muestra → la vista explosionada GENERAL del equipo: el dibujo con todas las piezas separadas y numeradas (suele estar junto a la lista de piezas). Una sola línea.",
   interior:
-    "VISTA|interior|qué muestra → un dibujo o foto del interior COMPLETO con el equipo abierto, donde se vean los bordes de la carcasa y las piezas en su lugar (en una notebook: dada vuelta y sin la tapa inferior, como en los pasos para sacar la batería o el ventilador). No sirve una vista explosionada ni el detalle de una sola pieza. Una sola línea.",
+    "VISTA|interior|qué muestra → un dibujo o foto del interior COMPLETO con el equipo abierto, donde se vean los bordes de la carcasa y las piezas en su lugar (en una notebook: dada vuelta y sin la tapa inferior, como en los pasos para sacar la batería o el ventilador). No sirve una vista explosionada ni el detalle de una sola pieza. Si hay varias, elegí la que muestre el equipo entero más grande, sin importar el síntoma. Una sola línea.",
 };
 
 const REGLAS =

@@ -55,7 +55,7 @@ ${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
 - Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
-- Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto.
+- Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
 
 <equipo>${equipo}</equipo>
 <sintoma>${sintoma}</sintoma>`;
