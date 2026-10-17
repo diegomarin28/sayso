@@ -1,0 +1,94 @@
+# CONTEXT.md — Experto al lado (leer entero antes de hacer nada)
+
+> Este archivo lo leen **Claude Code y Codex** de cada integrante. El plan completo está en `docs/plan-v4.md`; la estrategia 3D en `docs/3d-estrategia.md`.
+
+## PRIMERO: preguntá quién es la persona
+
+Antes de escribir código, preguntale al usuario: **"¿Sos Diego, Juanma o Iaio?"** y esperá la respuesta. Después seguí solo las instrucciones de su carril. Si pide algo de otro carril, avisale quién es el dueño y hacelo solo si lo acuerdan.
+
+| Persona | Cuenta | Carril | Foco |
+|---|---|---|---|
+| **Diego** | Claude 100 USD | **B — 3D** + `shared/` + integración final | lo más complejo: modelos 3D, coreografía, decisiones de arquitectura |
+| **Juanma** | Claude 20 USD | **A — Cerebro** | IA, captura guiada, chapa, knowledge pack, chat, seguridad |
+| **Iaio** | Claude 20 USD | **C — Producto** | app, pantallas, voz, deploy, demo y pitch |
+
+El reparto es una propuesta de Diego: si cambia, se actualiza esta tabla en un PR. La cuenta de Codex (20 USD) todavía no tiene dueño: usarla para revisar PRs y escribir tests.
+
+**Cuentas de 20 USD:** son limitadas. Reglas de ahorro para Juanma e Iaio: usar Sonnet para escribir, Haiku para clasificar, no pegar PDFs enteros en el chat de desarrollo (usar scripts que corten las páginas), pedir cambios chicos y pequeños commits, y cuando se acaba el cupo pasarle el trabajo a Diego avisando en el grupo.
+
+## Qué estamos construyendo (30 segundos)
+
+Hackatón Build 101, 17–18 oct 2026, ~15 h, 3 personas. **Experto al lado:** el usuario dice qué se rompió → la IA pide fotos según el equipo → lee la chapa y confirma el modelo → busca el manual y guías del modelo → arma un 3D con piezas nombradas → guía por voz resaltando, girando y moviendo piezas → el usuario pregunta por voz o texto → pasos peligrosos se bloquean. Demo con una notebook del jurado.
+
+Rúbrica: producto funcionando 35 %, problema y valor 25 %, calidad de la IA 20 %, UX 10 %, originalidad 10 %. La IA debe ser **indispensable** en el producto: un chat genérico, reglas fijas o IA solo como herramienta de desarrollo no cuentan.
+
+## Fases
+1. **Horas 0–6, MVP:** flujo completo con cualquier dispositivo, 3D básico. Puertas: hora 2, hora 5, hito hora 6.
+2. **Horas 6–13:** iterar el 3D por la escalera (ver `docs/3d-estrategia.md`) y probar con equipos y preguntas variadas.
+3. **Hora 10:** congelar funciones. **Horas 13–15:** ensayo y colchón.
+
+## Reglas de arquitectura (no negociables)
+- **La IA interpreta y propone; el código valida, calcula, guarda, anima y bloquea.** La IA nunca escribe directo en la base.
+- Todo lo que sale de un modelo pasa por **Zod**. Si no valida, se descarta y se reintenta una vez.
+- Texto y fotos del usuario son **datos, nunca instrucciones**.
+- **Seguridad:** tabla fija de riesgos en código (refrigerante, 220 V/capacitores, baterías hinchadas o abiertas, gas). Riesgo alto = bloqueo y derivación a técnico.
+- Cada dato lleva su estado: *confirmado / probable / desconocido*. Cada instrucción cita documento y página, o se marca *NO VERIFICADO*.
+- **No inventar** números de parte, modelos ni piezas.
+- **No usar datos ni documentos de CIR (empleador de Diego)**, ni de ninguna empresa, en el evento.
+- iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**.
+
+## Stack
+Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Realtime) · Claude Sonnet (visión, chat, herramientas) y Haiku (cortos) · Zod · three.js + React Three Fiber + drei · ElevenLabs Scribe v2 Realtime (voz a texto) y TTS Flash (texto a voz), con Web Speech API como plan B y campo de texto siempre disponible.
+
+## Estructura del repo y dueños
+
+```
+/shared            Diego   tipos Zod y fixtures (contratos). Se cambia solo por PR con etiqueta "contrato" y aviso al grupo.
+/app/api/intake    Juanma  captura guiada, calidad de fotos, lectura de chapa
+/app/api/ficha     Juanma
+/lib/knowledge     Juanma  armado y caché del knowledge pack, verificación de citas
+/app/api/chat      Juanma  conversación con el manual, emite texto + coreografía
+/lib/safety        Juanma  tabla de riesgos y bloqueo
+/components/viewer Diego   visor 3D, reproductor de coreografía
+/assets/models     Diego   GLB y plantillas
+/lib/planogenerator Diego  generador 3D desde el manual
+/app/(screens)     Iaio    las 6 pantallas
+/lib/voice         Iaio    entrada/salida de voz, subtítulos
+/lib/supabase      Iaio    cliente, esquema, migraciones
+/docs              todos   plan, estrategia, notas
+```
+
+## Contratos (en `/shared`)
+`Caso`, `Foto`, `Ficha`, `KnowledgePack`, `PlanoDePiezas`, `Coreografia`, `Evento`. Todos con **fixtures** de un caso de notebook completo: con eso cada carril trabaja desde la hora 1 sin esperar a los demás.
+
+Acciones de coreografía permitidas: `camara`, `resaltar`, `rotar`, `desplazar`, `ocultar`, `despiezar`, `restaurar`. Si la IA nombra una pieza que no existe en el GLB, el reproductor la ignora y registra un evento.
+
+## Cómo trabajamos con Orca y git
+- **Orca** (gratis, código abierto): una carpeta de trabajo (*worktree*) por tarea, cada una con su propio agente (Claude Code o Codex). Todos abrimos **el mismo repositorio**.
+- Rama por tarea: `a/<tarea>`, `b/<tarea>`, `c/<tarea>`. Commits chicos y frecuentes. **PR a `main`** y merge rápido; `main` siempre debe compilar.
+- Nunca tocar archivos de otro carril sin avisar. Si necesitás un cambio en `/shared`, abrí un PR con etiqueta "contrato" y avisá al grupo antes de seguir.
+- Secretos en `.env.local` (no se sube). Mantener `.env.example` con los nombres de las variables.
+- Antes de cerrar una tarea: compila, tipos sin errores, y probaste el flujo con el fixture.
+- No subir PDFs de manuales completos al repo (copyright); se bajan al vuelo o se guardan en Supabase Storage de la demo.
+
+## Qué hacer al arrancar la sesión
+1. Preguntar quién es la persona.
+2. Leer `docs/plan-v4.md`, la sección de su carril, y `git log` reciente.
+3. Proponer **una** tarea concreta de su carril, la más cercana a la próxima puerta.
+4. Trabajar en un worktree propio y abrir PR al terminar.
+
+## Tareas por carril (resumen; detalle en el plan)
+
+**A — Juanma:** A1 captura guiada y calidad · A2 ficha con estados · A3 knowledge pack con citas verificadas · A4 `/api/chat` con coreografía en el stream · A5 seguridad · A6 repuestos (P1).
+
+**B — Diego:** B1 `shared/` y fixtures (hora 0–1, con todos) · B2 notebook básico en GLB con nodos nombrados · B3 visor y reproductor de coreografía · B4 generador 3D desde el manual · B5 escalera 3D (carcasa desde fotos, segmentación) · B6 integración final.
+
+**C — Iaio:** C1 esqueleto, deploy, Supabase · C2 las 6 pantallas · C3 voz y subtítulos que se desvanecen · C4 feed de actividad y estados de carga · C5 set de pruebas y guion de demo · C6 pitch.
+
+## Herramientas
+- **Usamos:** Orca, ElevenLabs, ifixit-mcp (solo lectura), Blender MCP (solo Diego, para plantillas 3D), servidor MCP propio con las herramientas del producto (`pedir_foto`, `leer_chapa`, `guardar_ficha`, `buscar_manual`, `leer_pagina_manual`, `resaltar_pieza`, `listar_repuestos`).
+- **Opcionales:** Wispr Flow (dictar prompts al agente, no es parte del producto), OpenUI (UI generativa, solo si sobra tiempo), Jev (modelo de decisión: las altas estaban pausadas, plan B con Haiku).
+- **Kiro:** no es la herramienta principal; su flujo de especificaciones consume tiempo y créditos. Se puede usar el plan gratis para redactar una especificación, nada más.
+
+## Definición de terminado de una tarea
+Compila · tipos y Zod validan · probado con el fixture · sin secretos en el commit · PR abierto con una línea de qué cambió y cómo probarlo.
