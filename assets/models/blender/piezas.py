@@ -45,6 +45,11 @@ COLORES = {
     "cuerpo.bateria": ("#33373d", 0.25, 0.7),
     "cuerpo.parlante": ("#25282c", 0.1, 0.9),
     "cuerpo.pila": ("#e1e4e7", 0.6, 0.25),
+    "cuerpo.disco_duro": ("#b9c0c6", 0.8, 0.35),
+    "cuerpo.cable": ("#2f3338", 0.1, 0.6),
+    "cuerpo.bisagra": ("#8f979f", 0.85, 0.35),
+    "cuerpo.conector": ("#c6ccd2", 0.85, 0.3),
+    "cuerpo.soporte": ("#b0b7be", 0.85, 0.35),
     "aspas": ("#3b4048", 0.2, 0.5),
     "cubo": ("#1c1f23", 0.3, 0.4),
     "chip": ("#141619", 0.3, 0.45),
@@ -128,12 +133,15 @@ def caja(dim, pos=(0, 0, 0), mat="cuerpo", bisel=0.0, rot_z=0.0, seg=2):
     return ubicar(o, pos, rot_z)
 
 
-def cilindro(r, alto, pos=(0, 0, 0), mat="cuerpo", seg=32, bisel=0.0, r_arriba=None):
+def cilindro(r, alto, pos=(0, 0, 0), mat="cuerpo", seg=32, bisel=0.0, r_arriba=None, eje="z"):
+    """Eje z por defecto; `eje="x"` lo acuesta (ej. el barril de una bisagra)."""
     bm = bmesh.new()
     bmesh.ops.create_cone(
         bm, cap_ends=True, cap_tris=False, segments=seg, radius1=r,
         radius2=r if r_arriba is None else r_arriba, depth=alto,
     )
+    if eje == "x":
+        bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, "Y"))
     o = objeto(bm, mat)
     if bisel:
         biselar(o, bisel)
@@ -451,7 +459,66 @@ def tapa_inferior():
     return armar("tapa_inferior")
 
 
-PIEZAS = [base, tapa_inferior, placa_madre, ventilador, disipador, heatpipe, tornillo, ram, ssd, wifi, pila, bateria, parlante]
+def disco_duro():
+    """Disco de 2,5": carcasa de aluminio, etiqueta, tornillos de la tapa y conector SATA."""
+    caja((10.0, 7.0, 0.65), (0, 0, 0.325), bisel=0.08)
+    cilindro(1.6, 0.03, (-1.2, 0.2, 0.66), seg=48)
+    caja((5.0, 3.6, 0.01), (2.0, -0.6, 0.655), "etiqueta")
+    for x, y in [(-4.6, 3.1), (-4.6, -3.1), (4.6, 3.1), (4.6, -3.1), (-1.2, 2.6), (2.6, 2.6)]:
+        cilindro(0.16, 0.04, (x, y, 0.67), "metal", seg=16)
+    caja((0.5, 4.0, 0.45), (5.15, -1.0, 0.25), "plastico", bisel=0.03)
+    for i in range(7):
+        caja((0.05, 0.3, 0.02), (5.38, -2.6 + i * 0.5, 0.25), "contactos")
+    return armar("disco_duro")
+
+
+def cable():
+    """Cable plano (flex) con un conector en cada punta."""
+    caja((5.4, 0.8, 0.03), (0, 0, 0.075))
+    for x in (-2.9, 2.9):
+        caja((0.5, 1.0, 0.15), (x, 0, 0.075), "plastico", bisel=0.02)
+        caja((0.5, 0.75, 0.01), (x - 0.02 * (1 if x > 0 else -1), 0, 0.155), "contactos")
+    caja((1.2, 0.85, 0.01), (-1.6, 0, 0.095), "etiqueta")
+    return armar("cable")
+
+
+def bisagra():
+    """Bisagra: hoja metálica con tres agujeros y el barril atrás."""
+    hoja = caja((3.6, 1.6, 0.15), (0, -0.2, 0.075), bisel=0.04)
+    restar(hoja, varios([("cil", (0.17, 0.5), (x, -0.4, 0.075)) for x in (-1.2, 0, 1.2)]))
+    cilindro(0.42, 4.0, (0, 0.95, 0.42), seg=24, eje="x", bisel=0.04)
+    caja((3.0, 0.5, 0.12), (0, 0.6, 0.12))
+    for x in (-1.2, 0, 1.2):
+        aro = cilindro(0.3, 0.02, (x, -0.4, 0.16), "metal", seg=16)
+        restar(aro, cilindro(0.17, 0.5, (x, -0.4, 0.16), mat=None, seg=12))
+    return armar("bisagra")
+
+
+def conector():
+    """Puerto o conector (USB, alimentación): carcasa metálica con boca y lengüeta, patas para soldar."""
+    carcasa = caja((1.3, 1.5, 0.6), (0, 0, 0.3), bisel=0.04)
+    restar(carcasa, caja((1.1, 0.8, 0.42), (0, -0.5, 0.3), mat=None))
+    caja((0.9, 0.7, 0.1), (0, -0.4, 0.3), "plastico")
+    for x in (-0.55, 0.55):
+        caja((0.15, 0.3, 0.05), (x * 1.25, 0.4, 0.025), "metal")
+    return armar("conector")
+
+
+def soporte():
+    """Soporte metálico (bracket): chapa con alivianados, agujeros y orejas."""
+    chapa = caja((6.0, 4.0, 0.06), (0, 0, 0.03), bisel=0.03)
+    cortes = [("caja", (1.6, 1.2, 0.5), (x, 0.3, 0.03)) for x in (-1.8, 0, 1.8)]
+    cortes += [("cil", (0.16, 0.5), (x, y, 0.03)) for x in (-2.6, 2.6) for y in (-1.5, 1.5)]
+    restar(chapa, varios(cortes))
+    for x in (-2.97, 2.97):  # pestañas dobladas hacia arriba
+        caja((0.06, 2.0, 0.45), (x, -0.4, 0.225), bisel=0.02)
+    return armar("soporte")
+
+
+PIEZAS = [
+    base, tapa_inferior, placa_madre, ventilador, disipador, heatpipe, tornillo, ram, ssd, wifi, pila,
+    bateria, parlante, disco_duro, cable, bisagra, conector, soporte,
+]
 
 
 # ---------- Exportar y renders de revisión ----------

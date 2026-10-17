@@ -8,7 +8,11 @@ GLB y plantillas 3D.
 
 Piezas genéricas de notebook modeladas **por script** en Blender: base, tapa inferior, placa madre,
 ventilador (blower), disipador, heatpipe, tornillo, RAM SO-DIMM, SSD M.2, Wi-Fi M.2, pila de botón,
-batería y parlante.
+batería, parlante, disco duro 2,5", cable flex, bisagra, conector (puerto) y soporte.
+
+- El tipo se elige por el **comienzo** del id (`bisagra_izquierda` → `bisagra`). A propósito no se busca la
+  palabra en cualquier parte: en español el sustantivo va primero (`cable_bateria` es un cable, no una batería).
+- Cada tipo nuevo necesita su receta en `materiales.ts` (lo controla un test).
 
 - Regenerar (Blender 4.2+ instalado): `npm run modelos:piezas`. Con renders de revisión:
   `blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas.glb --renders <carpeta>`.
