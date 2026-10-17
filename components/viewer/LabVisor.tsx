@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { coreografiaEjemplo, planoEjemplo, type Coreografia, type Evento } from "../../shared";
+import { coreografiaEjemplo, knowledgePackEjemplo, planoEjemplo, type Coreografia, type Evento } from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import type { PasoPreparado } from "./paso";
-import { Visor } from "./Visor";
+import { Visor, type ModoEfectos } from "./Visor";
 
 /** Banco de pruebas del visor: reproduce el fixture y acciones sueltas. */
 
@@ -22,7 +22,7 @@ const EXTRAS: Array<[string, Coreografia]> = [
     { t: "camara", objetivo: "general" },
     { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 },
   ])],
-  ["Despiezar", paso("Así se separa todo.", [{ t: "camara", objetivo: "general", zoom: 0.8 }, { t: "despiezar", cantidad: 1 }])],
+  ["Despiezar", paso("Así se separa todo.", [{ t: "despiezar", cantidad: 1 }, { t: "camara", objetivo: "general" }])],
   ["Ocultar batería", paso("Escondo la batería.", [{ t: "ocultar", pieza: "bateria" }])],
   ["Pieza inexistente", paso("Esta pieza no existe.", [{ t: "resaltar", pieza: "condensador_de_flujo" }])],
   ["Paso peligroso", paso("Ahora abrí la batería con un destornillador.", [
@@ -38,6 +38,8 @@ export function LabVisor() {
   const [coreografia, setCoreografia] = useState<Coreografia | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [filtrado, setFiltrado] = useState<PasoPreparado | null>(null);
+  const [efectos, setEfectos] = useState<ModoEfectos>("auto");
+  const [efectosActivos, setEfectosActivos] = useState(true);
   const plano = PLANOS[planoId];
   // Copia nueva en cada clic: así el mismo paso se puede reproducir otra vez.
   const reproducir = (c: Coreografia) => setCoreografia({ ...c });
@@ -51,6 +53,9 @@ export function LabVisor() {
         casoId="caso-demo-1"
         onEvento={(e) => setEventos((prev) => [e, ...prev].slice(0, 20))}
         onPaso={setFiltrado}
+        piezas={knowledgePackEjemplo.piezas}
+        efectos={efectos}
+        onEfectos={setEfectosActivos}
       />
       <aside className="flex w-full flex-col gap-4 p-4 text-sm md:w-80">
         <h1 className="text-lg font-semibold">Lab · visor 3D</h1>
@@ -61,6 +66,12 @@ export function LabVisor() {
             </Boton>
           ))}
         </div>
+
+        <Seccion titulo={`Efectos (bloom ${efectosActivos ? "encendido" : "apagado"})`}>
+          {(["auto", "si", "no"] as const).map((m) => (
+            <Boton key={m} activo={m === efectos} onClick={() => setEfectos(m)}>{m}</Boton>
+          ))}
+        </Seccion>
 
         <Seccion titulo="Coreografía del fixture">
           {coreografiaEjemplo.map((c) => (

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { PlanoDePiezas, knowledgePackEjemplo, planoEjemplo } from "../../shared";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
+import { SUFIJO_DETALLE } from "./detalles";
 import { planoNotebookBase } from "./plantillas/notebook";
 
 const centroMundo = (o: THREE.Object3D) => {
@@ -82,6 +83,18 @@ describe("construirEscena", () => {
   });
 });
 
+describe("detalles", () => {
+  it("el ventilador trae aspas como detalle, sin crear piezas nuevas", () => {
+    const { raiz, nodos } = construirEscena(planoNotebookBase);
+    const malla = nodos.get("ventilador")!.getObjectByName("ventilador" + SUFIJO_MALLA)!;
+    const detalles = malla.children.filter((c) => c.name.includes(SUFIJO_DETALLE));
+    expect(detalles.length).toBeGreaterThan(10);
+    const grupos: string[] = [];
+    raiz.traverse((o) => o instanceof THREE.Group && o !== raiz && grupos.push(o.name));
+    expect(grupos.sort()).toEqual(planoNotebookBase.piezas.map((p) => p.pieza).sort());
+  });
+});
+
 describe("plantilla de notebook", () => {
   it("valida contra el contrato y no tiene avisos", () => {
     expect(() => PlanoDePiezas.parse(planoNotebookBase)).not.toThrow();
@@ -97,7 +110,9 @@ describe("plantilla de notebook", () => {
     const { raiz, nodos } = construirEscena(planoNotebookBase);
     raiz.updateMatrixWorld(true);
     const cajas = [...nodos.entries()].map(([id, n]) => {
-      const caja = new THREE.Box3().setFromObject(n.getObjectByName(id + SUFIJO_MALLA)!);
+      const malla = n.getObjectByName(id + SUFIJO_MALLA) as THREE.Mesh;
+      malla.geometry.computeBoundingBox();
+      const caja = malla.geometry.boundingBox!.clone().applyMatrix4(malla.matrixWorld);
       caja.expandByScalar(-0.001); // tocarse está bien, atravesarse no
       return [id, caja] as const;
     });

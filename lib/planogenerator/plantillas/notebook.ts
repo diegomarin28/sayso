@@ -29,10 +29,19 @@ export const planoNotebookBase: PlanoDePiezas = {
     {
       pieza: "disipador",
       forma: "caja",
-      dim: [10, 0.3, 2],
-      pos: [3, sobre(TOPE_PLACA, 0.3), -6],
+      dim: [4, 0.3, 4],
+      pos: [1, sobre(TOPE_PLACA, 0.3), -5.5],
       pivote: [0, 0, 0],
       padre: "placa_madre",
+    },
+    {
+      // Caño de cobre aplastado que lleva el calor del disipador al ventilador.
+      pieza: "heatpipe",
+      forma: "caja",
+      dim: [5, 0.25, 0.8],
+      pos: [5.5, sobre(TOPE_PLACA, 0.25), -6],
+      pivote: [0, 0, 0],
+      padre: "disipador",
     },
     {
       pieza: "ventilador",
