@@ -5,6 +5,7 @@ import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../..
 import { Visor, type ModoEfectos } from "../Visor";
 import { FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular } from "./iconos";
+import { paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { esperar, reproducir, tiempoDeLectura, type EstadoGuia } from "./reproducir";
 
@@ -24,6 +25,11 @@ export type GuiaExpertoProps = {
   /** Tipo de equipo en texto libre (de /api/intake/entender): el 3D elige la versión de cada pieza (notebook, celular…). */
   tipoEquipo?: string;
   manualFileId?: string | null;
+  /**
+   * Imagen (PNG) de una página del manual, si la hay: el paso que la cita muestra "Ver en el manual".
+   * La da /api/knowledge (campo de Juanma); la pantalla solo traduce ese campo a esta función.
+   */
+  imagenPagina?: (pagina: number) => string | null | undefined;
   /** Si viene, el experto arranca solo (ej. con el síntoma del caso). */
   preguntaInicial?: string;
   /** Voz (C3): decir la frase en voz alta y resolver cuando termina. Sin voz, se usa un tiempo de lectura. */
@@ -62,6 +68,7 @@ export function GuiaExperto({
   origenPlano,
   tipoEquipo,
   manualFileId,
+  imagenPagina,
   preguntaInicial,
   decir = decirConTiempoDeLectura,
   onEvento,
@@ -194,6 +201,10 @@ export function GuiaExperto({
     setMensajes((m) => [...m, { rol: "experto", c, id: ++idMensaje.current }]);
   };
   const pasoActual = pasos[indice];
+  // Página del manual del paso actual, si tiene imagen (nunca en un paso bloqueado).
+  const [paginaAbierta, setPaginaAbierta] = useState<PaginaManual | null>(null);
+  const cerrarPagina = useCallback(() => setPaginaAbierta(null), []);
+  const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
@@ -232,6 +243,7 @@ export function GuiaExperto({
                 total={pasos.length}
                 completa={completa}
                 onElegir={verPaso}
+                onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
               />
             )}
             <EstadoExperto estado={estado} detalle={detalle} />
@@ -273,6 +285,7 @@ export function GuiaExperto({
           <FlechaEnviar className="hidden max-[480px]:block" />
         </button>
       </form>
+      {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
     </div>
   );
 }

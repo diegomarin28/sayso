@@ -14,6 +14,14 @@ export const COLOR_ACTIVO = "#E8590C";
 const ACTIVO = new THREE.Color(COLOR_ACTIVO);
 const FANTASMA = new THREE.Color("#7d8894");
 const OPACIDAD_FANTASMA = 0.1;
+/**
+ * Piezas con ubicación incierta ("estimada" o "plantilla"): contorno punteado y más transparentes
+ * (también resaltadas, un poco menos). Las del manual quedan sólidas; sin origen (planos viejos), igual que antes.
+ */
+const OPACIDAD_INCIERTA = 0.5;
+const OPACIDAD_INCIERTA_ACTIVA = 0.8;
+/** Trazo del punteado como fracción del lado mayor de la pieza (entre 0,3 y 3 cm). */
+const TRAZO_PUNTEADO = 0.08;
 const BORDE = new THREE.Color("#cfd8e2");
 const BORDE_FANTASMA = new THREE.Color("#a9bacb");
 const BORDE_ACTIVO = new THREE.Color("#4a1803");
@@ -24,7 +32,9 @@ const ESCALON_DESPIECE_MS = 70;
 
 type MallaAnimable = {
   malla: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  /** LineDashedMaterial si la ubicación es incierta. */
   borde: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
+  incierta: boolean;
   color: THREE.Color;
   opacidad: number;
   transparente: boolean;
@@ -68,7 +78,7 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
       id,
       nodo,
       principal: nodo.getObjectByName(id + SUFIJO_MALLA) as THREE.Mesh,
-      mallas: mallasPropias(nodo).map(prepararMalla),
+      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza))),
       reposo: nodo.position.clone(),
       centroPadre: padre?.centro ?? null,
       ancestros: ancestrosDe(nodo, raiz),
@@ -124,21 +134,35 @@ function mallasPropias(nodo: THREE.Group): THREE.Mesh[] {
   return res;
 }
 
-function prepararMalla(m: THREE.Mesh): MallaAnimable {
+/** La ubicación no salió del manual: se estimó o es de la plantilla. */
+export function esIncierta(d: Pick<DatosPieza, "origen">): boolean {
+  return d.origen === "estimada" || d.origen === "plantilla";
+}
+
+function prepararMalla(m: THREE.Mesh, incierta: boolean): MallaAnimable {
   const malla = m as MallaAnimable["malla"];
   const mat = malla.material;
   mat.emissive.copy(ACTIVO);
   mat.emissiveIntensity = 0;
-  const borde = new THREE.LineSegments(
-    new THREE.EdgesGeometry(malla.geometry, ANGULO_BORDES),
-    new THREE.LineBasicMaterial({ color: BORDE, transparent: true, opacity: 0.6 }),
-  );
+  const geometria = new THREE.EdgesGeometry(malla.geometry, ANGULO_BORDES);
+  let material: THREE.LineBasicMaterial;
+  if (incierta) {
+    geometria.computeBoundingBox();
+    const lado = geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().reduce((a, b) => Math.max(a, b), 0);
+    const trazo = Math.min(Math.max(lado * TRAZO_PUNTEADO, 0.3), 3);
+    material = new THREE.LineDashedMaterial({ color: BORDE, transparent: true, opacity: 0.6, dashSize: trazo, gapSize: trazo * 0.7 });
+  } else {
+    material = new THREE.LineBasicMaterial({ color: BORDE, transparent: true, opacity: 0.6 });
+  }
+  const borde = new THREE.LineSegments(geometria, material);
+  if (incierta) borde.computeLineDistances(); // sin esto, el punteado no se dibuja
   borde.name = `${malla.name}__borde`;
   borde.raycast = () => {};
   malla.add(borde);
   return {
     malla,
     borde,
+    incierta,
     color: mat.color.clone(),
     opacidad: mat.opacity,
     transparente: mat.transparent,
@@ -232,7 +256,8 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   mat.roughness = lerp(m.roughness, 0.45, foco);
   mat.emissiveIntensity = foco * 0.9 * latido;
 
-  const opacidad = lerp(lerp(m.opacidad, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible;
+  const incierta = m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1;
+  const opacidad = lerp(lerp(m.opacidad, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible * incierta;
   mat.opacity = opacidad;
   const transparente = m.transparente || opacidad < 0.999;
   if (mat.transparent !== transparente) {
@@ -244,7 +269,8 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
 
   const b = m.borde.material;
   b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(BORDE_ACTIVO, foco);
-  b.opacity = lerp(lerp(0.22, 0.4, fantasma), 0.7, foco) * visible;
+  // El punteado se marca un poco más, para que se note aunque la pieza sea más transparente.
+  b.opacity = lerp(lerp(m.incierta ? 0.45 : 0.22, 0.4, fantasma), m.incierta ? 0.85 : 0.7, foco) * visible;
   m.borde.visible = b.opacity > 0.01;
 }
 
