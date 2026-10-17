@@ -35,7 +35,7 @@ import {
 } from "./escena";
 import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
-import { bajarCalidad, calidadInicial, esNegro, soporteDe, Vigia, type Calidad } from "./salud";
+import { bajarCalidad, calidadInicial, esNegro, puntosVigia, soporteDe, Vigia, type Calidad } from "./salud";
 import { OBJETIVO_GENERAL, aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
 
 /**
@@ -70,6 +70,8 @@ export type VisorProps = {
    * piezas se encuadran en lo que queda libre y las etiquetas nunca se meten en esa franja.
    */
   reservadoArriba?: number;
+  /** `false`: solo el 3D, sin el botón de vista ni el aviso de origen (ej. las tarjetas de /lab/galeria). */
+  controles?: boolean;
   className?: string;
 };
 
@@ -91,6 +93,7 @@ export function Visor({
   onEfectos,
   vistaInicial = "perspectiva",
   reservadoArriba = 0,
+  controles = true,
   className,
 }: VisorProps) {
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
@@ -148,6 +151,8 @@ export function Visor({
       const lienzo = gl.domElement;
       let plazo: ReturnType<typeof setTimeout> | undefined;
       lienzo.addEventListener("webglcontextlost", (e) => {
+        // Al desmontar el visor, R3F suelta el contexto a propósito: no es una falla.
+        if (!lienzo.isConnected) return;
         e.preventDefault();
         console.warn("[visor] se perdió el contexto WebGL: rearmo el 3D.");
         setFalla("contexto");
@@ -226,7 +231,7 @@ export function Visor({
         </Canvas>
       </Resguardo>
       {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
-      {!falla && (
+      {!falla && controles && (
         <p
           className="pointer-events-none absolute bottom-16 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11px] text-white/80 backdrop-blur"
           title="De dónde sale la ubicación de las piezas del 3D"
@@ -235,13 +240,15 @@ export function Visor({
           <span className="truncate">{origen.texto}</span>
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
-        className="absolute bottom-3 left-3 h-11 rounded-full border border-white/20 bg-black/70 px-4 text-xs text-white backdrop-blur active:scale-95"
-      >
-        {vista === "perspectiva" ? "Vista isométrica" : "Vista en perspectiva"}
-      </button>
+      {controles && (
+        <button
+          type="button"
+          onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
+          className="absolute bottom-3 left-3 h-11 rounded-full border border-white/20 bg-black/70 px-4 text-xs text-white backdrop-blur active:scale-95"
+        >
+          {vista === "perspectiva" ? "Vista isométrica" : "Vista en perspectiva"}
+        </button>
+      )}
     </div>
   );
 }
@@ -252,8 +259,10 @@ type Falla = "sin_webgl" | "contexto" | "negro" | "error";
 
 /** Si iOS pierde el contexto y no lo devuelve en este plazo, se arma un lienzo nuevo. */
 const ESPERA_CONTEXTO_MS = 2500;
-/** Lado del cuadrado del centro de la imagen que mira el vigía (px del lienzo). */
-const LADO_VIGIA = 24;
+/** Lado de cada cuadrado de la imagen que mira el vigía (px del lienzo; ver `puntosVigia`). */
+const LADO_VIGIA = 16;
+/** El vigía mira una grilla de 5×5: un equipo con huecos (una impresora sin carcasa) igual cae en algún punto. */
+const PUNTOS_VIGIA = 5;
 
 const TEXTO_FALLA: Record<Falla, string> = {
   sin_webgl: "Este navegador no puede mostrar el 3D. La guía sigue funcionando por voz y texto.",
@@ -312,7 +321,7 @@ class Resguardo extends Component<{ children: ReactNode; onError: (e: unknown) =
 }
 
 /**
- * Mira el centro de la imagen los primeros segundos (ver `Vigia`). Corre después de los efectos
+ * Mira la imagen (una grilla de puntos, ver `puntosVigia`) los primeros segundos (ver `Vigia`). Corre después de los efectos
  * (prioridad 2); con prioridad > 0 R3F deja de dibujar solo, así que sin efectos dibuja él.
  */
 function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolean; onNegro: () => void; onListo: () => void }) {
@@ -332,10 +341,12 @@ function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolea
     if (avisado.current) return;
     gl.setRenderTarget(null);
     const ctx = gl.getContext();
-    const x = Math.max(0, Math.floor(ctx.drawingBufferWidth / 2 - LADO_VIGIA / 2));
-    const y = Math.max(0, Math.floor(ctx.drawingBufferHeight / 2 - LADO_VIGIA / 2));
-    ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
-    if (v.registrar(esNegro(pixeles)) === "negro") {
+    // Negro solo si TODA la grilla está negra (un objeto oscuro en el centro no es una falla).
+    const negro = puntosVigia(ctx.drawingBufferWidth, ctx.drawingBufferHeight, LADO_VIGIA, PUNTOS_VIGIA).every(([x, y]) => {
+      ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
+      return esNegro(pixeles);
+    });
+    if (v.registrar(negro) === "negro") {
       avisado.current = true;
       onNegro();
     }
