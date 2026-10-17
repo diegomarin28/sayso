@@ -89,7 +89,12 @@ export default function Preparando() {
 
   return (
     <Pantalla>
-      <Encabezado paso={4} orbe={listo || error ? "quieto" : "pensando"} />
+      {/* Volver no corta ni repite la búsqueda: el resultado queda guardado en el caso. */}
+      <Encabezado
+        paso={4}
+        orbe={listo || error ? "quieto" : "pensando"}
+        alVolver={() => router.push("/ficha")}
+      />
 
       <DiceExperto texto={dice} />
 

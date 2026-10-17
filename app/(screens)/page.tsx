@@ -42,10 +42,14 @@ const NOMBRE_CLASE: Record<Caso["clase"], string> = {
 
 export default function QueSeRompio() {
   const router = useRouter();
-  const { setCaso, agregarEventos } = useFlujo();
-  const [texto, setTexto] = useState("");
+  const { caso, setCaso, agregarEventos } = useFlujo();
+  // Si la persona vuelve con la flecha, se sigue con el mismo caso (no se vuelve a llamar a la IA
+  // ni se pierde lo ya preparado). Solo "No, lo corrijo" arma un caso nuevo.
+  const [texto, setTexto] = useState(caso?.sintoma ?? "");
   const [pensando, setPensando] = useState(false);
-  const [entendido, setEntendido] = useState<Caso | null>(null);
+  const [entendido, setEntendido] = useState<Caso | null>(caso);
+  /** Solo habla después de que la persona mandó algo en esta visita (y el navegador deja sonar). */
+  const [respondio, setRespondio] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [bloqueo, setBloqueo] = useState<Bloqueo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +59,7 @@ export default function QueSeRompio() {
   async function enviar() {
     dictado.detener();
     if (!texto.trim()) return;
+    setRespondio(true);
     setPensando(true);
     setError(null);
     try {
@@ -95,7 +100,7 @@ export default function QueSeRompio() {
 
   // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,
   // así el navegador deja reproducir audio).
-  const hablarAhora = entendido !== null || error !== null;
+  const hablarAhora = respondio && (entendido !== null || error !== null);
   useEffect(() => {
     if (hablarAhora && !pensando) hablar(dice);
   }, [dice, hablarAhora, pensando]);
