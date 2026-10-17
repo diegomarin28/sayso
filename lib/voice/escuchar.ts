@@ -18,7 +18,11 @@ export type AlEscuchar = {
 
 export const SIN_MICROFONO = "No puedo usar el micrófono acá. Escribilo abajo.";
 
+/** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): reconocimiento del navegador, no gasta ElevenLabs. */
+const SIN_ELEVENLABS = process.env.NEXT_PUBLIC_DATOS === "fixture";
+
 export async function escuchar(cb: AlEscuchar): Promise<Escucha> {
+  if (SIN_ELEVENLABS) return escucharConNavegador(cb);
   try {
     return await escucharConScribe(cb);
   } catch (e) {
