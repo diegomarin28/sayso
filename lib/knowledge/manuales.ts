@@ -3,7 +3,7 @@ import { z } from "zod";
 import { normalizar } from "../intake/chapa";
 
 /**
- * Caché de manuales (tabla `manuales` en Supabase, migración en lib/supabase/migrations).
+ * Caché de manuales (tabla `manuales` en Supabase, migración lib/supabase/migraciones/003_manuales.sql).
  * La llena el bibliotecario cuando encuentra y verifica un manual; la próxima vez se reusa.
  * Nadie la carga a mano. Si Supabase no está configurado, se usa memoria (se pierde al reiniciar).
  */

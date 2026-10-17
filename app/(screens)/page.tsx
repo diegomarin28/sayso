@@ -1,11 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
-import { BotonPrincipal, BotonSecundario, DiceExperto, Encabezado, Flecha, Pantalla } from "./_ui/experto";
+import { useDictado } from "@/lib/voice/useDictado";
+import { callar, hablar } from "@/lib/voice/hablar";
+import {
+  BotonPrincipal,
+  BotonSecundario,
+  DiceExperto,
+  Encabezado,
+  Flecha,
+  Microfono,
+  Pantalla,
+} from "./_ui/experto";
 
 /** Pantalla 1 — Qué se rompió. */
 
@@ -40,7 +50,10 @@ export default function QueSeRompio() {
   const [bloqueo, setBloqueo] = useState<Bloqueo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const dictado = useDictado((frase) => setTexto((t) => (t.trim() ? `${t.trim()} ${frase}` : frase)));
+
   async function enviar() {
+    dictado.detener();
     if (!texto.trim()) return;
     setPensando(true);
     setError(null);
@@ -80,6 +93,14 @@ export default function QueSeRompio() {
             ? `Entendí: es ${NOMBRE_CLASE[entendido.clase]} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
             : "Hola. Contame qué se rompió.";
 
+  // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,
+  // así el navegador deja reproducir audio).
+  const hablarAhora = entendido !== null || error !== null;
+  useEffect(() => {
+    if (hablarAhora && !pensando) hablar(dice);
+  }, [dice, hablarAhora, pensando]);
+  useEffect(() => callar, []);
+
   return (
     <Pantalla>
       <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} />
@@ -89,21 +110,40 @@ export default function QueSeRompio() {
       {!entendido ? (
         <>
           <div className="flex flex-1 flex-col gap-4">
-            <textarea
-              autoFocus
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-              disabled={pensando}
-              rows={3}
-              placeholder="Ej.: mi notebook se apaga sola a los diez minutos…"
-              className="w-full resize-none rounded-2xl border border-borde bg-superficie p-4 text-lg placeholder:text-texto-suave/60 focus:border-acento focus:outline-none"
-            />
+            <div className="relative">
+              <textarea
+                autoFocus
+                value={dictado.parcial ? `${texto} ${dictado.parcial}`.trim() : texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    enviar();
+                  }
+                }}
+                disabled={pensando}
+                rows={3}
+                placeholder="Ej.: mi notebook se apaga sola a los diez minutos…"
+                className="w-full resize-none rounded-2xl border border-borde bg-superficie p-4 pr-16 text-lg placeholder:text-texto-suave/60 focus:border-acento focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={dictado.alternar}
+                disabled={pensando || dictado.conectando}
+                aria-pressed={dictado.escuchando}
+                aria-label={dictado.escuchando ? "Dejar de escuchar" : "Decirlo con la voz"}
+                className={`absolute right-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-40 ${
+                  dictado.escuchando ? "animate-pulse bg-peligro text-white" : "bg-acento text-black"
+                }`}
+              >
+                <Microfono />
+              </button>
+            </div>
+            {(dictado.escuchando || dictado.error) && (
+              <p className={`text-sm ${dictado.error ? "text-probable" : "text-texto-suave"}`}>
+                {dictado.error ?? "Te escucho… Cuando termines, tocá el micrófono o “Seguir”."}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS.map((s) => (
                 <button
