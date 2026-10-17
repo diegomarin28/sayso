@@ -6,7 +6,7 @@ import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
 import { useDictado } from "@/lib/voice/useDictado";
-import { callar, hablar } from "@/lib/voice/hablar";
+import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import {
   BotonPrincipal,
   BotonSecundario,
@@ -57,6 +57,7 @@ export default function QueSeRompio() {
   const dictado = useDictado((frase) => setTexto((t) => (t.trim() ? `${t.trim()} ${frase}` : frase)));
 
   async function enviar() {
+    desbloquearAudio(); // la respuesta se dice en voz alta cuando llega (iPhone pide un toque)
     dictado.detener();
     if (!texto.trim()) return;
     setRespondio(true);

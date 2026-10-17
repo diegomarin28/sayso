@@ -7,6 +7,7 @@ import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
 import { FeedActividad } from "../_ui/feed";
+import { desbloquearAudio } from "@/lib/voice/hablar";
 
 /**
  * Pantalla 4 — Preparando: el bibliotecario busca y lee el manual del modelo (30 s – 2 min)
@@ -162,7 +163,12 @@ export default function Preparando() {
           </BotonPrincipal>
         )}
         {listo && (
-          <BotonPrincipal onClick={() => router.push("/experto")}>
+          <BotonPrincipal
+            onClick={() => {
+              desbloquearAudio(); // el experto habla solo al entrar: en iPhone hace falta este toque
+              router.push("/experto");
+            }}
+          >
             Ver al experto <Flecha />
           </BotonPrincipal>
         )}

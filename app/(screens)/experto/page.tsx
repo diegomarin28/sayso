@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GuiaExperto } from "@/components/viewer";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
-import { callar, hablar } from "@/lib/voice/hablar";
+import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { Encabezado, Microfono } from "../_ui/experto";
+import { Repuestos } from "./repuestos";
 
 /**
  * Pantallas 5 y 6 — Experto en 3D y conversación. Todo lo hace <GuiaExperto> (carril B):
@@ -28,7 +29,7 @@ async function decir(texto: string, senal: AbortSignal) {
 export default function Experto() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada } = useFlujo();
+  const { ficha, preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada } = useFlujo();
   // La pregunta inicial se hace una sola vez por caso: al volver a esta pantalla no se repite
   // (ni la llamada a /api/chat ni la voz).
   const [preguntaInicial] = useState(() => (guiaIniciada ? undefined : caso?.sintoma));
@@ -51,7 +52,19 @@ export default function Experto() {
   return (
     <main className="flex h-dvh w-full flex-col bg-black">
       <div className="mx-auto w-full max-w-xl shrink-0 px-5 pt-6 pb-3">
-        <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
+          </div>
+          {ficha && (
+            <Repuestos
+              pack={preparado.pack}
+              ficha={ficha}
+              casoId={caso.id}
+              onEvento={(e) => agregarEventos([e])}
+            />
+          )}
+        </div>
       </div>
       <GuiaExperto
         className="min-h-0 flex-1"
@@ -71,6 +84,7 @@ export default function Experto() {
             type="button"
             onClick={() => {
               callar(); // si el experto está hablando, se calla para escuchar
+              desbloquearAudio();
               dictado.alternar();
             }}
             disabled={dictado.conectando}
