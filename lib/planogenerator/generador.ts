@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FormaPieza, PlanoDePiezas, type KnowledgePack, type PiezaPlano } from "../../shared";
+import { FormaPieza, PlanoDePiezas, type KnowledgePack, type OrigenDato3D, type PiezaPlano } from "../../shared";
 import { bloqueImagen, enviarMensaje, ErrorIA, MODELOS, pedirJson, type EnviarMensaje, type ImagenEntrada, type LlamarIA } from "../ia/claude";
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
@@ -256,6 +256,10 @@ export function planoDesdePropuesta(
     elegidas.set(p.pieza, p);
   }
 
+  // De dónde sale cada ubicación: lo que la IA vio en una página del manual, lo que dedujo, o la plantilla.
+  const origenes = new Map<string, OrigenDato3D>();
+  for (const p of elegidas.values()) origenes.set(p.pieza, origenDeLaIA(p));
+
   // 2. Completar con la plantilla lo que la IA no ubicó.
   const desdePlantilla = propuestaDesdePlantilla(plantilla);
   for (const id of validos.keys()) {
@@ -263,6 +267,7 @@ export function planoDesdePropuesta(
     const p = desdePlantilla.find((q) => q.pieza === id);
     if (p) {
       elegidas.set(id, p);
+      origenes.set(id, "plantilla");
       avisos.push(`"${id}" no se ubicó en el manual: se usa la posición genérica de la plantilla.`);
     } else {
       avisos.push(`"${id}" no se ubicó en el manual ni está en la plantilla: no aparece en el 3D.`);
@@ -327,9 +332,11 @@ export function planoDesdePropuesta(
 
   // 5. Armar el plano: base, piezas y tapa inferior encima de todo.
   const doc = kp.fuentes[0]?.doc ?? kp.modelo;
+  // La carcasa vale lo que valen sus medidas.
+  const origenCarcasa: OrigenDato3D = medidas.ancho.origen === "manual" && medidas.prof.origen === "manual" ? "manual" : "estimada";
   const techo = Math.max(ALTO_BASE / 2, ...[...cajas.values()].map((c) => c.techo));
   const piezas: PiezaPlano[] = [
-    { pieza: "base", forma: "extrusion", dim: [W, ALTO_BASE, D], pos: [0, 0, 0], pivote: [0, 0, 0] },
+    { pieza: "base", forma: "extrusion", dim: [W, ALTO_BASE, D], pos: [0, 0, 0], pivote: [0, 0, 0], origen: origenCarcasa },
     ...[...cajas.values()].map((c): PiezaPlano => ({
       pieza: c.id,
       forma: c.forma,
@@ -339,6 +346,7 @@ export function planoDesdePropuesta(
       padre: c.padre,
       ...(c.etiquetaManual ? { etiquetaManual: c.etiquetaManual } : {}),
       ...(c.pagina ? { cita: { doc, pagina: c.pagina, estado: "NO_VERIFICABLE" as const } } : {}),
+      origen: origenes.get(c.id) ?? "estimada",
     })),
   ];
   if (validos.has("tapa_inferior")) {
@@ -349,9 +357,16 @@ export function planoDesdePropuesta(
       pos: [0, techo + HOLGURA_TAPA + ALTO_TAPA / 2, 0],
       pivote: [0, 0, -D / 2], // se abre como bisagra desde el borde trasero
       padre: "base",
+      origen: origenCarcasa,
     });
   }
-  return { plano: PlanoDePiezas.parse({ modelo: kp.modelo, unidades: "cm", piezas }), avisos, medidas };
+  const plano = PlanoDePiezas.parse({
+    modelo: kp.modelo,
+    unidades: "cm",
+    piezas,
+    medidas: { ancho: medidas.ancho.origen, prof: medidas.prof.origen },
+  });
+  return { plano, avisos, medidas };
 }
 
 /**
@@ -360,7 +375,7 @@ export function planoDesdePropuesta(
  */
 export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas = planoNotebookBase) {
   const base = kp.clase === "notebook" ? plantilla.piezas.find((p) => p.pieza === "base") : undefined;
-  return planoDesdePropuesta(
+  const r = planoDesdePropuesta(
     kp,
     {
       base_ancho_cm: base?.dim[0] ?? null,
@@ -370,6 +385,18 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
     },
     plantilla,
   );
+  // Todo sale de la plantilla: ni las ubicaciones ni las medidas vienen del manual.
+  const plano: PlanoDePiezas = {
+    ...r.plano,
+    piezas: r.plano.piezas.map((p) => ({ ...p, origen: "plantilla" as const })),
+    medidas: { ancho: "plantilla", prof: "plantilla" },
+  };
+  return { ...r, plano };
+}
+
+/** La IA la vio en una página del manual (con confianza) o la dedujo. */
+function origenDeLaIA(p: PiezaPropuesta): OrigenDato3D {
+  return p.pagina !== null && p.confianza !== "baja" ? "manual" : "estimada";
 }
 
 type Limites = { minX: number; maxX: number; minZ: number; maxZ: number };
