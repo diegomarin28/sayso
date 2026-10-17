@@ -61,6 +61,13 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["puerta", { color: "#e8eaec", metalness: 0.2, roughness: 0.4 }],
   // Carcasa del electrodoméstico: translúcida, como la tapa inferior, para ver lo de adentro.
   ["carcasa", { color: "#dfe3e7", metalness: 0.3, roughness: 0.4, opacity: 0.16 }],
+  ["evaporador", { color: "#c9d0d6", metalness: 0.8, roughness: 0.35 }],
+  ["turbina", { color: "#d9dcdf", metalness: 0.1, roughness: 0.5 }],
+  ["retroiluminacion", { color: "#e9ecef", metalness: 0.1, roughness: 0.4 }],
+  ["tira_led", { color: "#f2f2ee", metalness: 0, roughness: 0.5 }],
+  // Plástico transparente de cajones y estantes: deja ver lo que hay detrás.
+  ["bandeja", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
+  ["estante", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };

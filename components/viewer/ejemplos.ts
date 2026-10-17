@@ -1,9 +1,9 @@
-import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import type { Coreografia, PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
 
 /**
  * Planos de ejemplo de electrodomésticos, SOLO para /lab y tests (regla "nada hardcodeado"):
  * medidas típicas en cm, no de un modelo. En producción el plano lo arma la IA desde el manual.
- * Incluyen piezas sin tipo en la biblioteca (sensor, bandeja) para ver la primitiva de respaldo.
+ * Incluyen una pieza sin tipo en la biblioteca (el sensor) para ver la primitiva de respaldo.
  */
 const pieza = (id: string, dim: Vec3, pos: Vec3, forma: PiezaPlano["forma"] = "caja", padre?: string): PiezaPlano => ({
   pieza: id,
@@ -24,7 +24,8 @@ export const planoHeladera: PlanoDePiezas = {
     pieza("bisagra_superior", [7, 3, 3], [-25, 173.5, 31], "caja", "carcasa_heladera"),
     pieza("compresor", [18, 17, 14], [0, 10.5, -22], "cilindro", "carcasa_heladera"),
     pieza("condensador", [45, 80, 2], [0, 95, -34], "caja", "carcasa_heladera"),
-    pieza("serpentin_evaporador", [40, 20, 3], [0, 140, -27], "caja", "carcasa_heladera"),
+    pieza("evaporador", [40, 20, 3], [0, 140, -27], "caja", "carcasa_heladera"),
+    pieza("bandeja_verduras", [52, 18, 30], [0, 12, 14], "caja", "carcasa_heladera"),
     pieza("ventilador_evaporador", [12, 12, 3], [20, 140, -24], "cilindro", "carcasa_heladera"),
     pieza("resistencia_deshielo", [30, 4, 6], [0, 128, -27], "caja", "carcasa_heladera"),
     pieza("termostato", [4, 3, 3], [22, 112, -28], "caja", "carcasa_heladera"),
@@ -52,8 +53,31 @@ export const planoAire: PlanoDePiezas = {
   ],
 };
 
-/** Ejemplos del lab, con el tipo de equipo que diría la recepción. */
-export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string }> = {
-  heladera: { plano: planoHeladera, tipoEquipo: "heladera" },
+const paso = (n: number, dice: string, acciones: Coreografia["acciones"]): Coreografia => ({ paso: n, dice, acciones, riesgo: "bajo" });
+
+/**
+ * Mostrar el compresor: se ocultan las puertas, se gira la heladera (la carcasa es la madre de todas las
+ * piezas, así que giran con ella) y la cámara va al compresor, que queda atrás, abajo.
+ * El paso 3 nombra el compresor: la tabla de seguridad (lib/safety) hoy lo bloquea aunque solo lo muestre.
+ */
+export const coreografiaHeladera: Coreografia[] = [
+  paso(1, "Saco las puertas para ver adentro.", [
+    { t: "ocultar", pieza: "puerta_freezer" },
+    { t: "ocultar", pieza: "puerta_heladera" },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(2, "Giro la heladera para ver la parte de atrás.", [
+    { t: "rotar", pieza: "carcasa_heladera", eje: "y", grados: 180 },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(3, "Abajo, atrás, está el compresor. No lo abras ni toques los caños: tienen gas a presión.", [
+    { t: "camara", objetivo: "compresor", zoom: 1.2 },
+    { t: "resaltar", pieza: "compresor" },
+  ]),
+];
+
+/** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
+export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
+  heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
   aire: { plano: planoAire, tipoEquipo: "aire acondicionado split" },
 };

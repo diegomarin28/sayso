@@ -160,8 +160,18 @@
   },
   "pantalla@panel": {
    "familia": "electronica",
-   "descripcion": "Panel de televisor o monitor: pantalla plana con marco fino y la placa T-con atrás, abajo.",
+   "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios, placa T-con, flex de los drivers arriba y el cable.",
    "equipos": "televisor tv monitor"
+  },
+  "retroiluminacion": {
+   "familia": "electronica",
+   "descripcion": "Retroiluminación de televisor: chapa reflectora con tiras de LED (barras de aluminio con las lentes) y sus fichas.",
+   "equipos": "televisor tv monitor"
+  },
+  "tira_led": {
+   "familia": "electronica",
+   "descripcion": "Tira de LED suelta (retroiluminación, luz interior): barra de aluminio con lentes y una ficha en la punta.",
+   "equipos": ""
   },
   "ventilador": {
    "familia": "movimiento",
@@ -178,6 +188,11 @@
    "descripcion": "Turbina tangencial (unidad interior de aire split): jaula larga de álabes con discos de refuerzo y eje.",
    "equipos": "aire split acondicionado climatizador"
   },
+  "turbina@centrifuga": {
+   "familia": "movimiento",
+   "descripcion": "Turbina centrífuga (jaula de ardilla: horno, secarropas, aire de conducto): rueda corta de álabes curvos con disco trasero y cubo.",
+   "equipos": ""
+  },
   "motor": {
    "familia": "movimiento",
    "descripcion": "Motor eléctrico: carcasa con aletas de enfriamiento, tapas, eje, patas y caja de conexiones.",
@@ -185,7 +200,7 @@
   },
   "bomba": {
    "familia": "movimiento",
-   "descripcion": "Bomba de agua (desagote): voluta con la entrada grande y la salida, motor sincrónico con su bobina y terminales.",
+   "descripcion": "Bomba de agua (desagote de lavarropas): voluta con el filtro y su tapa adelante, entrada y salida con espigas, motor sincrónico (núcleo, bobina y ficha) atrás y orejas para atornillarla.",
    "equipos": ""
   },
   "correa": {
@@ -195,12 +210,12 @@
   },
   "tambor": {
    "familia": "movimiento",
-   "descripcion": "Tambor de lavarropas de carga frontal: cuba de acero perforada, abierta adelante, con paletas, cruceta y eje.",
+   "descripcion": "Tambor de lavarropas de carga frontal: cuba de acero perforada con nervios, abierta adelante, paletas, aro de balanceo atrás, cruceta de aluminio y eje.",
    "equipos": ""
   },
   "compresor": {
    "familia": "movimiento",
-   "descripcion": "Compresor hermético (heladera o aire): cápsula con domo, patas con gomas, caños de cobre y caja de terminales.",
+   "descripcion": "Compresor hermético (heladera o aire): cápsula con domo, costura soldada y chapa de datos, patas con gomas, caños de cobre (succión, descarga y el de proceso aplastado) y la caja del relé con el cable.",
    "equipos": ""
   },
   "serpentin": {
@@ -211,6 +226,11 @@
   "condensador": {
    "familia": "frio_calor",
    "descripcion": "Condensador de heladera (tubo y alambre): caño negro en zigzag con varillas soldadas a los dos lados.",
+   "equipos": "heladera refrigerador freezer congelador nevera"
+  },
+  "evaporador": {
+   "familia": "frio_calor",
+   "descripcion": "Evaporador de heladera (placa roll-bond): chapa de aluminio con los canales del gas en relieve, el capilar y el caño de succión.",
    "equipos": "heladera refrigerador freezer congelador nevera"
   },
   "termostato": {
@@ -278,6 +298,21 @@
    "descripcion": "Puerta de lavarropas de carga frontal: aro con el vidrio abombado, la manija y la bisagra.",
    "equipos": "lavarropas lavasecarropas lavadora secarropas"
   },
+  "bandeja": {
+   "familia": "estructura",
+   "descripcion": "Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente.",
+   "equipos": ""
+  },
+  "bandeja@goteo": {
+   "familia": "estructura",
+   "descripcion": "Bandeja de goteo o de condensado (aire split, heladera): batea larga y baja con nervios y el pico de desagote.",
+   "equipos": ""
+  },
+  "bandeja@estante": {
+   "familia": "estructura",
+   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
+   "equipos": ""
+  },
   "carcasa@heladera": {
    "familia": "carcasas",
    "descripcion": "Gabinete de heladera: caja alta abierta adelante, divisor del freezer, estantes, compartimento del compresor y patas.",
@@ -316,6 +351,21 @@
   "condensador@electrolitico": {
    "familia": "frio_calor",
    "descripcion": "Condensador electrónico (capacitor): la forma del capacitor electrolítico.",
+   "equipos": ""
+  },
+  "evaporador@aletas": {
+   "familia": "frio_calor",
+   "descripcion": "Evaporador de aletas (heladera no frost, aire split): la forma del serpentín.",
+   "equipos": ""
+  },
+  "turbina": {
+   "familia": "movimiento",
+   "descripcion": "Turbina tangencial (unidad interior de aire split): la misma jaula larga de álabes.",
+   "equipos": "aire split acondicionado climatizador"
+  },
+  "estante": {
+   "familia": "estructura",
+   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
    "equipos": ""
   }
  }

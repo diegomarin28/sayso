@@ -16,7 +16,7 @@ import { Visor, type ModoEfectos } from "./Visor";
 
 /** Banco de pruebas del visor: reproduce el fixture y acciones sueltas. */
 
-const PLANOS: Record<string, { plano: PlanoDePiezas; tipoEquipo?: string }> = {
+const PLANOS: Record<string, { plano: PlanoDePiezas; tipoEquipo?: string; coreografia?: Coreografia[] }> = {
   plantilla: { plano: planoNotebookBase },
   fixture: { plano: planoEjemplo },
   ...EJEMPLOS,
@@ -134,8 +134,8 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
           ))}
         </Seccion>
 
-        <Seccion titulo="Coreografía del fixture">
-          {coreografiaEjemplo.map((c) => (
+        <Seccion titulo={elegido.coreografia ? `Coreografía de ${planoId}` : "Coreografía del fixture"}>
+          {(elegido.coreografia ?? coreografiaEjemplo).map((c) => (
             <Boton key={c.paso} onClick={() => reproducir(c)}>Paso {c.paso}</Boton>
           ))}
         </Seccion>

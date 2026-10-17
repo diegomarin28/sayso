@@ -80,6 +80,11 @@ COLORES = {
     "cuerpo.filtro": ("#cfd4d8", 0.05, 0.5),
     "cuerpo.puerta": ("#e8eaec", 0.2, 0.4),
     "cuerpo.carcasa": ("#dfe3e7", 0.3, 0.4),
+    "cuerpo.evaporador": ("#c9d0d6", 0.8, 0.35),
+    "cuerpo.turbina": ("#d9dcdf", 0.1, 0.5),
+    "cuerpo.retroiluminacion": ("#e9ecef", 0.1, 0.4),
+    "cuerpo.tira_led": ("#f2f2ee", 0.0, 0.5),
+    "cuerpo.bandeja": ("#cfe3ea", 0.1, 0.25),
     "aspas": ("#3b4048", 0.2, 0.5),
     "cubo": ("#1c1f23", 0.3, 0.4),
     "chip": ("#141619", 0.3, 0.45),
@@ -887,13 +892,23 @@ def conector_terminal():
 
 
 def pantalla_panel():
-    """Panel de televisor o monitor: pantalla plana con marco fino y la placa T-con atrás, abajo."""
+    """Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios, placa T-con, flex de los drivers arriba y el cable."""
     W, H, P = 100.0, 58.0, 1.0
-    caja((W, P, H), (0, 0, H / 2), bisel=0.1)
-    caja((W - 1.0, 0.05, H - 1.0), (0, -P / 2 - 0.03, H / 2), "vidrio")
-    caja((20.0, 0.3, 6.0), (0, P / 2 + 0.15, 4.0), "pcb")
-    for i in range(6):
-        caja((3.0, 0.05, 2.0), (-25.0 + i * 10.0, P / 2 + 0.03, 1.2), "plastico")
+    caja((W - 0.6, P, H - 0.6), (0, 0, H / 2))
+    caja((W - 1.2, 0.05, H - 1.2), (0, -P / 2 - 0.03, H / 2), "vidrio")
+    marco_m = caja((W, P + 0.3, H), (0, 0.1, H / 2), "metal", bisel=0.1)
+    restar(marco_m, caja((W - 1.0, P + 1.0, H - 1.0), (0, 0.1, H / 2), mat=None))
+    caja((W - 4.0, 0.2, H - 4.0), (0, P / 2 + 0.1, H / 2), "metal")
+    for z in (H * 0.3, H * 0.5, H * 0.7):
+        caja((W - 8.0, 0.2, 1.2), (0, P / 2 + 0.3, z), "metal", bisel=0.05)
+    caja((22.0, 0.3, 7.0), (0, P / 2 + 0.55, 6.0), "pcb")
+    for x, w in [(-6.0, 2.5), (-1.5, 1.5), (3.0, 3.0)]:
+        caja((w, 0.25, w * 0.7), (x, P / 2 + 0.82, 6.5), "chip")
+    for i in range(10):
+        x = -W / 2 + 7.0 + i * (W - 14.0) / 9
+        caja((3.6, 0.06, 3.0), (x, P / 2 + 0.25, H - 1.2), "plastico")
+        caja((1.2, 0.1, 0.6), (x, P / 2 + 0.3, H - 1.4), "chip")
+    tubo([(10.5, P / 2 + 0.7, 6.0), (16.0, P / 2 + 0.9, 8.0), (22.0, P / 2 + 0.9, 12.0)], 0.35, "plastico", seg=10)
     return armar("pantalla@panel", EQUIPOS_TV)
 
 
@@ -950,17 +965,27 @@ def ventilador_tangencial():
 
 
 def bomba():
-    """Bomba de agua (desagote): voluta con la entrada grande y la salida, motor sincrónico con su bobina y terminales."""
-    z = 3.0
-    cilindro(2.8, 2.6, (0, -1.0, z), seg=32, eje="y", bisel=0.15)
-    cilindro(1.6, 3.0, (0, -3.8, z), seg=28, eje="y")
-    cilindro(0.9, 3.2, (2.0, -1.0, z + 2.6), seg=20)
-    cilindro(3.4, 0.3, (0, 0.45, z), "plastico", seg=32, eje="y")
-    caja((4.6, 1.6, 4.6), (0, 1.4, z), "metal")
-    caja((2.6, 2.2, 2.2), (0, 3.0, z), "cobre")
-    caja((4.6, 0.6, 4.6), (0, 4.4, z), "metal")
-    for x in (-0.6, 0.6):
-        caja((0.4, 0.6, 0.06), (x, 4.9, z + 1.6), "contactos")
+    """Bomba de agua (desagote de lavarropas): voluta con el filtro y su tapa adelante, entrada y salida con espigas,
+    motor sincrónico (núcleo, bobina y ficha) atrás y orejas para atornillarla."""
+    z = 4.0
+    cilindro(3.2, 2.2, (0, 0, z), seg=36, eje="y", bisel=0.2)
+    cilindro(2.6, 3.0, (0, -2.6, z), seg=32, eje="y")
+    cilindro(2.8, 0.8, (0, -4.4, z), "plastico", seg=32, eje="y", bisel=0.2)
+    caja((4.2, 0.8, 0.8), (0, -5.0, z), "plastico", bisel=0.2)
+    entrada = [(1.6, -1.0, z + 2.4), (2.4, -1.0, z + 4.2), (3.0, -1.0, z + 5.6), (3.4, -1.0, z + 6.6)]
+    tubo(entrada, 1.2, seg=20, radios=[1.2, 1.2, 1.3, 1.2])
+    salida = [(-2.8, 0, z + 0.6), (-4.4, 0, z + 1.2), (-5.4, 0, z + 2.0), (-6.4, 0, z + 2.8), (-7.2, 0, z + 3.4)]
+    tubo(salida, 0.7, seg=16, radios=[0.7, 0.7, 0.8, 0.7, 0.8])
+    caja((5.0, 2.0, 5.0), (0, 2.2, z), "metal")
+    for i in range(5):
+        caja((5.02, 0.02, 0.05), (0, 1.19, z - 2.0 + i), "ranura")
+    caja((3.0, 2.4, 1.8), (0, 2.3, z + 3.3), "cobre")
+    caja((2.2, 1.2, 1.2), (0, 3.6, z + 3.3), "conector", bisel=0.05)
+    for x in (-0.5, 0.5):
+        caja((0.3, 0.05, 0.5), (x, 4.22, z + 3.3), "contactos")
+    for x, zz in [(-3.9, z - 2.0), (3.9, z - 2.0), (0, z + 3.6)]:
+        oreja = caja((1.4, 0.5, 1.4), (x, 0.9, zz), bisel=0.1)
+        restar(oreja, cilindro(0.3, 1.0, (x, 0.9, zz), mat=None, seg=12, eje="y"))
     return armar("bomba")
 
 
@@ -973,14 +998,19 @@ def correa():
 
 
 def tambor():
-    """Tambor de lavarropas de carga frontal: cuba de acero perforada, abierta adelante, con paletas, cruceta y eje."""
+    """Tambor de lavarropas de carga frontal: cuba de acero perforada con nervios, abierta adelante, paletas,
+    aro de balanceo atrás, cruceta de aluminio y eje."""
     R, P = 24.0, 30.0
     cuba = cilindro(R, P, (0, 0, R), seg=48, eje="y")
     restar(cuba, cilindro(R - 0.3, P, (0, -0.4, R), mat=None, seg=48, eje="y"))
     aro = cilindro(R + 0.3, 1.2, (0, -P / 2 + 0.6, R), "metal", seg=48, eje="y")
     restar(aro, cilindro(R - 3.0, 2.0, (0, -P / 2 + 0.6, R), mat=None, seg=48, eje="y"))
-    for j in range(5):
-        y = -P / 2 + 4.0 + j * 5.0
+    for y in (-P / 2 + 8.5, P / 2 - 8.5):
+        nervio = cilindro(R + 0.15, 0.6, (0, y, R), "metal", seg=48, eje="y")
+        restar(nervio, cilindro(R - 0.1, 1.0, (0, y, R), mat=None, seg=48, eje="y"))
+    balanceo = cilindro(R + 0.4, 1.6, (0, P / 2 - 0.8, R), "metal", seg=48, eje="y")
+    restar(balanceo, cilindro(R - 1.5, 2.0, (0, P / 2 - 0.8, R), mat=None, seg=48, eje="y"))
+    for j, y in enumerate((-P / 2 + 3.5, -P / 2 + 6.5, -1.5, 1.5, P / 2 - 6.5, P / 2 - 3.5)):
         for k in range(24):
             a = 2 * math.pi * k / 24 + j * 0.13
             agujero = cilindro(0.35, 0.06, (math.cos(a) * (R + 0.01), y, R + math.sin(a) * (R + 0.01)), "ranura", seg=6)
@@ -991,28 +1021,124 @@ def tambor():
     for a in (math.radians(90), math.radians(210), math.radians(330)):
         brazo = caja((R * 0.95, 1.2, 2.0), (math.cos(a) * R * 0.475, P / 2 + 0.6, R + math.sin(a) * R * 0.475), "metal", bisel=0.3)
         girar(brazo, (0, -a, 0))
+    cilindro(3.0, 1.6, (0, P / 2 + 1.2, R), "metal", seg=24, eje="y")
     cilindro(1.2, 5.0, (0, P / 2 + 3.5, R), "metal", seg=20, eje="y")
     return armar("tambor")
 
 
 def compresor():
-    """Compresor hermético (heladera o aire): cápsula con domo, patas con gomas, caños de cobre y caja de terminales."""
+    """Compresor hermético (heladera o aire): cápsula con domo, costura soldada y chapa de datos, patas con gomas,
+    caños de cobre (succión, descarga y el de proceso aplastado) y la caja del relé con el cable."""
     R, H, z0 = 7.0, 12.0, 1.9
     caja((18.0, 14.0, 0.4), (0, 0, 0.2), "metal")
     for sx in (-1, 1):
         for sy in (-1, 1):
             cilindro(0.9, 0.8, (sx * 7.8, sy * 5.8, 0.6), "goma", seg=16)
+            cilindro(0.35, 1.2, (sx * 7.8, sy * 5.8, 0.8), "metal", seg=10)
         caja((2.0, 14.0, 1.5), (sx * 4.0, 0, 1.15), "metal")
     cilindro(R, H, (0, 0, z0 + H / 2), seg=40)
     esfera(R, (0, 0, z0 + H), escala=(1, 1, 0.45), seg=40, anillos=12)
     esfera(R, (0, 0, z0), escala=(1, 1, 0.3), seg=40, anillos=12)
     cilindro(R + 0.15, 0.5, (0, 0, z0 + H * 0.7), "metal", seg=40)
+    girar(caja((4.0, 0.05, 2.6), (2.6, -R + 0.45, z0 + H * 0.4), "etiqueta"), (0, 0, math.radians(-22)))
     zt = z0 + H
-    for x, y, r in [(-2.5, -1.0, 0.45), (0, 0.8, 0.3), (2.5, -1.0, 0.3)]:
-        tubo([(x, y, zt + 2.4), (x, y, zt + 4.0), (x, y + 0.6, zt + 4.8), (x, y + 2.2, zt + 5.1)], r, "cobre", seg=12)
-    caja((3.5, 2.0, 3.0), (0, -R - 0.5, z0 + H * 0.45), "plastico", bisel=0.15)
-    tubo([(0.8, -R - 1.4, z0 + H * 0.45), (1.5, -R - 3.0, z0 + H * 0.3), (2.5, -R - 4.0, z0 + 1.0)], 0.25, "plastico", seg=10)
+    # Succión (la más gruesa), descarga y proceso: suben del domo y se doblan hacia atrás.
+    for x, y, r in [(-2.5, -1.0, 0.45), (2.5, -1.0, 0.3)]:
+        tubo([(x, y, zt + 2.4), (x, y, zt + 4.0)] + arco((x, y + 1.0, zt + 4.0), 1.0, 180, 90, n=6, plano="yz")[1:] + [(x, y + 3.0, zt + 5.0)], r, "cobre", seg=12)
+    tubo([(0, 0.8, zt + 2.9), (0, 0.8, zt + 5.5)], 0.3, "cobre", seg=12)
+    caja((0.9, 0.2, 0.6), (0, 0.8, zt + 5.8), "cobre")
+    caja((4.0, 2.4, 3.6), (0, -R - 0.6, z0 + H * 0.45), "plastico", bisel=0.2)
+    caja((1.2, 0.3, 1.2), (1.0, -R - 1.85, z0 + H * 0.3), "conector", bisel=0.05)
+    tubo([(1.0, -R - 2.0, z0 + H * 0.3), (1.6, -R - 3.4, z0 + H * 0.2), (2.6, -R - 4.4, z0 + 1.2)], 0.25, "plastico", seg=10)
     return armar("compresor")
+
+
+def evaporador():
+    """Evaporador de heladera (placa roll-bond): chapa de aluminio con los canales del gas en relieve, el capilar y el caño de succión."""
+    W, H = 40.0, 30.0
+    caja((W, 0.15, H), (0, 0, H / 2))
+    n, pts = 9, []
+    paso = (H - 4.0) / (n - 1)
+    for i in range(n):
+        z = 2.0 + i * paso
+        izq, der = (-W / 2 + 2.5, -0.1, z), (W / 2 - 2.5, -0.1, z)
+        pts += [izq, der] if i % 2 == 0 else [der, izq]
+        if i < n - 1:
+            cx = W / 2 - 2.5 if i % 2 == 0 else -W / 2 + 2.5
+            a0, a1 = (-90, 90) if i % 2 == 0 else (270, 90)
+            pts += arco((cx, -0.1, z + paso / 2), paso / 2, a0, a1, n=6)[1:-1]
+    tubo(pts, 0.35, "metal", seg=8)
+    tubo([(-W / 2 + 2.5, -0.1, 2.0), (-W / 2 + 1.0, -0.6, 1.0), (-W / 2 - 1.0, -0.8, -1.0)], 0.4, "cobre", seg=10)
+    tubo([(-W / 2 + 3.5, -0.1, 2.0), (-W / 2 + 2.6, -0.5, 0.5), (-W / 2 + 1.5, -0.7, -1.0)], 0.12, "cobre", seg=6)
+    return armar("evaporador", EQUIPOS_HELADERA)
+
+
+def turbina_centrifuga():
+    """Turbina centrífuga (jaula de ardilla: horno, secarropas, aire de conducto): rueda corta de álabes curvos con disco trasero y cubo."""
+    R, L = 6.0, 8.0
+    cilindro(R, 0.3, (L / 2, 0, R), seg=40, eje="x")
+    aro = cilindro(R, 0.4, (-L / 2, 0, R), seg=40, eje="x")
+    restar(aro, cilindro(R - 1.2, 1.0, (-L / 2, 0, R), mat=None, seg=40, eje="x"))
+    for k in range(36):
+        a = 2 * math.pi * k / 36
+        alabe = caja((L - 0.4, 0.06, 1.0), (0, math.cos(a) * (R - 0.6), R + math.sin(a) * (R - 0.6)), "aspas")
+        girar(alabe, (a + 0.6, 0, 0))
+    cilindro(1.4, 1.6, (L / 2 - 0.8, 0, R), "metal", seg=24, eje="x")
+    cilindro(0.4, 3.0, (L / 2 + 1.0, 0, R), "metal", seg=12, eje="x")
+    return armar("turbina@centrifuga")
+
+
+def retroiluminacion():
+    """Retroiluminación de televisor: chapa reflectora con tiras de LED (barras de aluminio con las lentes) y sus fichas."""
+    W, H = 96.0, 56.0
+    caja((W, 0.1, H), (0, 0.4, H / 2))
+    for i in range(8):
+        z = 4.0 + i * (H - 8.0) / 7
+        caja((W - 6.0, 0.15, 1.2), (0, 0.27, z), "metal")
+        for j in range(11):
+            cilindro(0.45, 0.3, (-W / 2 + 6.0 + j * (W - 12.0) / 10, 0.2, z), "etiqueta", seg=8, eje="y")
+        caja((1.2, 0.3, 0.8), (-W / 2 + 2.4, 0.2, z), "conector", bisel=0.05)
+    return armar("retroiluminacion", EQUIPOS_TV)
+
+
+def tira_led():
+    """Tira de LED suelta (retroiluminación, luz interior): barra de aluminio con lentes y una ficha en la punta."""
+    caja((40.0, 0.15, 1.2), (0, 0, 0.075), "metal")
+    for j in range(8):
+        cilindro(0.45, 0.3, (-17.5 + j * 5.0, 0, 0.3), "etiqueta", seg=8)
+    caja((38.0, 0.6, 0.04), (0, 0, 0.17))
+    caja((1.2, 0.8, 0.3), (20.6, 0, 0.15), "conector", bisel=0.05)
+    return armar("tira_led")
+
+
+def bandeja():
+    """Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente."""
+    W, P, H = 50.0, 30.0, 20.0
+    caj = caja((W, P, H), (0, 0, H / 2), bisel=0.8)
+    restar(caj, caja((W - 0.8, P - 0.8, H), (0, 0, H / 2 + 0.4), mat=None), caja((14.0, 2.0, 3.0), (0, -P / 2, H - 2.5), mat=None))
+    for x in (-W / 4, W / 4):
+        caja((0.3, P - 1.0, 1.0), (x, 0, 0.9), "plastico")
+    return armar("bandeja")
+
+
+def bandeja_goteo():
+    """Bandeja de goteo o de condensado (aire split, heladera): batea larga y baja con nervios y el pico de desagote."""
+    W, P, H = 70.0, 10.0, 3.0
+    caj = caja((W, P, H), (0, 0, H / 2), bisel=0.4)
+    restar(caj, caja((W - 0.8, P - 0.8, H), (0, 0, H / 2 + 0.4), mat=None))
+    for i in range(6):
+        caja((0.3, P - 1.0, 0.8), (-W / 2 + 6.0 + i * (W - 12.0) / 5, 0, 0.8), "plastico")
+    cilindro(0.8, 3.0, (-W / 2 - 1.0, 0, 1.2), seg=16, eje="x")
+    return armar("bandeja@goteo")
+
+
+def bandeja_estante():
+    """Estante de heladera: vidrio templado con perfil de plástico adelante y atrás."""
+    W, P = 55.0, 35.0
+    caja((W - 1.0, P - 1.0, 0.4), (0, 0, 0.6), "vidrio")
+    for y in (-P / 2 + 0.6, P / 2 - 0.6):
+        caja((W, 1.2, 1.2), (0, y, 0.6), bisel=0.2)
+    return armar("bandeja@estante")
 
 
 # ---------- Electrodomésticos: frío y calor ----------
@@ -1285,11 +1411,14 @@ FAMILIAS = {
     ],
     "electronica": [
         placa_compacta, placa_control, fuente, capacitor, capacitor_motor, transformador, panel,
-        parlante, parlante_celular, conector, conector_usb_c, conector_terminal, pantalla_panel,
+        parlante, parlante_celular, conector, conector_usb_c, conector_terminal, pantalla_panel, retroiluminacion, tira_led,
     ],
-    "movimiento": [ventilador, ventilador_axial, ventilador_tangencial, motor, bomba, correa, tambor, compresor],
-    "frio_calor": [serpentin, condensador_heladera, termostato, resistencia, valvula],
-    "estructura": [tornillo, manguera, filtro, filtro_cartucho, cable, cable_redondo, bisagra, bisagra_puerta, puerta, puerta_ojo_de_buey],
+    "movimiento": [ventilador, ventilador_axial, ventilador_tangencial, turbina_centrifuga, motor, bomba, correa, tambor, compresor],
+    "frio_calor": [serpentin, condensador_heladera, evaporador, termostato, resistencia, valvula],
+    "estructura": [
+        tornillo, manguera, filtro, filtro_cartucho, cable, cable_redondo, bisagra, bisagra_puerta, puerta, puerta_ojo_de_buey,
+        bandeja, bandeja_goteo, bandeja_estante,
+    ],
     "carcasas": [carcasa_heladera, carcasa_split, carcasa_televisor, carcasa_lavarropas, carcasa_microondas],
 }
 
@@ -1298,6 +1427,9 @@ ALIAS = [
     ("placa_madre@celular", "placa", "computo", EQUIPOS_CELULAR, "Placa madre de celular: la misma placa compacta en L."),
     ("condensador@aletas", "serpentin", "frio_calor", EQUIPOS_SPLIT, "Condensador de aletas (unidad exterior de aire): la forma del serpentín."),
     ("condensador@electrolitico", "capacitor", "frio_calor", None, "Condensador electrónico (capacitor): la forma del capacitor electrolítico."),
+    ("evaporador@aletas", "serpentin", "frio_calor", None, "Evaporador de aletas (heladera no frost, aire split): la forma del serpentín."),
+    ("turbina", "ventilador@tangencial", "movimiento", EQUIPOS_SPLIT, "Turbina tangencial (unidad interior de aire split): la misma jaula larga de álabes."),
+    ("estante", "bandeja@estante", "estructura", None, "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás."),
 ]
 
 

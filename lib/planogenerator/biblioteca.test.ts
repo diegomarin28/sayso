@@ -70,7 +70,7 @@ describe("biblioteca de piezas (public/models/piezas)", () => {
     // `ventilador` tiene variantes en movimiento; `parlante` (de notebook y de celular) está en electrónica.
     expect(archivosPara(["parlante_izquierdo"], indice)).toEqual(["electronica.glb"]);
     expect(archivosPara(["condensador_c12"], indice)).toEqual(["frio_calor.glb"]);
-    expect(archivosPara(["bandeja_condensado"], indice)).toEqual([]);
+    expect(archivosPara(["sensor_temperatura"], indice)).toEqual([]);
   });
 
   it("la lista de tipos para la IA sale del índice", () => {
@@ -115,7 +115,7 @@ describe("biblioteca de piezas (public/models/piezas)", () => {
   it("heladera y aire: cada pieza con tipo usa su forma y su variante; las demás, la primitiva", () => {
     const elegida = (plano: PlanoDePiezas, id: string, equipo: string) =>
       nombreDe(modeloPara(id, biblioteca, plano.piezas.find((p) => p.pieza === id)!.dim, equipo));
-    const sinTipo = ["sensor_temperatura", "bandeja_condensado"];
+    const sinTipo = ["sensor_temperatura"];
     for (const plano of [planoHeladera, planoAire]) {
       for (const p of plano.piezas) expect(modeloPara(p.pieza, biblioteca) === undefined, p.pieza).toBe(sinTipo.includes(p.pieza));
     }
@@ -126,11 +126,27 @@ describe("biblioteca de piezas (public/models/piezas)", () => {
     expect(elegida(planoHeladera, "cable_alimentacion", "heladera")).toBe("cable@redondo");
     expect(elegida(planoAire, "carcasa_split", "aire acondicionado split")).toBe("carcasa@split");
     expect(elegida(planoAire, "ventilador_tangencial", "aire acondicionado split")).toBe("ventilador@tangencial");
+    expect(elegida(planoHeladera, "evaporador", "heladera")).toBe("evaporador@aletas");
+    expect(elegida(planoHeladera, "bandeja_verduras", "heladera")).toBe("bandeja");
+    expect(elegida(planoAire, "bandeja_condensado", "aire acondicionado split")).toBe("bandeja@goteo");
     // Sin tipo de equipo, las medidas alcanzan para las carcasas.
     for (const [plano, variante] of [[planoHeladera, "carcasa@heladera"], [planoAire, "carcasa@split"]] as const) {
       const c = plano.piezas[0];
       expect(nombreDe(modeloPara(c.pieza, biblioteca, c.dim))).toBe(variante);
     }
+  });
+
+  it("piezas sueltas: evaporador, turbina, retroiluminación y bandejas eligen la forma por las medidas", () => {
+    const de = (id: string, dim: [number, number, number]) => nombreDe(modeloPara(id, biblioteca, dim));
+    expect(de("evaporador", [40, 30, 0.6])).toBe("evaporador"); // placa roll-bond
+    expect(de("evaporador_no_frost", [40, 20, 3])).toBe("evaporador@aletas");
+    expect(de("turbina", [64, 9, 9])).toBe("turbina");
+    expect(de("turbina_horno", [8, 12, 12])).toBe("turbina@centrifuga");
+    expect(de("retroiluminacion", [96, 56, 1])).toBe("retroiluminacion");
+    expect(de("tira_led_3", [40, 1.2, 0.4])).toBe("tira_led");
+    expect(de("estante_vidrio", [55, 1, 35])).toBe("estante");
+    expect(de("bandeja_estante", [55, 1, 35])).toBe("bandeja@estante");
+    expect(de("bandeja_goteo", [70, 3, 10])).toBe("bandeja@goteo");
   });
 
   it("las variantes traen del GLB para qué equipo son", () => {
