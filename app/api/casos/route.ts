@@ -3,6 +3,7 @@ import { Caso, Evento, Ficha, Foto } from "../../../shared";
 import { supabaseServidor } from "../../../lib/supabase/cliente";
 import {
   ErrorSupabase,
+  ExtraCaso,
   guardarCaso,
   guardarEventos,
   guardarFicha,
@@ -16,7 +17,7 @@ import {
  * responde `guardado: false` y la app sigue igual.
  */
 
-const Entrada = z.object({
+const Entrada = ExtraCaso.extend({
   caso: Caso.optional(),
   fotos: z
     .array(
@@ -39,10 +40,10 @@ export async function POST(req: Request) {
   const db = supabaseServidor();
   if (!db) return Response.json({ guardado: false, fotos: [] });
 
-  const { caso, fotos, ficha, eventos } = r.data;
+  const { caso, fotos, ficha, eventos, dispositivo, tipoEquipo, cierre } = r.data;
   try {
     // El caso primero: fotos, ficha y eventos lo referencian.
-    if (caso) await guardarCaso(db, caso);
+    if (caso) await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre });
     const urls: { id: string; url: string }[] = [];
     for (const { foto, imagen } of fotos) {
       const url = imagen

@@ -1,5 +1,6 @@
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
 import type { ImagenB64 } from "./imagen";
+import type { Cierre } from "./mis-casos";
 
 /**
  * Guarda el avance del caso en Supabase vía `/api/casos`, en segundo plano y en orden
@@ -9,6 +10,10 @@ import type { ImagenB64 } from "./imagen";
 
 type Cambio = {
   caso?: Caso;
+  /** Id anónimo del dispositivo ("Mis casos"), sin login. */
+  dispositivo?: string;
+  tipoEquipo?: string | null;
+  cierre?: Cierre;
   fotos?: { foto: Foto; imagen?: ImagenB64 }[];
   ficha?: Ficha;
   eventos?: Evento[];
