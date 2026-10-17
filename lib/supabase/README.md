@@ -15,5 +15,5 @@ Cliente, esquema y migraciones de Supabase.
 import { supabaseServidor } from "@/lib/supabase/cliente";
 import { cachePacksSupabase } from "@/lib/supabase/repo";
 
-armarPack(entrada, { cache: cachePacksSupabase<Armado>(supabaseServidor()) });
+armarKnowledgePack(entrada, { cache: cachePacksSupabase<Armado>(supabaseServidor()) });
 ```
