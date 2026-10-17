@@ -29,6 +29,11 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["wifi", { color: "#b9c0c6", metalness: 0.7, roughness: 0.32 }],
   ["parlante", { color: "#25282c", metalness: 0.1, roughness: 0.9 }],
   ["pila", { color: "#e1e4e7", metalness: 0.6, roughness: 0.25 }],
+  ["disco_duro", { color: "#b9c0c6", metalness: 0.8, roughness: 0.35 }],
+  ["cable", { color: "#2f3338", metalness: 0.1, roughness: 0.6 }],
+  ["bisagra", { color: "#8f979f", metalness: 0.85, roughness: 0.35 }],
+  ["conector", { color: "#c6ccd2", metalness: 0.85, roughness: 0.3 }],
+  ["soporte", { color: "#b0b7be", metalness: 0.85, roughness: 0.35 }],
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };

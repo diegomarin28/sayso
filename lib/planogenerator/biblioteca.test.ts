@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { PlanoDePiezas } from "../../shared";
 import { RECETA_CUERPO, bibliotecaDesdeEscena, modeloPara, partesAjustadas, type BibliotecaPiezas } from "./biblioteca";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
-import { RECETAS_DETALLE } from "./materiales";
+import { RECETAS_DETALLE, recetaPara } from "./materiales";
 import { planoNotebookBase } from "./plantillas/notebook";
 
 const GLB = "public/models/piezas.glb";
@@ -41,6 +41,10 @@ describe("piezas.glb", () => {
       expect(recetas, tipo).toContain(RECETA_CUERPO);
       for (const r of recetas) expect([RECETA_CUERPO, ...Object.keys(RECETAS_DETALLE)], `${tipo}: ${r}`).toContain(r);
     }
+  });
+
+  it("cada tipo tiene su propia receta en materiales.ts (no la genérica)", () => {
+    for (const tipo of biblioteca.keys()) expect(recetaPara(tipo), tipo).not.toBe(recetaPara("pieza_sin_tipo"));
   });
 
   it("cubre todas las piezas de la plantilla de notebook", () => {
