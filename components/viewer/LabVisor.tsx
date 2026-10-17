@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { coreografiaEjemplo, planoEjemplo, type Coreografia, type Evento } from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
+import type { PasoPreparado } from "./paso";
 import { Visor } from "./Visor";
 
 /** Banco de pruebas del visor: reproduce el fixture y acciones sueltas. */
@@ -24,6 +25,11 @@ const EXTRAS: Array<[string, Coreografia]> = [
   ["Despiezar", paso("Así se separa todo.", [{ t: "camara", objetivo: "general", zoom: 0.8 }, { t: "despiezar", cantidad: 1 }])],
   ["Ocultar batería", paso("Escondo la batería.", [{ t: "ocultar", pieza: "bateria" }])],
   ["Pieza inexistente", paso("Esta pieza no existe.", [{ t: "resaltar", pieza: "condensador_de_flujo" }])],
+  ["Paso peligroso", paso("Ahora abrí la batería con un destornillador.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.5 },
+    { t: "resaltar", pieza: "bateria" },
+    { t: "desplazar", pieza: "bateria", vec: [0, 5, 0] },
+  ])],
   ["Restaurar", paso("Vuelvo todo a su lugar.", [{ t: "restaurar" }, { t: "camara", objetivo: "general" }])],
 ];
 
@@ -31,6 +37,7 @@ export function LabVisor() {
   const [planoId, setPlanoId] = useState<keyof typeof PLANOS>("plantilla");
   const [coreografia, setCoreografia] = useState<Coreografia | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [filtrado, setFiltrado] = useState<PasoPreparado | null>(null);
   const plano = PLANOS[planoId];
   // Copia nueva en cada clic: así el mismo paso se puede reproducir otra vez.
   const reproducir = (c: Coreografia) => setCoreografia({ ...c });
@@ -43,6 +50,7 @@ export function LabVisor() {
         coreografia={coreografia}
         casoId="caso-demo-1"
         onEvento={(e) => setEventos((prev) => [e, ...prev].slice(0, 20))}
+        onPaso={setFiltrado}
       />
       <aside className="flex w-full flex-col gap-4 p-4 text-sm md:w-80">
         <h1 className="text-lg font-semibold">Lab · visor 3D</h1>
@@ -77,12 +85,12 @@ export function LabVisor() {
           ))}
         </Seccion>
 
-        {coreografia && (
-          <p className="rounded bg-neutral-900 p-3">
-            “{coreografia.dice}”
-            {coreografia.cita && (
+        {coreografia && filtrado && (
+          <p className={`rounded p-3 ${filtrado.evaluacion.bloqueado ? "bg-red-950 text-red-100" : "bg-neutral-900"}`}>
+            “{filtrado.coreografia.dice}”
+            {filtrado.coreografia.cita && (
               <span className="block pt-1 text-xs text-neutral-400">
-                {coreografia.cita.doc}, pág. {coreografia.cita.pagina} · {coreografia.cita.estado}
+                {filtrado.coreografia.cita.doc}, pág. {filtrado.coreografia.cita.pagina} · {filtrado.coreografia.cita.estado}
               </span>
             )}
           </p>
