@@ -56,7 +56,8 @@ async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): 
   }
   const datos: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    console.error(`[api] ${ruta} ${res.status}`, datos);
+    // Aviso y no error: es un fallo esperable que la pantalla ya muestra con "Probar de nuevo".
+    console.warn(`[api] ${ruta} ${res.status}`, datos);
     throw new ErrorApi(
       res.status === 502 ? "Me trabé pensando. Probá de nuevo." : "Algo salió mal. Probá de nuevo.",
     );
