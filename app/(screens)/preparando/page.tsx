@@ -42,15 +42,15 @@ export default function Preparando() {
     const inicio = Date.now();
     const reloj = setInterval(() => setSegundos(Math.floor((Date.now() - inicio) / 1000)), 1000);
     (async () => {
-      let pack = preparado?.pack;
-      if (!pack) {
+      let guia = preparado;
+      if (!guia) {
         const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma);
         if (!vigente) return;
         agregarEventos(nuevos);
         setPreparado(listo);
-        pack = listo.pack;
+        guia = listo;
       }
-      const { eventos: nuevos, ...p } = await generarPlano(caso.id, pack);
+      const { eventos: nuevos, ...p } = await generarPlano(ficha, guia);
       if (!vigente) return;
       agregarEventos(nuevos);
       setPlano(p);
@@ -80,7 +80,9 @@ export default function Preparando() {
     : !pack
       ? etapa.texto(equipo)
       : !plano
-        ? "Ahora ubico cada pieza en el 3D…"
+        ? preparado?.manualFileId
+          ? "Ahora miro la vista explosionada del manual para ubicar cada pieza en el 3D…"
+          : "Ahora ubico cada pieza en el 3D…"
         : pack.verificado
           ? `Listo. Tengo el manual de tu ${equipo} y las piezas ubicadas.`
           : `No encontré el manual oficial de tu ${equipo}. Te guío con una guía pública, sin verificar.`;

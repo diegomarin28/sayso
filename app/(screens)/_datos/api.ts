@@ -213,14 +213,26 @@ export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
 
 const generando = new Map<string, Promise<z.infer<typeof RespPlano>>>();
 
-/** El cartógrafo ubica las piezas de la guía en el 3D (carril B). Una vez por caso. */
-export function generarPlano(
-  casoId: string,
-  knowledgePack: KnowledgePack,
-): Promise<z.infer<typeof RespPlano>> {
+/**
+ * El cartógrafo ubica las piezas en el 3D leyendo la vista explosionada del manual (carril B).
+ * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
+ */
+export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
+  const casoId = ficha.casoId;
   const enCurso = generando.get(casoId);
   if (enCurso) return enCurso;
-  const p = llamar("/api/plano", { casoId, knowledgePack }, RespPlano);
+  const p = llamar(
+    "/api/plano",
+    {
+      casoId,
+      ficha,
+      knowledgePack: preparado.pack,
+      manualFileId: preparado.manualFileId,
+      manualUrl: preparado.manualUrl,
+      paginasVistaExplosionada: preparado.paginasVistaExplosionada,
+    },
+    RespPlano,
+  );
   generando.set(casoId, p);
   p.catch(() => generando.delete(casoId));
   return p;
