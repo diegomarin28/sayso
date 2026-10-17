@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Foto, type TipoFoto } from "../../shared";
-import { bloqueImagen, LIMITES, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { bloqueImagen, LIMITES, pedirJson, type ImagenEntrada, type LlamarIA, MODELO_DE } from "../ia/claude";
 
 /**
  * Control de calidad de una foto. La IA mide; el código decide si se acepta.
@@ -59,7 +59,7 @@ export async function evaluarFoto(
   const medicion = await pedirJson(
     SalidaCalidad,
     {
-      modelo: MODELOS.vision,
+      modelo: MODELO_DE.calidad,
       system: SYSTEM_CALIDAD,
       contenido: [
         bloqueImagen(entrada.imagen),

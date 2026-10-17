@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { tiposParaPrompt } from "../planogenerator/tipos";
-import { enviarMensaje, ErrorIA, LIMITES, MODELOS, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo } from "../ia/claude";
+import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
@@ -78,11 +78,11 @@ async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaj
   for (let i = 0; i <= LIMITES.guiaPublica.continuaciones; i++) {
     const r = await enviar(
       {
-        model: MODELOS.vision,
+        model: MODELO_DE.guiaPublica,
         max_tokens: LIMITES.lectura.maxTokensPack,
         output_config: { effort: LIMITES.lectura.effort },
         system: SYSTEM_LECTOR,
-        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: LIMITES.guiaPublica.busquedas }],
+        tools: herramientasWeb(MODELO_DE.guiaPublica, { busquedas: LIMITES.guiaPublica.busquedas }),
         messages,
       },
       "bibliotecario: guía pública",

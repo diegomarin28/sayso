@@ -24,8 +24,16 @@ export const MODELO_DE = {
   lectura: MODELOS.corto as string,
   /** Bibliotecario: buscar el PDF del manual en la web. */
   bibliotecario: MODELOS.corto as string,
-  /** Chat respondiendo solo con el pack (sin PDF). */
-  chatPack: MODELOS.vision as string,
+  /** Chat respondiendo solo con el pack (sin PDF): es lo que más se usa en la demo. */
+  chatPack: MODELOS.corto as string,
+  /** Calidad de cada foto (nitidez y encuadre). */
+  calidad: MODELOS.corto as string,
+  /** Lectura de la etiqueta. Si en la prueba lee peor, volver a MODELOS.vision. */
+  chapa: MODELOS.corto as string,
+  /** Reconocer el equipo por la foto del frente. */
+  reconocer: MODELOS.corto as string,
+  /** Guía pública con búsqueda web (cuando no hay manual). */
+  guiaPublica: MODELOS.corto as string,
 };
 
 /** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */
@@ -41,14 +49,14 @@ export const LIMITES = {
   },
   pdf: { maxBytes: 150 * 1024 * 1024, timeoutMs: 60_000, venceEnSeg: 7 * 24 * 3600 },
   bibliotecario: {
-    busquedas: 3,
+    busquedas: 2,
     paginas: 2,
     vueltas: 6,
     /** Tope de texto por página abierta con web_fetch (los PDF no se cortan: se prueban con probar_pdf). */
     maxTokensPagina: 10_000,
   },
   /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
-  extracto: { maxPaginas: 14, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400 },
+  extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400 },
   pack: { maxPasos: 12 },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
