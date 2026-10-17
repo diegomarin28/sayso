@@ -39,4 +39,4 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 - Las citas de posición quedan `NO_VERIFICABLE` (el código no puede verificar una ubicación en un diagrama).
 - **Si la IA falla** dos veces → `origen: "plantilla"` (`planoDesdePlantilla`), nunca se corta el flujo.
 - Prueba real (gasta créditos): `npx tsx --env-file=.env.local lib/planogenerator/probar-plano.ts [kp.json] [pagina.png …] --pag 54 --salida plano.json`, y pegá el JSON en `/lab/visor`.
-- Evaluación con manuales reales (T480, E14 Gen 4, L14 Gen 2): ver `evaluacion/README.md`. Primera medición: IA 73 % vs plantilla 27 %.
+- Evaluación contra manuales reales (casos locales, fuera del repo): ver `evaluacion/README.md`.
