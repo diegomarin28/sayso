@@ -5,6 +5,7 @@ import { knowledgePackEjemplo, type Evento } from "../../../shared";
 import { planoNotebookBase } from "../../../lib/planogenerator";
 import { fuenteApi } from "./eventos-chat";
 import { GuiaExperto } from "./GuiaExperto";
+import { Cerrar, Engranaje, Microfono } from "./iconos";
 import { fuenteSimulada } from "./simulada";
 
 /** Banco de pruebas de <GuiaExperto> con el caso del fixture. */
@@ -39,9 +40,9 @@ export function LabGuia() {
             type="button"
             aria-label="Hablar (simulado)"
             onClick={() => setDictada((d) => ({ texto: SUGERIDAS[0], id: (d?.id ?? 0) + 1 }))}
-            className="h-12 w-12 shrink-0 rounded-2xl border border-borde text-texto-suave"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-borde text-texto-suave"
           >
-            🎙
+            <Microfono />
           </button>
         }
       />
@@ -52,7 +53,7 @@ export function LabGuia() {
         onClick={() => setPanel((p) => !p)}
         className="fixed right-3 bottom-24 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/75 text-lg text-white backdrop-blur md:hidden"
       >
-        {panel ? "✕" : "⚙"}
+        {panel ? <Cerrar /> : <Engranaje />}
       </button>
       <aside
         className={`${panel ? "flex" : "hidden"} fixed inset-x-0 bottom-0 z-30 max-h-[70dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-borde bg-fondo p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-texto md:static md:flex md:max-h-none md:w-72 md:rounded-none md:border-t-0 md:border-l md:bg-transparent`}
