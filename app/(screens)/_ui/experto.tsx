@@ -60,12 +60,13 @@ export function Encabezado({
         disabled={!alVolver || volverApagado}
         aria-hidden={!alVolver}
         tabIndex={alVolver ? undefined : -1}
-        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 ${
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium max-[380px]:px-3 text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 ${
           alVolver ? "" : "invisible"
         }`}
       >
         <FlechaAtras />
-        Atrás
+        {/* En celulares muy angostos queda solo la flecha, para que entre el progreso. */}
+        <span className="max-[380px]:sr-only">Atrás</span>
       </button>
       <Link href="/" aria-label="Volver al inicio">
         <Orbe estado={orbe} />
@@ -91,17 +92,15 @@ export function Encabezado({
 
 export function Pantalla({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-8 px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    // Celular: columna de ancho completo. Tablet y compu: más aire y un poco más ancha, centrada.
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-8 px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 md:max-w-2xl md:gap-10 md:px-8 md:pt-10 lg:max-w-3xl">
       {children}
     </main>
   );
 }
 
 /** Botón principal, pensado para el pulgar: ancho completo y abajo. */
-export function BotonPrincipal({
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function BotonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
@@ -112,10 +111,7 @@ export function BotonPrincipal({
   );
 }
 
-export function BotonSecundario({
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function BotonSecundario({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
@@ -128,7 +124,17 @@ export function BotonSecundario({
 
 export function Flecha() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
@@ -136,7 +142,17 @@ export function Flecha() {
 
 export function FlechaAtras() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M19 12H5M11 6l-6 6 6 6" />
     </svg>
   );
@@ -144,7 +160,17 @@ export function FlechaAtras() {
 
 export function Microfono({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
     </svg>
@@ -153,7 +179,17 @@ export function Microfono({ size = 22 }: { size?: number }) {
 
 export function Check({ size = 20 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   );
@@ -161,7 +197,17 @@ export function Check({ size = 20 }: { size?: number }) {
 
 export function Camara({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
       <circle cx="12" cy="13" r="3.5" />
     </svg>
