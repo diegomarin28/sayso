@@ -13,10 +13,10 @@ el plano** (una heladera no baja las piezas de notebook).
 | Familia (GLB) | Tipos |
 |---|---|
 | `computo` | base, tapa_inferior, placa_madre, disipador, heatpipe, ram, ssd, wifi, pila, bateria, disco_duro, soporte; celular: pantalla, camara (`@modulo`: tres traseras), marco, tapa_trasera, `bateria@celular`, `placa_madre@celular` |
-| `electronica` | placa (compacta en L; `@control`: placa de electrodoméstico con relés), fuente, capacitor (`@motor`: de arranque/marcha), transformador, panel (de control), parlante (`@celular`), conector (puerto; `@usb_c`, `@terminal`: ficha con cables), `pantalla@panel` (TV/monitor) |
-| `movimiento` | ventilador (blower de notebook; `@axial`, `@tangencial`), motor, bomba, correa, tambor, compresor |
-| `frio_calor` | serpentin, condensador (de heladera; `@aletas`: de aire; `@electrolitico`: el capacitor), termostato, resistencia, valvula |
-| `estructura` | tornillo, manguera, filtro (`@cartucho`), cable (flex; `@redondo`), bisagra (`@puerta`), puerta (`@ojo_de_buey`: lavarropas) |
+| `electronica` | placa (compacta en L; `@control`: placa de electrodoméstico con relés), fuente, capacitor (`@motor`: de arranque/marcha), transformador, panel (de control), parlante (`@celular`), conector (puerto; `@usb_c`, `@terminal`: ficha con cables), `pantalla@panel` (TV/monitor), retroiluminacion (TV), tira_led |
+| `movimiento` | ventilador (blower de notebook; `@axial`, `@tangencial`), turbina (tangencial; `@centrifuga`), motor, bomba, correa, tambor, compresor |
+| `frio_calor` | serpentin, condensador (de heladera; `@aletas`: de aire; `@electrolitico`: el capacitor), evaporador (placa roll-bond; `@aletas`), termostato, resistencia, valvula |
+| `estructura` | tornillo, manguera, filtro (`@cartucho`), cable (flex; `@redondo`), bisagra (`@puerta`), puerta (`@ojo_de_buey`: lavarropas), bandeja (cajón; `@goteo`, `@estante`), estante |
 | `carcasas` | carcasa `@heladera`, `@split`, `@televisor`, `@lavarropas`, `@microondas` (translúcidas en la app) |
 
 La lista para la IA sale del índice: `TIPOS_DE_PIEZA` y `tiposParaPrompt()` en `lib/planogenerator/tipos.ts`.
@@ -44,6 +44,6 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
 - Son formas **típicas por tipo**, no de un modelo: la posición y las medidas siguen saliendo del plano.
 - Un nodo por tipo; adentro, una malla por material. El nombre del material es la receta de la app
   (`cuerpo.<tipo>` o una de `RECETAS_DETALLE` en `lib/planogenerator/materiales.ts`).
-- Límite: cada GLB menos de 2 MB (lo controla un test; hoy entre 171 y 924 KB, 2,7 MB en total). Una variante
+- Límite: cada GLB menos de 2 MB (lo controla un test; hoy entre 171 y 924 KB, 3 MB en total). Una variante
   idéntica a otro tipo comparte mallas (`ALIAS`). Sin texturas ni compresión Draco (no hace falta bajar decodificadores).
-- Planos de ejemplo de heladera y aire para `/lab/visor?plano=heladera` (o `aire`): `components/viewer/ejemplos.ts` (solo lab y tests).
+- Planos de ejemplo de heladera y aire para `/lab/visor?plano=heladera` (o `aire`), y una coreografía de heladera (ocultar puertas, girar, ir al compresor): `components/viewer/ejemplos.ts` (solo lab y tests).
