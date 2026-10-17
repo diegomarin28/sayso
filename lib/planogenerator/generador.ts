@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { FormaPieza, PlanoDePiezas, type KnowledgePack, type PiezaPlano } from "../../shared";
-import { bloqueImagen, ErrorIA, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { bloqueImagen, enviarMensaje, ErrorIA, MODELOS, pedirJson, type EnviarMensaje, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { leerManual } from "../knowledge/lector";
 import { planoNotebookBase } from "./plantillas/notebook";
 import type { ManualRecortado } from "./recorte";
 
@@ -103,7 +104,7 @@ export type ResultadoGenerador = {
   propuesta?: PropuestaPlano;
 };
 
-export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA): Promise<ResultadoGenerador> {
+export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA, enviar?: EnviarMensaje): Promise<ResultadoGenerador> {
   const kp = entrada.knowledgePack;
   const lista = kp.piezas
     .filter((p) => !ES_ESTRUCTURA.has(p.id))
@@ -122,42 +123,33 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
       } Para ubicar las piezas buscá en el manual las ilustraciones del interior con la tapa inferior sacada (por ejemplo en los procedimientos para sacar la tapa inferior, el ventilador o la batería) y citá esa página.`
     : "";
 
+  const tarea = `Equipo: ${kp.clase}, modelo ${kp.modelo}. ${paginas} ${guiaManual}\nPiezas del knowledge pack:\n${lista}\n\nUbicá cada pieza.`;
   try {
-    const propuesta = await pedirJson(
-      PropuestaPlano,
-      {
-        modelo: MODELOS.vision,
-        system: SYSTEM_PLANO,
-        contenido: [
-          ...(recorte
-            ? [
-                {
-                  type: "document" as const,
-                  source: { type: "base64" as const, media_type: "application/pdf" as const, data: recorte.base64 },
-                },
-              ]
-            : []),
-          ...(manual
-            ? [
-                {
-                  type: "document" as const,
-                  source: { type: "file" as const, file_id: manual.fileId },
-                  ...(manual.titulo ? { title: manual.titulo } : {}),
-                  cache_control: { type: "ephemeral" as const },
-                },
-              ]
-            : []),
-          ...(entrada.imagenes ?? []).map(bloqueImagen),
-          {
-            type: "text",
-            text: `Equipo: ${kp.clase}, modelo ${kp.modelo}. ${paginas} ${guiaManual}\nPiezas del knowledge pack:\n${lista}\n\nUbicá cada pieza.`,
-          },
-        ],
-        maxTokens: 6000,
-        etapa: recorte ? "cartografo: ubicar piezas (recorte)" : "cartografo: ubicar piezas",
-      },
-      llamar,
-    );
+    const propuesta =
+      manual && !entrada.imagenes?.length
+        ? await ubicarLeyendoManual({ fileId: manual.fileId, titulo: manual.titulo ?? kp.modelo }, tarea, enviar)
+        : await pedirJson(
+            PropuestaPlano,
+            {
+              modelo: MODELOS.vision,
+              system: SYSTEM_PLANO,
+              contenido: [
+                ...(recorte
+                  ? [
+                      {
+                        type: "document" as const,
+                        source: { type: "base64" as const, media_type: "application/pdf" as const, data: recorte.base64 },
+                      },
+                    ]
+                  : []),
+                ...(entrada.imagenes ?? []).map(bloqueImagen),
+                { type: "text", text: tarea },
+              ],
+              maxTokens: 6000,
+              etapa: recorte ? "cartografo: ubicar piezas (recorte)" : "cartografo: ubicar piezas",
+            },
+            llamar,
+          );
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
     const { plano, avisos } = planoDesdePropuesta(kp, propuesta);
     return { plano, avisos, origen: "ia", propuesta };
@@ -165,6 +157,41 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
     if (!(e instanceof ErrorIA)) throw e;
     const { plano, avisos } = planoDesdePlantilla(kp);
     return { plano, avisos: [`La IA no pudo ubicar las piezas (${e.message}): se usa la plantilla genérica.`, ...avisos], origen: "plantilla" };
+  }
+}
+
+/**
+ * Con el manual entero, el pedido arranca IGUAL que las lecturas del bibliotecario (`leerManual`:
+ * mismo modelo, system, effort y documento) y las instrucciones del cartógrafo van después del
+ * documento: así el manual sale de la caché de prompts que dejó /api/knowledge (~US$ 0,03 en vez
+ * de ~US$ 0,50). Como el documento va con citas, la API no acepta salida estructurada: el JSON
+ * se pide como texto y se valida con Zod (un reintento, que también sale de la caché).
+ */
+async function ubicarLeyendoManual(
+  manual: { fileId: string; titulo: string },
+  tarea: string,
+  enviar: EnviarMensaje = enviarMensaje,
+): Promise<PropuestaPlano> {
+  const pedido = `${SYSTEM_PLANO}\n\n${tarea}\n\nRespondé SOLO con un objeto JSON (sin texto antes ni después) que cumpla este esquema:\n${JSON.stringify(z.toJSONSchema(PropuestaPlano))}`;
+  let error: unknown;
+  for (let intento = 0; intento < 2; intento++) {
+    const { bloques } = await leerManual(manual, pedido, 6000, enviar, "cartografo: ubicar piezas (manual en caché)");
+    const r = PropuestaPlano.safeParse(jsonDelTexto(bloques.map((b) => b.text).join("")));
+    if (r.success) return r.data;
+    error = r.error;
+  }
+  throw new ErrorIA("La propuesta del plano no validó dos veces", error);
+}
+
+/** El objeto JSON de una respuesta en texto (tolera ```json y texto alrededor). */
+export function jsonDelTexto(texto: string): unknown {
+  const ini = texto.indexOf("{");
+  const fin = texto.lastIndexOf("}");
+  if (ini < 0 || fin <= ini) return null;
+  try {
+    return JSON.parse(texto.slice(ini, fin + 1));
+  } catch {
+    return null;
   }
 }
 

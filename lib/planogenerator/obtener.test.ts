@@ -1,7 +1,9 @@
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { fichaEjemplo, knowledgePackEjemplo, type KnowledgePack } from "../../shared";
-import type { LlamarIA, PedidoIA } from "../ia/claude";
+import type Anthropic from "@anthropic-ai/sdk";
+import { LIMITES, type EnviarMensaje, type LlamarIA, type PedidoIA } from "../ia/claude";
+import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
 import { cachePlanosEnMemoria } from "./cache";
 import { propuestaDesdePlantilla } from "./generador";
 import { obtenerPlano } from "./obtener";
@@ -15,6 +17,15 @@ const contador = () => {
     return propuesta;
   };
   return { llamadas, llamar };
+};
+/** La IA con el manual entero: responde el JSON como texto (con citas, la API no da salida estructurada). */
+const enviarFalso = (texto = propuesta) => {
+  const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
+  const enviar: EnviarMensaje = async (params) => {
+    pedidos.push(params);
+    return { content: [{ type: "text", text: "```json\n" + texto + "\n```", citations: null }], stop_reason: "end_turn" } as unknown as Anthropic.Message;
+  };
+  return { pedidos, enviar };
 };
 const entrada = { casoId: "c", knowledgePack: kp, ficha: fichaEjemplo };
 const pdfDePrueba = async (hojas: number) => {
@@ -67,14 +78,35 @@ describe("obtenerPlano (caché por marca + modelo)", () => {
     expect(llamadas).toHaveLength(2);
   });
 
-  it("con el manual subido, le pasa el PDF por file_id y las páginas de la vista explosionada", async () => {
+  it("con el manual entero, el pedido arranca igual que la lectura del bibliotecario (caché de prompts)", async () => {
     const { llamadas, llamar } = contador();
-    await obtenerPlano(
-      { ...entrada, manual: { fileId: "file_123", paginasVistaExplosionada: [51, 52] } },
-      { cache: cachePlanosEnMemoria(), llamar },
+    const { pedidos, enviar } = enviarFalso();
+    const conUrl: KnowledgePack = { ...kp, fuentes: [{ doc: "Otro documento" }, { doc: "Manual de servicio X1", url: "https://ej.com/x1.pdf" }] };
+    const r = await obtenerPlano(
+      { ...entrada, knowledgePack: conUrl, manualUrl: "https://ej.com/x1.pdf", manual: { fileId: "file_123", paginasVistaExplosionada: [51, 52] } },
+      { cache: cachePlanosEnMemoria(), llamar, enviar },
     );
-    expect(llamadas[0].contenido[0]).toMatchObject({ type: "document", source: { type: "file", file_id: "file_123" } });
-    expect(JSON.stringify(llamadas[0].contenido)).toContain("páginas 51, 52");
+    expect(r.origen).toBe("ia");
+    expect(llamadas).toHaveLength(0);
+    const [p] = pedidos;
+    // Mismo prefijo que leerManual: system, effort y el documento (con el título de las fuentes del pack).
+    expect(p.system).toBe(SYSTEM_LECTOR);
+    expect(p.output_config).toEqual({ effort: LIMITES.lectura.effort });
+    const contenido = p.messages[0].content as Anthropic.ContentBlockParam[];
+    expect(contenido[0]).toEqual(bloqueManual({ fileId: "file_123", titulo: "Manual de servicio X1" }));
+    // La tarea del cartógrafo va después del documento.
+    expect(JSON.stringify(contenido[1])).toContain("páginas 51, 52");
+    expect(JSON.stringify(contenido[1])).toContain("Respondé SOLO con un objeto JSON");
+  });
+
+  it("con el manual entero, si el JSON no valida dos veces cae a la plantilla", async () => {
+    const { pedidos, enviar } = enviarFalso("esto no es un plano");
+    const r = await obtenerPlano(
+      { ...entrada, manual: { fileId: "file_123" } },
+      { cache: cachePlanosEnMemoria(), enviar },
+    );
+    expect(pedidos).toHaveLength(2);
+    expect(r.origen).toBe("plantilla");
   });
 
   it("con la vista interior y la URL, la IA lee solo esas páginas (no el manual entero)", async () => {
@@ -91,12 +123,13 @@ describe("obtenerPlano (caché por marca + modelo)", () => {
   });
 
   it("si no se puede bajar el manual para recortarlo, lee el manual entero", async () => {
-    const { llamadas, llamar } = contador();
+    const { pedidos, enviar } = enviarFalso();
     const r = await obtenerPlano(
       { ...entrada, manualUrl: "https://ej.com/hmm.pdf", manual: { fileId: "file_123", paginaVistaInterior: 51 } },
-      { cache: cachePlanosEnMemoria(), llamar, descargar: async () => new Response("no", { status: 404 }) },
+      { cache: cachePlanosEnMemoria(), enviar, descargar: async () => new Response("no", { status: 404 }) },
     );
     expect(r.paginasLeidas).toBeNull();
-    expect(llamadas[0].contenido[0]).toMatchObject({ type: "document", source: { type: "file", file_id: "file_123" } });
+    const contenido = pedidos[0].messages[0].content as Anthropic.ContentBlockParam[];
+    expect(contenido[0]).toMatchObject({ type: "document", source: { type: "file", file_id: "file_123" } });
   });
 });
