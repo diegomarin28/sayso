@@ -1,4 +1,5 @@
 import { MODELOS } from "../ia/claude";
+import { LIMITES_COMPRAS } from "./limites";
 
 /**
  * Configuración del agente de compras (A6) en un solo lugar — dueño: Diego.
@@ -16,9 +17,7 @@ export const COMPRAS = {
   /** Tope de cada página leída (los avisos de Mercado Libre son largos). */
   tokensPorPagina: 12_000,
   vueltas: 8,
-  /** Candidatos que puede proponer el agente; el código elige las mejores. */
-  candidatosMax: 8,
-  opciones: 3,
+  ...LIMITES_COMPRAS,
   /** Largo mínimo (sin espacios ni guiones) para aceptar una coincidencia de número de parte o modelo. */
   minCoincidencia: 4,
   /** Texto de cada página leída que se guarda para verificar (el resto no hace falta). */
