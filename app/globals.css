@@ -114,9 +114,6 @@ body {
 
 /* ---------- Pantalla 4: manual que se lee y notebook que se arma (animacion-preparando.tsx) ---------- */
 
-.prep-acto { transition: opacity 0.7s ease; }
-.prep-oculto { opacity: 0; }
-
 /* Líneas de texto que se escriben y se borran, en loop. */
 @keyframes prep-escribe {
   0% { stroke-dashoffset: 1; opacity: 1; }

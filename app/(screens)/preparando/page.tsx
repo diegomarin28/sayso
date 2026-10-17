@@ -28,7 +28,7 @@ const ETAPAS: { desde: number; texto: (equipo: string) => string }[] = [
 export default function Preparando() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos } = useFlujo();
+  const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos, tipoEquipo } = useFlujo();
   const [segundos, setSegundos] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
@@ -109,14 +109,14 @@ export default function Preparando() {
 
       {!pack && !error && (
         <div className="flex flex-col items-center gap-3 py-6">
-          <AnimacionPreparando acto={!pack ? "manual" : "plano"} />
+          <AnimacionPreparando acto={!pack ? "manual" : "plano"} equipo={tipoEquipo ?? caso.clase} />
           <p className="font-mono text-xs text-texto-suave tabular-nums" aria-label="Tiempo">
             {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
           </p>
         </div>
       )}
 
-      {pack && <ResumenGuia pack={pack} plano={plano} />}
+      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} />}
 
       <div className="mt-auto flex flex-col gap-6">
         <FeedActividad eventos={eventos} />

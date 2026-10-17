@@ -3,7 +3,9 @@
 /**
  * Animación de la pantalla 4. Muestra lo que de verdad está pasando, en dos actos:
  *  - "manual": un manual que se abre, se lee (franja que barre la página), pasa hojas y marca citas.
- *  - "plano": una notebook en líneas que se dibuja sola y enciende sus piezas una por una.
+ *  - "plano": el equipo de la persona en líneas, que se dibuja solo y enciende sus piezas.
+ *    El dibujo depende del equipo (notebook, celular, heladera, lavarropas, aire, TV o genérico).
+ * Se dibuja solo el acto que corresponde (no se oculta con CSS: así nunca se superponen).
  * Solo SVG + CSS (clases .prep-* en globals.css); con "reducir movimiento" queda quieta.
  */
 
@@ -12,23 +14,37 @@ export type ActoPreparando = "manual" | "plano" | "listo";
 const LINEAS_IZQ = [92, 70, 96, 84, 60, 90, 76];
 const LINEAS_DER = [88, 96, 66, 92, 80, 58, 94];
 
-export function AnimacionPreparando({ acto }: { acto: ActoPreparando }) {
+type Dibujo = "notebook" | "celular" | "heladera" | "lavarropas" | "aire" | "tv" | "generico";
+
+/** Elige el dibujo por el tipo de equipo en texto libre (de la IA) o, si no hay, por la clase. */
+export function dibujoPara(equipo?: string | null): Dibujo {
+  const t = (equipo ?? "").toLowerCase();
+  if (/celular|tel[eé]fono|smartphone|iphone|android|tablet|ipad/.test(t)) return "celular";
+  if (/heladera|freezer|refrigerador|nevera|congelador/.test(t)) return "heladera";
+  if (/lavarropas|lavadora|lavavajillas|secarropas/.test(t)) return "lavarropas";
+  if (/aire|split|acondicionado/.test(t)) return "aire";
+  if (/notebook|laptop|port[aá]til|computadora|\bpc\b|macbook|chromebook/.test(t)) return "notebook";
+  if (/\btv\b|televisor|tele\b|smart tv|monitor|pantalla/.test(t)) return "tv";
+  return "generico";
+}
+
+export function AnimacionPreparando({ acto, equipo }: { acto: ActoPreparando; equipo?: string | null }) {
+  const dibujo = dibujoPara(equipo);
   return (
     <div className="relative mx-auto aspect-[7/5] w-full max-w-sm" aria-hidden>
-      <svg
-        viewBox="0 0 280 200"
-        className={`prep-acto absolute inset-0 h-full w-full ${acto === "manual" ? "" : "prep-oculto"}`}
-      >
-        <Manual />
-      </svg>
-      <svg
-        viewBox="0 0 280 200"
-        className={`prep-acto absolute inset-0 h-full w-full ${acto === "manual" ? "prep-oculto" : ""} ${
-          acto === "listo" ? "prep-listo" : ""
-        }`}
-      >
-        <Notebook />
-      </svg>
+      {acto === "manual" ? (
+        <svg key="manual" viewBox="0 0 280 200" className="aparece absolute inset-0 h-full w-full">
+          <Manual />
+        </svg>
+      ) : (
+        <svg
+          key={`equipo-${dibujo}`}
+          viewBox="0 0 280 200"
+          className={`aparece absolute inset-0 h-full w-full ${acto === "listo" ? "prep-listo" : ""}`}
+        >
+          <Equipo dibujo={dibujo} />
+        </svg>
+      )}
     </div>
   );
 }
@@ -167,4 +183,141 @@ function Notebook() {
       ))}
     </g>
   );
+}
+
+/** Contorno que se dibuja solo. */
+function Trazo({ d, retraso = 0, suave = false }: { d: string; retraso?: number; suave?: boolean }) {
+  return (
+    <path
+      d={d}
+      stroke={suave ? "var(--texto-suave)" : "var(--texto)"}
+      strokeWidth={suave ? 2 : 2.2}
+      pathLength={1}
+      className="prep-trazo"
+      style={{ animationDelay: `${retraso}s` }}
+    />
+  );
+}
+
+/** Pieza que se enciende en naranja. */
+function Pieza({ d, retraso }: { d: string; retraso: number }) {
+  return (
+    <path
+      d={d}
+      stroke="var(--acento)"
+      strokeWidth="2.4"
+      className="prep-pieza"
+      style={{ animationDelay: `${retraso}s` }}
+    />
+  );
+}
+
+function Sombra({ rx = 110 }: { rx?: number }) {
+  return <ellipse cx="140" cy="186" rx={rx} ry="8" fill="rgb(0 0 0 / 0.35)" />;
+}
+
+function Equipo({ dibujo }: { dibujo: Dibujo }) {
+  const comun = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  switch (dibujo) {
+    case "notebook":
+      return <Notebook />;
+    case "celular":
+      return (
+        <g {...comun}>
+          <Sombra rx={60} />
+          {/* cuerpo con un poco de profundidad */}
+          <Trazo d="M114 18 h56 a12 12 0 0 1 12 12 v140 a12 12 0 0 1 -12 12 h-56 a12 12 0 0 1 -12 -12 v-140 a12 12 0 0 1 12 -12 z" />
+          <Trazo d="M182 30 l8 4 v138 a12 12 0 0 1 -12 12 l-8 -2" suave retraso={0.3} />
+          {/* placa, cámara, batería, parlante */}
+          <Pieza d="M116 32 h52 v22 h-52 z" retraso={0.9} />
+          <Pieza
+            d="M131 43 m-5 0 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0 M147 43 m-4 0 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0"
+            retraso={1.4}
+          />
+          <Pieza d="M118 62 h48 v84 h-48 z M138 58 h8" retraso={1.9} />
+          <Pieza d="M128 166 h28" retraso={2.5} />
+        </g>
+      );
+    case "heladera":
+      return (
+        <g {...comun}>
+          <Sombra rx={70} />
+          <Trazo d="M96 14 h88 v168 h-88 z" />
+          <Trazo d="M184 14 l12 6 v158 l-12 4" suave retraso={0.3} />
+          <Trazo d="M96 72 h88 M104 30 v28 M104 86 v40" suave retraso={0.5} />
+          {/* evaporador, bandejas, compresor, motor del ventilador */}
+          <Pieza d="M118 24 h56 v12 h-56 z" retraso={0.9} />
+          <Pieza d="M114 104 h62 M114 128 h62" retraso={1.5} />
+          <Pieza d="M150 160 h28 v18 h-28 z M156 160 v-4 h16 v4" retraso={2.1} />
+          <Pieza
+            d="M168 50 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0 M168 50 l5 -3 M168 50 l-5 3"
+            retraso={2.7}
+          />
+        </g>
+      );
+    case "lavarropas":
+      return (
+        <g {...comun}>
+          <Sombra rx={80} />
+          <Trazo d="M82 34 h116 v148 h-116 z" />
+          <Trazo d="M198 34 l12 6 v138 l-12 4" suave retraso={0.3} />
+          <Trazo d="M82 60 h116 M168 47 m-5 0 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0" suave retraso={0.5} />
+          <Trazo d="M140 120 m-40 0 a40 40 0 1 0 80 0 a40 40 0 1 0 -80 0" retraso={0.6} />
+          {/* tambor, motor, bomba, panel */}
+          <Pieza
+            d="M140 120 m-27 0 a27 27 0 1 0 54 0 a27 27 0 1 0 -54 0 M126 108 l28 24 M154 108 l-28 24"
+            retraso={1.1}
+          />
+          <Pieza d="M96 44 h40 v8 h-40 z" retraso={1.7} />
+          <Pieza d="M92 168 h24 v8 h-24 z" retraso={2.3} />
+          <Pieza d="M182 170 m-6 0 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0" retraso={2.8} />
+        </g>
+      );
+    case "aire":
+      return (
+        <g {...comun}>
+          <Sombra rx={100} />
+          {/* unidad interior */}
+          <Trazo d="M40 30 h200 a10 10 0 0 1 10 10 v26 a10 10 0 0 1 -10 10 h-200 a10 10 0 0 1 -10 -10 v-26 a10 10 0 0 1 10 -10 z" />
+          <Trazo d="M50 66 h180" suave retraso={0.4} />
+          {/* unidad exterior */}
+          <Trazo d="M142 112 h104 v68 h-104 z" retraso={0.3} />
+          {/* filtro, turbina, cañerías (refrigerante: no se toca), ventilador exterior */}
+          <Pieza d="M48 40 h120 v10 h-120 z" retraso={0.9} />
+          <Pieza d="M210 48 m-10 0 a10 8 0 1 0 20 0 a10 8 0 1 0 -20 0" retraso={1.5} />
+          <Pieza d="M60 76 v60 h82 M70 76 v50 h72" retraso={2.0} />
+          <Pieza
+            d="M194 146 m-24 0 a24 24 0 1 0 48 0 a24 24 0 1 0 -48 0 M194 146 l14 -8 M194 146 l-14 8 M194 146 l-4 16 M194 146 l4 -16"
+            retraso={2.6}
+          />
+        </g>
+      );
+    case "tv":
+      return (
+        <g {...comun}>
+          <Sombra rx={90} />
+          <Trazo d="M34 26 h212 v128 h-212 z" />
+          <Trazo d="M120 154 l-10 24 h60 l-10 -24" suave retraso={0.4} />
+          {/* retroiluminación, placa principal, fuente, parlantes */}
+          <Pieza d="M48 50 h184 M48 76 h184 M48 102 h184 M48 128 h184" retraso={0.9} />
+          <Pieza d="M150 60 h56 v40 h-56 z" retraso={1.6} />
+          <Pieza d="M74 64 h48 v48 h-48 z" retraso={2.2} />
+          <Pieza d="M50 144 h30 M200 144 h30" retraso={2.8} />
+        </g>
+      );
+    default:
+      return (
+        <g {...comun}>
+          <Sombra rx={95} />
+          {/* caja genérica en perspectiva con la tapa levantada */}
+          <Trazo d="M60 110 L140 78 L220 110 L140 142 Z" />
+          <Trazo d="M60 110 v44 L140 186 L220 154 v-44 M140 142 v44" suave retraso={0.3} />
+          <Trazo d="M60 110 L60 58 L140 26 L140 78" suave retraso={0.5} />
+          {/* placa, conectores, fuente */}
+          <Pieza d="M96 112 L140 94 L184 112 L140 130 Z" retraso={1.0} />
+          <Pieza d="M118 104 l10 -4 l10 4 l-10 4 z M146 114 l10 -4 l10 4 l-10 4 z" retraso={1.7} />
+          <Pieza d="M82 126 l16 -6 l12 6 l-16 6 z" retraso={2.4} />
+        </g>
+      );
+  }
 }
