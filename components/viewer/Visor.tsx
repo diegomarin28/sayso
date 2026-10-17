@@ -14,7 +14,7 @@ import { Canvas, createPortal, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
 import { useBibliotecaPiezas } from "./biblioteca";
@@ -26,15 +26,19 @@ import {
   LINEA_ETIQUETA,
   liberar,
   piezasResaltadas,
-  prepararEscena,
+  prepararEscenaSegura,
   type LadoEtiqueta,
   type ModoVista,
   type NodoAnimable,
 } from "./escena";
 import { prepararPaso, type PasoPreparado } from "./paso";
+import { bajarCalidad, calidadInicial, esNegro, soporteDe, Vigia, type Calidad } from "./salud";
 import { OBJETIVO_GENERAL, aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
 
-/** "auto": bloom encendido, se apaga solo si el equipo no sostiene ~30 fps. */
+/**
+ * "auto": bloom encendido, se apaga solo si el equipo no sostiene ~30 fps.
+ * En cualquier modo, si el equipo no lo soporta o deja la imagen en negro, se apaga (ver salud.ts).
+ */
 export type ModoEfectos = "auto" | "si" | "no";
 export type { ModoVista };
 
@@ -88,48 +92,131 @@ export function Visor({
 }: VisorProps) {
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
   const [rindeBien, setRindeBien] = useState(true);
-  const efectosActivos = efectos === "si" || (efectos === "auto" && rindeBien);
+  // null hasta conocer el WebGL del equipo (ver salud.ts).
+  const [calidad, setCalidad] = useState<Calidad | null>(null);
+  const [falla, setFalla] = useState<Falla | null>(null);
+  // Cambiar `intento` rearma el lienzo entero (contexto perdido o "Reintentar").
+  const [intento, setIntento] = useState(0);
+  const [vigiando, setVigiando] = useState(true);
+  // Cambiar `ronda` arranca un vigía nuevo (después de bajar la calidad), sin rearmar el lienzo.
+  const [ronda, setRonda] = useState(0);
+  const efectosActivos = efectos !== "no" && !!calidad?.efectos && (efectos === "si" || rindeBien);
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
   const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
+  const soportaWebGL2 = useSoportaWebGL2();
 
   useEffect(() => {
     onEfectos?.(efectosActivos);
   }, [efectosActivos, onEfectos]);
 
+  /** Contexto perdido (iOS lo hace con poca memoria): se rearma el lienzo sin efectos. */
+  const rearmar = useCallback(() => {
+    setCalidad((c) => (c ? { ...c, efectos: false, multisampling: 0 } : c));
+    setFalla(null);
+    setVigiando(true);
+    setIntento((i) => i + 1);
+  }, []);
+
+  const alCrear = useCallback(
+    ({ gl }: { gl: THREE.WebGLRenderer }) => {
+      const tactil = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
+      const inicial = calidadInicial(soporteDe(gl.getContext(), gl.capabilities.maxSamples, tactil));
+      // Al rearmar, no se vuelve a prender lo que ya se apagó.
+      setCalidad((c) =>
+        c
+          ? {
+              efectos: inicial.efectos && c.efectos,
+              multisampling: Math.min(c.multisampling, inicial.multisampling),
+              entorno: inicial.entorno && c.entorno,
+            }
+          : inicial,
+      );
+      // Un shader que no compila (ej. el del bloom en algún Safari) apaga los efectos.
+      gl.debug.onShaderError = (_gl, _programa, vertice, fragmento) => {
+        console.error("[visor] un shader no compiló: apago los efectos.", gl.getContext().getShaderInfoLog(fragmento) || gl.getContext().getShaderInfoLog(vertice));
+        setCalidad((c) => (c ? { ...c, efectos: false } : c));
+      };
+      const lienzo = gl.domElement;
+      let plazo: ReturnType<typeof setTimeout> | undefined;
+      lienzo.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        console.warn("[visor] se perdió el contexto WebGL: rearmo el 3D.");
+        setFalla("contexto");
+        plazo = setTimeout(rearmar, ESPERA_CONTEXTO_MS);
+      });
+      lienzo.addEventListener("webglcontextrestored", () => {
+        clearTimeout(plazo);
+        rearmar();
+      });
+    },
+    [rearmar],
+  );
+
+  /** El vigía vio negro: se apaga lo siguiente; si no queda nada, aviso en vez de lienzo vacío. */
+  const alVerNegro = useCallback(() => {
+    if (!calidad) return;
+    const menos = bajarCalidad(calidad);
+    console.warn("[visor] el 3D quedó en negro:", menos ? "bajo la calidad y vuelvo a mirar." : "muestro el aviso.");
+    if (menos) {
+      setCalidad(menos);
+      setRonda((r) => r + 1); // vigía nuevo con la calidad nueva
+    } else {
+      setVigiando(false);
+      setFalla("negro");
+    }
+  }, [calidad]);
+
+  if (soportaWebGL2 === false) {
+    return (
+      <div className={className} style={{ position: "relative", background: "#000" }}>
+        <AvisoVisor falla="sin_webgl" />
+      </div>
+    );
+  }
+
   return (
     <div className={className} style={{ position: "relative", background: "#000", touchAction: "none" }}>
-      <Canvas dpr={[1, 2]}>
-        <color attach="background" args={["#000000"]} />
-        {vista === "isometrica" ? (
-          <OrthographicCamera makeDefault position={[100, 100, 100]} near={0.1} far={2000} zoom={10} />
-        ) : (
-          <PerspectiveCamera makeDefault position={[0, 55, 60]} fov={FOV} near={0.5} far={1000} />
-        )}
-        <LuzDeEstudio />
-        {biblioteca !== undefined && (
-          <Escena
-            plano={plano}
-            biblioteca={biblioteca}
-            tipoEquipo={tipoEquipo}
-            coreografia={coreografia}
-            piezas={piezas}
-            casoId={casoId}
-            onEvento={onEvento}
-            onPaso={onPaso}
-            sombrasEnVivo={efectosActivos}
-            reservadoArriba={reservadoArriba}
-          />
-        )}
-        {efectos === "auto" && (
-          <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={() => setRindeBien(false)} />
-        )}
-        {efectosActivos && (
-          <EffectComposer multisampling={4}>
-            <Bloom mipmapBlur luminanceThreshold={0.8} luminanceSmoothing={0.2} intensity={1.2} />
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-          </EffectComposer>
-        )}
-      </Canvas>
+      <Resguardo key={intento} onError={() => setFalla("error")}>
+        <Canvas dpr={[1, 2]} onCreated={alCrear}>
+          <color attach="background" args={["#000000"]} />
+          {vista === "isometrica" ? (
+            <OrthographicCamera makeDefault position={[100, 100, 100]} near={0.1} far={2000} zoom={10} />
+          ) : (
+            <PerspectiveCamera makeDefault position={[0, 55, 60]} fov={FOV} near={0.5} far={1000} />
+          )}
+          {calidad && <LuzDeEstudio entorno={calidad.entorno} />}
+          {calidad && biblioteca !== undefined && (
+            <Escena
+              plano={plano}
+              biblioteca={biblioteca}
+              tipoEquipo={tipoEquipo}
+              coreografia={coreografia}
+              piezas={piezas}
+              casoId={casoId}
+              onEvento={onEvento}
+              onPaso={onPaso}
+              sombrasEnVivo={efectosActivos}
+              reservadoArriba={reservadoArriba}
+            />
+          )}
+          {/* Con el contexto perdido todo se lee negro: el vigía espera al lienzo nuevo. */}
+          {calidad && biblioteca !== undefined && vigiando && !falla && (
+            <VigiaNegro key={ronda} renderizaSolo={!efectosActivos} onNegro={alVerNegro} onListo={() => setVigiando(false)} />
+          )}
+          {efectos === "auto" && (
+            <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={() => setRindeBien(false)} />
+          )}
+          {calidad && efectosActivos && (
+            <Resguardo onError={() => setCalidad((c) => (c ? { ...c, efectos: false } : c))}>
+              <EffectComposer multisampling={calidad.multisampling}>
+                <Bloom mipmapBlur luminanceThreshold={0.8} luminanceSmoothing={0.2} intensity={1.2} />
+                <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+              </EffectComposer>
+            </Resguardo>
+          )}
+        </Canvas>
+      </Resguardo>
+      {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
       <button
         type="button"
         onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
@@ -141,16 +228,118 @@ export function Visor({
   );
 }
 
+// ---------- Que nunca quede negro (ver salud.ts) ----------
+
+type Falla = "sin_webgl" | "contexto" | "negro" | "error";
+
+/** Si iOS pierde el contexto y no lo devuelve en este plazo, se arma un lienzo nuevo. */
+const ESPERA_CONTEXTO_MS = 2500;
+/** Lado del cuadrado del centro de la imagen que mira el vigía (px del lienzo). */
+const LADO_VIGIA = 24;
+
+const TEXTO_FALLA: Record<Falla, string> = {
+  sin_webgl: "Este navegador no puede mostrar el 3D. La guía sigue funcionando por voz y texto.",
+  contexto: "Reiniciando el 3D…",
+  negro: "No pude mostrar el 3D en este equipo. La guía sigue funcionando por voz y texto.",
+  error: "El 3D tuvo un problema. La guía sigue funcionando por voz y texto.",
+};
+
+function AvisoVisor({ falla, onReintentar }: { falla: Falla; onReintentar?: () => void }) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black px-8 text-center text-sm text-white/80">
+      <p>{TEXTO_FALLA[falla]}</p>
+      {onReintentar && (
+        <button type="button" onClick={onReintentar} className="rounded-full border border-white/30 px-4 py-1.5 text-xs text-white">
+          Reintentar
+        </button>
+      )}
+    </div>
+  );
+}
+
+let webgl2: boolean | undefined;
+/** Se prueba una sola vez y se libera el contexto de prueba (iOS tiene pocos contextos WebGL). */
+function hayWebGL2(): boolean {
+  if (webgl2 === undefined) {
+    try {
+      const ctx = document.createElement("canvas").getContext("webgl2");
+      webgl2 = !!ctx;
+      ctx?.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch {
+      webgl2 = false;
+    }
+  }
+  return webgl2;
+}
+const sinCambios = () => () => {};
+
+/** `false` si el navegador no tiene WebGL2 (three.js lo necesita); `undefined` en el servidor. */
+function useSoportaWebGL2(): boolean | undefined {
+  return useSyncExternalStore(sinCambios, hayWebGL2, () => undefined);
+}
+
+/** Atrapa un error de lo que envuelve (el lienzo o los efectos) y avisa en vez de dejar todo negro. */
+class Resguardo extends Component<{ children: ReactNode; onError: (e: unknown) => void }, { roto: boolean }> {
+  state = { roto: false };
+  static getDerivedStateFromError() {
+    return { roto: true };
+  }
+  componentDidCatch(e: unknown) {
+    console.error("[visor]", e);
+    this.props.onError(e);
+  }
+  render() {
+    return this.state.roto ? null : this.props.children;
+  }
+}
+
+/**
+ * Mira el centro de la imagen los primeros segundos (ver `Vigia`). Corre después de los efectos
+ * (prioridad 2); con prioridad > 0 R3F deja de dibujar solo, así que sin efectos dibuja él.
+ */
+function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolean; onNegro: () => void; onListo: () => void }) {
+  const vigia = useRef(new Vigia());
+  const pixeles = useMemo(() => new Uint8Array(4 * LADO_VIGIA * LADO_VIGIA), []);
+  const avisado = useRef(false);
+  useFrame(({ gl, scene, camera }) => {
+    if (renderizaSolo) gl.render(scene, camera);
+    const v = vigia.current;
+    if (!v.siguiente()) {
+      if (v.terminado && !avisado.current) {
+        avisado.current = true;
+        onListo();
+      }
+      return;
+    }
+    if (avisado.current) return;
+    gl.setRenderTarget(null);
+    const ctx = gl.getContext();
+    const x = Math.max(0, Math.floor(ctx.drawingBufferWidth / 2 - LADO_VIGIA / 2));
+    const y = Math.max(0, Math.floor(ctx.drawingBufferHeight / 2 - LADO_VIGIA / 2));
+    ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
+    if (v.registrar(esNegro(pixeles)) === "negro") {
+      avisado.current = true;
+      onNegro();
+    }
+  }, 2);
+  return null;
+}
+
 /** Luz de estudio armada con paneles (sin descargar HDRIs: el Wi-Fi del evento no es confiable). */
-function LuzDeEstudio() {
+function LuzDeEstudio({ entorno }: { entorno: boolean }) {
   return (
     <>
-      <Environment resolution={256} frames={1}>
-        <Lightformer form="rect" intensity={2.2} position={[0, 40, 0]} rotation-x={Math.PI / 2} scale={[60, 30, 1]} />
-        <Lightformer form="rect" intensity={1.4} position={[-40, 12, 15]} rotation-y={Math.PI / 2} scale={[40, 12, 1]} />
-        <Lightformer form="rect" intensity={1} position={[40, 12, -15]} rotation-y={-Math.PI / 2} scale={[40, 12, 1]} />
-        <Lightformer form="ring" color="#9fc0ff" intensity={0.8} position={[0, 15, -45]} scale={25} />
-      </Environment>
+      {entorno ? (
+        <Environment resolution={256} frames={1}>
+          <Lightformer form="rect" intensity={2.2} position={[0, 40, 0]} rotation-x={Math.PI / 2} scale={[60, 30, 1]} />
+          <Lightformer form="rect" intensity={1.4} position={[-40, 12, 15]} rotation-y={Math.PI / 2} scale={[40, 12, 1]} />
+          <Lightformer form="rect" intensity={1} position={[40, 12, -15]} rotation-y={-Math.PI / 2} scale={[40, 12, 1]} />
+          <Lightformer form="ring" color="#9fc0ff" intensity={0.8} position={[0, 15, -45]} scale={25} />
+        </Environment>
+      ) : (
+        // Sin luz de entorno (el equipo no tiene buffers flotantes): luz de relleno para que los metales no queden negros.
+        <hemisphereLight args={["#ffffff", "#30343a", 1.6]} />
+      )}
       <ambientLight intensity={0.15} />
       <directionalLight position={[25, 40, 30]} intensity={1.4} />
     </>
@@ -170,7 +359,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
-  const escena = useMemo(() => prepararEscena(plano, biblioteca ?? undefined, tipoEquipo), [plano, biblioteca, tipoEquipo]);
+  const escena = useMemo(() => prepararEscenaSegura(plano, biblioteca, tipoEquipo), [plano, biblioteca, tipoEquipo]);
   const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys()));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
