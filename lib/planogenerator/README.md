@@ -28,3 +28,14 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 ## Plantillas
 
 - `plantillas/notebook.ts`: notebook genérica, esquemática, vista desde abajo con la tapa inferior translúcida (se abre como bisagra desde el borde trasero).
+
+## Generador desde el manual (B4) — `generador.ts`
+
+`generarPlano({ casoId, knowledgePack, imagenes?, paginas? })` → `{ plano, avisos, origen }`. Ruta: `POST /api/plano`.
+
+- **La IA interpreta:** con la vista explosionada / inferior del manual (imágenes) y la lista de piezas del knowledge pack, propone para cada pieza su **zona** en la planta (x, z de -1 a 1), su **capa** (`placa`, `sobre_placa`, `sobre_base`, `sobre_pieza`), su tamaño relativo, su número en el diagrama y la página. Modelo: `MODELOS.vision` de `lib/ia/claude.ts`, salida validada con Zod (un reintento).
+- **El código calcula** (`planoDesdePropuesta`, pura y testeada): medidas en cm, alturas apilando capas, padres, límites dentro de la base y de su soporte, choques (coloca por capa y confianza; si choca, busca el lugar libre más cercano), tapa inferior encima de todo.
+- **No se inventan piezas:** un id que no está en el knowledge pack se descarta. Lo que la IA no ubica sale de la plantilla. Todo queda en `avisos`.
+- Las citas de posición quedan `NO_VERIFICABLE` (el código no puede verificar una ubicación en un diagrama).
+- **Si la IA falla** dos veces → `origen: "plantilla"` (`planoDesdePlantilla`), nunca se corta el flujo.
+- Prueba real (gasta créditos): `npx tsx --env-file=.env.local lib/planogenerator/probar-plano.ts [kp.json] [pagina.png …] --pag 54 --salida plano.json`, y pegá el JSON en `/lab/visor`.

@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { coreografiaEjemplo, knowledgePackEjemplo, planoEjemplo, type Coreografia, type Evento } from "../../shared";
+import {
+  PlanoDePiezas,
+  coreografiaEjemplo,
+  knowledgePackEjemplo,
+  planoEjemplo,
+  type Coreografia,
+  type Evento,
+} from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
@@ -9,6 +16,7 @@ import { Visor, type ModoEfectos } from "./Visor";
 /** Banco de pruebas del visor: reproduce el fixture y acciones sueltas. */
 
 const PLANOS = { plantilla: planoNotebookBase, fixture: planoEjemplo } as const;
+type IdPlano = keyof typeof PLANOS | "generado";
 
 const paso = (dice: string, acciones: Coreografia["acciones"]): Coreografia => ({
   paso: 1,
@@ -34,13 +42,46 @@ const EXTRAS: Array<[string, Coreografia]> = [
 ];
 
 export function LabVisor() {
-  const [planoId, setPlanoId] = useState<keyof typeof PLANOS>("plantilla");
+  const [planoId, setPlanoId] = useState<IdPlano>("plantilla");
+  const [generado, setGenerado] = useState<PlanoDePiezas | null>(null);
+  const [estadoGenerador, setEstadoGenerador] = useState("");
+  const [pegado, setPegado] = useState("");
   const [coreografia, setCoreografia] = useState<Coreografia | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [filtrado, setFiltrado] = useState<PasoPreparado | null>(null);
   const [efectos, setEfectos] = useState<ModoEfectos>("auto");
   const [efectosActivos, setEfectosActivos] = useState(true);
-  const plano = PLANOS[planoId];
+  const plano = planoId === "generado" && generado ? generado : PLANOS[planoId === "generado" ? "plantilla" : planoId];
+  const usarGenerado = (p: PlanoDePiezas) => {
+    setGenerado(p);
+    setPlanoId("generado");
+    setCoreografia(null);
+  };
+  const generarConIA = async () => {
+    setEstadoGenerador("Generando…");
+    try {
+      const res = await fetch("/api/plano", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ casoId: "caso-demo-1", knowledgePack: knowledgePackEjemplo }),
+      });
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error ?? res.statusText);
+      usarGenerado(PlanoDePiezas.parse(datos.plano));
+      setEventos((prev) => [...datos.eventos, ...prev].slice(0, 20));
+      setEstadoGenerador(`Listo (${datos.origen}, ${datos.avisos.length} avisos).`);
+    } catch (e) {
+      setEstadoGenerador(`Error: ${(e as Error).message}`);
+    }
+  };
+  const usarPegado = () => {
+    try {
+      usarGenerado(PlanoDePiezas.parse(JSON.parse(pegado)));
+      setEstadoGenerador("Plano pegado.");
+    } catch {
+      setEstadoGenerador("El texto no es un PlanoDePiezas válido.");
+    }
+  };
   // Copia nueva en cada clic: así el mismo paso se puede reproducir otra vez.
   const reproducir = (c: Coreografia) => setCoreografia({ ...c });
 
@@ -60,12 +101,24 @@ export function LabVisor() {
       <aside className="flex w-full flex-col gap-4 p-4 text-sm md:w-80">
         <h1 className="text-lg font-semibold">Lab · visor 3D</h1>
         <div className="flex gap-2">
-          {(Object.keys(PLANOS) as Array<keyof typeof PLANOS>).map((id) => (
+          {(["plantilla", "fixture", ...(generado ? ["generado" as const] : [])] as IdPlano[]).map((id) => (
             <Boton key={id} activo={id === planoId} onClick={() => { setPlanoId(id); setCoreografia(null); }}>
               {id}
             </Boton>
           ))}
         </div>
+
+        <Seccion titulo="Generador desde el manual (B4)">
+          <Boton onClick={generarConIA}>Generar con IA (gasta créditos)</Boton>
+          <textarea
+            value={pegado}
+            onChange={(e) => setPegado(e.target.value)}
+            placeholder="…o pegá un plano JSON"
+            className="h-16 w-full rounded bg-neutral-900 p-2 font-mono text-xs"
+          />
+          <Boton onClick={usarPegado}>Usar plano pegado</Boton>
+          {estadoGenerador && <p className="w-full text-xs text-neutral-400">{estadoGenerador}</p>}
+        </Seccion>
 
         <Seccion titulo={`Efectos (bloom ${efectosActivos ? "encendido" : "apagado"})`}>
           {(["auto", "si", "no"] as const).map((m) => (
