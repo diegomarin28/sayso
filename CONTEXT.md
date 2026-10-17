@@ -63,11 +63,23 @@ Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Re
 
 Acciones de coreografía permitidas: `camara`, `resaltar`, `rotar`, `desplazar`, `ocultar`, `despiezar`, `restaurar`. Si la IA nombra una pieza que no existe en el GLB, el reproductor la ignora y registra un evento.
 
-## MODO GUÍA (cómo tratás a la persona)
+## MODO AUTÓNOMO (cómo trabajás)
 
-Tenemos poco tiempo y la persona **no va a revisar código**. Vos manejás git, tests, PR y fusiones. La persona solo da el OK en dos momentos: **el plan de la tarea** y **la fusión**.
+Tenemos poco tiempo y la persona **no va a revisar código**. Vos manejás git, tests, PR y fusiones, y **trabajás en bloques largos (~1 hora) sin frenar**.
 
-- Explicá en español simple, **un paso por vez**, y esperá respuesta antes del siguiente.
+1. **Al arrancar la sesión, una sola vez:** comprobá que la máquina está bien (`git fetch`, `npm install` si falta, `.env.local` existe sin leer su contenido, `npm test` pasa). Si algo falla, guiá a la persona para arreglarlo.
+2. **Proponé el bloque:** las próximas 2–4 tareas del carril, cada una con 2–3 líneas de qué vas a hacer. La persona da **un solo OK** para todo el bloque.
+3. **Ejecutá el bloque entero seguido**, tarea tras tarea, con el ciclo de abajo. **Fusioná solo** cuando todo pase en verde y solo tocaste archivos de tu carril. No pidas OK para cada fusión.
+4. **Solo frenás y preguntás si:**
+   - hace falta una cuenta, una clave o un gasto,
+   - hay un conflicto con otro carril o hace falta cambiar `shared/`,
+   - una decisión cambia el alcance o el plan,
+   - algo falla dos veces seguidas y no sabés por qué,
+   - necesitás que la persona pruebe algo en el navegador, el micrófono o la cámara.
+5. **Al terminar el bloque:** resumen en 3–5 líneas (qué se fusionó, qué falta, qué hay que avisar al grupo) y proponé el siguiente bloque.
+
+Cuando le hables a la persona:
+- Explicá en español simple, **un paso por vez**.
 - Si hace falta que la persona haga algo fuera de la terminal (crear una cuenta, pegar una clave, probar en el navegador), dale el paso exacto: dónde tocar, qué copiar, qué debería ver.
 - Comandos según su sistema: **Juanma usa Windows (PowerShell)**; Diego e Iaio usan Mac. Si no sabés el sistema, preguntá.
 - Nunca le pidas que pegue claves en el chat. Las claves van en `.env.local`.
@@ -76,13 +88,13 @@ Tenemos poco tiempo y la persona **no va a revisar código**. Vos manejás git, 
 ## Ciclo de cada tarea (lo hacés vos, sin que la persona toque git)
 
 1. **Sincronizar:** `git fetch origin` y crear la rama de la tarea desde `origin/main`, en el mismo worktree: `git switch -c <carril>/<tarea> origin/main`. Si hay cambios sin guardar, avisá antes.
-2. **Proponer el plan** en 5–8 puntos y esperar el OK de la persona.
+2. **Plan:** si la tarea ya está dentro del bloque aprobado, seguí sin preguntar.
 3. **Construir** solo dentro de las carpetas del carril. Commits chicos.
 4. **Verificar:** `npm test`, `npm run typecheck` y `npm run build`. Si algo falla, lo arreglás antes de seguir. Si es una pantalla, pedile a la persona que la mire en `npm run dev` y confirme.
 5. **Actualizar con main:** `git fetch origin` y `git rebase origin/main`, y volver a verificar.
    - Si el conflicto es en archivos de **otro carril o en `shared/`**: no lo resuelvas vos. Pará y decile a la persona que avise en el grupo.
 6. **PR:** `gh pr create --base main` con título claro y 2–3 líneas de qué cambió.
-7. **Pedir OK para fusionar:** "¿Fusiono?" Con el OK: `gh pr merge --squash --delete-branch`.
+7. **Fusionar:** si los tests, los tipos, el build y la verificación de GitHub (CI) están en verde, `gh pr merge --squash --delete-branch`. Para ver la CI: `gh pr checks --watch`.
    - Si `gh` falla, guiá la instalación (`brew install gh` en Mac, `winget install --id GitHub.cli` en Windows) y `gh auth login`.
 8. **Avisar:** decile a la persona que escriba en el grupo: "Fusioné <tarea>, hagan pull". Cuando la persona te diga que otro fusionó, corré `git fetch origin` y `git rebase origin/main` en tu rama.
 9. **Siguiente tarea:** volvés al paso 1 con la próxima del carril, en el mismo worktree (no hace falta crear uno nuevo ni volver a copiar `.env.local`).
