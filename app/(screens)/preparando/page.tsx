@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
+import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
+import { ResumenGuia } from "../_ui/resumen-guia";
 import { desbloquearAudio } from "@/lib/voice/hablar";
 
 /**
@@ -72,7 +74,6 @@ export default function Preparando() {
   const equipo = [ficha.marca.valor, ficha.modelo.valor].filter(Boolean).join(" ");
   const etapa = ETAPAS.findLast((e) => segundos >= e.desde) ?? ETAPAS[0];
   const pack = preparado?.pack;
-  const verificados = pack?.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length ?? 0;
 
   const listo = pack && plano;
 
@@ -106,48 +107,16 @@ export default function Preparando() {
         </Etapa>
       </ol>
 
-      {!listo && !error && (
+      {!pack && !error && (
         <div className="flex flex-col items-center gap-3 py-6">
-          <Orbe estado="pensando" tam={120} />
+          <AnimacionPreparando acto={!pack ? "manual" : "plano"} />
           <p className="font-mono text-xs text-texto-suave tabular-nums" aria-label="Tiempo">
             {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
           </p>
         </div>
       )}
 
-      {pack && (
-        <div className="rounded-3xl border border-borde bg-superficie p-5">
-          <p className="text-xs text-texto-suave">Fuente</p>
-          <p className="mt-1 font-medium">{pack.fuentes[0]?.doc ?? "Guía pública"}</p>
-          <span
-            className={`mt-2 inline-block rounded-full border px-2.5 py-0.5 text-xs ${
-              pack.verificado
-                ? "border-confirmado/40 bg-confirmado/10 text-confirmado"
-                : "border-probable/40 bg-probable/10 text-probable"
-            }`}
-          >
-            {pack.verificado ? "Manual verificado" : "NO VERIFICADO"}
-          </span>
-          <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
-            <Dato valor={pack.piezas.length} etiqueta="piezas" />
-            <Dato valor={pack.pasos.length} etiqueta="pasos" />
-            <Dato valor={verificados} etiqueta="con página citada" />
-          </dl>
-          {plano && (
-            <p className="mt-4 text-xs text-texto-suave">
-              3D:{" "}
-              {plano.origen === "ia"
-                ? "piezas ubicadas según el manual."
-                : "modelo genérico del equipo (no pude ubicar las piezas con el manual)."}
-            </p>
-          )}
-          {pack.advertencias.length > 0 && (
-            <p className="mt-5 rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm text-probable">
-              ⚠ {pack.advertencias[0]}
-            </p>
-          )}
-        </div>
-      )}
+      {pack && <ResumenGuia pack={pack} plano={plano} />}
 
       <div className="mt-auto flex flex-col gap-6">
         <FeedActividad eventos={eventos} />
@@ -174,15 +143,6 @@ export default function Preparando() {
         )}
       </div>
     </Pantalla>
-  );
-}
-
-function Dato({ valor, etiqueta }: { valor: number; etiqueta: string }) {
-  return (
-    <div>
-      <dd className="font-mono text-3xl font-semibold">{valor}</dd>
-      <dt className="mt-1 text-xs text-texto-suave">{etiqueta}</dt>
-    </div>
   );
 }
 

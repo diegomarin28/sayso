@@ -41,6 +41,28 @@ body {
   color: var(--texto);
 }
 
+/* ---------- Solo vertical: aviso si un celular se pone horizontal ---------- */
+
+.solo-vertical { display: none; }
+
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .solo-vertical {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: var(--fondo);
+    color: var(--texto);
+    font-size: 1.125rem;
+    text-align: center;
+    padding: 2rem;
+  }
+}
+
 /* ---------- Orbe del experto ---------- */
 
 @keyframes orbe-respira {
@@ -90,6 +112,63 @@ body {
 
 .aparece { animation: aparece 0.4s ease-out both; }
 
+/* ---------- Pantalla 4: manual que se lee y notebook que se arma (animacion-preparando.tsx) ---------- */
+
+.prep-acto { transition: opacity 0.7s ease; }
+.prep-oculto { opacity: 0; }
+
+/* Líneas de texto que se escriben y se borran, en loop. */
+@keyframes prep-escribe {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  25%, 82% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+.prep-linea { stroke-dasharray: 1; stroke-dashoffset: 1; animation: prep-escribe 5s ease-out infinite; }
+
+/* Franja naranja que "lee" la página. */
+@keyframes prep-lee {
+  from { transform: translateY(0); }
+  to { transform: translateY(112px); }
+}
+.prep-lectura { animation: prep-lee 2.6s ease-in-out infinite alternate; }
+
+/* Marcas de cita que aparecen con un pequeño rebote. */
+@keyframes prep-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  8% { opacity: 1; transform: scale(1.12); }
+  14%, 80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+.prep-cita { opacity: 0; transform-box: fill-box; transform-origin: center; animation: prep-pop 5s ease-out infinite; }
+
+/* Hoja que pasa: gira sobre el lomo (x = 140) de derecha a izquierda. */
+@keyframes prep-pasa {
+  0%, 68% { opacity: 0; transform: scaleX(1); }
+  72% { opacity: 1; transform: scaleX(1); }
+  90% { opacity: 1; transform: scaleX(-1); }
+  100% { opacity: 0; transform: scaleX(-1); }
+}
+.prep-hoja { opacity: 0; transform-box: view-box; transform-origin: 140px 0; animation: prep-pasa 5s ease-in-out infinite; }
+
+/* Notebook: el contorno se dibuja y las piezas se encienden una por una. */
+@keyframes prep-dibuja {
+  0% { stroke-dashoffset: 1; }
+  30%, 100% { stroke-dashoffset: 0; }
+}
+.prep-trazo { stroke-dasharray: 1; stroke-dashoffset: 1; animation: prep-dibuja 4.5s ease-out infinite; }
+
+@keyframes prep-enciende {
+  0% { opacity: 0; filter: none; }
+  10% { opacity: 1; filter: drop-shadow(0 0 6px var(--acento)); }
+  25%, 85% { opacity: 1; filter: drop-shadow(0 0 2px var(--acento)); }
+  100% { opacity: 0; filter: none; }
+}
+.prep-pieza { opacity: 0; animation: prep-enciende 4.5s ease-out infinite; }
+
+/* Listo: la notebook queda armada y quieta. */
+.prep-listo .prep-trazo { animation: none; stroke-dashoffset: 0; }
+.prep-listo .prep-pieza { animation: none; opacity: 1; }
+
 /* ---------- Escaneo sobre fotos ---------- */
 
 @keyframes escaneo {
@@ -128,4 +207,7 @@ body {
   .orbe, .orbe-halo, .linea-escaneo { animation: none; }
   .palabra { animation: none; opacity: 1; }
   .aparece { animation: none; }
+  .prep-linea, .prep-trazo { animation: none; stroke-dashoffset: 0; }
+  .prep-cita, .prep-pieza { animation: none; opacity: 1; }
+  .prep-lectura, .prep-hoja { animation: none; opacity: 0; }
 }
