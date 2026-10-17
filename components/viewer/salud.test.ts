@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { planoNotebookBase, type BibliotecaPiezas } from "../../lib/planogenerator";
 import { prepararEscena, prepararEscenaSegura } from "./escena";
-import { bajarCalidad, calidadInicial, esNegro, Vigia, type SoporteGL } from "./salud";
+import { bajarCalidad, calidadInicial, esNegro, puntosVigia, Vigia, type SoporteGL } from "./salud";
 
 const iphone: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 4, tactil: true };
 const mac: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 8, tactil: false };
@@ -82,5 +82,28 @@ describe("prepararEscenaSegura", () => {
     const escena = prepararEscenaSegura(planoNotebookBase, null);
     expect(escena.nodos.size).toBe(prepararEscena(planoNotebookBase).nodos.size);
     expect(escena.avisos.some((a) => /formas simples/.test(a))).toBe(false);
+  });
+});
+
+describe("puntosVigia", () => {
+  it("reparte una grilla de 3×3 por la imagen (no solo el centro) y nunca se sale del lienzo", () => {
+    const puntos = puntosVigia(800, 600, 24);
+    expect(puntos).toHaveLength(9);
+    const xs = new Set(puntos.map(([x]) => x));
+    const ys = new Set(puntos.map(([, y]) => y));
+    expect(xs.size).toBe(3);
+    expect(ys.size).toBe(3);
+    for (const [x, y] of puntos) {
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(x + 24).toBeLessThanOrEqual(800);
+      expect(y + 24).toBeLessThanOrEqual(600);
+    }
+    expect(puntos).toContainEqual([388, 288]); // el centro sigue estando
+    expect(puntosVigia(800, 600, 16, 5)).toHaveLength(25);
+  });
+
+  it("en un lienzo más chico que el cuadrado, mira desde la esquina", () => {
+    for (const [x, y] of puntosVigia(10, 10, 24)) expect([x, y]).toEqual([0, 0]);
   });
 });

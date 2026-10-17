@@ -34,6 +34,8 @@ import { Visor } from "@/components/viewer";
 - **Probar en el celular con `npm run dev`:** abrí la app por la IP de la Mac (ej. `http://10.x.x.x:3000`). `next.config.ts` permite las IPs de red de la máquina (`allowedDevOrigins`); sin eso, Next bloquea sus recursos de desarrollo y la página no arranca (3D negro). Si cambiás de red, reiniciá `npm run dev`.
 - Semántica de acciones: ver `reproductor.ts`. Son **idempotentes** (repetir un paso no acumula). `camara` acepta `"general"` para ver todo.
 - Página de prueba: `/lab/visor` (`npm run dev`).
+- **Galería para el pitch:** `/lab/galeria` (`galeria/`): los 13 tipos de equipo que cubre la biblioteca con un plano de ejemplo cada uno (`ejemplos.ts`), en tarjetas que se abren en grande con "Despiezar". Fondo negro y títulos grandes (celular y proyector). Las tarjetas usan `controles={false}` (solo el 3D) y montan el visor solo cerca de la pantalla (pocos lienzos WebGL en el celular).
+- **Vigía de pantalla negra** (`salud.ts`): mira una grilla de 5×5 puntos, no solo el centro (un televisor de frente tiene en el centro su pantalla apagada, que es negra de verdad). Al desmontar el visor, la pérdida de contexto no se toma como falla.
 
 ## `<GuiaExperto>` — pantallas 5 y 6 (B6)
 
