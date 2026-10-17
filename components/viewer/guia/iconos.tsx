@@ -70,3 +70,13 @@ export function FlechaEnviar(p: PropsIcono) {
     </Icono>
   );
 }
+
+/** Libro abierto (para "Ver en el manual"). */
+export function Libro(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M12 6.5C10.5 5.2 8.3 4.5 5 4.5H3v14h2c3.3 0 5.5.7 7 2 1.5-1.3 3.7-2 7-2h2v-14h-2c-3.3 0-5.5.7-7 2z" />
+      <path d="M12 6.5v14" />
+    </Icono>
+  );
+}

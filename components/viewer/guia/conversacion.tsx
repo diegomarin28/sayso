@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import type { Coreografia, KnowledgePack } from "../../../shared";
+import { Libro } from "./iconos";
 
 /**
  * Partes visuales de la guía (pantallas 5 y 6), para que se entienda el paso a paso y la charla:
@@ -18,6 +19,7 @@ export function TarjetaPaso({
   total,
   completa,
   onElegir,
+  onVerManual,
 }: {
   c: Coreografia;
   indice: number;
@@ -25,6 +27,8 @@ export function TarjetaPaso({
   /** Ya llegaron todos los pasos de la respuesta: se puede volver a ver cualquiera. */
   completa: boolean;
   onElegir: (i: number) => void;
+  /** Si está, el paso cita una página que tiene imagen: botón "Ver en el manual". */
+  onVerManual?: () => void;
 }) {
   const bloqueo = c.riesgo === "alto";
   return (
@@ -70,7 +74,18 @@ export function TarjetaPaso({
           </Fragment>
         ))}
       </p>
-      <EtiquetaCita c={c} />
+      <div className="flex flex-wrap items-center gap-2">
+        <EtiquetaCita c={c} />
+        {onVerManual && (
+          <button
+            type="button"
+            onClick={onVerManual}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-borde bg-superficie px-2.5 py-1 text-xs font-medium text-texto active:scale-95"
+          >
+            <Libro size={14} /> Ver en el manual
+          </button>
+        )}
+      </div>
     </div>
   );
 }

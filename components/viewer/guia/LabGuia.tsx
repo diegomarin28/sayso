@@ -9,6 +9,15 @@ import { Cerrar, Engranaje, Microfono } from "./iconos";
 import { fuenteSimulada } from "./simulada";
 
 /** Banco de pruebas de <GuiaExperto> con el caso del fixture. */
+/**
+ * Página del manual de ejemplo para probar "Ver en el manual" sin subir manuales al repo (copyright):
+ * un dibujo con el número de página. En la app, la imagen la da /api/knowledge.
+ */
+function paginaDeEjemplo(pagina: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="850" height="1100" viewBox="0 0 850 1100"><rect width="850" height="1100" fill="#fff"/><text x="60" y="110" font-family="sans-serif" font-size="40" fill="#222">Manual de servicio (ejemplo)</text><text x="60" y="170" font-family="sans-serif" font-size="28" fill="#666">Página ${pagina}</text><rect x="120" y="260" width="610" height="420" rx="24" fill="none" stroke="#333" stroke-width="4"/><circle cx="560" cy="400" r="90" fill="none" stroke="#333" stroke-width="4"/><text x="660" y="300" font-family="sans-serif" font-size="30" fill="#c2410c">7</text><rect x="170" y="520" width="300" height="110" fill="none" stroke="#333" stroke-width="4"/><text x="60" y="800" font-family="sans-serif" font-size="24" fill="#444">Figura: vista inferior sin la tapa (dibujo de prueba)</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 const SUGERIDAS = ["¿Dónde está el SSD?", "Se apaga sola y el ventilador suena fuerte", "¿Cómo abro la batería para cambiarle las celdas?"];
 
 export function LabGuia() {
@@ -31,6 +40,7 @@ export function LabGuia() {
         plano={planoNotebookBase}
         origenPlano={origen}
         preguntaInicial="Se apaga sola a los diez minutos y el ventilador suena muy fuerte."
+        imagenPagina={paginaDeEjemplo}
         fuente={real ? fuenteApi : fuenteSimulada}
         onEvento={(e) => setEventos((p) => [e, ...p].slice(0, 12))}
         preguntaDictada={dictada}

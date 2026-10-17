@@ -23,6 +23,7 @@ import { Visor } from "@/components/viewer";
 
 - **Seguridad:** toda coreografía pasa por `filtrarCoreografia` (lib/safety) antes de animarse (`paso.ts`). Si es de riesgo alto no se anima (solo `restaurar`) y `onPaso` trae la derivación en vez del texto de la IA. Mostrá siempre `onPaso(...).coreografia.dice`, no el original.
 - **Piezas de Blender:** el visor lee `/models/piezas/indice.json` y baja solo las familias (GLB) que usan las piezas del plano, una vez cada una (`biblioteca.ts`); arma cada pieza con su forma típica (ventilador, RAM, compresor, carcasa…). Si no carga en 4 s, usa las primitivas. `tipoEquipo` ayuda a elegir la variante.
+- **Origen visible:** las piezas con origen "estimada" o "plantilla" se dibujan con contorno punteado y más transparentes (resaltadas, un poco menos); las del manual, sólidas. Sin origen (planos viejos, fixtures), como siempre.
 - **Piezas que llegan tarde:** si los GLB tardan más de 4 s, el visor arranca con primitivas y, cuando termina la descarga, las cambia por las piezas reales sin perder la cámara, el estado ni el paso en curso (`continuarAnimacion` en `escena.ts`, `siguienteBiblioteca` en `biblioteca.ts`).
 - **Estilo ilustración técnica** (`escena.ts`): bordes en todas las piezas, luz de estudio sin descargas, sombras de contacto, materiales por tipo y detalles (aspas, chips, etiquetas).
 - **Rayos X:** si el paso resalta piezas, esas quedan sólidas en `#E8590C` con brillo; el resto, gris translúcido. Las hijas de una pieza activa se ven normales.
