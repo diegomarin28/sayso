@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
+import { FlechaEnviar, GirarCelular } from "./iconos";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { esperar, reproducir, tiempoDeLectura, type EstadoGuia } from "./reproducir";
 
@@ -177,8 +178,8 @@ export function GuiaExperto({
             <EstadoExperto estado={estado} detalle={detalle} />
             {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
             {horizontal && (
-              <p className="self-start rounded-full border border-white/20 bg-black/75 px-4 py-1.5 text-sm text-white backdrop-blur">
-                ⟳ Girá el celular para ver mejor
+              <p className="flex items-center gap-2 self-start rounded-full border border-white/20 bg-black/75 px-4 py-1.5 text-sm text-white backdrop-blur">
+                <GirarCelular size={18} /> Girá el celular para ver mejor
               </p>
             )}
           </div>
@@ -204,11 +205,11 @@ export function GuiaExperto({
           type="submit"
           disabled={!texto.trim()}
           aria-label={etiquetaBoton}
-          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[399px]:w-12 max-[399px]:px-0"
+          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
         >
-          {/* En celulares angostos, solo el ícono: así la caja de texto tiene lugar. */}
-          <span className="max-[399px]:hidden">{etiquetaBoton}</span>
-          <FlechaEnviar className="hidden max-[399px]:block" />
+          {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
+          <span className="max-[480px]:hidden">{etiquetaBoton}</span>
+          <FlechaEnviar className="hidden max-[480px]:block" />
         </button>
       </form>
     </div>
@@ -276,14 +277,6 @@ function EstadoExperto({ estado, detalle }: { estado: EstadoGuia; detalle?: stri
   if (!texto) return null;
   return (
     <p className={`text-sm ${estado === "error" ? "text-peligro" : "animate-pulse text-texto-suave"}`}>{texto}</p>
-  );
-}
-
-function FlechaEnviar({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
-      <path d="M12 19V5M5 12l7-7 7 7" />
-    </svg>
   );
 }
 
