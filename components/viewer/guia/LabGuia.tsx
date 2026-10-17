@@ -1,0 +1,90 @@
+"use client";
+
+import { useState } from "react";
+import { knowledgePackEjemplo, type Evento } from "../../../shared";
+import { planoNotebookBase } from "../../../lib/planogenerator";
+import { fuenteApi } from "./eventos-chat";
+import { GuiaExperto } from "./GuiaExperto";
+import { fuenteSimulada } from "./simulada";
+
+/** Banco de pruebas de <GuiaExperto> con el caso del fixture. */
+const SUGERIDAS = ["¿Dónde está el SSD?", "Se apaga sola y el ventilador suena fuerte", "¿Cómo abro la batería para cambiarle las celdas?"];
+
+export function LabGuia() {
+  const [origen, setOrigen] = useState<"ia" | "plantilla">("ia");
+  const [real, setReal] = useState(false);
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  // Cambiar de modo remonta la guía (arranca de nuevo con la pregunta inicial).
+  const clave = `${origen}-${real}`;
+
+  return (
+    <main className="flex h-dvh flex-col bg-black md:flex-row">
+      <GuiaExperto
+        key={clave}
+        className="min-h-0 flex-1"
+        casoId="caso-demo-1"
+        pack={knowledgePackEjemplo}
+        plano={planoNotebookBase}
+        origenPlano={origen}
+        preguntaInicial="Se apaga sola a los diez minutos y el ventilador suena muy fuerte."
+        fuente={real ? fuenteApi : fuenteSimulada}
+        onEvento={(e) => setEventos((p) => [e, ...p].slice(0, 12))}
+        accesorioEntrada={
+          <button type="button" aria-label="Hablar (lo conecta C3)" className="h-12 w-12 shrink-0 rounded-2xl border border-borde text-texto-suave">
+            🎙
+          </button>
+        }
+      />
+      <aside className="flex max-h-[38dvh] shrink-0 flex-col gap-3 overflow-y-auto border-t border-borde p-4 text-sm text-texto md:max-h-none md:w-72 md:border-t-0 md:border-l">
+        <h1 className="font-semibold">Lab · guía del experto</h1>
+        <Opcion titulo="Plano" valor={origen} opciones={["ia", "plantilla"]} onCambio={setOrigen} />
+        <Opcion
+          titulo="Respuestas"
+          valor={real ? "API real" : "simuladas"}
+          opciones={["simuladas", "API real"]}
+          onCambio={(v) => setReal(v === "API real")}
+        />
+        {real && <p className="text-xs text-probable">Con la API real cada pregunta gasta créditos.</p>}
+        <div>
+          <h2 className="mb-1 text-xs tracking-wide text-texto-suave uppercase">Preguntas para copiar</h2>
+          <ul className="space-y-1 text-xs text-texto-suave">
+            {SUGERIDAS.map((s) => (
+              <li key={s}>“{s}”</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="mb-1 text-xs tracking-wide text-texto-suave uppercase">Eventos</h2>
+          <ul className="space-y-1 text-xs text-texto-suave">
+            {eventos.length === 0 && <li>Sin eventos.</li>}
+            {eventos.map((e) => (
+              <li key={e.id}>
+                [{e.tipo}] {e.mensaje}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+    </main>
+  );
+}
+
+function Opcion<T extends string>({ titulo, valor, opciones, onCambio }: { titulo: string; valor: T | string; opciones: T[]; onCambio: (v: T) => void }) {
+  return (
+    <div>
+      <h2 className="mb-1 text-xs tracking-wide text-texto-suave uppercase">{titulo}</h2>
+      <div className="flex gap-2">
+        {opciones.map((o) => (
+          <button
+            key={o}
+            type="button"
+            onClick={() => onCambio(o)}
+            className={`rounded px-3 py-1.5 ${o === valor ? "bg-acento text-black" : "bg-superficie"}`}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

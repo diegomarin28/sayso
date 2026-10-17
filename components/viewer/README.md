@@ -30,3 +30,28 @@ import { Visor } from "@/components/viewer";
 - **Rendimiento:** con `efectos="auto"` el bloom está prendido y se apaga solo si el equipo no sostiene ~30 fps (también congela las sombras). `onEfectos` avisa el estado.
 - Semántica de acciones: ver `reproductor.ts`. Son **idempotentes** (repetir un paso no acumula). `camara` acepta `"general"` para ver todo.
 - Página de prueba: `/lab/visor` (`npm run dev`).
+
+## `<GuiaExperto>` — pantallas 5 y 6 (B6)
+
+Autocontenido: visor + stream de `/api/chat` + frase que aparece palabra por palabra y se desvanece al terminar + cita (`verificado` / `no verificado` / `NO VERIFICADO`) + aviso "Esquema genérico, no es tu modelo exacto" + caja para preguntar.
+
+```tsx
+import { GuiaExperto } from "@/components/viewer";
+
+<GuiaExperto
+  className="h-dvh"
+  casoId={caso.id}
+  pack={pack}                     // de /api/knowledge
+  plano={plano}                   // de /api/plano
+  origenPlano={origen}            // "ia" | "plantilla" (de /api/plano)
+  manualFileId={manualFileId}     // de /api/knowledge
+  preguntaInicial={caso.sintoma}  // arranca explicando solo
+  decir={hablar}                  // C3: TTS; resolver cuando termina. Sin esto, tiempo de lectura.
+  accesorioEntrada={<BotonMicrofono />}
+  onEvento={agregarEvento}
+/>
+```
+
+- Los pasos se muestran **en orden**: cada uno anima el 3D y se espera a que termine de decirse antes del siguiente. Una pregunta nueva corta la respuesta en curso.
+- Bloqueo (riesgo alto): la derivación queda a la vista en rojo, el 3D vuelve al reposo y no se anima nada más.
+- Ejemplo: `/lab/guia` (con `npm run dev`), con respuestas simuladas (sin gastar IA) o la API real.
