@@ -14,6 +14,7 @@ export function LabGuia() {
   const [origen, setOrigen] = useState<"ia" | "plantilla">("ia");
   const [real, setReal] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [dictada, setDictada] = useState<{ texto: string; id: number }>();
   // Cambiar de modo remonta la guía (arranca de nuevo con la pregunta inicial).
   const clave = `${origen}-${real}`;
 
@@ -29,8 +30,15 @@ export function LabGuia() {
         preguntaInicial="Se apaga sola a los diez minutos y el ventilador suena muy fuerte."
         fuente={real ? fuenteApi : fuenteSimulada}
         onEvento={(e) => setEventos((p) => [e, ...p].slice(0, 12))}
+        preguntaDictada={dictada}
         accesorioEntrada={
-          <button type="button" aria-label="Hablar (lo conecta C3)" className="h-12 w-12 shrink-0 rounded-2xl border border-borde text-texto-suave">
+          // Simula el micrófono: "dicta" la primera pregunta sugerida.
+          <button
+            type="button"
+            aria-label="Hablar (simulado)"
+            onClick={() => setDictada((d) => ({ texto: SUGERIDAS[0], id: (d?.id ?? 0) + 1 }))}
+            className="h-12 w-12 shrink-0 rounded-2xl border border-borde text-texto-suave"
+          >
             🎙
           </button>
         }
