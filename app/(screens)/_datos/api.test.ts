@@ -117,3 +117,14 @@ describe("plano: tipoEquipo para la plantilla por tipo (#78)", () => {
     expect(cuerpo.tipoEquipo).toBe("heladera no frost");
   });
 });
+
+describe("knowledge: tipoEquipo (#79)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("prepararExperto manda el tipoEquipo de la recepción", async () => {
+    const fetch = vi.fn(() => respuesta(knowledge));
+    vi.stubGlobal("fetch", fetch);
+    await prepararExperto({ ...ficha, casoId: "caso-knowledge-tipo" }, "no enfría", "heladera no frost");
+    const cuerpo = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(cuerpo.tipoEquipo).toBe("heladera no frost");
+  });
+});
