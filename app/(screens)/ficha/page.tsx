@@ -38,7 +38,8 @@ const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
 export default function FichaDelEquipo() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { fotos, imagenes, ficha, setFicha, agregarEventos, preparado, setPreparado, setPlano } = useFlujo();
+  const { fotos, imagenes, ficha, setFicha, agregarEventos, preparado, setPreparado, setPlano, tipoEquipo } =
+    useFlujo();
   const [editando, setEditando] = useState<ClaveCampo | null>(null);
   const [borrador, setBorrador] = useState("");
   const [correcciones, setCorrecciones] = useState<Partial<Record<ClaveCampo, string | null>>>({});
@@ -55,9 +56,13 @@ export default function FichaDelEquipo() {
   useEffect(() => {
     if (!caso || ficha) return;
     let vigente = true;
-    // La chapa está en la etiqueta; si no hay, probamos con lo que haya.
-    const paraLeer = (etiquetas.length ? etiquetas : aceptadas).slice(-3).map((f) => imagenes[f.id]);
-    leerChapa(caso, paraLeer)
+    // La chapa está en la etiqueta. El frente (o, si no hay, otra foto) sirve para reconocer el
+    // equipo cuando la etiqueta no se lee: ahí marca y modelo salen "probables" y la persona confirma.
+    const frentes = aceptadas.filter((f) => f.tipoPedido === "frente");
+    const otras = aceptadas.filter((f) => f.tipoPedido !== "etiqueta");
+    const paraLeer = etiquetas.slice(-3).map((f) => imagenes[f.id]);
+    const delFrente = (frentes.length ? frentes : otras).slice(-2).map((f) => imagenes[f.id]);
+    leerChapa(caso, paraLeer, { tipoEquipo, imagenesFrente: delFrente })
       .then((r) => {
         if (!vigente) return;
         agregarEventos(r.eventos);
@@ -176,6 +181,7 @@ export default function FichaDelEquipo() {
                         className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${estilo.clase}`}
                       >
                         {estilo.texto}
+                        {campo.fuente === "foto" ? " · por la foto" : ""}
                       </span>
                     </dt>
                     {editando === clave ? (

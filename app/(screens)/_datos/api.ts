@@ -83,6 +83,8 @@ const RespCalidad = conEventos({ foto: Foto });
 const RespChapa = conEventos({ ficha: Ficha });
 const RespFicha = conEventos({ ficha: Ficha, listaParaPreparar: z.boolean() });
 const RespEntender = conEventos({
+  /** El equipo en texto libre (ej. "heladera no frost"): se pasa a pedidos, chapa y al 3D. */
+  tipoEquipo: z.string().optional(),
   caso: Caso,
   /** Lo que contó la persona es de riesgo alto (gas, batería hinchada...): mostrar antes de seguir. */
   bloqueo: z.object({ clases: z.array(z.string()), derivacion: z.string().optional() }).optional(),
@@ -94,6 +96,7 @@ export async function entenderSintoma(texto: string): Promise<z.infer<typeof Res
   if (USAR_FIXTURE) {
     await esperar(600);
     return RespEntender.parse({
+      tipoEquipo: "notebook",
       caso: {
         id: crypto.randomUUID(),
         clase: "notebook",
@@ -106,7 +109,10 @@ export async function entenderSintoma(texto: string): Promise<z.infer<typeof Res
   return llamar("/api/intake/entender", { texto }, RespEntender);
 }
 
-export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedidos>> {
+export async function pedidosDeFoto(
+  caso: Caso,
+  tipoEquipo?: string | null,
+): Promise<z.infer<typeof RespPedidos>> {
   if (USAR_FIXTURE) {
     await esperar(300);
     return RespPedidos.parse({
@@ -127,8 +133,13 @@ export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedi
       ],
     });
   }
-  return unaVez(`pedidos|${caso.id}|${caso.clase}`, () =>
-    llamar("/api/intake/pedidos", { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma }, RespPedidos),
+  const tipo = tipoEquipo?.trim() || undefined;
+  return unaVez(`pedidos|${caso.id}|${caso.clase}|${tipo ?? ""}`, () =>
+    llamar(
+      "/api/intake/pedidos",
+      { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma, tipoEquipo: tipo },
+      RespPedidos,
+    ),
   );
 }
 
@@ -155,9 +166,17 @@ export async function evaluarFoto(
   return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen }, RespCalidad);
 }
 
-export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {
-  if (imagenes.length === 0 && !USAR_FIXTURE) {
-    // Sin foto de la etiqueta no hay nada que leer: la ficha sale vacía y la persona escribe el modelo.
+/**
+ * Lee la chapa. `imagenes`: fotos de la etiqueta; `imagenesFrente`: del frente del equipo, para
+ * reconocerlo cuando la etiqueta no se lee (sale como "probable", fuente "foto": la persona confirma).
+ */
+export async function leerChapa(
+  caso: Caso,
+  imagenes: ImagenB64[],
+  { tipoEquipo, imagenesFrente = [] }: { tipoEquipo?: string | null; imagenesFrente?: ImagenB64[] } = {},
+): Promise<z.infer<typeof RespChapa>> {
+  if (imagenes.length === 0 && imagenesFrente.length === 0 && !USAR_FIXTURE) {
+    // Sin ninguna foto no hay nada que leer: la ficha sale vacía y la persona escribe el modelo.
     const nada = { valor: null, estado: "desconocido" as const };
     return RespChapa.parse({
       ficha: {
@@ -177,11 +196,17 @@ export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.in
       ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
     });
   }
-  const paraLeer = imagenes.slice(0, 3);
-  // Misma foto = misma lectura; si la persona saca otra foto de la etiqueta, se lee de nuevo.
-  const huella = paraLeer.map((i) => `${i.base64.length}:${i.base64.slice(-24)}`).join(",");
-  return unaVez(`chapa|${caso.id}|${huella}`, () =>
-    llamar("/api/intake/chapa", { casoId: caso.id, clase: caso.clase, imagenes: paraLeer }, RespChapa),
+  const etiqueta = imagenes.slice(0, 3);
+  const frente = imagenesFrente.slice(0, 2);
+  // Mismas fotos = misma lectura; si la persona saca otra, se lee de nuevo.
+  const huella = [...etiqueta, ...frente].map((i) => `${i.base64.length}:${i.base64.slice(-24)}`).join(",");
+  const tipo = tipoEquipo?.trim() || undefined;
+  return unaVez(`chapa|${caso.id}|${tipo ?? ""}|${huella}`, () =>
+    llamar(
+      "/api/intake/chapa",
+      { casoId: caso.id, clase: caso.clase, tipoEquipo: tipo, imagenes: etiqueta, imagenesFrente: frente },
+      RespChapa,
+    ),
   );
 }
 

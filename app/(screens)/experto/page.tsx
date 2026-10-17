@@ -29,7 +29,8 @@ async function decir(texto: string, senal: AbortSignal) {
 export default function Experto() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { ficha, preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada } = useFlujo();
+  const { ficha, preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada, tipoEquipo } =
+    useFlujo();
   // La pregunta inicial se hace una sola vez por caso: al volver a esta pantalla no se repite
   // (ni la llamada a /api/chat ni la voz).
   const [preguntaInicial] = useState(() => (guiaIniciada ? undefined : caso?.sintoma));
@@ -75,6 +76,8 @@ export default function Experto() {
         pack={preparado.pack}
         plano={plano.plano}
         origenPlano={plano.origen}
+        // El 3D elige la versión de cada pieza según el equipo (notebook, celular, heladera…).
+        tipoEquipo={tipoEquipo ?? undefined}
         manualFileId={preparado.manualFileId}
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
         preguntaInicial={preguntaInicial}

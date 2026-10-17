@@ -42,12 +42,15 @@ const NOMBRE_CLASE: Record<Caso["clase"], string> = {
 
 export default function QueSeRompio() {
   const router = useRouter();
-  const { caso, setCaso, agregarEventos } = useFlujo();
+  const { caso, setCaso, agregarEventos, tipoEquipo } = useFlujo();
   // Si la persona vuelve con la flecha, se sigue con el mismo caso (no se vuelve a llamar a la IA
   // ni se pierde lo ya preparado). Solo "No, lo corrijo" arma un caso nuevo.
   const [texto, setTexto] = useState(caso?.sintoma ?? "");
   const [pensando, setPensando] = useState(false);
   const [entendido, setEntendido] = useState<Caso | null>(caso);
+  /** Qué equipo es en texto libre (lo dice la IA; si la persona elige otra clase, gana su elección). */
+  const [tipo, setTipo] = useState<string | null>(tipoEquipo);
+  const [tipoDeLaIA, setTipoDeLaIA] = useState<string | null>(tipoEquipo);
   /** Solo habla después de que la persona mandó algo en esta visita (y el navegador deja sonar). */
   const [respondio, setRespondio] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -66,6 +69,8 @@ export default function QueSeRompio() {
     try {
       const r = await entenderSintoma(texto);
       setEntendido(r.caso);
+      setTipo(r.tipoEquipo ?? null);
+      setTipoDeLaIA(r.tipoEquipo ?? null);
       setEventos(r.eventos);
       setBloqueo(r.bloqueo ?? null);
     } catch (e) {
@@ -77,7 +82,7 @@ export default function QueSeRompio() {
 
   function confirmar() {
     if (!entendido) return;
-    setCaso(entendido); // primero el caso: los eventos lo referencian al guardarse
+    setCaso(entendido, tipo); // primero el caso: los eventos lo referencian al guardarse
     agregarEventos(eventos);
     router.push("/fotos");
   }
@@ -87,17 +92,21 @@ export default function QueSeRompio() {
     setBloqueo(null);
   }
 
+  // "equipo" es lo que devuelve la IA cuando no sabe qué es.
+  const tipoConocido = !!tipo && tipo !== "equipo";
   const dice = pensando
     ? "Dejame entender…"
     : error
       ? error
       : bloqueo
         ? "Pará un momento. Esto puede ser peligroso."
-        : entendido?.clase === "otro"
+        : entendido?.clase === "otro" && !tipoConocido
           ? "No me quedó claro qué equipo es. Elegilo abajo."
-          : entendido
-            ? `Entendí: es ${NOMBRE_CLASE[entendido.clase]} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
-            : "Hola. Contame qué se rompió.";
+          : entendido?.clase === "otro"
+            ? `Entendí: es “${tipo}” y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
+            : entendido
+              ? `Entendí: es ${NOMBRE_CLASE[entendido.clase]} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
+              : "Hola. Contame qué se rompió.";
 
   // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,
   // así el navegador deja reproducir audio).
@@ -182,7 +191,9 @@ export default function QueSeRompio() {
             </div>
           )}
           <p className="text-sm text-texto-suave">
-            {entendido.clase === "otro" ? "¿Qué equipo es?" : "¿No es eso? Tocá el equipo correcto:"}
+            {entendido.clase === "otro" && !tipoConocido
+              ? "¿Qué equipo es?"
+              : "¿No es eso? Tocá el equipo correcto:"}
           </p>
           <div className="mb-3 flex flex-wrap gap-2">
             {(Object.keys(NOMBRE_CLASE) as Caso["clase"][]).map((clase) => (
@@ -190,7 +201,11 @@ export default function QueSeRompio() {
                 key={clase}
                 type="button"
                 aria-pressed={entendido.clase === clase}
-                onClick={() => setEntendido({ ...entendido, clase })}
+                onClick={() => {
+                  setEntendido({ ...entendido, clase });
+                  // Si la persona corrige la clase, el tipo pasa a ser el que eligió (salvo "Otro").
+                  setTipo(clase === "otro" ? tipoDeLaIA : ETIQUETA_CLASE[clase].toLowerCase());
+                }}
                 className={`rounded-full border px-4 py-2 text-sm transition ${
                   entendido.clase === clase
                     ? "border-acento bg-acento/15 text-texto"
