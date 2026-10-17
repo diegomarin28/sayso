@@ -1,8 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia } from "../../shared";
+import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia, type Evento } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
-import { LIMITES, MODELOS, streamClaude, type StreamIA } from "../ia/claude";
+import { AcumuladorUso, LIMITES, MODELOS, registrarUso, streamClaude, totalUsd, type StreamIA, type Uso } from "../ia/claude";
+import { eventoCosto } from "../intake/entrada";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { Segmentador, type Segmento } from "./segmentos";
 
@@ -36,7 +37,8 @@ export type EventoChat =
   | { tipo: "paso"; coreografia: Coreografia }
   | { tipo: "bloqueo"; coreografia: Coreografia; clases: string[] }
   | { tipo: "buscando"; texto: string }
-  | { tipo: "fin"; pasos: number }
+  /** `costo`: lo que costó esta respuesta, como evento para el feed (no viene si no se llamó a la IA). */
+  | { tipo: "fin"; pasos: number; costo?: { usd: number; evento: Evento } }
   | { tipo: "error"; mensaje: string };
 
 const marcas3D = (piezas: string[]) => `Para mover el 3D, poné marcas AL PRINCIPIO de la frase a la que acompañan:
@@ -90,6 +92,7 @@ type Contexto = {
   piezas: Set<string>;
   paso: number;
   resaltadosPrevios: Accion[];
+  usos: Uso[];
 };
 
 /** Arma la Coreografia de una frase y la pasa por lib/safety. */
@@ -118,10 +121,30 @@ async function* fase(
   params: Anthropic.MessageCreateParamsNonStreaming,
   ctx: Contexto,
   detectarManual: boolean,
+  etapa: string,
+): AsyncGenerator<EventoChat, Resultado> {
+  const acumulador = new AcumuladorUso(etapa, params.model);
+  try {
+    return yield* frases(stream, params, ctx, detectarManual, acumulador);
+  } finally {
+    // También si se cortó a mitad (pidió el manual o hubo bloqueo): lo que ya se consumió se paga.
+    const uso = acumulador.uso();
+    registrarUso(uso);
+    ctx.usos.push(uso);
+  }
+}
+
+async function* frases(
+  stream: StreamIA,
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  ctx: Contexto,
+  detectarManual: boolean,
+  acumulador: AcumuladorUso,
 ): AsyncGenerator<EventoChat, Resultado> {
   const seg = new Segmentador(ctx.piezas);
   let crudo = "";
   for await (const ev of stream(params)) {
+    acumulador.ver(ev);
     if (ev.type !== "content_block_delta") continue;
     const listos: Segmento[] = [];
     if (ev.delta.type === "text_delta") {
@@ -166,7 +189,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
     ? [...new Set(entrada.plano.piezas.map((p) => p.pieza))]
     : [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
   const doc = pack.fuentes[0]?.doc ?? "Manual";
-  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [] };
+  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [] };
   const historial = entrada.historial.map((h) => `<${h.rol}>${h.texto}</${h.rol}>`).join("\n");
   const textoPregunta: Anthropic.TextBlockParam = {
     type: "text",
@@ -193,6 +216,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
         },
         ctx,
         !!manualFileId,
+        "experto: respuesta con el pack",
       );
     }
     if (resultado === "manual" && manualFileId) {
@@ -223,9 +247,11 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
         },
         ctx,
         false,
+        "experto: respuesta con el manual",
       );
     }
-    yield { tipo: "fin", pasos: ctx.paso };
+    const costo = eventoCosto(entrada.casoId, "experto", ctx.usos);
+    yield { tipo: "fin", pasos: ctx.paso, ...(costo ? { costo: { usd: totalUsd(ctx.usos), evento: costo } } : {}) };
   } catch (e) {
     console.error("[chat]", e);
     yield { tipo: "error", mensaje: "El experto no pudo responder. Probá de nuevo." };

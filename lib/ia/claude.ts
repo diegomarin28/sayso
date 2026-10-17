@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import Anthropic, { toFile } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
@@ -6,6 +7,7 @@ import type { z } from "zod";
  * Llamadas a Claude del carril A — dueño: Juanma.
  * Regla: todo lo que devuelve el modelo pasa por Zod. Si no valida, se reintenta
  * una vez; si vuelve a fallar, se lanza ErrorIA y el código decide qué mostrar.
+ * Cada llamada registra sus tokens y su costo estimado (ver "Costo" más abajo).
  */
 
 export const MODELOS = {
@@ -34,6 +36,105 @@ export const LIMITES = {
   chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30 },
 } as const;
 
+// ---------- Costo ----------
+
+type Tarifa = { entrada: number; salida: number };
+type Precio = Tarifa & { /** Tarifa para prompts largos (Haiku 5.5: más de 100K tokens). */ largo?: Tarifa & { desde: number } };
+
+/**
+ * USD por millón de tokens (precios de la API de Anthropic, octubre 2026).
+ * Caché de 5 minutos: escribir cuesta 1,25x la entrada y leer 0,1x.
+ */
+export const PRECIOS: Record<string, Precio> = {
+  [MODELOS.vision]: { entrada: 2, salida: 10 },
+  [MODELOS.corto]: { entrada: 0.1, salida: 0.5, largo: { desde: 100_000, entrada: 0.5, salida: 2.5 } },
+};
+const CACHE_ESCRITURA = 1.25;
+const CACHE_LECTURA = 0.1;
+/** La búsqueda web se cobra aparte: USD 10 cada 1000 búsquedas. */
+export const USD_POR_BUSQUEDA_WEB = 0.01;
+
+/** Tokens y costo de una llamada. */
+export type Uso = {
+  etapa: string;
+  modelo: string;
+  entrada: number;
+  salida: number;
+  cacheEscrita: number;
+  cacheLeida: number;
+  busquedas: number;
+  usd: number;
+};
+
+/** Lo que devuelve la API en `usage` (mensaje completo o delta del stream). */
+type UsoApi = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  server_tool_use?: { web_search_requests?: number | null } | null;
+};
+
+export function calcularUso(etapa: string, modelo: string, u: UsoApi): Uso {
+  const entrada = u.input_tokens ?? 0;
+  const salida = u.output_tokens ?? 0;
+  const cacheEscrita = u.cache_creation_input_tokens ?? 0;
+  const cacheLeida = u.cache_read_input_tokens ?? 0;
+  const busquedas = u.server_tool_use?.web_search_requests ?? 0;
+  // Un modelo sin precio cargado se cuenta como Sonnet, para no subestimar.
+  const p = PRECIOS[modelo] ?? PRECIOS[MODELOS.vision];
+  const t: Tarifa = p.largo && entrada + cacheEscrita + cacheLeida > p.largo.desde ? p.largo : p;
+  const usd =
+    (entrada * t.entrada + cacheEscrita * t.entrada * CACHE_ESCRITURA + cacheLeida * t.entrada * CACHE_LECTURA + salida * t.salida) / 1e6 +
+    busquedas * USD_POR_BUSQUEDA_WEB;
+  return { etapa, modelo, entrada, salida, cacheEscrita, cacheLeida, busquedas, usd };
+}
+
+/** Junta el `usage` de un stream (llega en `message_start` y se completa en `message_delta`). */
+export class AcumuladorUso {
+  private u: UsoApi = {};
+  constructor(
+    private readonly etapa: string,
+    private readonly modelo: string,
+  ) {}
+
+  ver(ev: Anthropic.RawMessageStreamEvent): void {
+    if (ev.type === "message_start") this.u = { ...ev.message.usage };
+    else if (ev.type === "message_delta") {
+      // Los valores del delta son acumulados: cuando vienen, reemplazan a los del inicio.
+      for (const [k, v] of Object.entries(ev.usage)) if (v !== null && v !== undefined) (this.u as Record<string, unknown>)[k] = v;
+    }
+  }
+
+  uso(): Uso {
+    return calcularUso(this.etapa, this.modelo, this.u);
+  }
+}
+
+const medicion = new AsyncLocalStorage<Uso[]>();
+
+/** Registra el uso de una llamada: en el log siempre, y en la medición en curso si hay una. */
+export function registrarUso(uso: Uso): void {
+  medicion.getStore()?.push(uso);
+  console.info(
+    `[costo] ${uso.etapa} · ${uso.modelo} · entrada ${uso.entrada} · salida ${uso.salida} · caché escrita ${uso.cacheEscrita} / leída ${uso.cacheLeida}` +
+      `${uso.busquedas ? ` · ${uso.busquedas} búsquedas` : ""} · US$ ${uso.usd.toFixed(4)}`,
+  );
+}
+
+/** Corre `fn` y devuelve, además de su resultado, el uso de todas las llamadas que hizo. */
+export async function medirCosto<T>(fn: () => Promise<T>): Promise<{ resultado: T; usos: Uso[] }> {
+  const usos: Uso[] = [];
+  const resultado = await medicion.run(usos, fn);
+  return { resultado, usos };
+}
+
+export function totalUsd(usos: Uso[]): number {
+  return usos.reduce((s, u) => s + u.usd, 0);
+}
+
+// ---------- Llamadas ----------
+
 export type PedidoIA = {
   modelo: string;
   system: string;
@@ -41,6 +142,8 @@ export type PedidoIA = {
   /** Esquema que se le pide al modelo (formato de salida). */
   formato: z.ZodType;
   maxTokens?: number;
+  /** Nombre del paso, para el registro de costos (ej. "recepcion: calidad de foto"). */
+  etapa?: string;
 };
 
 /** Devuelve el texto crudo de la respuesta. Se reemplaza en los tests. */
@@ -63,7 +166,7 @@ function obtenerCliente(): Anthropic {
   return cliente;
 }
 
-export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, formato, maxTokens }) => {
+export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, formato, maxTokens, etapa }) => {
   const respuesta = await obtenerCliente().messages.create({
     model: modelo,
     max_tokens: maxTokens ?? 4000,
@@ -71,6 +174,7 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
     system,
     messages: [{ role: "user", content: contenido }],
   });
+  registrarUso(calcularUso(etapa ?? "sin etapa", modelo, respuesta.usage));
   if (respuesta.stop_reason === "refusal") {
     throw new ErrorIA("El modelo rechazó el pedido", respuesta.stop_details);
   }
@@ -81,15 +185,19 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
 };
 
 /** Llamada completa (con streaming para pedidos largos, ej. un PDF). Se reemplaza en los tests. */
-export type EnviarMensaje = (params: Anthropic.MessageCreateParamsNonStreaming) => Promise<Anthropic.Message>;
+export type EnviarMensaje = (params: Anthropic.MessageCreateParamsNonStreaming, etapa?: string) => Promise<Anthropic.Message>;
 
-export const enviarMensaje: EnviarMensaje = async (params) => {
+export const enviarMensaje: EnviarMensaje = async (params, etapa) => {
   const mensaje = await obtenerCliente().messages.stream(params).finalMessage();
+  registrarUso(calcularUso(etapa ?? "sin etapa", params.model, mensaje.usage));
   if (mensaje.stop_reason === "refusal") throw new ErrorIA("El modelo rechazó el pedido", mensaje.stop_details);
   return mensaje;
 };
 
-/** Stream de eventos crudos (texto y citas a medida que llegan). Se reemplaza en los tests. */
+/**
+ * Stream de eventos crudos (texto y citas a medida que llegan). Se reemplaza en los tests.
+ * Quien lo consume registra el uso con `AcumuladorUso` (ver lib/chat/conversar.ts).
+ */
 export type StreamIA = (params: Anthropic.MessageCreateParamsNonStreaming) => AsyncIterable<Anthropic.RawMessageStreamEvent>;
 
 export const streamClaude: StreamIA = (params) => obtenerCliente().messages.stream(params);

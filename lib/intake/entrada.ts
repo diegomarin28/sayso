@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ClaseEquipo, Evento, TipoFoto, type Agente } from "../../shared";
-import { ErrorIA, LIMITES } from "../ia/claude";
+import { ErrorIA, LIMITES, medirCosto, MODELOS, totalUsd, type Uso } from "../ia/claude";
 
 /** Esquemas de entrada de /api/intake/*. Todo lo que manda el cliente se valida acá. */
 
@@ -54,7 +54,42 @@ export function evento(
   });
 }
 
-/** Lee y valida el cuerpo; ejecuta `fn`; traduce errores a respuestas HTTP. */
+const NOMBRE_MODELO: Record<string, string> = { [MODELOS.vision]: "Sonnet", [MODELOS.corto]: "Haiku" };
+
+/** "US$ 0,0123" */
+export function formatoUsd(usd: number): string {
+  return `US$ ${usd.toFixed(4).replace(".", ",")}`;
+}
+
+/** Evento del feed con el costo de las llamadas a la IA de un paso (null si no hubo llamadas). */
+export function eventoCosto(casoId: string, agente: z.infer<typeof Agente>, usos: Uso[]): Evento | null {
+  if (usos.length === 0) return null;
+  const suma = (k: "entrada" | "salida" | "cacheEscrita" | "cacheLeida") => usos.reduce((s, u) => s + u[k], 0);
+  const modelos = [...new Set(usos.map((u) => NOMBRE_MODELO[u.modelo] ?? u.modelo))].join(" y ");
+  const leida = suma("cacheLeida");
+  const usd = totalUsd(usos);
+  return evento(
+    casoId,
+    agente,
+    "costo",
+    `Costo de este paso: ${formatoUsd(usd)} (${usos.length} ${usos.length === 1 ? "llamada" : "llamadas"} a ${modelos}; ` +
+      `${suma("entrada") + suma("cacheEscrita")} tokens de entrada${leida ? ` y ${leida} leídos de la caché` : ""}, ${suma("salida")} de salida).`,
+    { usd, usos },
+  );
+}
+
+/** Si el resultado trae `eventos`, le suma el del costo (con el caso y el agente del primer evento). */
+function conCosto(resultado: unknown, usos: Uso[]): unknown {
+  if (!resultado || typeof resultado !== "object" || !("eventos" in resultado)) return resultado;
+  const eventos = (resultado as { eventos: unknown }).eventos;
+  if (!Array.isArray(eventos) || eventos.length === 0) return resultado;
+  const primero = Evento.safeParse(eventos[0]);
+  if (!primero.success) return resultado;
+  const costo = eventoCosto(primero.data.casoId, primero.data.agente, usos);
+  return costo ? { ...resultado, eventos: [...eventos, costo] } : resultado;
+}
+
+/** Lee y valida el cuerpo; ejecuta `fn` midiendo el costo de la IA; traduce errores a respuestas HTTP. */
 export async function manejar<T>(
   req: Request,
   esquema: z.ZodType<T>,
@@ -71,7 +106,8 @@ export async function manejar<T>(
     return Response.json({ error: "Entrada inválida", detalle: z.treeifyError(r.error) }, { status: 400 });
   }
   try {
-    return Response.json(await fn(r.data));
+    const { resultado, usos } = await medirCosto(() => fn(r.data));
+    return Response.json(conCosto(resultado, usos));
   } catch (e) {
     if (e instanceof ErrorIA || e instanceof Anthropic.APIError) {
       console.error("[intake] IA", e.message);

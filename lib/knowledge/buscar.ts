@@ -67,7 +67,7 @@ export async function buscarManual(
   ];
 
   for (let vuelta = 0; vuelta < LIMITES.bibliotecario.vueltas; vuelta++) {
-    const r = await enviar({ model: MODELOS.vision, max_tokens: 8000, system: SYSTEM_BUSCAR, tools, messages });
+    const r = await enviar({ model: MODELOS.vision, max_tokens: 8000, system: SYSTEM_BUSCAR, tools, messages }, "bibliotecario: buscar manual");
     messages.push({ role: "assistant", content: r.content });
 
     if (r.stop_reason === "pause_turn") continue; // la búsqueda del servidor sigue en la próxima vuelta

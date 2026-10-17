@@ -68,6 +68,7 @@ export async function leerChapa(
         { type: "text", text: `Equipo: ${entrada.clase}. Leé la etiqueta.` },
       ],
       maxTokens: 2000,
+      etapa: "identificador: leer chapa",
     },
     llamar,
   );
