@@ -18,7 +18,7 @@ import { materialDeParte, materialPara } from "./materiales";
  *     └─ Mesh (name = `${id}__malla`, desplazada -pivote)
  *          └─ Meshes de detalle (`${id}__malla__detalle_N`: aspas, chips…), opcionales
  *
- * Con `biblioteca` (piezas.glb), cada pieza cuyo id empieza con un tipo de la biblioteca usa esa
+ * Con `biblioteca` (public/models/piezas), cada pieza cuyo id empieza con un tipo de la biblioteca usa esa
  * forma (la variante que menos se deforma) ajustada a `dim`: la malla principal es el cuerpo y las demás partes son detalles.
  * Sin biblioteca (o tipo desconocido) se usa la primitiva de `forma` con detalles hechos en código.
  *     └─ Groups de las piezas hijas
