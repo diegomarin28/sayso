@@ -5,6 +5,7 @@
  *   npx tsx --env-file=.env.local lib/knowledge/probar-pack.ts --solo-buscar "Lenovo" "ThinkPad E14 Gen 2"
  */
 import type { Ficha } from "../../shared";
+import { medirCosto, totalUsd } from "../ia/claude";
 import { armarKnowledgePack } from "./armar";
 import { buscarManual } from "./buscar";
 
@@ -33,7 +34,8 @@ async function main() {
     confirmadaPorUsuario: true,
   };
   const t0 = Date.now();
-  const { pack, manual, eventos, vistas } = await armarKnowledgePack({ ficha, sintoma });
+  const { resultado, usos } = await medirCosto(() => armarKnowledgePack({ ficha, sintoma }));
+  const { pack, manual, eventos, vistas } = resultado;
   for (const e of eventos) console.log(`· ${e.mensaje}`);
   console.log(`\nManual: ${manual ? `${manual.url} (${(manual.bytes / 1e6).toFixed(1)} MB)` : "ninguno"}  verificado=${pack.verificado}`);
   console.log("\nPiezas:");
@@ -46,6 +48,14 @@ async function main() {
   console.log("\nRepuestos:", pack.repuestos.map((r) => `${r.pieza}=${r.numeroParte} (p.${r.cita.pagina})`).join(", ") || "ninguno");
   console.log("Advertencias:", pack.advertencias.length);
   console.log(`Vistas para /api/plano: explosionada p. ${vistas.explosionada ?? "—"}, interior p. ${vistas.interior ?? "—"}`);
+  console.log(`Extracto: ${manual ? `${manual.paginas.length} páginas (${manual.paginas.join(", ")}), ${(manual.bytes / 1e6).toFixed(1)} MB` : "—"}`);
+  console.log("\nCosto por llamada:");
+  for (const u of usos) {
+    console.log(
+      `  ${u.etapa.padEnd(32)} ${u.modelo.padEnd(18)} entrada ${String(u.entrada + u.cacheEscrita).padStart(7)} · caché leída ${String(u.cacheLeida).padStart(6)} · salida ${String(u.salida).padStart(6)} · US$ ${u.usd.toFixed(4)}`,
+    );
+  }
+  console.log(`  TOTAL US$ ${totalUsd(usos).toFixed(4)}`);
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 

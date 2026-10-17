@@ -11,11 +11,19 @@ import type { z } from "zod";
  */
 
 export const MODELOS = {
-  /** Visión, lectura de chapa, conversación. */
+  /** Visión y razonamiento: calidad de foto, lectura de chapa, chat con el manual. */
   vision: "claude-sonnet-5-5",
-  /** Textos cortos y clasificaciones. */
+  /** Textos cortos, clasificaciones y pasos sin visión: entender, fotos, elegir páginas, buscar manual. */
   corto: "claude-haiku-5-5",
 } as const;
+
+/** Qué modelo usa cada paso que podría ir con cualquiera de los dos (se decide midiendo calidad y costo). */
+export const MODELO_DE = {
+  /** Lectura del extracto del manual para armar el pack. */
+  lectura: MODELOS.vision as string,
+  /** Chat respondiendo solo con el pack (sin PDF). */
+  chatPack: MODELOS.vision as string,
+};
 
 /** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */
 export const LIMITES = {
@@ -36,6 +44,8 @@ export const LIMITES = {
     /** Tope de texto por página abierta con web_fetch (los PDF no se cortan: se prueban con probar_pdf). */
     maxTokensPagina: 10_000,
   },
+  /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
+  extracto: { maxPaginas: 14, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400 },
   pack: { maxPasos: 12 },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
@@ -219,6 +229,32 @@ export const subirArchivo: SubirArchivo = async (datos, nombre) => {
   const meta = await obtenerCliente().files.upload({ file: archivo, expires_in_seconds: LIMITES.pdf.venceEnSeg });
   return meta.id;
 };
+
+/** Nombre con el que se subió un archivo a la Files API. */
+export async function nombreDeArchivo(fileId: string): Promise<string> {
+  return (await obtenerCliente().files.retrieveMetadata(fileId)).filename;
+}
+
+/**
+ * Herramientas web según el modelo: Sonnet usa las versiones con filtrado dinámico;
+ * Haiku, las básicas (las nuevas son solo para Sonnet y Opus).
+ */
+export function herramientasWeb(modelo: string, maximos: { busquedas: number; paginas?: number }): Anthropic.ToolUnion[] {
+  const nuevas = modelo !== MODELOS.corto;
+  const tools: Anthropic.ToolUnion[] = [
+    nuevas
+      ? { type: "web_search_20260209", name: "web_search", max_uses: maximos.busquedas }
+      : { type: "web_search_20250305", name: "web_search", max_uses: maximos.busquedas },
+  ];
+  if (maximos.paginas) {
+    tools.push(
+      nuevas
+        ? { type: "web_fetch_20260209", name: "web_fetch", max_uses: maximos.paginas }
+        : { type: "web_fetch_20250910", name: "web_fetch", max_uses: maximos.paginas },
+    );
+  }
+  return tools;
+}
 
 /** Primer objeto JSON dentro de un texto (por si el modelo agrega algo alrededor). */
 export function extraerJson(texto: string): unknown {

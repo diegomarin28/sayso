@@ -1,24 +1,29 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
-import { enviarMensaje, ErrorIA, LIMITES, MODELOS, subirArchivo, type EnviarMensaje, type SubirArchivo } from "../ia/claude";
+import { enviarMensaje, ErrorIA, LIMITES, MODELOS, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo } from "../ia/claude";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
+import { nombreExtracto, paginaOriginal, prepararExtracto, type Extracto } from "./extracto";
 import { leerManual, SYSTEM_LECTOR, type Lectura } from "./lector";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
-import { combinar, faltantes, instruccionesVistas, SIN_VISTAS, ubicarVistas } from "./vistas";
+import { combinar, faltantes, instruccionesVistas, SIN_VISTAS } from "./vistas";
 
 /**
- * Armado del knowledge pack: buscar manual → descargar PDF → leerlo con citas → validar.
- * En la misma lectura se ubican las vistas del manual para el cartógrafo (/api/plano).
+ * Armado del knowledge pack: buscar manual → extracto con las páginas que importan → leerlo con citas → validar.
+ * A la IA nunca se le manda el PDF entero (ver extracto.ts). En la misma lectura se ubican las vistas
+ * para el cartógrafo (/api/plano). Todas las páginas que salen de acá son del manual COMPLETO.
  * El pack se arma una vez por modelo + síntoma; el manual y sus vistas, una vez por modelo.
  */
 
-/** El manual elegido, ya subido a la Files API. A4 (/api/chat) lo reusa por `fileId` con caché de prompt. */
-export type Manual = { url: string; fileId: string; bytes: number; titulo: string; fuente: ManualEncontrado["fuente"] };
+/**
+ * El manual elegido. `fileId` es el EXTRACTO subido a la Files API (A4 y /api/plano lo leen con caché de prompt);
+ * `paginas`: qué páginas del manual completo tiene el extracto, en orden.
+ */
+export type Manual = { url: string; fileId: string; bytes: number; titulo: string; fuente: ManualEncontrado["fuente"]; paginas: number[] };
 
 /** `vistas`: páginas físicas del PDF con la vista explosionada y una vista interior (para /api/plano). */
 export type Armado = { pack: KnowledgePack; manual: Manual | null; vistas: Vistas };
@@ -105,7 +110,27 @@ function mensajeVistas(v: Vistas): string {
   return "No encontré en el manual la vista explosionada ni una vista del interior.";
 }
 
-export type Deps = { enviar?: EnviarMensaje; subir?: SubirArchivo; fetch?: Fetch; cache?: CachePacks; manuales?: RepoManuales };
+export type Deps = {
+  enviar?: EnviarMensaje;
+  /** Llamadas cortas (elegir páginas del extracto). */
+  llamar?: LlamarIA;
+  subir?: SubirArchivo;
+  fetch?: Fetch;
+  cache?: CachePacks;
+  manuales?: RepoManuales;
+};
+
+/** Pasa las páginas citadas del extracto a las del manual completo. */
+function aPaginasDelManual(c: Contenido, paginas: number[]): Contenido {
+  const pag = (n: number | undefined) => (n === undefined ? undefined : paginaOriginal(paginas, n));
+  const vista = (n: number | null) => (n === null ? null : paginaOriginal(paginas, n));
+  return {
+    ...c,
+    pasos: c.pasos.map((p) => (p.cita?.pagina ? { ...p, cita: { ...p.cita, pagina: pag(p.cita.pagina) } } : p)),
+    repuestos: c.repuestos.map((r) => (r.cita.pagina ? { ...r, cita: { ...r.cita, pagina: pag(r.cita.pagina) } } : r)),
+    vistas: { explosionada: vista(c.vistas.explosionada), interior: vista(c.vistas.interior) },
+  };
+}
 
 export async function armarKnowledgePack(
   entrada: { ficha: Ficha; sintoma: string },
@@ -150,10 +175,24 @@ export async function armarKnowledgePack(
   // 2. Si no, el bibliotecario lo busca (agente con búsqueda web + probar_pdf).
   encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: ficha.clase }, { enviar, fetch: deps.fetch });
 
+  // 3. Extracto: solo las páginas que importan. Si no se puede armar, no se manda el PDF entero: guía pública.
   let manual: Manual | null = null;
+  let extracto: Extracto | null = null;
   if (encontrado) {
-    const fileId = await (deps.subir ?? subirArchivo)(encontrado.pdf.datos, "manual.pdf");
-    manual = { url: encontrado.url, fileId, bytes: encontrado.pdf.bytes, titulo: encontrado.titulo, fuente: encontrado.fuente };
+    try {
+      const fijas = [vistas.explosionada, vistas.interior].filter((n): n is number => n !== null);
+      extracto = await prepararExtracto(new Uint8Array(encontrado.pdf.datos), nombreEquipo, sintoma, fijas, deps.llamar);
+      const datos = Buffer.from(extracto.datos);
+      const fileId = await (deps.subir ?? subirArchivo)(datos, nombreExtracto(extracto.paginas));
+      manual = { url: encontrado.url, fileId, bytes: datos.length, titulo: encontrado.titulo, fuente: encontrado.fuente, paginas: extracto.paginas };
+      eventos.push(
+        evento(casoId, "bibliotecario", "extracto_armado", `Elegí ${extracto.paginas.length} páginas del manual para leer (no el manual entero).`, {
+          paginas: extracto.paginas,
+        }),
+      );
+    } catch (e) {
+      console.error("[knowledge] no pude armar el extracto del manual:", (e as Error).message);
+    }
   }
   eventos.push(
     manual
@@ -168,7 +207,7 @@ export async function armarKnowledgePack(
   if (manual) {
     try {
       lectura = await leerManual(manual, tareaPack(nombreEquipo, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
-      contenido = parsearContenido(lineasConCitas(lectura.bloques), manual.titulo);
+      contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
     } catch (e) {
       console.error("[knowledge] falló la lectura del manual:", (e as Error).message);
     }
@@ -194,7 +233,12 @@ export async function armarKnowledgePack(
   }
   if (!contenido || !lectura) throw new Error("inalcanzable");
   // Las páginas solo tienen sentido con lo que se leyó del PDF del manual.
-  vistas = conManual ? combinar(vistas, contenido.vistas) : SIN_VISTAS;
+  // Si la lectura no marcó alguna vista, queda la que eligió el bibliotecario al armar el extracto.
+  const elegidas: Vistas = {
+    explosionada: extracto?.seleccion?.explosionada.find((n) => manual?.paginas.includes(n)) ?? null,
+    interior: extracto?.seleccion?.interior.find((n) => manual?.paginas.includes(n)) ?? null,
+  };
+  vistas = conManual ? combinar(combinar(vistas, contenido.vistas), elegidas) : SIN_VISTAS;
 
   const pack = KnowledgePack.parse({
     modelo: nombreEquipo,
@@ -218,15 +262,6 @@ export async function armarKnowledgePack(
   );
 
   if (manual && conManual) {
-    // 4. Si alguna vista no salió en la lectura, búsqueda dedicada (reusa la caché de prompts del manual).
-    const faltan = faltantes(vistas);
-    if (faltan.length) {
-      try {
-        vistas = combinar(vistas, await ubicarVistas(manual, faltan, enviar));
-      } catch (e) {
-        console.error("[knowledge] no pude ubicar las vistas del manual:", (e as Error).message);
-      }
-    }
     eventos.push(evento(casoId, "bibliotecario", "vistas_ubicadas", mensajeVistas(vistas), { vistas }));
 
     // 5. Se guarda el manual para la próxima vez. Un manual ya verificado no pierde esa marca.
