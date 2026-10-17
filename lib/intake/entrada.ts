@@ -1,12 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ClaseEquipo, Evento, TipoFoto, type Agente } from "../../shared";
-import { ErrorIA } from "../ia/claude";
+import { ErrorIA, LIMITES } from "../ia/claude";
 
 /** Esquemas de entrada de /api/intake/*. Todo lo que manda el cliente se valida acá. */
 
 /** ~5 MB de imagen. Claude acepta hasta 5 MB por imagen. */
-const MAX_BASE64 = 7_000_000;
+const MAX_BASE64 = LIMITES.foto.maxBase64;
 
 export const ImagenSchema = z.object({
   base64: z
@@ -33,7 +33,7 @@ export const EntradaCalidad = z.object({
 export const EntradaChapa = z.object({
   casoId: z.string().min(1),
   clase: ClaseEquipo,
-  imagenes: z.array(ImagenSchema).min(1).max(3),
+  imagenes: z.array(ImagenSchema).min(1).max(LIMITES.foto.chapaMaxImagenes),
 });
 
 export function evento(

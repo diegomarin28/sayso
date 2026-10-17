@@ -145,6 +145,15 @@ describe("conversar", () => {
     expect(ev.map((e) => e.tipo)).toEqual(["paso", "fin"]);
   });
 
+  it("con plano, descarta piezas que no están en el plano", async () => {
+    const plano = { modelo: "x", unidades: "cm" as const, piezas: [{ pieza: "ventilador", forma: "caja" as const, dim: [1, 1, 1] as [number, number, number], pos: [0, 0, 0] as [number, number, number], pivote: [0, 0, 0] as [number, number, number] }] };
+    const stream = streamFalso(["[[resaltar:ssd]] [[resaltar:ventilador]] Mirá acá. "]);
+    const ev = await todos(conversar({ ...base, plano, pregunta: "¿Dónde está el ventilador?" }, stream));
+    const p = ev[0];
+    if (p.tipo !== "paso") throw new Error();
+    expect(p.coreografia.acciones).toEqual([{ t: "resaltar", pieza: "ventilador" }]);
+  });
+
   it("un error del stream sale como evento de error", async () => {
     const roto: StreamIA = async function* () {
       throw new Error("se cortó");

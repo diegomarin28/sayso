@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { Foto, type TipoFoto } from "../../shared";
-import { bloqueImagen, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { bloqueImagen, LIMITES, MODELOS, pedirJson, type ImagenEntrada, type LlamarIA } from "../ia/claude";
 
 /**
  * Control de calidad de una foto. La IA mide; el código decide si se acepta.
  */
 
-export const NITIDEZ_MINIMA = 0.6;
+export const NITIDEZ_MINIMA = LIMITES.foto.nitidezMinima;
 
 const SalidaCalidad = z.object({
   nitidez: z.number(),

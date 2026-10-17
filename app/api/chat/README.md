@@ -2,7 +2,7 @@
 
 Dueño: Juanma. Lógica en `lib/chat/`.
 
-`POST { casoId, pack, manualFileId?, historial?: [{ rol: "persona"|"experto", texto }], pregunta, modo?: "auto"|"manual" }`
+`POST { casoId, pack, plano?, manualFileId?, historial?: [{ rol: "persona"|"experto", texto }], pregunta, modo?: "auto"|"manual" }`
 (`pack` y `manualFileId` salen de `/api/knowledge`)
 
 Responde un **stream NDJSON** (una línea JSON por evento), frase por frase:
@@ -16,6 +16,6 @@ Responde un **stream NDJSON** (una línea JSON por evento), frase por frase:
 
 - Primero contesta con el knowledge pack (~2–4 s a la primera frase); si no alcanza, consulta el PDF completo con citas de la API.
 - La pregunta pasa por `lib/safety` antes de llamar a la IA, y cada frase pasa por `filtrarCoreografia` antes de salir.
-- Marcas que no corresponden a piezas del 3D se descartan.
+- Si viene `plano` (el `PlanoDePiezas` del visor), solo salen ids de piezas de ese plano; sin plano, se usan las del pack + la plantilla genérica.
 
 Prueba real: `npx tsx --env-file=.env.local lib/chat/probar-chat.ts <pack.json fuera del repo> "Lenovo" "ThinkPad E14 Gen 2" "¿Dónde está el SSD?"`

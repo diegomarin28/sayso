@@ -1,13 +1,13 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
-import { enviarMensaje, ErrorIA, MODELOS, subirArchivo, type EnviarMensaje, type SubirArchivo } from "../ia/claude";
+import { enviarMensaje, ErrorIA, LIMITES, MODELOS, subirArchivo, type EnviarMensaje, type SubirArchivo } from "../ia/claude";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
-import { buscarManual, type Candidato } from "./buscar";
+import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
 import { lineasConCitas, parsearContenido } from "./lineas";
-import { manualConocido } from "./manuales";
+import { repoManuales, type RepoManuales } from "./manuales";
 
 /**
  * Armado del knowledge pack: buscar manual → descargar PDF → leerlo con citas → validar.
@@ -15,9 +15,10 @@ import { manualConocido } from "./manuales";
  */
 
 /** El manual elegido, ya subido a la Files API. A4 (/api/chat) lo reusa por `fileId` con caché de prompt. */
-export type Manual = { url: string; fileId: string; bytes: number; titulo: string; fuente: Candidato["fuente"] };
+export type Manual = { url: string; fileId: string; bytes: number; titulo: string; fuente: ManualEncontrado["fuente"] };
 
-export type Armado = { pack: KnowledgePack; manual: Manual | null };
+/** `paginasVistaExplosionada`: páginas del manual con la vista explosionada / lista de piezas (para el cartógrafo). */
+export type Armado = { pack: KnowledgePack; manual: Manual | null; paginasVistaExplosionada: number[] };
 
 /** Caché simple en memoria. Cuando exista lib/supabase se cambia por una tabla. */
 export interface CachePacks {
@@ -45,9 +46,10 @@ PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la v
 PASO|orden|instrucción corta para una persona sin experiencia|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${conManual ? "el manual" : "la fuente"}
 ADVERTENCIA|texto
+VISTA|qué muestra (una línea por cada página con vista explosionada o lista de piezas; citá la página)
 Reglas:
 - Ids de pieza en minúsculas con guion bajo. Usá estos cuando correspondan: ${IDS_PLANTILLA.join(", ")}.
-- Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo 12).
+- Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${conManual ? "el manual" : "las fuentes"}.
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto.
@@ -87,7 +89,7 @@ async function leer(
   });
 }
 
-export type Deps = { enviar?: EnviarMensaje; subir?: SubirArchivo; fetch?: Fetch; cache?: CachePacks };
+export type Deps = { enviar?: EnviarMensaje; subir?: SubirArchivo; fetch?: Fetch; cache?: CachePacks; manuales?: RepoManuales };
 
 export async function armarKnowledgePack(
   entrada: { ficha: Ficha; sintoma: string },
@@ -110,23 +112,29 @@ export async function armarKnowledgePack(
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
   eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
 
-  const conocido = manualConocido(ficha.marca.valor, modelo);
-  const candidatos = conocido ? [conocido] : await buscarManual({ marca: ficha.marca.valor, modelo, clase: ficha.clase }, enviar);
-  let manual: Manual | null = null;
-  for (const c of candidatos.slice(0, 4)) {
-    const pdf = await descargarPdf(c.url, deps.fetch);
+  // 1. Caché de manuales (Supabase): si ya lo encontramos y verificamos antes, se reusa.
+  const repo = deps.manuales ?? repoManuales();
+  let encontrado: ManualEncontrado | null = null;
+  const registro = await repo.buscar(ficha.marca.valor, modelo);
+  if (registro?.verificado) {
+    const pdf = await descargarPdf(registro.url, deps.fetch);
     if (pdf) {
-      const fileId = await (deps.subir ?? subirArchivo)(pdf.datos, "manual.pdf");
-      manual = { url: pdf.url, fileId, bytes: pdf.bytes, titulo: c.titulo, fuente: c.fuente };
-      break;
+      encontrado = { url: registro.url, titulo: registro.titulo, fuente: registro.fuente, pdf };
+      eventos.push(evento(casoId, "bibliotecario", "manual_en_cache", `Ya conocía el manual: ${registro.titulo}.`, { url: registro.url }));
     }
+  }
+  // 2. Si no, el bibliotecario lo busca (agente con búsqueda web + probar_pdf).
+  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: ficha.clase }, { enviar, fetch: deps.fetch });
+
+  let manual: Manual | null = null;
+  if (encontrado) {
+    const fileId = await (deps.subir ?? subirArchivo)(encontrado.pdf.datos, "manual.pdf");
+    manual = { url: encontrado.url, fileId, bytes: encontrado.pdf.bytes, titulo: encontrado.titulo, fuente: encontrado.fuente };
   }
   eventos.push(
     manual
-      ? evento(casoId, "bibliotecario", "manual_encontrado", `Encontré el manual: ${manual.titulo}.`, { url: manual.url })
-      : evento(casoId, "bibliotecario", "manual_no_encontrado", "No encontré el manual oficial; uso guías públicas (NO VERIFICADO).", {
-          candidatos: candidatos.length,
-        }),
+      ? evento(casoId, "bibliotecario", "manual_encontrado", `Tengo el manual: ${manual.titulo}.`, { url: manual.url })
+      : evento(casoId, "bibliotecario", "manual_no_encontrado", "No encontré el manual oficial; uso guías públicas (NO VERIFICADO)."),
   );
 
   const respuesta = await leer(nombreEquipo, sintoma, manual, enviar);
@@ -137,9 +145,7 @@ export async function armarKnowledgePack(
     modelo: nombreEquipo,
     clase: ficha.clase,
     verificado: manual !== null && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO"),
-    fuentes: manual
-      ? [{ doc: manual.titulo, url: manual.url }]
-      : candidatos.map((c) => ({ doc: c.titulo, url: c.url })),
+    fuentes: manual ? [{ doc: manual.titulo, url: manual.url }] : fuentesWeb(bloques),
     piezas: contenido.piezas,
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
@@ -154,7 +160,28 @@ export async function armarKnowledgePack(
     }),
   );
 
-  const armado = { pack, manual };
+  if (manual) {
+    // 3. Se guarda para la próxima vez. Verificado = PDF real + al menos una cita de página.
+    await repo.guardar({
+      marca: ficha.marca.valor ?? "",
+      modelo,
+      url: manual.url,
+      titulo: manual.titulo,
+      paginas_vista_explosionada: contenido.vistas,
+      verificado: pack.verificado,
+      fuente: manual.fuente,
+    });
+  }
+
+  const armado = { pack, manual, paginasVistaExplosionada: contenido.vistas };
   await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
+}
+
+/** Fuentes web citadas cuando no hubo manual (para mostrar de dónde salió la guía NO VERIFICADA). */
+function fuentesWeb(bloques: Anthropic.TextBlock[]): { doc: string; url: string }[] {
+  const vistas = new Map<string, string>();
+  for (const b of bloques)
+    for (const c of b.citations ?? []) if (c.type === "web_search_result_location") vistas.set(c.url, c.title ?? c.url);
+  return [...vistas].map(([url, doc]) => ({ doc, url }));
 }

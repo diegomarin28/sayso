@@ -1,8 +1,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { KnowledgePack, type Accion, type Cita, type Coreografia } from "../../shared";
+import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
-import { MODELOS, streamClaude, type StreamIA } from "../ia/claude";
+import { LIMITES, MODELOS, streamClaude, type StreamIA } from "../ia/claude";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { Segmentador, type Segmento } from "./segmentos";
 
@@ -18,11 +18,13 @@ import { Segmentador, type Segmento } from "./segmentos";
 export const EntradaChat = z.object({
   casoId: z.string().min(1),
   pack: KnowledgePack,
+  /** Plano que está mostrando el visor. Si viene, solo se aceptan sus ids de pieza. */
+  plano: PlanoDePiezas.optional(),
   /** file_id del manual en la Files API (lo devuelve /api/knowledge). */
   manualFileId: z.string().nullable().optional(),
   historial: z
     .array(z.object({ rol: z.enum(["persona", "experto"]), texto: z.string().max(4000) }))
-    .max(30)
+    .max(LIMITES.chat.maxHistorial)
     .default([]),
   pregunta: z.string().trim().min(1).max(2000),
   /** "auto" (por defecto): primero el pack; si no alcanza, el manual. "manual": directo al PDF. */
@@ -159,7 +161,10 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
     return;
   }
 
-  const piezas = [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
+  // Solo ids que existen en el plano del visor; sin plano, red de seguridad: pack + plantilla genérica.
+  const piezas = entrada.plano
+    ? [...new Set(entrada.plano.piezas.map((p) => p.pieza))]
+    : [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
   const doc = pack.fuentes[0]?.doc ?? "Manual";
   const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [] };
   const historial = entrada.historial.map((h) => `<${h.rol}>${h.texto}</${h.rol}>`).join("\n");
@@ -181,7 +186,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
         stream,
         {
           model: MODELOS.vision,
-          max_tokens: 1500,
+          max_tokens: LIMITES.chat.maxTokensPack,
           output_config: { effort: "low" },
           system: [{ type: "text", text: reglasPack(piezas, !!manualFileId) }, bloquePack],
           messages: [{ role: "user", content: [textoPregunta] }],
@@ -197,7 +202,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
         stream,
         {
           model: MODELOS.vision,
-          max_tokens: 2000,
+          max_tokens: LIMITES.chat.maxTokensManual,
           output_config: { effort: "low" },
           system: [{ type: "text", text: reglasManual(piezas) }, bloquePack],
           messages: [
