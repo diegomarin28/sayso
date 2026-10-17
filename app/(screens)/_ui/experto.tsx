@@ -34,27 +34,36 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
 
 const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
 
-/** Encabezado común: orbe + progreso del recorrido (1–6). Con `alVolver` muestra la flecha para atrás. */
+/**
+ * Encabezado común: botón "Atrás" + orbe + progreso del recorrido (1–6).
+ * El lugar del botón está siempre reservado (invisible sin `alVolver`) para que el orbe
+ * no salte entre pantallas. `volverApagado` lo muestra deshabilitado (ej. revisando una foto).
+ */
 export function Encabezado({
   paso,
   orbe = "quieto",
   alVolver,
+  volverApagado = false,
 }: {
   paso: number;
   orbe?: EstadoOrbe;
   alVolver?: () => void;
+  volverApagado?: boolean;
 }) {
   return (
     <header className="flex items-center gap-4">
-      {alVolver && (
-        <button
-          onClick={alVolver}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
-        >
-          <FlechaAtras />
-          Atrás
-        </button>
-      )}
+      <button
+        onClick={alVolver}
+        disabled={!alVolver || volverApagado}
+        aria-hidden={!alVolver}
+        tabIndex={alVolver ? undefined : -1}
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 ${
+          alVolver ? "" : "invisible"
+        }`}
+      >
+        <FlechaAtras />
+        Atrás
+      </button>
       <Link href="/" aria-label="Volver al inicio">
         <Orbe estado={orbe} />
       </Link>

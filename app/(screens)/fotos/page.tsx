@@ -121,7 +121,8 @@ export default function CapturaGuiada() {
       <Encabezado
         paso={2}
         orbe={!pedidos || toma.revisando ? "pensando" : "quieto"}
-        alVolver={toma.revisando ? undefined : volver}
+        alVolver={volver}
+        volverApagado={toma.revisando}
       />
 
       <DiceExperto texto={dice} />
