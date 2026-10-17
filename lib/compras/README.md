@@ -1,0 +1,31 @@
+# lib/compras
+
+Dueño: Diego (tarea A6, tomada del carril A para liberar el cupo de Juanma).
+
+Dónde comprar un repuesto. Ruta: `POST /api/compras { pieza, numeroParte, modelo, marca?, casoId? }` → `{ opciones, cotizacion, descartados, costo, eventos }` (tarda ~20–60 s).
+
+1. `agente.ts`: agente con Haiku y las herramientas `web_search` y `web_fetch` de la API (versiones básicas: las de filtrado dinámico no corren en Haiku). Busca primero en Mercado Libre Uruguay con el número de parte (FRU) del knowledge pack, después en la web, y lee los avisos. Propone candidatos con precio, envío y la cotización del dólar si hace falta.
+2. `verificar.ts`: **el código decide**, no el modelo.
+   - Se descarta la URL que no salió de una búsqueda o lectura real (inventada), las repetidas y las que dicen que no envían a Uruguay.
+   - Compatibilidad: `numero_parte` o `modelo` si aparecen en el título o en el texto del aviso; si no, `no_verificado`.
+   - Precio y envío `confirmado` solo si el número aparece en la página leída; si no, `probable`. Envío sin dato = `desconocido`.
+   - La cotización solo vale si el número aparece en la página que la IA citó. Sin cotización, lo que está en dólares queda sin total en pesos.
+   - Orden: primero lo compatible, después el total más barato (precio + envío en pesos). Se devuelven las 3 mejores.
+3. `costo.ts`: el costo de cada búsqueda (tokens + búsquedas web, a precio de lista) va en la respuesta, en el evento del feed y en el log del servidor (`[compras] …`).
+
+Nunca compra ni paga: `<OpcionesCompra>` (en `components/compras`) solo abre la publicación.
+
+Configuración (modelo, límites, precios): `config.ts`.
+
+Prueba real: `npx tsx --env-file=.env.local lib/compras/probar.ts "ventilador" "5F10S13875" "ThinkPad E14 Gen 2" "Lenovo"` (~0,05 USD).
+
+## Para la pantalla 6 (Iaio)
+
+```tsx
+import { OpcionesCompra } from "@/components/compras";
+
+<OpcionesCompra key={repuesto.pieza} casoId={caso.id} pieza={repuesto.pieza} numeroParte={repuesto.numeroParte}
+  modelo={ficha.modelo.valor} marca={ficha.marca.valor} onEvento={agregarAlFeed} />
+```
+
+Los repuestos con número de parte salen de `pack.repuestos`. Por defecto espera el toque en "Buscar repuesto"; `buscarAlMontar` busca solo. Para otra pieza, cambiar la `key`.
