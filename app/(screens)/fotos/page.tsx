@@ -22,7 +22,7 @@ const NOMBRE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
 export default function CapturaGuiada() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { agregarFoto, agregarEventos, captura, setCaptura } = useFlujo();
+  const { agregarFoto, agregarEventos, captura, setCaptura, tipoEquipo } = useFlujo();
   // Lo de la captura vive en el flujo: al volver a esta pantalla sigue donde estaba.
   const { pedidos, actual, tomas } = captura;
   const setPedidos = (p: PedidoDeFoto[]) => setCaptura((c) => ({ ...c, pedidos: p }));
@@ -36,7 +36,7 @@ export default function CapturaGuiada() {
   useEffect(() => {
     if (!caso || pedidos) return;
     let vigente = true;
-    pedidosDeFoto(caso)
+    pedidosDeFoto(caso, tipoEquipo)
       .then((r) => {
         if (!vigente) return;
         agregarEventos(r.eventos);

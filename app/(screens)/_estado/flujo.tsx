@@ -47,7 +47,10 @@ type Flujo = {
   /** La guía ya hizo la pregunta inicial (no repetirla al volver a la pantalla 5). */
   guiaIniciada: boolean;
   marcarGuiaIniciada: () => void;
-  setCaso: (c: Caso | null) => void;
+  /** Qué equipo es, en texto libre (de /api/intake/entender, ej. "heladera no frost"). */
+  tipoEquipo: string | null;
+  /** `tipoEquipo` solo cambia si se pasa; un caso nuevo sin tipo lo borra. */
+  setCaso: (c: Caso | null, tipoEquipo?: string | null) => void;
   agregarFoto: (f: Foto, imagen?: ImagenB64) => void;
   setFicha: (f: Ficha | null) => void;
   agregarEventos: (e: Evento[]) => void;
@@ -57,6 +60,7 @@ const Contexto = createContext<Flujo | null>(null);
 
 export function ProveedorFlujo({ children }: { children: ReactNode }) {
   const [caso, setCaso] = useState<Caso | null>(null);
+  const [tipoEquipo, setTipoEquipo] = useState<string | null>(null);
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [imagenes, setImagenes] = useState<Record<string, ImagenB64>>({});
   const [ficha, setFicha] = useState<Ficha | null>(null);
@@ -82,9 +86,12 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         setCaptura,
         guiaIniciada,
         marcarGuiaIniciada: () => setGuiaIniciada(true),
-        setCaso: (c) => {
+        tipoEquipo,
+        setCaso: (c, tipo) => {
+          if (tipo !== undefined) setTipoEquipo(tipo);
           // Un caso nuevo arranca de cero.
           if (c?.id !== caso?.id) {
+            if (tipo === undefined) setTipoEquipo(null);
             setFotos([]);
             setImagenes({});
             setFicha(null);
