@@ -5,13 +5,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * andando sin guardar (el flujo vive en el navegador): Supabase nunca frena la demo.
  */
 
-let servidor: SupabaseClient | null | undefined;
-let navegador: SupabaseClient | null | undefined;
+// Solo se recuerda el cliente ya creado: si faltaban variables, se vuelve a mirar en la próxima llamada.
+let servidor: SupabaseClient | null = null;
+let navegador: SupabaseClient | null = null;
 
 /** Solo en el servidor (rutas de API): usa la clave secreta y saltea RLS. */
 export function supabaseServidor(): SupabaseClient | null {
   if (typeof window !== "undefined") throw new Error("supabaseServidor() solo se usa en el servidor");
-  if (servidor === undefined) {
+  if (!servidor) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
     servidor = urlValida(url) && clave ? createClient(url, clave, { auth: { persistSession: false } }) : null;
@@ -21,7 +22,7 @@ export function supabaseServidor(): SupabaseClient | null {
 
 /** En el navegador: clave pública, solo puede leer eventos (feed en vivo). */
 export function supabaseNavegador(): SupabaseClient | null {
-  if (navegador === undefined) {
+  if (!navegador) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const clave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     navegador = urlValida(url) && clave ? createClient(url, clave) : null;
