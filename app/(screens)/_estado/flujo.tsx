@@ -2,11 +2,12 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
+import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
 
 /**
- * Estado del recorrido en memoria del navegador. Al recargar se pierde y se vuelve a
- * la pantalla 1; cuando esté Supabase (C1) el caso se guarda ahí.
+ * Estado del recorrido en memoria del navegador. Cada cambio también se guarda en
+ * Supabase en segundo plano (`guardar`); al recargar se vuelve a la pantalla 1.
  */
 type Flujo = {
   caso: Caso | null;
@@ -39,13 +40,30 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         imagenes,
         ficha,
         eventos,
-        setCaso,
+        setCaso: (c) => {
+          // Un caso nuevo arranca de cero.
+          if (c?.id !== caso?.id) {
+            setFotos([]);
+            setImagenes({});
+            setFicha(null);
+            setEventos([]);
+          }
+          setCaso(c);
+          if (c) guardar({ caso: c });
+        },
         agregarFoto: (f, imagen) => {
           setFotos((prev) => [...prev, f]);
           if (imagen && f.aceptada) setImagenes((prev) => ({ ...prev, [f.id]: imagen }));
+          guardar({ fotos: [{ foto: f, imagen: f.aceptada ? imagen : undefined }] });
         },
-        setFicha,
-        agregarEventos: (e) => setEventos((prev) => [...prev, ...e]),
+        setFicha: (f) => {
+          setFicha(f);
+          if (f) guardar({ ficha: f });
+        },
+        agregarEventos: (e) => {
+          setEventos((prev) => [...prev, ...e]);
+          guardar({ eventos: e });
+        },
       }}
     >
       {children}
