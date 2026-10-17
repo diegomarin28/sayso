@@ -10,13 +10,18 @@ import {
   type Evento,
 } from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
+import { EJEMPLOS } from "./ejemplos";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
 
 /** Banco de pruebas del visor: reproduce el fixture y acciones sueltas. */
 
-const PLANOS = { plantilla: planoNotebookBase, fixture: planoEjemplo } as const;
-type IdPlano = keyof typeof PLANOS | "generado";
+const PLANOS: Record<string, { plano: PlanoDePiezas; tipoEquipo?: string }> = {
+  plantilla: { plano: planoNotebookBase },
+  fixture: { plano: planoEjemplo },
+  ...EJEMPLOS,
+};
+type IdPlano = string;
 
 const paso = (dice: string, acciones: Coreografia["acciones"]): Coreografia => ({
   paso: 1,
@@ -41,8 +46,9 @@ const EXTRAS: Array<[string, Coreografia]> = [
   ["Restaurar", paso("Vuelvo todo a su lugar.", [{ t: "restaurar" }, { t: "camara", objetivo: "general" }])],
 ];
 
-export function LabVisor() {
-  const [planoId, setPlanoId] = useState<IdPlano>("plantilla");
+/** `planoInicial`: uno de PLANOS (ej. `/lab/visor?plano=heladera`, para capturas). */
+export function LabVisor({ planoInicial }: { planoInicial?: string }) {
+  const [planoId, setPlanoId] = useState<IdPlano>(planoInicial && planoInicial in PLANOS ? planoInicial : "plantilla");
   const [generado, setGenerado] = useState<PlanoDePiezas | null>(null);
   const [estadoGenerador, setEstadoGenerador] = useState("");
   const [pegado, setPegado] = useState("");
@@ -51,7 +57,8 @@ export function LabVisor() {
   const [filtrado, setFiltrado] = useState<PasoPreparado | null>(null);
   const [efectos, setEfectos] = useState<ModoEfectos>("auto");
   const [efectosActivos, setEfectosActivos] = useState(true);
-  const plano = planoId === "generado" && generado ? generado : PLANOS[planoId === "generado" ? "plantilla" : planoId];
+  const elegido = planoId === "generado" && generado ? { plano: generado } : (PLANOS[planoId] ?? PLANOS.plantilla);
+  const plano = elegido.plano;
   const usarGenerado = (p: PlanoDePiezas) => {
     setGenerado(p);
     setPlanoId("generado");
@@ -95,13 +102,14 @@ export function LabVisor() {
         onEvento={(e) => setEventos((prev) => [e, ...prev].slice(0, 20))}
         onPaso={setFiltrado}
         piezas={knowledgePackEjemplo.piezas}
+        tipoEquipo={elegido.tipoEquipo}
         efectos={efectos}
         onEfectos={setEfectosActivos}
       />
       <aside className="flex w-full flex-col gap-4 p-4 text-sm md:w-80">
         <h1 className="text-lg font-semibold">Lab · visor 3D</h1>
-        <div className="flex gap-2">
-          {(["plantilla", "fixture", ...(generado ? ["generado" as const] : [])] as IdPlano[]).map((id) => (
+        <div className="flex flex-wrap gap-2">
+          {[...Object.keys(PLANOS), ...(generado ? ["generado"] : [])].map((id) => (
             <Boton key={id} activo={id === planoId} onClick={() => { setPlanoId(id); setCoreografia(null); }}>
               {id}
             </Boton>

@@ -22,7 +22,7 @@ import { Visor } from "@/components/viewer";
 ```
 
 - **Seguridad:** toda coreografía pasa por `filtrarCoreografia` (lib/safety) antes de animarse (`paso.ts`). Si es de riesgo alto no se anima (solo `restaurar`) y `onPaso` trae la derivación en vez del texto de la IA. Mostrá siempre `onPaso(...).coreografia.dice`, no el original.
-- **Piezas de Blender:** el visor carga `/models/piezas.glb` una vez (`biblioteca.ts`) y arma cada pieza con su forma típica (ventilador, RAM, SSD…). Si no carga en 4 s, usa las primitivas.
+- **Piezas de Blender:** el visor lee `/models/piezas/indice.json` y baja solo las familias (GLB) que usan las piezas del plano, una vez cada una (`biblioteca.ts`); arma cada pieza con su forma típica (ventilador, RAM, compresor, carcasa…). Si no carga en 4 s, usa las primitivas. `tipoEquipo` ayuda a elegir la variante.
 - **Estilo ilustración técnica** (`escena.ts`): bordes en todas las piezas, luz de estudio sin descargas, sombras de contacto, materiales por tipo y detalles (aspas, chips, etiquetas).
 - **Rayos X:** si el paso resalta piezas, esas quedan sólidas en `#E8590C` con brillo; el resto, gris translúcido. Las hijas de una pieza activa se ven normales.
 - **Etiquetas** con línea guía para las piezas activas: número del manual + nombre (del knowledge pack, o el id si no hay).

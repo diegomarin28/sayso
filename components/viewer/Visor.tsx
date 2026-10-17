@@ -90,7 +90,7 @@ export function Visor({
   const [rindeBien, setRindeBien] = useState(true);
   const efectosActivos = efectos === "si" || (efectos === "auto" && rindeBien);
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
-  const biblioteca = useBibliotecaPiezas();
+  const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
 
   useEffect(() => {
     onEfectos?.(efectosActivos);
