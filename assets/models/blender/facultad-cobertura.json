@@ -1,0 +1,296 @@
+{
+  "macbook_air": {
+    "nuevas": [
+      "bateria@celdas_pegadas",
+      "placa_logica_integrada",
+      "trackpad",
+      "teclado@notebook",
+      "tecla",
+      "mecanismo_tijera",
+      "conector@magsafe"
+    ],
+    "reutilizadas": [
+      "base",
+      "tapa_inferior",
+      "pantalla",
+      "camara",
+      "parlante",
+      "cable",
+      "disipador",
+      "conector@usb_c",
+      "tornillo"
+    ],
+    "criterio": "Solo formas genéricas. Sin ventilador, RAM SO-DIMM, SSD M.2 ni Wi-Fi removible en esta cobertura de Apple Silicon. No es un plano exacto ni una plantilla de reparación."
+  },
+  "macbook_pro": {
+    "nuevas": [
+      "bateria@celdas_pegadas",
+      "placa_logica_integrada",
+      "trackpad",
+      "teclado@notebook",
+      "tecla",
+      "mecanismo_tijera",
+      "conector@magsafe"
+    ],
+    "reutilizadas": [
+      "base",
+      "tapa_inferior",
+      "pantalla",
+      "camara",
+      "parlante",
+      "cable",
+      "disipador",
+      "heatpipe",
+      "ventilador",
+      "conector@usb_c",
+      "tornillo"
+    ],
+    "criterio": "Ventilador reutilizado como blower genérico, cantidad según plano confirmado. Sin RAM SO-DIMM, SSD M.2 ni Wi-Fi removible en esta cobertura de Apple Silicon."
+  },
+  "imac": {
+    "nuevas": [
+      "placa_logica_integrada",
+      "soporte_monitor",
+      "placa_tcon"
+    ],
+    "reutilizadas": [
+      "pantalla@panel",
+      "retroiluminacion",
+      "fuente",
+      "parlante",
+      "camara",
+      "cable",
+      "tornillo"
+    ],
+    "criterio": "Panel y retroiluminación son referencias visuales por tipo. Fuente interna, T-con y número de módulos dependen del equipo, no se dan por confirmados."
+  },
+  "monitor": {
+    "nuevas": [
+      "soporte_monitor",
+      "placa_tcon",
+      "placa_principal_av"
+    ],
+    "reutilizadas": [
+      "pantalla@panel",
+      "retroiluminacion",
+      "fuente",
+      "tira_led",
+      "cable",
+      "puerto_hdmi",
+      "tornillo"
+    ],
+    "criterio": "T-con puede estar integrada en el panel. El soporte genérico no certifica montaje ni norma VESA."
+  },
+  "iphone": {
+    "nuevas": [
+      "modulo_biometrico",
+      "sensor_proximidad",
+      "motor_vibracion",
+      "bandeja_sim",
+      "conector@lightning"
+    ],
+    "reutilizadas": [
+      "bateria@celular",
+      "pantalla",
+      "camara",
+      "camara@modulo",
+      "placa_madre@celular",
+      "conector@usb_c",
+      "parlante@celular",
+      "microfono_mems",
+      "bobina_carga",
+      "marco",
+      "tapa_trasera",
+      "tornillo"
+    ],
+    "criterio": "USB-C o Lightning según el equipo. Bandeja SIM solo si existe; no todos los equipos la incluyen. Módulo biométrico ilustrativo, sin compatibilidad de Face ID."
+  },
+  "samsung": {
+    "nuevas": [
+      "lector_huella",
+      "sensor_proximidad",
+      "motor_vibracion",
+      "motor_vibracion@excentrico",
+      "bandeja_sim"
+    ],
+    "reutilizadas": [
+      "bateria@celular",
+      "pantalla",
+      "camara",
+      "camara@modulo",
+      "placa_madre@celular",
+      "conector@usb_c",
+      "parlante@celular",
+      "microfono_mems",
+      "bobina_carga",
+      "marco",
+      "tapa_trasera",
+      "tornillo"
+    ],
+    "criterio": "Huella, actuador lineal o excéntrico son alternativas por confirmar. No presupone reconocimiento facial de profundidad ni bandeja SIM en todos los modelos."
+  },
+  "televisor": {
+    "nuevas": [
+      "placa_tcon",
+      "placa_principal_av"
+    ],
+    "reutilizadas": [
+      "pantalla@panel",
+      "retroiluminacion",
+      "tira_led",
+      "fuente",
+      "parlante",
+      "cable",
+      "carcasa@televisor",
+      "puerto_hdmi",
+      "tornillo"
+    ],
+    "criterio": "Placa AV, T-con y tiras LED son formas genéricas multimarca. Su presencia, cantidad y distribución salen del plano/manual."
+  },
+  "proyector": {
+    "nuevas": [
+      "placa_principal_av",
+      "lampara_proyector",
+      "modulo_led_proyector",
+      "lente_proyector",
+      "rueda_color",
+      "modulador_imagen"
+    ],
+    "reutilizadas": [
+      "ventilador",
+      "ventilador@axial",
+      "fuente",
+      "placa",
+      "cable",
+      "puerto_hdmi",
+      "tornillo"
+    ],
+    "criterio": "Lámpara o LED como alternativas; rueda de color solo si corresponde. No se supone que todos los proyectores compartan la misma tecnología."
+  },
+  "impresora": {
+    "nuevas": [
+      "unidad_fusora",
+      "cilindro_fotoconductor",
+      "sensor_papel"
+    ],
+    "reutilizadas": [
+      "cartucho_tinta",
+      "cartucho_toner",
+      "cabezal_impresion",
+      "carro_impresion",
+      "rodillo_arrastre",
+      "riel_lineal",
+      "cinta_encoder",
+      "engranaje_arrastre",
+      "fuente",
+      "motor",
+      "placa@control",
+      "conector_usb_a",
+      "tornillo"
+    ],
+    "criterio": "Cartucho/cabezal para inyección; tóner/fusor/fotoconductor para láser. No se mezclan automáticamente ambas arquitecturas."
+  },
+  "mouse": {
+    "nuevas": [
+      "carcasa_mouse",
+      "rueda_scroll",
+      "sensor_mouse",
+      "microswitch"
+    ],
+    "reutilizadas": [
+      "placa",
+      "conector_usb_a",
+      "cable@redondo",
+      "pila_aa",
+      "bateria@celular",
+      "tornillo"
+    ],
+    "criterio": "Pila, batería y cable son alternativas según el equipo, no un conjunto obligatorio."
+  },
+  "teclado": {
+    "nuevas": [
+      "teclado",
+      "tecla",
+      "switch_teclado",
+      "mecanismo_tijera",
+      "membrana_teclado"
+    ],
+    "reutilizadas": [
+      "placa",
+      "conector_usb_a",
+      "cable@redondo",
+      "pila_aa",
+      "bateria@celular",
+      "tornillo"
+    ],
+    "criterio": "Mecánico, membrana y tijera son alternativas; la geometría no impone distribución regional."
+  },
+  "joystick": {
+    "nuevas": [
+      "motor_vibracion",
+      "motor_vibracion@excentrico",
+      "microswitch",
+      "carcasa_mando",
+      "cruceta_mando",
+      "boton_mando",
+      "potenciometro"
+    ],
+    "reutilizadas": [
+      "joystick_analogico",
+      "boton_gatillo",
+      "membrana_botones",
+      "placa",
+      "bateria@celular",
+      "conector@usb_c",
+      "tornillo"
+    ],
+    "criterio": "Actuador lineal o excéntrico según el mando; no implica que ambos estén presentes."
+  },
+  "parlante_pc": {
+    "nuevas": [
+      "potenciometro"
+    ],
+    "reutilizadas": [
+      "parlante",
+      "malla_acustica",
+      "fuente",
+      "placa",
+      "perilla_mando",
+      "cable@redondo",
+      "tornillo"
+    ],
+    "criterio": "Alimentación interna o externa según el equipo; volumen con potenciómetro solo si existe."
+  },
+  "cargador_notebook": {
+    "nuevas": [
+      "adaptador_notebook",
+      "conector@jack_dc",
+      "conector@magsafe",
+      "protector_termico"
+    ],
+    "reutilizadas": [
+      "fuente",
+      "nucleo_ferrita",
+      "fusible_cartucho",
+      "conector@usb_c",
+      "cable@redondo",
+      "clavija_red"
+    ],
+    "criterio": "USB-C, jack DC y conector magnético son alternativas; no se asignan potencia, polaridad o compatibilidad."
+  },
+  "zapatilla": {
+    "nuevas": [
+      "carcasa_zapatilla",
+      "toma_corriente",
+      "contactos_zapatilla",
+      "protector_termico"
+    ],
+    "reutilizadas": [
+      "interruptor_basculante",
+      "cable@redondo",
+      "clavija_red",
+      "tornillo"
+    ],
+    "criterio": "Módulos ilustrativos, sin norma, trazado eléctrico, conexión funcional ni instrucciones de intervención."
+  }
+}
