@@ -14,7 +14,7 @@ export function supabaseServidor(): SupabaseClient | null {
   if (servidor === undefined) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    servidor = url && clave ? createClient(url, clave, { auth: { persistSession: false } }) : null;
+    servidor = urlValida(url) && clave ? createClient(url, clave, { auth: { persistSession: false } }) : null;
   }
   return servidor;
 }
@@ -24,7 +24,17 @@ export function supabaseNavegador(): SupabaseClient | null {
   if (navegador === undefined) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const clave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    navegador = url && clave ? createClient(url, clave) : null;
+    navegador = urlValida(url) && clave ? createClient(url, clave) : null;
   }
   return navegador;
+}
+
+/** Una URL mal cargada (ej. solo el código del proyecto) no debe romper la app. */
+function urlValida(url: string | undefined): url is string {
+  if (!url) return false;
+  if (/^https?:\/\/\S+$/.test(url)) return true;
+  console.warn(
+    "[supabase] NEXT_PUBLIC_SUPABASE_URL no es una URL (https://<proyecto>.supabase.co); no se guarda nada.",
+  );
+  return false;
 }
