@@ -3,6 +3,7 @@ import { z } from "zod";
 import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia, type Evento } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { AcumuladorUso, LIMITES, MODELOS, registrarUso, streamClaude, totalUsd, type StreamIA, type Uso } from "../ia/claude";
+import { IAEnPausa } from "../ia/freno";
 import { eventoCosto } from "../intake/entrada";
 import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
@@ -263,6 +264,10 @@ export async function* conversar(
     const costo = eventoCosto(entrada.casoId, "experto", ctx.usos);
     yield { tipo: "fin", pasos: ctx.paso, ...(costo ? { costo: { usd: totalUsd(ctx.usos), evento: costo } } : {}) };
   } catch (e) {
+    if (e instanceof IAEnPausa) {
+      yield { tipo: "error", mensaje: e.message };
+      return;
+    }
     console.error("[chat]", e);
     yield { tipo: "error", mensaje: "El experto no pudo responder. Probá de nuevo." };
   }

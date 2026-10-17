@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ClaseEquipo, Evento, TipoFoto, type Agente } from "../../shared";
 import { ErrorIA, LIMITES, medirCosto, MODELOS, totalUsd, type Uso } from "../ia/claude";
+import { estadoFreno, gastoPendiente, IAEnPausa, respuestaPausa } from "../ia/freno";
 
 /** Esquemas de entrada de /api/intake/*. Todo lo que manda el cliente se valida acá. */
 
@@ -89,11 +90,16 @@ function conCosto(resultado: unknown, usos: Uso[]): unknown {
   return costo ? { ...resultado, eventos: [...eventos, costo] } : resultado;
 }
 
-/** Lee y valida el cuerpo; ejecuta `fn` midiendo el costo de la IA; traduce errores a respuestas HTTP. */
+/**
+ * Lee y valida el cuerpo; ejecuta `fn` midiendo el costo de la IA; traduce errores a respuestas HTTP.
+ * Si la IA está en pausa (lib/ia/freno.ts), responde 503 "ia_en_pausa" sin empezar.
+ * `ia: false` para las rutas que no llaman a la IA (no se frenan).
+ */
 export async function manejar<T>(
   req: Request,
   esquema: z.ZodType<T>,
   fn: (entrada: T) => Promise<unknown>,
+  opciones: { ia?: boolean } = {},
 ): Promise<Response> {
   let cuerpo: unknown;
   try {
@@ -105,10 +111,17 @@ export async function manejar<T>(
   if (!r.success) {
     return Response.json({ error: "Entrada inválida", detalle: z.treeifyError(r.error) }, { status: 400 });
   }
+  if (opciones.ia !== false) {
+    const pausa = await estadoFreno();
+    if (pausa) return respuestaPausa(pausa);
+  }
   try {
     const { resultado, usos } = await medirCosto(() => fn(r.data));
+    await gastoPendiente();
     return Response.json(conCosto(resultado, usos));
   } catch (e) {
+    await gastoPendiente();
+    if (e instanceof IAEnPausa) return respuestaPausa(e);
     if (e instanceof ErrorIA || e instanceof Anthropic.APIError) {
       console.error("[intake] IA", e.message);
       return Response.json({ error: "La IA no pudo responder. Probá de nuevo." }, { status: 502 });
