@@ -33,12 +33,15 @@ async function abrir(archivo: File): Promise<ImageBitmap> {
   } catch (e) {
     if (esHeic(archivo)) {
       try {
-        // Se carga solo cuando hace falta: pesa ~1 MB.
-        const { default: heic2any } = await import("heic2any");
-        const jpg = await heic2any({ blob: archivo, toType: "image/jpeg", quality: 0.9 });
-        return await createImageBitmap(Array.isArray(jpg) ? jpg[0] : jpg);
+        // Se carga solo cuando hace falta (trae libheif en WebAssembly, pesa varios MB).
+        const { heicTo } = await import("heic-to");
+        return await heicTo({ blob: archivo, type: "bitmap" });
       } catch (e2) {
-        console.error("[imagen] no se pudo convertir HEIC", archivo.size, e2);
+        console.error(
+          "[imagen] no se pudo convertir HEIC",
+          archivo.size,
+          e2 instanceof Error ? e2.message : JSON.stringify(e2),
+        );
       }
     } else {
       console.error("[imagen] no se pudo abrir", archivo.type, archivo.size, e);
