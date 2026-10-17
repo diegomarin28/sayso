@@ -1,24 +1,58 @@
-import {
-  Caso,
-  Ficha,
-  Foto,
-  PedidoDeFoto,
-  fichaEjemplo,
-  fotosEjemplo,
-} from "@/shared";
+import { z } from "zod";
+import { Caso, Evento, Ficha, Foto, PedidoDeFoto, fichaEjemplo, fotosEjemplo } from "@/shared";
+import type { ImagenB64 } from "./imagen";
 
 /**
- * Fuente de datos de las pantallas. Por ahora responde con los fixtures de `shared/`
- * (con demoras para ver los estados de carga). Cuando Juanma tenga `/api/intake` y
- * `/api/ficha`, se cambian estas funciones por llamadas reales y las pantallas no cambian.
+ * Fuente de datos de las pantallas: llama a `/api/intake/*` y `/api/ficha` (carril A).
+ * Con `NEXT_PUBLIC_DATOS=fixture` responde con los fixtures de `shared/` sin gastar IA
+ * (sirve para trabajar sin claves y como plan B de la demo).
  */
+
+const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
+
+/** Error que se le puede mostrar a la persona tal cual. */
+export class ErrorApi extends Error {}
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(ruta, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo),
+    });
+  } catch {
+    throw new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+  }
+  const datos: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    console.error(`[api] ${ruta} ${res.status}`, datos);
+    throw new ErrorApi(
+      res.status === 502 ? "Me trabé pensando. Probá de nuevo." : "Algo salió mal. Probá de nuevo.",
+    );
+  }
+  const r = esquema.safeParse(datos);
+  if (!r.success) {
+    console.error(`[api] ${ruta} respuesta inválida`, r.error);
+    throw new ErrorApi("Algo salió mal. Probá de nuevo.");
+  }
+  return r.data;
+}
+
+const conEventos = <T extends z.ZodRawShape>(forma: T) =>
+  z.object({ ...forma, eventos: z.array(Evento).default([]) });
+
+const RespPedidos = conEventos({ pedidos: z.array(PedidoDeFoto) });
+const RespCalidad = conEventos({ foto: Foto });
+const RespChapa = conEventos({ ficha: Ficha });
+const RespFicha = conEventos({ ficha: Ficha, listaParaPreparar: z.boolean() });
+
 export async function entenderSintoma(texto: string): Promise<Caso> {
-  await esperar(1200);
+  await esperar(600);
   return Caso.parse({
-    id: `caso-${Date.now()}`,
+    id: crypto.randomUUID(),
     clase: "notebook", // TODO(A1): lo decide la IA a partir del texto
     sintoma: texto.trim(),
     estado: "captura",
@@ -26,39 +60,87 @@ export async function entenderSintoma(texto: string): Promise<Caso> {
   });
 }
 
-export async function pedidosDeFoto(): Promise<PedidoDeFoto[]> {
-  await esperar(300);
-  return PedidoDeFoto.array().parse([
-    { tipo: "frente", instruccion: "Sacale una foto de frente, con la tapa abierta." },
-    {
-      tipo: "etiqueta",
-      instruccion: "Dala vuelta y sacale una foto a la etiqueta de abajo. Que se lean las letras.",
-      advertencia: "Apagala y desenchufala antes de darla vuelta.",
-    },
-    { tipo: "puertos", instruccion: "Ahora los costados, donde están los puertos." },
-  ]);
+export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedidos>> {
+  if (USAR_FIXTURE) {
+    await esperar(300);
+    return RespPedidos.parse({
+      pedidos: [
+        {
+          tipo: "frente",
+          instruccion: "Sacale una foto de frente, con la tapa abierta.",
+        },
+        {
+          tipo: "etiqueta",
+          instruccion: "Dala vuelta y sacale una foto a la etiqueta de abajo. Que se lean las letras.",
+          advertencia: "Apagala y desenchufala antes de darla vuelta.",
+        },
+        {
+          tipo: "puertos",
+          instruccion: "Ahora los costados, donde están los puertos.",
+        },
+      ],
+    });
+  }
+  return llamar(
+    "/api/intake/pedidos",
+    { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma },
+    RespPedidos,
+  );
 }
 
-/** Mock del control de calidad: la primera foto de la etiqueta sale "movida", como en el fixture. */
 export async function evaluarFoto(
   casoId: string,
   tipo: PedidoDeFoto["tipo"],
+  imagen: ImagenB64,
   url: string,
   intento: number,
-): Promise<Foto> {
-  await esperar(1600);
-  const rechazada = tipo === "etiqueta" && intento === 1;
-  const base = rechazada ? fotosEjemplo[0] : fotosEjemplo[1];
-  return Foto.parse({
-    ...base,
-    id: `foto-${tipo}-${intento}`,
-    casoId,
-    tipoPedido: tipo,
-    url,
-  });
+): Promise<z.infer<typeof RespCalidad>> {
+  if (USAR_FIXTURE) {
+    // La primera foto de la etiqueta sale "movida", como en el fixture.
+    await esperar(1600);
+    const base = tipo === "etiqueta" && intento === 1 ? fotosEjemplo[0] : fotosEjemplo[1];
+    return RespCalidad.parse({
+      foto: {
+        ...base,
+        id: `foto-${tipo}-${intento}`,
+        casoId,
+        tipoPedido: tipo,
+        url,
+      },
+    });
+  }
+  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen, url }, RespCalidad);
 }
 
-export async function leerChapa(casoId: string): Promise<Ficha> {
-  await esperar(1800);
-  return Ficha.parse({ ...fichaEjemplo, casoId, confirmadaPorUsuario: false });
+export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {
+  if (USAR_FIXTURE || imagenes.length === 0) {
+    await esperar(1800);
+    return RespChapa.parse({
+      ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
+    });
+  }
+  return llamar(
+    "/api/intake/chapa",
+    { casoId: caso.id, clase: caso.clase, imagenes: imagenes.slice(0, 3) },
+    RespChapa,
+  );
+}
+
+type NombreCampo = "marca" | "modelo" | "serie" | "anio";
+
+/** La persona confirma la ficha: lo que miró queda confirmado, lo que corrigió también. */
+export async function confirmarFicha(
+  ficha: Ficha,
+  confirmados: NombreCampo[],
+  correcciones: Partial<Record<NombreCampo, string | null>>,
+): Promise<z.infer<typeof RespFicha>> {
+  if (USAR_FIXTURE) {
+    await esperar(300);
+    const nueva = { ...ficha, confirmadaPorUsuario: true };
+    return RespFicha.parse({
+      ficha: nueva,
+      listaParaPreparar: !!ficha.modelo.valor,
+    });
+  }
+  return llamar("/api/ficha", { ficha, confirmados, correcciones }, RespFicha);
 }
