@@ -17,7 +17,7 @@ URL de la demo: **https://sayso-mu.vercel.app** (proyecto de Vercel de Iaio, `sa
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: empieza con `sb_publishable_`.
      - `SUPABASE_SERVICE_ROLE_KEY`: empieza con `sb_secret_` (la rotada).
      - `ELEVENLABS_API_KEY`.
-     - `IA_LIMITE_USD_DIA=5`.
+     - `IA_LIMITE_USD_DIA=1` (si hoy dice 5, cambiarla: `printf 1 | vercel env add IA_LIMITE_USD_DIA production --force`).
    - Cómo revisarlas sin mostrar valores: `vercel env ls production` para los nombres. Para el formato, `vercel env pull <archivo temporal> --environment=production`, revisar solo el prefijo o si coincide con `.env.local`, y **borrar el archivo enseguida**.
    - Si hay que subir una clave: ponerla en `.env.local` y subirla con un comando que la lea del archivo (`grep … | vercel env add NOMBRE production --force`). **Nunca** a través del portapapeles mientras se copia el comando (así se cargó una vez el texto del comando en lugar de la clave).
 
