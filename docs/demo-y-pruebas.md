@@ -20,9 +20,9 @@ Para ensayar el flujo completo y medir los controles de calidad del plan (§9). 
 
 **Plan B:** si falla el micrófono, se escribe (el campo siempre está). Si falla internet, video de respaldo (grabar en la hora 13) y un caso ya guardado en Supabase.
 
-**QR al link de producción:** `docs/qr-demo.png` (para imprimir o proyectar) y `docs/qr-demo.svg` (para la presentación, escala sin perder calidad). Apunta a https://sayso-smoky.vercel.app. Probarlo con la cámara de un iPhone y de un Android antes de imprimir.
+**QR al link de producción:** `docs/qr-demo.png` (para imprimir o proyectar) y `docs/qr-demo.svg` (para la presentación, escala sin perder calidad). Apunta a https://sayso-mu.vercel.app. Probarlo con la cámara de un iPhone y de un Android antes de imprimir.
 
-**Antes de la demo:** pasar los 3 equipos de prueba una vez para que el manual quede en caché; probar en el celular desde https://sayso-smoky.vercel.app en Safari o Chrome (no dentro de WhatsApp); volumen alto; cargador.
+**Antes de la demo:** pasar los 3 equipos de prueba una vez para que el manual quede en caché; probar en el celular desde https://sayso-mu.vercel.app en Safari o Chrome (no dentro de WhatsApp); volumen alto; cargador.
 
 ## Equipos de prueba
 
