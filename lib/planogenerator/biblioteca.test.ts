@@ -185,6 +185,37 @@ const planoCelular: PlanoDePiezas = {
 
 const nombreDe = (modelo?: ModeloPieza) => [...biblioteca].find(([, m]) => m === modelo)?.[0];
 
+describe("GLB comprimido (posiciones cuantizadas)", () => {
+  it("las posiciones int16 normalizadas con la escala en el nodo dan la misma caja (no se recortan a ±1)", () => {
+    // Una caja de 20×2×10 cm guardada como hace KHR_mesh_quantization: enteros en [-1, 1] y la escala en el nodo.
+    const real = new THREE.BoxGeometry(20, 2, 10);
+    const pos = real.getAttribute("position");
+    const enteros = new Int16Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      enteros[i * 3] = Math.round((pos.getX(i) / 10) * 32767);
+      enteros[i * 3 + 1] = Math.round((pos.getY(i) / 10) * 32767);
+      enteros[i * 3 + 2] = Math.round((pos.getZ(i) / 10) * 32767);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(enteros, 3, true));
+    g.setIndex(real.getIndex());
+    const malla = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ name: "cuerpo.prueba" }));
+    malla.scale.setScalar(10);
+    const tipo = new THREE.Group();
+    tipo.name = "prueba";
+    tipo.add(malla);
+    const escena = new THREE.Group();
+    escena.add(tipo);
+
+    const modelo = bibliotecaDesdeEscena(escena).get("prueba")!;
+    expect(modelo.caja.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2))).toEqual([20, 2, 10]);
+    expect(modelo.partes[0].geometria.getAttribute("position").array).toBeInstanceOf(Float32Array);
+    const [p] = partesAjustadas(modelo, [40, 4, 20]);
+    p.geometria.computeBoundingBox();
+    expect(p.geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2))).toEqual([40, 4, 20]);
+  });
+});
+
 describe("modeloPara", () => {
   it("elige el prefijo más largo y no inventa", () => {
     const b: BibliotecaPiezas = new Map([

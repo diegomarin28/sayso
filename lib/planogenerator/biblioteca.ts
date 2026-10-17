@@ -52,6 +52,22 @@ export type ModeloPieza = { partes: ParteModelo[]; caja: THREE.Box3; equipos?: s
 export type BibliotecaPiezas = Map<string, ModeloPieza>;
 
 /**
+ * Atributos en Float32 sin normalizar. Un GLB comprimido (KHR_mesh_quantization / meshopt) trae las
+ * posiciones como enteros normalizados en [-1, 1] y la escala real en el nodo: si se les aplica esa
+ * matriz sin convertirlas, three las vuelve a guardar en [-1, 1] y la pieza se deforma (y con ella la
+ * caja, la elección de variante y los ajustes por tramo).
+ */
+export function enFloat(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  for (const [nombre, a] of Object.entries(g.attributes)) {
+    if (a.array instanceof Float32Array && !a.normalized && !("isInterleavedBufferAttribute" in a)) continue;
+    const valores = new Float32Array(a.count * a.itemSize);
+    for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) valores[i * a.itemSize + c] = a.getComponent(i, c);
+    g.setAttribute(nombre, new THREE.BufferAttribute(valores, a.itemSize));
+  }
+  return g;
+}
+
+/**
  * Arma la biblioteca desde la escena del GLB: cada hijo de la raíz es un tipo y sus mallas son
  * las partes. La receta sale del nombre del material, antes del punto (`cuerpo.ventilador` → `cuerpo`).
  */
@@ -63,7 +79,7 @@ export function bibliotecaDesdeEscena(escena: THREE.Object3D): BibliotecaPiezas 
     const partes: ParteModelo[] = [];
     tipo.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
-      const geometria = (o.geometry as THREE.BufferGeometry).clone();
+      const geometria = enFloat((o.geometry as THREE.BufferGeometry).clone());
       geometria.applyMatrix4(new THREE.Matrix4().multiplyMatrices(aLocal, o.matrixWorld));
       const material = Array.isArray(o.material) ? o.material[0] : o.material;
       partes.push({ geometria, receta: material?.name?.split(".")[0] || RECETA_CUERPO });
