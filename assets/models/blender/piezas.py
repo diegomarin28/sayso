@@ -1432,6 +1432,50 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    # Familia dispositivos: ejes del GLB (X, Z y -Y de Blender).
+    "deposito_polvo": "redondo:xz",
+    "filtro_hepa": "libre",
+    "cepillo_rotativo": "tramo:x:redondo",
+    "boquilla_suelo": "proporcional",
+    "separador_ciclon": "proporcional",  # La entrada tangencial hace asimétrica la caja exterior.,
+    "rueda_goma": "redondo:yz",
+    "carcasa_secador": "proporcional",
+    "boquilla_concentradora": "proporcional",
+    "difusor_secador": "redondo:xz",
+    "selector_deslizante": "proporcional",
+    "soporte_mica": "proporcional",
+    "cartucho_tinta": "proporcional",
+    "cartucho_toner": "proporcional",
+    "cabezal_impresion": "proporcional",
+    "carro_impresion": "proporcional",
+    "rodillo_arrastre": "tramo:x:redondo",
+    "riel_lineal": "tramo:x:redondo",
+    "cinta_encoder": "tramo:x",
+    "engranaje_arrastre": "redondo:xz",
+    "unidad_optica": "proporcional",
+    "blindaje_metalico": "libre",
+    "placa_consola": "libre",
+    "puerto_hdmi": "proporcional",
+    "conector_usb_a": "proporcional",
+    "joystick_analogico": "proporcional",
+    "boton_gatillo": "proporcional",
+    "antena_wifi": "tramo:y:redondo",
+    "placa_router": "libre",
+    "puerto_rj45": "proporcional",
+    "jaula_sfp": "proporcional",
+    "conector_coaxial": "proporcional",
+    "boton_reset": "proporcional",
+    "deposito_agua": "libre",
+    "portafiltro": "proporcional",
+    "caldera_cafetera": "redondo:xz",
+    "bloque_termico": "proporcional",
+    "valvula_antirretorno": "proporcional",
+    "molino_muelas": "redondo:xz",
+    "tolva_cafe": "redondo:xz",
+    "lanza_vapor": "proporcional",
+    "junta_portafiltro": "redondo:xz",
+    "filtro_cafe": "redondo:xz",
+
     "ventilador": "redondo:xz",
     "ventilador@axial": "redondo:xz",
     "ventilador@tangencial": "tramo:x:redondo",
@@ -1611,6 +1655,25 @@ def renders(carpeta, grupos):
         bpy.ops.render.render(write_still=True)
 
 
+def actualizar_indice(archivo, familias, tipos):
+    """Actualiza solo las familias exportadas; conserva las de scripts independientes."""
+    anterior = {"familias": {}, "tipos": {}}
+    if os.path.exists(archivo):
+        with open(archivo, encoding="utf-8") as f:
+            anterior = json.load(f)
+    for nombre, meta in tipos.items():
+        previo = anterior["tipos"].get(nombre)
+        if previo and previo["familia"] not in familias:
+            raise ValueError("Tipo ocupado por otra familia: " + nombre)
+    restantes = {k: v for k, v in anterior["tipos"].items() if v["familia"] not in familias}
+    anterior["familias"].update(familias)
+    restantes.update(tipos)
+    anterior["tipos"] = restantes
+    with open(archivo, "w", encoding="utf-8") as f:
+        json.dump(anterior, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     p = argparse.ArgumentParser()
@@ -1641,11 +1704,10 @@ def main():
         exportar(archivo, vacios)
         familias[familia] = f"{familia}.glb"
         print(f"Exportado {archivo}: {os.path.getsize(archivo) / 1024:.0f} KB, {len(vacios)} tipos")
-    with open(os.path.join(args.salida, "indice.json"), "w", encoding="utf-8") as f:
-        json.dump({"familias": familias, "tipos": tipos}, f, ensure_ascii=False, indent=1)
-        f.write("\n")
+    actualizar_indice(os.path.join(args.salida, "indice.json"), familias, tipos)
     if args.renders:
         renders(args.renders, grupos)
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RECETAS_DISPOSITIVOS } from "./materiales-dispositivos";
 
 /**
  * Materiales por tipo de pieza, estilo "ilustración técnica": carcasa de aluminio,
@@ -68,6 +69,7 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   // Plástico transparente de cajones y estantes: deja ver lo que hay detrás.
   ["bandeja", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
   ["estante", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
+  ...RECETAS_DISPOSITIVOS,
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };
