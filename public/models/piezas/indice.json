@@ -7,7 +7,8 @@
   "estructura": "estructura.glb",
   "carcasas": "carcasas.glb",
   "dispositivos": "dispositivos.glb",
-  "cotidianos": "cotidianos.glb"
+  "cotidianos": "cotidianos.glb",
+  "facultad": "facultad.glb"
  },
  "tipos": {
   "base": {
@@ -1005,6 +1006,258 @@
    "descripcion": "Núcleo toroidal de ferrita con bobinado de cobre simplificado, sin valor de inductancia.",
    "equipos": "cargador celular telefono adaptador",
    "ajuste": "redondo:xz"
+  },
+  "bateria@celdas_pegadas": {
+   "familia": "facultad",
+   "descripcion": "Conjunto genérico de seis celdas pouch adheridas, con lengüetas de adhesivo y placa de protección. No representa una batería exacta de Air o Pro.",
+   "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
+   "ajuste": "proporcional"
+  },
+  "placa_logica_integrada": {
+   "familia": "facultad",
+   "descripcion": "Placa lógica compacta con SoC, memorias soldadas y puertos; sin zócalos de RAM ni módulos SSD removibles. Disposición ilustrativa, no de un Mac específico.",
+   "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil imac apple aio escritorio",
+   "ajuste": "libre"
+  },
+  "trackpad": {
+   "familia": "facultad",
+   "descripcion": "Trackpad independiente: superficie lisa, soporte metálico posterior, cuatro orejas y flex.",
+   "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
+   "ajuste": "libre"
+  },
+  "teclado": {
+   "familia": "facultad",
+   "descripcion": "Teclado externo genérico con matriz de teclas y barra espaciadora. No impone distribución regional.",
+   "equipos": "teclado keyboard periferico",
+   "ajuste": "libre"
+  },
+  "teclado@notebook": {
+   "familia": "facultad",
+   "descripcion": "Módulo de teclado fino de notebook con matriz de teclas y flex. Forma genérica de perfil bajo, sin marca ni distribución exacta.",
+   "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
+   "ajuste": "libre"
+  },
+  "soporte_monitor": {
+   "familia": "facultad",
+   "descripcion": "Pie de monitor o equipo all-in-one: base, cuello inclinado, bisagra y placa de anclaje; no implica compatibilidad VESA.",
+   "equipos": "imac apple aio escritorio monitor display pantalla",
+   "ajuste": "proporcional"
+  },
+  "modulo_biometrico": {
+   "familia": "facultad",
+   "descripcion": "Módulo frontal de profundidad/biometría ilustrativo: cámara IR, emisor y soporte con flex. No reproduce el sistema Face ID ni asegura compatibilidad.",
+   "equipos": "iphone apple celular telefono smartphone movil",
+   "ajuste": "proporcional"
+  },
+  "lector_huella": {
+   "familia": "facultad",
+   "descripcion": "Módulo genérico de lectura de huella: ventana y placa con flex. No especifica tecnología, ubicación o presencia en un modelo.",
+   "equipos": "samsung galaxy celular telefono smartphone movil",
+   "ajuste": "proporcional"
+  },
+  "sensor_proximidad": {
+   "familia": "facultad",
+   "descripcion": "Sensor frontal de proximidad/luz: dos ventanas sobre una placa pequeña con flex, sin alcance especificado.",
+   "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil",
+   "ajuste": "proporcional"
+  },
+  "motor_vibracion": {
+   "familia": "facultad",
+   "descripcion": "Actuador háptico lineal ilustrativo: cápsula rectangular, orejas y flex, sin parámetros de vibración.",
+   "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "motor_vibracion@excentrico": {
+   "familia": "facultad",
+   "descripcion": "Motor vibrador rotativo pequeño con masa excéntrica en el eje, distinto del actuador lineal.",
+   "equipos": "samsung galaxy celular telefono smartphone movil joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "bandeja_sim": {
+   "familia": "facultad",
+   "descripcion": "Bandeja SIM extraíble: marco de una tarjeta, junta y frente con orificio de extracción. Solo para equipos que tengan bandeja física.",
+   "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil",
+   "ajuste": "proporcional"
+  },
+  "conector@lightning": {
+   "familia": "facultad",
+   "descripcion": "Puerto de carga de formato Lightning ilustrativo, abierto al frente con lengüeta y anclajes; no representa pinout ni compatibilidad.",
+   "equipos": "iphone apple celular telefono smartphone movil",
+   "ajuste": "proporcional"
+  },
+  "placa_tcon": {
+   "familia": "facultad",
+   "descripcion": "Placa T-con independiente: PCB alargada, chip, blindaje y salidas de flex hacia el panel. Solo si el equipo usa módulo separado.",
+   "equipos": "televisor tv led monitor display pantalla imac apple aio escritorio",
+   "ajuste": "libre"
+  },
+  "placa_principal_av": {
+   "familia": "facultad",
+   "descripcion": "Placa principal de audio/video: SoC, memorias, blindaje de sintonizador y puertos de señal. Genérica para distintas marcas, no de un televisor exacto.",
+   "equipos": "televisor tv led monitor display pantalla proyector projector datashow beamer",
+   "ajuste": "libre"
+  },
+  "lampara_proyector": {
+   "familia": "facultad",
+   "descripcion": "Módulo de lámpara de proyector: reflector cóncavo, cápsula central, soporte y terminales. Representación visual, sin potencia ni procedimiento de recambio.",
+   "equipos": "proyector projector datashow beamer",
+   "ajuste": "proporcional"
+  },
+  "modulo_led_proyector": {
+   "familia": "facultad",
+   "descripcion": "Módulo de luz LED de proyector: emisor sobre sustrato, óptica primaria y disipador de aletas. Alternativa a lámpara, no obligatoria en todos los equipos.",
+   "equipos": "proyector projector datashow beamer",
+   "ajuste": "proporcional"
+  },
+  "lente_proyector": {
+   "familia": "facultad",
+   "descripcion": "Objetivo de proyector: barril, anillos de foco y zoom, lentes y brida. Sin distancia focal asignada.",
+   "equipos": "proyector projector datashow beamer",
+   "ajuste": "redondo:xz"
+  },
+  "rueda_color": {
+   "familia": "facultad",
+   "descripcion": "Rueda de color de algunos proyectores DLP: disco segmentado con motor y soporte; no usada en todas las tecnologías.",
+   "equipos": "proyector projector datashow beamer",
+   "ajuste": "redondo:xz"
+  },
+  "modulador_imagen": {
+   "familia": "facultad",
+   "descripcion": "Módulo genérico de formación de imagen de proyector: ventana óptica y placa con conector. No especifica DLP, LCD o resolución.",
+   "equipos": "proyector projector datashow beamer",
+   "ajuste": "proporcional"
+  },
+  "unidad_fusora": {
+   "familia": "facultad",
+   "descripcion": "Unidad fusora de impresora láser: dos rodillos, soportes y cubierta superior; sin calefacción funcional.",
+   "equipos": "impresora printer multifuncion laser",
+   "ajuste": "proporcional"
+  },
+  "cilindro_fotoconductor": {
+   "familia": "facultad",
+   "descripcion": "Cilindro fotoconductor de impresora láser: superficie, eje, tapas y engranaje. Distinto del tambor de lavarropas.",
+   "equipos": "impresora printer multifuncion laser",
+   "ajuste": "tramo:x:redondo"
+  },
+  "sensor_papel": {
+   "familia": "facultad",
+   "descripcion": "Sensor óptico de papel: horquilla emisora/receptora con palanca y tres terminales.",
+   "equipos": "impresora printer multifuncion laser",
+   "ajuste": "proporcional"
+  },
+  "carcasa_mouse": {
+   "familia": "facultad",
+   "descripcion": "Cubierta hueca de mouse con dos botones separados y abertura de rueda; sin placa dentro.",
+   "equipos": "mouse raton periferico",
+   "ajuste": "proporcional"
+  },
+  "rueda_scroll": {
+   "familia": "facultad",
+   "descripcion": "Rueda de desplazamiento de mouse: neumático estriado y eje, sin encoder integrado.",
+   "equipos": "mouse raton periferico",
+   "ajuste": "redondo:yz"
+  },
+  "sensor_mouse": {
+   "familia": "facultad",
+   "descripcion": "Sensor óptico de mouse con lente inferior y PCB; no especifica resolución ni iluminación láser.",
+   "equipos": "mouse raton periferico",
+   "ajuste": "proporcional"
+  },
+  "microswitch": {
+   "familia": "facultad",
+   "descripcion": "Microinterruptor de clic con actuador superior y tres terminales; sin especificación eléctrica.",
+   "equipos": "mouse raton periferico joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "tecla": {
+   "familia": "facultad",
+   "descripcion": "Tecla individual genérica: capuchón hueco con alojamiento inferior, sin leyenda ni distribución regional.",
+   "equipos": "teclado keyboard periferico macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
+   "ajuste": "proporcional"
+  },
+  "switch_teclado": {
+   "familia": "facultad",
+   "descripcion": "Interruptor de teclado mecánico: carcasa, vástago en cruz y terminales. Alternativa al teclado de membrana, no presente en todos.",
+   "equipos": "teclado keyboard periferico",
+   "ajuste": "proporcional"
+  },
+  "mecanismo_tijera": {
+   "familia": "facultad",
+   "descripcion": "Mecanismo de tecla de perfil bajo: dos marcos cruzados con pivotes. No representa un mecanismo de marca exacto.",
+   "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil teclado keyboard periferico",
+   "ajuste": "proporcional"
+  },
+  "membrana_teclado": {
+   "familia": "facultad",
+   "descripcion": "Lámina de membrana de teclado: pistas impresas y matriz de contactos, sin circuito ni distribución funcional.",
+   "equipos": "teclado keyboard periferico",
+   "ajuste": "libre"
+  },
+  "carcasa_mando": {
+   "familia": "facultad",
+   "descripcion": "Carcasa abierta de mando de videojuegos con dos empuñaduras y huecos para botones y sticks. No sigue una marca concreta.",
+   "equipos": "joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "cruceta_mando": {
+   "familia": "facultad",
+   "descripcion": "Cruceta direccional de mando: cruz con pivote inferior y superficies de contacto.",
+   "equipos": "joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "boton_mando": {
+   "familia": "facultad",
+   "descripcion": "Botón de mando: capuchón redondeado, guía inferior y pestañas de retención, sin símbolo de marca.",
+   "equipos": "joystick mando gamepad controlador",
+   "ajuste": "redondo:xz"
+  },
+  "potenciometro": {
+   "familia": "facultad",
+   "descripcion": "Potenciómetro rotativo de panel: cuerpo, eje estriado, tuerca y tres terminales; sin resistencia asignada.",
+   "equipos": "parlante_pc parlante altavoz bocina pc computadora joystick mando gamepad controlador",
+   "ajuste": "proporcional"
+  },
+  "adaptador_notebook": {
+   "familia": "facultad",
+   "descripcion": "Envolvente genérica de adaptador externo de notebook: dos mitades y alivios de tensión. Sin circuito ni potencia especificada.",
+   "equipos": "cargador_notebook cargador notebook laptop adaptador",
+   "ajuste": "proporcional"
+  },
+  "conector@jack_dc": {
+   "familia": "facultad",
+   "descripcion": "Conector cilíndrico DC de cable: barril hueco, aislante y alivio; sin polaridad ni diámetro de compatibilidad.",
+   "equipos": "cargador_notebook cargador notebook laptop adaptador",
+   "ajuste": "proporcional"
+  },
+  "conector@magsafe": {
+   "familia": "facultad",
+   "descripcion": "Conector magnético de alimentación de formato MagSafe ilustrativo: cara con cinco contactos y alivio. La generación y compatibilidad dependen del equipo.",
+   "equipos": "cargador_notebook cargador notebook laptop adaptador macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
+   "ajuste": "proporcional"
+  },
+  "carcasa_zapatilla": {
+   "familia": "facultad",
+   "descripcion": "Carcasa vacía de regleta eléctrica con cuatro alojamientos, tornillos y entrada de cable; sin norma ni cableado funcional.",
+   "equipos": "zapatilla regleta alargue extension electrica",
+   "ajuste": "proporcional"
+  },
+  "toma_corriente": {
+   "familia": "facultad",
+   "descripcion": "Módulo de toma con dos alojamientos redondos y hueco de tierra ilustrativos. No declara norma, tensión ni compatibilidad de enchufe.",
+   "equipos": "zapatilla regleta alargue extension electrica",
+   "ajuste": "proporcional"
+  },
+  "contactos_zapatilla": {
+   "familia": "facultad",
+   "descripcion": "Barras y contactos interiores ilustrativos de regleta, sin trazado eléctrico ni garantía de seguridad o norma.",
+   "equipos": "zapatilla regleta alargue extension electrica",
+   "ajuste": "proporcional"
+  },
+  "protector_termico": {
+   "familia": "facultad",
+   "descripcion": "Protector térmico rearmable de panel: cuerpo, botón de rearme y dos terminales. Sin curva ni corriente nominal.",
+   "equipos": "zapatilla regleta alargue extension electrica cargador_notebook cargador notebook laptop adaptador",
+   "ajuste": "proporcional"
   }
  }
 }

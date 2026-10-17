@@ -68,3 +68,9 @@ con generador, GLB y renders propios. Se regenera con `npm run modelos:dispositi
 Familia independiente `cotidianos.glb`: 52 formas nuevas para 13 equipos, con reglas de ajuste,
 52 renders individuales y 13 hojas. Reutiliza los tipos existentes por nombre.
 [Generación, cobertura y galería](blender/COTIDIANOS.md).
+
+## Equipos de facultad
+
+Familia independiente `facultad.glb`: 42 formas faltantes, reutilizando 49 tipos existentes.
+Incluye reglas de ajuste, 42 renders individuales y 15 hojas para los equipos y periféricos.
+[Generación, criterios de cobertura y galería](blender/FACULTAD.md).
