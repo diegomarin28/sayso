@@ -7,9 +7,9 @@ Ruta: `POST /api/knowledge { ficha, sintoma }` → `{ pack, manualUrl, manualFil
 
 1. `manuales.ts`: caché en Supabase (tabla `manuales`, migración `lib/supabase/migraciones/003_manuales.sql`). Si el modelo ya tiene un manual verificado, se reusa con sus vistas. Nadie la carga a mano.
 2. Si no está, `buscar.ts` (bibliotecario) es un agente con `web_search`, `web_fetch` y `probar_pdf`: el código baja cada URL candidata y verifica que sea un PDF real; solo se acepta una URL verificada.
-3. El PDF se sube a la Files API (`fileId`, sirve para A4).
-4. `armar.ts` lo lee con **citas de la API** (texto literal + página). Paso con cita de página = `VERIFICADO`; sin cita = sin `cita` (mostrar NO VERIFICADO). Números de parte solo si aparecen en el texto citado. El riesgo pasa por `lib/safety`.
-5. En esa misma lectura se ubican las **vistas** (líneas `VISTA|explosionada|…` y `VISTA|interior|…`). Si falta alguna, `vistas.ts` la busca sola reusando el manual de la caché de prompts (`lector.ts`: todas las lecturas comparten modelo, system, effort y documento).
+3. **Extracto** (`extracto.ts`): a la IA nunca se le manda el PDF entero. El código lee los marcadores del PDF (y el inicio del texto de las primeras páginas), Haiku elige hasta 14 páginas (índice, vista explosionada, vista interior y sección del síntoma) y el código las recorta en un PDF chico que se sube a la Files API (`fileId`, lo leen A4 y /api/plano). El nombre del archivo (`extracto_3-4-51-73.pdf`) guarda qué páginas del manual completo tiene. Costo medido (E14 Gen 2): elegir páginas US$ 0,0003 + leer 13 páginas con Sonnet US$ 0,156 (antes ~0,62 con el manual entero).
+4. `armar.ts` lee el extracto con **citas de la API** y traduce cada página citada a la del manual completo (texto literal + página). Paso con cita de página = `VERIFICADO`; sin cita = sin `cita` (mostrar NO VERIFICADO). Números de parte solo si aparecen en el texto citado. El riesgo pasa por `lib/safety`.
+5. En esa misma lectura se ubican las **vistas** (líneas `VISTA|explosionada|…` y `VISTA|interior|…`). Si la lectura no marca alguna, queda la que eligió Haiku para el extracto. **Parte fija para la caché de prompts:** `prefijoManual(m)` en `lector.ts` (modelo, effort, system y bloque del extracto con citas); otra lectura del mismo extracto que empiece igual sale de la caché.
 6. Se guarda el manual en la caché con sus vistas y `verificado` (un manual verificado no pierde la marca).
 7. Sin manual: guía pública con búsqueda web, `verificado: false`, sin vistas, y no se guarda como manual.
 

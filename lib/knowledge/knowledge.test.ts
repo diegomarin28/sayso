@@ -1,11 +1,13 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { fichaEjemplo, KnowledgePack } from "../../shared";
 import type { EnviarMensaje } from "../ia/claude";
 import { armarKnowledgePack, type Armado, type CachePacks } from "./armar";
 import { buscarManual } from "./buscar";
 import { descargarPdf, tituloDelPdf } from "./descargar";
+import { mapearPdf, nombreExtracto, paginaEnExtracto, paginaOriginal, paginasDeNombre, paginasDelExtracto, prepararExtracto } from "./extracto";
 import { lineasConCitas, parsearContenido } from "./lineas";
 import { repoEnMemoria, repoSupabase, vistasDe } from "./manuales";
 
@@ -94,7 +96,16 @@ describe("buscar y descargar", () => {
 
 const mensaje = (content: unknown[], stop_reason = "end_turn"): Anthropic.Message =>
   ({ content, stop_reason }) as unknown as Anthropic.Message;
-const pdfOk = (async () => new Response("%PDF-1.7 manual")) as typeof fetch;
+/** PDF real de `n` páginas (pdf.js lo tiene que poder abrir); cada página dice "Página N". */
+async function crearPdf(n: number): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const fuente = await doc.embedFont(StandardFonts.Helvetica);
+  for (let i = 1; i <= n; i++) doc.addPage([300, 300]).drawText(`Pagina ${i} del manual`, { x: 20, y: 250, size: 12, font: fuente });
+  return doc.save();
+}
+const PDF_CHICO = await crearPdf(5);
+const PDF_GRANDE = await crearPdf(40);
+const pdfOk = (async () => new Response(PDF_CHICO.slice())) as typeof fetch;
 const nada = (async () => new Response("no", { status: 404 })) as typeof fetch;
 
 /** Texto de la tarea (último bloque de texto del mensaje del usuario). */
@@ -163,22 +174,22 @@ describe("armarKnowledgePack", () => {
     });
   });
 
-  it("si falta una vista, la busca sola con el mismo prefijo (caché de prompts)", async () => {
+  it("con un manual grande: Haiku elige las páginas, se lee solo el extracto y las páginas vuelven al manual completo", async () => {
     const manuales = repoEnMemoria();
-    const f = enviarFalso({ enPack: [VISTA_EXPLOSIONADA], dedicada: [VISTA_INTERIOR] });
-    const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache: sinCache, subir, manuales });
-    expect(r.vistas).toEqual({ explosionada: 51, interior: 73 });
-
-    const [lecturaPack] = f.de("pack");
-    const [lecturaVistas] = f.de("vistas");
-    expect(tarea(lecturaVistas)).toMatch(/VISTA\|interior/);
-    expect(tarea(lecturaVistas)).not.toMatch(/VISTA\|explosionada/);
-    // Mismo modelo, system, effort y documento: la segunda lectura sale de la caché de prompts.
-    const prefijo = (p: Anthropic.MessageCreateParamsNonStreaming) => {
-      const c = p.messages[0].content as Anthropic.ContentBlockParam[];
-      return JSON.stringify({ model: p.model, system: p.system, output_config: p.output_config, tools: p.tools, doc: c[0] });
-    };
-    expect(prefijo(lecturaVistas)).toBe(prefijo(lecturaPack));
+    // La lectura cita la hoja 2 del extracto (= página 12 del manual) para la vista interior.
+    const interiorEnExtracto: Bloque = { text: "\nVISTA|interior|Base sin tapa", citations: [pagina("Removing the fan", 2)] };
+    const f = enviarFalso({ enPack: [interiorEnExtracto] });
+    const subidos: string[] = [];
+    const llamar = async () => JSON.stringify({ indice: [2], explosionada: [30], interior: [12], sintoma: [{ desde: 20, hasta: 22 }] });
+    const r = await armarKnowledgePack(
+      { ficha: fichaEjemplo, sintoma: "se apaga" },
+      { enviar: f.enviar, llamar, fetch: (async () => new Response(PDF_GRANDE.slice())) as typeof fetch, cache: sinCache, manuales, subir: async (_d, nombre) => (subidos.push(nombre), "file_x") },
+    );
+    expect(r.manual?.paginas).toEqual([2, 12, 20, 21, 22, 30]);
+    expect(subidos).toEqual(["extracto_2-12-20-21-22-30.pdf"]);
+    // Interior: de la cita (hoja 2 → página 12). Explosionada: no la marcó la lectura → la que eligió Haiku.
+    expect(r.vistas).toEqual({ explosionada: 30, interior: 12 });
+    expect(r.eventos.map((e) => e.tipo)).toContain("extracto_armado");
   });
 
   it("con el manual en caché y sus vistas, no las vuelve a pedir ni busca el manual", async () => {
@@ -340,5 +351,43 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
     const c = parsearContenido(lineasConCitas([{ text: "1. **PASO**|1|Sacá la tapa.|tapa_inferior|bajo\n- PIEZA|ssd|SSD|abajo|" }]), "HMM");
     expect(c.pasos).toHaveLength(1);
     expect(c.piezas.map((p) => p.id)).toEqual(["ssd"]);
+  });
+});
+
+describe("extracto", () => {
+  it("lee el mapa de un PDF sin marcadores (texto del inicio de cada página)", async () => {
+    const m = await mapearPdf(await crearPdf(3));
+    expect(m.totalPaginas).toBe(3);
+    expect(m.marcadores).toEqual([]);
+    expect(m.inicios[1]).toEqual({ pagina: 2, texto: "Pagina 2 del manual" });
+  });
+
+  it("elige páginas con prioridad (fijas, vistas, síntoma, índice), sin repetir ni pasarse", () => {
+    const sel = { indice: [1, 2], explosionada: [30, 31], interior: [12], sintoma: [{ desde: 20, hasta: 40 }, { desde: 99, hasta: 120 }] };
+    const p = paginasDelExtracto(sel, 40, 8, [5]);
+    expect(p).toHaveLength(8);
+    expect(p).toEqual([5, 12, 20, 21, 22, 23, 30, 31]);
+    expect(paginasDelExtracto({ indice: [0, -3], explosionada: [999], interior: [], sintoma: [] }, 40, 8)).toEqual([]);
+  });
+
+  it("un PDF chico va entero, sin llamar a la IA", async () => {
+    let llamadas = 0;
+    const e = await prepararExtracto(await crearPdf(4), "EJ NB-15", "x", [], async () => (llamadas++, "{}"));
+    expect(e.paginas).toEqual([1, 2, 3, 4]);
+    expect(llamadas).toBe(0);
+  });
+
+  it("recorta el PDF con las páginas elegidas", async () => {
+    const e = await prepararExtracto(PDF_GRANDE, "EJ NB-15", "x", [], async () => JSON.stringify({ indice: [], explosionada: [7], interior: [9], sintoma: [] }));
+    expect(e.paginas).toEqual([7, 9]);
+    expect((await PDFDocument.load(e.datos)).getPageCount()).toBe(2);
+  });
+
+  it("traduce páginas entre el extracto y el manual completo, y las guarda en el nombre del archivo", () => {
+    expect(paginaOriginal([7, 9, 30], 2)).toBe(9);
+    expect(paginaOriginal(null, 2)).toBe(2);
+    expect(paginaEnExtracto([7, 9, 30], 30)).toBe(3);
+    expect(paginasDeNombre(nombreExtracto([7, 9, 30]))).toEqual([7, 9, 30]);
+    expect(paginasDeNombre("manual.pdf")).toBeNull();
   });
 });

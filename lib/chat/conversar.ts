@@ -6,6 +6,7 @@ import { AcumuladorUso, LIMITES, MODELOS, registrarUso, streamClaude, totalUsd, 
 import { eventoCosto } from "../intake/entrada";
 import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
+import { paginaOriginal, paginasDelArchivo } from "../knowledge/extracto";
 import { Segmentador, type Segmento } from "./segmentos";
 
 /**
@@ -75,10 +76,11 @@ Basate en el manual de servicio adjunto y citalo. Si algo no está en el manual,
 ${marcas3D(piezas)}`;
 }
 
-function citaDe(s: Segmento, pack: KnowledgePack, doc: string): Cita | undefined {
+function citaDe(s: Segmento, pack: KnowledgePack, doc: string, paginas: number[] | null): Cita | undefined {
   const c = s.citas.find((x) => x.type === "page_location");
   if (c && c.type === "page_location" && c.cited_text.trim().length >= 8) {
-    return { doc: c.document_title ?? doc, pagina: c.start_page_number, estado: "VERIFICADO" };
+    // El PDF es el extracto: la página se traduce a la del manual completo.
+    return { doc: c.document_title ?? doc, pagina: paginaOriginal(paginas, c.start_page_number), estado: "VERIFICADO" };
   }
   // [[paso:N]]: la cita es la que el código verificó al armar el pack.
   for (const n of s.pasos) {
@@ -95,6 +97,8 @@ type Contexto = {
   paso: number;
   resaltadosPrevios: Accion[];
   usos: Uso[];
+  /** Páginas del manual completo que tiene el extracto (null = sin traducir). */
+  paginas: number[] | null;
 };
 
 /** Arma la Coreografia de una frase y la pasa por lib/safety. */
@@ -104,7 +108,7 @@ function emitir(s: Segmento, ctx: Contexto): EventoChat {
   // Cada paso nuevo limpia los resaltados en el visor: una frase sin marcas mantiene los anteriores.
   if (acciones.length === 0) acciones = ctx.resaltadosPrevios;
   else ctx.resaltadosPrevios = acciones.filter((a) => a.t === "resaltar");
-  const cita = citaDe(s, ctx.pack, ctx.doc);
+  const cita = citaDe(s, ctx.pack, ctx.doc, ctx.paginas);
   const { coreografia, evaluacion } = filtrarCoreografia({
     paso: ctx.paso,
     dice: s.texto,
@@ -170,7 +174,11 @@ async function* frases(
   return "ok";
 }
 
-export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = streamClaude): AsyncGenerator<EventoChat> {
+export async function* conversar(
+  entradaCruda: EntradaChat,
+  stream: StreamIA = streamClaude,
+  paginasDe: (fileId: string) => Promise<number[] | null> = paginasDelArchivo,
+): AsyncGenerator<EventoChat> {
   const entrada = EntradaChat.parse(entradaCruda);
   const { pack, pregunta, manualFileId } = entrada;
 
@@ -191,7 +199,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
     ? [...new Set(entrada.plano.piezas.map((p) => p.pieza))]
     : [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
   const doc = pack.fuentes[0]?.doc ?? "Manual";
-  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [] };
+  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [], paginas: null };
   const historial = entrada.historial.map((h) => `<${h.rol}>${h.texto}</${h.rol}>`).join("\n");
   const textoPregunta: Anthropic.TextBlockParam = {
     type: "text",
@@ -227,6 +235,7 @@ export async function* conversar(entradaCruda: EntradaChat, stream: StreamIA = s
       // manual.titulo = pack.fuentes[0].doc) y las reglas del chat DESPUÉS del documento: si se
       // cambia algo de eso, cada primera consulta vuelve a pagar el manual entero (~US$ 0,64).
       if (entrada.modo === "auto") yield { tipo: "buscando", texto: "Dejame buscarlo en el manual…" };
+      ctx.paginas = await paginasDe(manualFileId).catch(() => null);
       yield* fase(
         stream,
         {

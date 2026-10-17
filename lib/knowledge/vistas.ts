@@ -1,11 +1,9 @@
-import { LIMITES, type EnviarMensaje } from "../ia/claude";
-import { leerManual, type ManualSubido } from "./lector";
-import { lineasConCitas, parsearContenido, type ClaseVista, type Vistas } from "./lineas";
+import type { ClaseVista, Vistas } from "./lineas";
 
 /**
  * Bibliotecario: las dos páginas del manual que usa el cartógrafo (/api/plano) para ubicar
  * las piezas. Se piden dentro de la lectura del pack (sin llamada extra); si falta alguna,
- * se buscan solas reusando el manual de la caché de prompts. Se guardan en la caché de manuales.
+ * queda la que eligió el bibliotecario al armar el extracto. Se guardan en la caché de manuales.
  */
 
 export const SIN_VISTAS: Vistas = { explosionada: null, interior: null };
@@ -33,14 +31,4 @@ export function faltantes(v: Vistas): ClaseVista[] {
 /** Mantiene lo que ya había; completa solo lo que falta. */
 export function combinar(base: Vistas, extra: Vistas): Vistas {
   return { explosionada: base.explosionada ?? extra.explosionada, interior: base.interior ?? extra.interior };
-}
-
-/** Búsqueda dedicada de las vistas que faltan (sale de la caché de prompts si el manual se acaba de leer). */
-export async function ubicarVistas(manual: ManualSubido, clases: ClaseVista[], enviar: EnviarMensaje): Promise<Vistas> {
-  if (clases.length === 0) return SIN_VISTAS;
-  const tarea = `Buscá en el manual adjunto estas páginas y escribí SOLO estas líneas, una por renglón, sin nada más:\n${instruccionesVistas(clases)}`;
-  const { bloques } = await leerManual(manual, tarea, LIMITES.lectura.maxTokensVistas, enviar, "bibliotecario: ubicar vistas");
-  const { vistas } = parsearContenido(lineasConCitas(bloques), manual.titulo);
-  // Solo las que se pidieron.
-  return { explosionada: clases.includes("explosionada") ? vistas.explosionada : null, interior: clases.includes("interior") ? vistas.interior : null };
 }
