@@ -1611,6 +1611,25 @@ def renders(carpeta, grupos):
         bpy.ops.render.render(write_still=True)
 
 
+def actualizar_indice(archivo, familias, tipos):
+    """Actualiza solo las familias exportadas; conserva las de scripts independientes."""
+    anterior = {"familias": {}, "tipos": {}}
+    if os.path.exists(archivo):
+        with open(archivo, encoding="utf-8") as f:
+            anterior = json.load(f)
+    for nombre, meta in tipos.items():
+        previo = anterior["tipos"].get(nombre)
+        if previo and previo["familia"] not in familias:
+            raise ValueError("Tipo ocupado por otra familia: " + nombre)
+    restantes = {k: v for k, v in anterior["tipos"].items() if v["familia"] not in familias}
+    anterior["familias"].update(familias)
+    restantes.update(tipos)
+    anterior["tipos"] = restantes
+    with open(archivo, "w", encoding="utf-8") as f:
+        json.dump(anterior, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     p = argparse.ArgumentParser()
@@ -1641,11 +1660,10 @@ def main():
         exportar(archivo, vacios)
         familias[familia] = f"{familia}.glb"
         print(f"Exportado {archivo}: {os.path.getsize(archivo) / 1024:.0f} KB, {len(vacios)} tipos")
-    with open(os.path.join(args.salida, "indice.json"), "w", encoding="utf-8") as f:
-        json.dump({"familias": familias, "tipos": tipos}, f, ensure_ascii=False, indent=1)
-        f.write("\n")
+    actualizar_indice(os.path.join(args.salida, "indice.json"), familias, tipos)
     if args.renders:
         renders(args.renders, grupos)
 
 
-main()
+if __name__ == "__main__":
+    main()

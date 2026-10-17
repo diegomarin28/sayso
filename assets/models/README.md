@@ -57,3 +57,8 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
   Un tipo sin entrada usa la de su tipo base, y un alias, la de su forma. Un test controla que lo
   declarado redondo sea redondo en el modelo.
 - Planos de ejemplo de heladera y aire para `/lab/visor?plano=heladera` (o `aire`), y una coreografía de heladera (ocultar puertas, girar, ir al compresor): `components/viewer/ejemplos.ts` (solo lab y tests).
+
+## Familia independiente de dispositivos
+
+[42 componentes de aspiradora, secador, impresora, consola, router/módem y cafetera](blender/DISPOSITIVOS.md),
+con generador, GLB y renders propios. Se regenera con `npm run modelos:dispositivos`.

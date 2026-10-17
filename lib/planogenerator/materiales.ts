@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RECETAS_DISPOSITIVOS } from "./materiales-dispositivos";
 
 /**
  * Materiales por tipo de pieza, estilo "ilustración técnica": carcasa de aluminio,
@@ -16,6 +17,7 @@ export type Receta = {
 
 // Se busca por prefijo del id, en orden: el primero que coincide gana.
 const RECETAS: Array<[prefijo: string, receta: Receta]> = [
+  ...RECETAS_DISPOSITIVOS,
   ["tapa_inferior", { color: "#c3c9cf", metalness: 0.9, roughness: 0.3, opacity: 0.18 }],
   ["base", { color: "#aeb5bc", metalness: 0.95, roughness: 0.38 }],
   ["placa_madre", { color: "#1d6b45", metalness: 0.15, roughness: 0.55 }],
