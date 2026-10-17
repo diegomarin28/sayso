@@ -9,7 +9,7 @@ Antes de escribir código, preguntale al usuario: **"¿Sos Diego, Juanma o Iaio?
 | Persona | Cuenta | Carril | Foco |
 |---|---|---|---|
 | **Diego** | Claude 100 USD | **B — 3D** + `shared/` + integración final | lo más complejo: modelos 3D, coreografía, decisiones de arquitectura |
-| **Juanma** | Claude 20 USD | **A — Cerebro** | IA, captura guiada, chapa, knowledge pack, chat, seguridad |
+| **Juanma** (Windows) | Claude 20 USD | **A — Cerebro** | IA, captura guiada, chapa, knowledge pack, chat, seguridad |
 | **Iaio** | Claude 20 USD | **C — Producto** | app, pantallas, voz, deploy, demo y pitch |
 
 El reparto es una propuesta de Diego: si cambia, se actualiza esta tabla en un PR. La cuenta de Codex (20 USD) todavía no tiene dueño: usarla para revisar PRs y escribir tests.
@@ -63,19 +63,48 @@ Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Re
 
 Acciones de coreografía permitidas: `camara`, `resaltar`, `rotar`, `desplazar`, `ocultar`, `despiezar`, `restaurar`. Si la IA nombra una pieza que no existe en el GLB, el reproductor la ignora y registra un evento.
 
+## MODO GUÍA (cómo tratás a la persona)
+
+Tenemos poco tiempo y la persona **no va a revisar código**. Vos manejás git, tests, PR y fusiones. La persona solo da el OK en dos momentos: **el plan de la tarea** y **la fusión**.
+
+- Explicá en español simple, **un paso por vez**, y esperá respuesta antes del siguiente.
+- Si hace falta que la persona haga algo fuera de la terminal (crear una cuenta, pegar una clave, probar en el navegador), dale el paso exacto: dónde tocar, qué copiar, qué debería ver.
+- Comandos según su sistema: **Juanma usa Windows (PowerShell)**; Diego e Iaio usan Mac. Si no sabés el sistema, preguntá.
+- Nunca le pidas que pegue claves en el chat. Las claves van en `.env.local`.
+- Al final de cada tarea, decile en una o dos líneas qué quedó hecho y cuál es la próxima.
+
+## Ciclo de cada tarea (lo hacés vos, sin que la persona toque git)
+
+1. **Sincronizar:** `git fetch origin` y crear la rama de la tarea desde `origin/main`, en el mismo worktree: `git switch -c <carril>/<tarea> origin/main`. Si hay cambios sin guardar, avisá antes.
+2. **Proponer el plan** en 5–8 puntos y esperar el OK de la persona.
+3. **Construir** solo dentro de las carpetas del carril. Commits chicos.
+4. **Verificar:** `npm test`, `npm run typecheck` y `npm run build`. Si algo falla, lo arreglás antes de seguir. Si es una pantalla, pedile a la persona que la mire en `npm run dev` y confirme.
+5. **Actualizar con main:** `git fetch origin` y `git rebase origin/main`, y volver a verificar.
+   - Si el conflicto es en archivos de **otro carril o en `shared/`**: no lo resuelvas vos. Pará y decile a la persona que avise en el grupo.
+6. **PR:** `gh pr create --base main` con título claro y 2–3 líneas de qué cambió.
+7. **Pedir OK para fusionar:** "¿Fusiono?" Con el OK: `gh pr merge --squash --delete-branch`.
+   - Si `gh` falla, guiá la instalación (`brew install gh` en Mac, `winget install --id GitHub.cli` en Windows) y `gh auth login`.
+8. **Avisar:** decile a la persona que escriba en el grupo: "Fusioné <tarea>, hagan pull". Cuando la persona te diga que otro fusionó, corré `git fetch origin` y `git rebase origin/main` en tu rama.
+9. **Siguiente tarea:** volvés al paso 1 con la próxima del carril, en el mismo worktree (no hace falta crear uno nuevo ni volver a copiar `.env.local`).
+
+Reglas de fusión:
+- `main` siempre tiene que compilar y pasar los tests. Nunca fusiones algo rojo.
+- Nunca hagas `push --force` a `main` ni commits directos a `main`.
+- Los cambios en `shared/` los hace solo el Claude de Diego, con aviso al grupo antes de fusionar.
+- Si GitHub tiene la verificación automática (CI) en rojo, no fusiones.
+
 ## Cómo trabajamos con Orca y git
-- **Orca** (gratis, código abierto): una carpeta de trabajo (*worktree*) por tarea, cada una con su propio agente (Claude Code o Codex). Todos abrimos **el mismo repositorio**.
-- Rama por tarea: `a/<tarea>`, `b/<tarea>`, `c/<tarea>`. Commits chicos y frecuentes. **PR a `main`** y merge rápido; `main` siempre debe compilar.
-- Nunca tocar archivos de otro carril sin avisar. Si necesitás un cambio en `/shared`, abrí un PR con etiqueta "contrato" y avisá al grupo antes de seguir.
+- **Orca** (gratis, código abierto): cada persona tiene un worktree con su agente. Todos sobre **el mismo repositorio**.
+- Rama por tarea: `a/<tarea>`, `b/<tarea>`, `c/<tarea>`.
+- Nunca tocar archivos de otro carril sin avisar.
 - Secretos en `.env.local` (no se sube). Mantener `.env.example` con los nombres de las variables.
-- Antes de cerrar una tarea: compila, tipos sin errores, y probaste el flujo con el fixture.
 - No subir PDFs de manuales completos al repo (copyright); se bajan al vuelo o se guardan en Supabase Storage de la demo.
 
 ## Qué hacer al arrancar la sesión
-1. Preguntar quién es la persona.
-2. Leer `docs/plan-v4.md`, la sección de su carril, y `git log` reciente.
-3. Proponer **una** tarea concreta de su carril, la más cercana a la próxima puerta.
-4. Trabajar en un worktree propio y abrir PR al terminar.
+1. Preguntar quién es la persona (y su sistema si no lo sabés).
+2. Leer `docs/plan-v4.md`, la sección de su carril, y `git log --oneline -15` de `origin/main` para ver qué ya está hecho.
+3. Decirle en dos líneas dónde está el carril y proponer **la próxima tarea** (la más cercana a la próxima puerta del cronograma).
+4. Seguir el ciclo de arriba.
 
 ## Tareas por carril (resumen; detalle en el plan)
 
