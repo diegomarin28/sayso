@@ -154,6 +154,7 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA)
           },
         ],
         maxTokens: 6000,
+        etapa: recorte ? "cartografo: ubicar piezas (recorte)" : "cartografo: ubicar piezas",
       },
       llamar,
     );

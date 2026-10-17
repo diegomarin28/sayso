@@ -6,7 +6,7 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { knowledgePackEjemplo } from "../../../shared";
-import { subirArchivo, type LlamarIA, type PedidoIA } from "../../ia/claude";
+import { calcularUso, subirArchivo, type LlamarIA, type PedidoIA } from "../../ia/claude";
 import { descargarPdf } from "../../knowledge/descargar";
 import { RegistroManual } from "../../knowledge/manuales";
 import { supabaseServidor } from "../../supabase/cliente";
@@ -56,8 +56,9 @@ async function main() {
   const entero = await pedidoDe({ ...base, manual: { fileId, paginasVistaExplosionada: m.paginas_vista_explosionada } });
   const chico = await pedidoDe({ ...base, recorte });
   const [tEntero, tChico] = [await tokens(entero), await tokens(chico)];
-  console.log(`Manual entero: ${(pdf.bytes / 1e6).toFixed(1)} MB · ${tEntero} tokens de entrada`);
-  console.log(`Recorte:       ${((recorte.base64.length * 3) / 4 / 1e6).toFixed(2)} MB · ${tChico} tokens de entrada (${(tEntero / tChico).toFixed(0)}× menos)`);
+  const usd = (t: number) => calcularUso("medicion", entero.modelo, { input_tokens: t }).usd.toFixed(3);
+  console.log(`Manual entero: ${(pdf.bytes / 1e6).toFixed(1)} MB · ${tEntero} tokens de entrada · US$ ${usd(tEntero)} sin caché`);
+  console.log(`Recorte:       ${((recorte.base64.length * 3) / 4 / 1e6).toFixed(2)} MB · ${tChico} tokens de entrada · US$ ${usd(tChico)} (${(tEntero / tChico).toFixed(0)}× menos)`);
 
   const t0 = Date.now();
   const r = await generarPlano({ ...base, recorte });
