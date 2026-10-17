@@ -12,7 +12,8 @@ import type { Vec3 } from "../../shared";
 export const RECETA_CUERPO = "cuerpo";
 
 export type ParteModelo = { geometria: THREE.BufferGeometry; receta: string };
-export type ModeloPieza = { partes: ParteModelo[]; caja: THREE.Box3 };
+/** `equipos`: palabras de los equipos para los que es la forma (del GLB); vacío = cualquiera. */
+export type ModeloPieza = { partes: ParteModelo[]; caja: THREE.Box3; equipos?: string[] };
 export type BibliotecaPiezas = Map<string, ModeloPieza>;
 
 /**
@@ -38,7 +39,8 @@ export function bibliotecaDesdeEscena(escena: THREE.Object3D): BibliotecaPiezas 
       p.geometria.computeBoundingBox();
       caja.union(p.geometria.boundingBox!);
     }
-    biblioteca.set(tipo.name, { partes, caja });
+    const equipos = typeof tipo.userData.equipos === "string" ? palabras(tipo.userData.equipos) : [];
+    biblioteca.set(tipo.name, { partes, caja, equipos });
   }
   return biblioteca;
 }
@@ -60,12 +62,30 @@ export function deformacion(modelo: ModeloPieza, dim: Vec3): number {
   return alto + Math.min(log(a, t.x) + log(p, t.z), log(a, t.z) + log(p, t.x));
 }
 
+/** Minúsculas, sin tildes, separado en palabras: "Teléfono celular" → ["telefono", "celular"]. */
+export function palabras(texto: string): string[] {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/** ¿El tipo de equipo (texto libre de la recepción) nombra alguno de los equipos de la variante? */
+function esPara(modelo: ModeloPieza, equipo: string[]): boolean {
+  return (modelo.equipos ?? []).some((e) => equipo.some((p) => p.startsWith(e)));
+}
+
 /**
  * El tipo cuyo nombre es el prefijo más largo del id (`tornillos_ventilador` → `tornillo`).
- * Si el tipo tiene variantes y viene `dim`, la que menos se deforma (una batería de 26 cm usa la
- * de notebook; una de 6 cm, la de celular). Sin `dim`, la variante base.
+ * Si el tipo tiene variantes:
+ * - con `tipoEquipo` (texto libre de la recepción, ej. "celular Samsung") que nombra un equipo que la
+ *   biblioteca conoce, se descartan las variantes marcadas para otro equipo (las sin marca quedan);
+ * - con `dim`, de las que quedan, la que menos se deforma (una batería de 26 cm usa la de notebook;
+ *   una de 6 cm, la de celular). Sin `dim`, la base.
  */
-export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: Vec3): ModeloPieza | undefined {
+export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: Vec3, tipoEquipo?: string): ModeloPieza | undefined {
   if (!biblioteca) return undefined;
   let mejor: string | undefined;
   for (const nombre of biblioteca.keys()) {
@@ -73,8 +93,14 @@ export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: V
     if (pieza.startsWith(tipo) && (!mejor || tipo.length > mejor.length)) mejor = tipo;
   }
   if (!mejor) return undefined;
-  const variantes = [...biblioteca].filter(([nombre]) => tipoDe(nombre) === mejor);
-  if (!dim || variantes.length === 1) return biblioteca.get(mejor) ?? variantes[0][1];
+  let variantes = [...biblioteca].filter(([nombre]) => tipoDe(nombre) === mejor);
+  const equipo = tipoEquipo ? palabras(tipoEquipo) : [];
+  // Solo si la biblioteca conoce ese equipo (alguna variante lo nombra); "MacBook" o "lavarropas" no descartan nada.
+  if (equipo.length && [...biblioteca.values()].some((m) => esPara(m, equipo))) {
+    const aplicables = variantes.filter(([, m]) => !m.equipos?.length || esPara(m, equipo));
+    if (aplicables.length) variantes = aplicables;
+  }
+  if (!dim || variantes.length === 1) return (variantes.find(([nombre]) => nombre === mejor) ?? variantes[0])[1];
   return variantes.reduce((a, b) => (deformacion(b[1], dim) < deformacion(a[1], dim) ? b : a))[1];
 }
 

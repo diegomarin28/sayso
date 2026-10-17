@@ -39,6 +39,8 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["placa", { color: "#173f35", metalness: 0.15, roughness: 0.5 }],
   ["camara", { color: "#2a2e34", metalness: 0.6, roughness: 0.35 }],
   ["marco", { color: "#9aa2ab", metalness: 0.9, roughness: 0.35 }],
+  // Como la tapa inferior: translúcida, para ver lo que hay debajo.
+  ["tapa_trasera", { color: "#2b3440", metalness: 0.4, roughness: 0.2, opacity: 0.22 }],
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };

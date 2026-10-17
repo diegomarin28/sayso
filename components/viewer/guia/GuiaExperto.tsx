@@ -18,6 +18,8 @@ export type GuiaExpertoProps = {
   plano: PlanoDePiezas;
   /** "plantilla" = la IA no pudo ubicar las piezas: se avisa que es un esquema genérico. */
   origenPlano: "ia" | "plantilla";
+  /** Tipo de equipo en texto libre (de /api/intake/entender): el 3D elige la versión de cada pieza (notebook, celular…). */
+  tipoEquipo?: string;
   manualFileId?: string | null;
   /** Si viene, el experto arranca solo (ej. con el síntoma del caso). */
   preguntaInicial?: string;
@@ -54,6 +56,7 @@ export function GuiaExperto({
   pack,
   plano,
   origenPlano,
+  tipoEquipo,
   manualFileId,
   preguntaInicial,
   decir = decirConTiempoDeLectura,
@@ -150,6 +153,7 @@ export function GuiaExperto({
             plano={plano}
             coreografia={coreografia}
             piezas={pack.piezas}
+            tipoEquipo={tipoEquipo}
             casoId={casoId}
             onEvento={onEvento}
             onPaso={(p) => setFrase((f) => ({ c: p.coreografia, id: (f?.id ?? 0) + 1, visible: true }))}

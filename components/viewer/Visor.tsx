@@ -44,6 +44,8 @@ export type VisorProps = {
   coreografia?: Coreografia | null;
   /** Piezas del knowledge pack: dan el nombre de las etiquetas. Si falta, se usa el id. */
   piezas?: Pieza[];
+  /** Tipo de equipo en texto libre (de la recepción): elige la versión de cada pieza (ej. la batería de celular). */
+  tipoEquipo?: string;
   casoId?: string;
   /** Eventos para el feed de actividad (ej. pieza que no existe en el modelo). */
   onEvento?: (evento: Evento) => void;
@@ -64,6 +66,7 @@ export function Visor({
   plano,
   coreografia,
   piezas,
+  tipoEquipo,
   casoId = "sin-caso",
   onEvento,
   onPaso,
@@ -96,6 +99,7 @@ export function Visor({
           <Escena
             plano={plano}
             biblioteca={biblioteca}
+            tipoEquipo={tipoEquipo}
             coreografia={coreografia}
             piezas={piezas}
             casoId={casoId}
@@ -142,16 +146,16 @@ function LuzDeEstudio() {
 }
 
 type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
-  Pick<VisorProps, "coreografia" | "piezas" | "onEvento" | "onPaso"> & {
+  Pick<VisorProps, "coreografia" | "piezas" | "tipoEquipo" | "onEvento" | "onPaso"> & {
     sombrasEnVivo: boolean;
     biblioteca: BibliotecaPiezas | null;
   };
 
-function Escena({ plano, biblioteca, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo }: EscenaProps) {
+function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo }: EscenaProps) {
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
-  const escena = useMemo(() => prepararEscena(plano, biblioteca ?? undefined), [plano, biblioteca]);
+  const escena = useMemo(() => prepararEscena(plano, biblioteca ?? undefined, tipoEquipo), [plano, biblioteca, tipoEquipo]);
   const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys()));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);

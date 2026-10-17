@@ -43,7 +43,11 @@ export type EscenaConstruida = {
   avisos: string[];
 };
 
-export type OpcionesEscena = { biblioteca?: BibliotecaPiezas };
+export type OpcionesEscena = {
+  biblioteca?: BibliotecaPiezas;
+  /** Texto libre de la recepción (ej. "celular", "notebook Lenovo"): ayuda a elegir la variante de cada pieza. */
+  tipoEquipo?: string;
+};
 
 export function construirEscena(plano: PlanoDePiezas, opciones: OpcionesEscena = {}): EscenaConstruida {
   const raiz = new THREE.Group();
@@ -60,7 +64,7 @@ export function construirEscena(plano: PlanoDePiezas, opciones: OpcionesEscena =
       continue;
     }
     piezas.set(p.pieza, p);
-    nodos.set(p.pieza, crearNodo(p, opciones.biblioteca));
+    nodos.set(p.pieza, crearNodo(p, opciones));
   }
 
   for (const [id, p] of piezas) {
@@ -112,7 +116,7 @@ function resolverPadre(
   return p.padre;
 }
 
-function crearNodo(p: PiezaPlano, biblioteca?: BibliotecaPiezas): THREE.Group {
+function crearNodo(p: PiezaPlano, { biblioteca, tipoEquipo }: OpcionesEscena): THREE.Group {
   const nodo = new THREE.Group();
   nodo.name = p.pieza;
   const datos: DatosPieza = {
@@ -124,7 +128,7 @@ function crearNodo(p: PiezaPlano, biblioteca?: BibliotecaPiezas): THREE.Group {
   };
   nodo.userData = datos;
 
-  const modelo = modeloPara(p.pieza, biblioteca, p.dim);
+  const modelo = modeloPara(p.pieza, biblioteca, p.dim, tipoEquipo);
   const malla = modelo ? mallaDeBiblioteca(p, partesAjustadas(modelo, p.dim)) : new THREE.Mesh(crearGeometria(p), materialPara(p.pieza));
   malla.name = p.pieza + SUFIJO_MALLA;
   malla.position.set(-p.pivote[0], -p.pivote[1], -p.pivote[2]);
