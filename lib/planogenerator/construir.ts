@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import { agregarDetalles } from "./detalles";
 import { materialPara } from "./materiales";
 
 /**
@@ -14,6 +15,7 @@ import { materialPara } from "./materiales";
  * Estructura de cada pieza:
  *   Group (name = id de la pieza, ubicado en el pivote)  ← esto anima el reproductor
  *     └─ Mesh (name = `${id}__malla`, desplazada -pivote)
+ *          └─ Meshes de detalle (`${id}__malla__detalle_N`: aspas, chips…), opcionales
  *     └─ Groups de las piezas hijas
  */
 
@@ -120,6 +122,7 @@ function crearNodo(p: PiezaPlano): THREE.Group {
   malla.position.set(-p.pivote[0], -p.pivote[1], -p.pivote[2]);
   malla.castShadow = true;
   malla.receiveShadow = true;
+  agregarDetalles(p.pieza, malla, p.dim);
   nodo.add(malla);
   return nodo;
 }
