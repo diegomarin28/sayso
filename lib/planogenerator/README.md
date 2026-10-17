@@ -29,14 +29,15 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 
 - `plantillas/notebook.ts`: notebook genérica, esquemática, vista desde abajo con la tapa inferior translúcida (se abre como bisagra desde el borde trasero).
 
-## Generador desde el manual (B4) — `generador.ts`
+## Generador desde el manual (B4) — `generador.ts`, `obtener.ts`, `cache.ts`
 
-`generarPlano({ casoId, knowledgePack, imagenes?, paginas? })` → `{ plano, avisos, origen }`. Ruta: `POST /api/plano`.
+`POST /api/plano { casoId, knowledgePack, ficha?, manualFileId?, manualUrl?, paginasVistaExplosionada?, imagenes?, paginas? }`
+→ `{ plano, origen: "ia" | "plantilla", desdeCache, avisos, eventos }`
 
-- **La IA interpreta:** con la vista explosionada / inferior del manual (imágenes) y la lista de piezas del knowledge pack, propone para cada pieza su **zona** en la planta (x, z de -1 a 1), su **capa** (`placa`, `sobre_placa`, `sobre_base`, `sobre_pieza`), su tamaño relativo, su número en el diagrama y la página. Modelo: `MODELOS.vision` de `lib/ia/claude.ts`, salida validada con Zod (un reintento).
-- **El código calcula** (`planoDesdePropuesta`, pura y testeada): medidas en cm, alturas apilando capas, padres, límites dentro de la base y de su soporte, choques (coloca por capa y confianza; si choca, busca el lugar libre más cercano), tapa inferior encima de todo.
-- **No se inventan piezas:** un id que no está en el knowledge pack se descarta. Lo que la IA no ubica sale de la plantilla. Todo queda en `avisos`.
-- Las citas de posición quedan `NO_VERIFICABLE` (el código no puede verificar una ubicación en un diagrama).
-- **Si la IA falla** dos veces → `origen: "plantilla"` (`planoDesdePlantilla`), nunca se corta el flujo.
-- Prueba real (gasta créditos): `npx tsx --env-file=.env.local lib/planogenerator/probar-plano.ts [kp.json] [pagina.png …] --pag 54 --salida plano.json`, y pegá el JSON en `/lab/visor`.
+- **Flujo en la pantalla 4:** `/api/knowledge` devuelve `manualFileId` y `paginasVistaExplosionada`; se pasan tal cual a `/api/plano` junto con el pack y la ficha. Después, el mismo `plano` va al `<Visor>` y a `/api/chat` (el chat solo usa ids de ese plano).
+- **La IA interpreta:** lee el manual completo por `file_id` (sin renderizar páginas), identifica las piezas con la vista explosionada y las ubica con las ilustraciones del interior que busca ella misma. Propone zona, capa, tamaño relativo, n.º del diagrama y página. Modelo `MODELOS.vision`, salida validada con Zod (un reintento).
+- **El código calcula** (`planoDesdePropuesta`, pura y testeada): medidas en cm, alturas por capas, padres, límites, choques (lugar libre más cercano por confianza), tapa inferior. Descarta ids fuera del pack y completa con la plantilla; todo queda en `avisos`. Citas de posición: `NO_VERIFICABLE`.
+- **Caché** (`cache.ts`, tabla `planos`, migración `lib/supabase/migraciones/003_planos.sql`): un plano por marca + modelo (misma clave que la tabla `manuales`). Se reusa si al generarlo ya se pidieron todas las piezas del pack actual. La plantilla genérica nunca se guarda. Sin Supabase, caché en memoria.
+- **Si la IA falla** → `origen: "plantilla"`: la pantalla tiene que mostrar "esquema genérico, no es tu modelo exacto".
+- Medición (3 manuales de prueba, escala 0–2): leyendo el PDF completo 65 % (1 corrida por manual); con imágenes recortadas 60 % (58–62, 3 corridas); plantilla sin IA 27 %.
 - Evaluación contra manuales reales (casos locales, fuera del repo): ver `evaluacion/README.md`.
