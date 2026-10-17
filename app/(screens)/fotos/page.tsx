@@ -207,7 +207,7 @@ export default function CapturaGuiada() {
                 <span className="rounded-full bg-acento p-5 text-black">
                   <Camara />
                 </span>
-                <span className="text-sm">Tocá para sacar la foto</span>
+                <span className="text-sm">Tocá para sacar la foto con la cámara</span>
               </div>
             )}
             <Esquinas
@@ -222,6 +222,22 @@ export default function CapturaGuiada() {
               </div>
             )}
           </label>
+
+          {/* La foto grande abre la cámara; esto deja elegir una que ya esté en el celular. */}
+          {!toma.revisando && !aceptada && (
+            <label className="-mt-4 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-borde text-sm font-medium text-texto transition hover:border-texto-suave active:scale-[0.98]">
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => {
+                  alSacar(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <Galeria /> Elegir de la galería
+            </label>
+          )}
 
           <div className="mt-auto flex items-center justify-between gap-4 text-sm text-texto-suave">
             <span>
@@ -276,4 +292,24 @@ function mensajeDeError(e: unknown) {
   if (e instanceof ErrorApi || e instanceof ErrorImagen) return e.message;
   console.error("[fotos]", e);
   return "Algo salió mal. Probá de nuevo.";
+}
+
+function Galeria() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="M21 16l-5-5-8 9" />
+    </svg>
+  );
 }
