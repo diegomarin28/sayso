@@ -1,5 +1,5 @@
 -- Caché del plano 3D (carril B, Diego): un plano por marca + modelo, generado por el cartógrafo
--- (/api/plano) leyendo el manual. Se corre a mano en el SQL Editor, después de 001 y 002.
+-- (/api/plano) leyendo el manual. Se corre a mano en el SQL Editor, después de 001, 002 y 003.
 -- Se puede correr varias veces.
 
 create table if not exists planos (

@@ -2,45 +2,54 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Visor } from "@/components/viewer";
+import { GuiaExperto } from "@/components/viewer";
+import { callar, hablar } from "@/lib/voice/hablar";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { DiceExperto, Encabezado } from "../_ui/experto";
+import { Encabezado } from "../_ui/experto";
 
 /**
- * Pantalla 5 — Experto en 3D: pantalla negra, 3D al centro que se gira con el dedo.
- *
- * LUGAR PARA <GuiaExperto> (carril B, Diego): cuando esté, reemplaza al <Visor> de abajo y
- * trae el chat, los subtítulos y la cita. Datos que ya tiene el flujo para pasarle:
- *   caso, ficha, preparado.pack, preparado.manualFileId, plano.plano, agregarEventos.
- * El texto que se muestra es siempre el `dice` que devuelve el visor tras el filtro de
- * seguridad, nunca el original de la IA (ahí viene el aviso cuando se bloquea un paso).
+ * Pantallas 5 y 6 — Experto en 3D y conversación. Todo lo hace <GuiaExperto> (carril B):
+ * visor, chat con el manual, frase que se desvanece, cita y bloqueo de pasos peligrosos.
+ * Acá solo se monta con los datos del caso y se le da la voz (C3).
  */
+
+/** La guía espera que la frase se diga entera; si cambia de tema, corta la voz. */
+async function decir(texto: string, senal: AbortSignal) {
+  if (senal.aborted) return;
+  const voz = hablar(texto);
+  senal.addEventListener("abort", voz.detener, { once: true });
+  await voz.termino;
+}
+
 export default function Experto() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { preparado, plano, agregarEventos } = useFlujo();
 
   useEffect(() => {
-    if (caso && !plano) router.replace("/preparando");
-  }, [caso, plano, router]);
+    if (caso && (!preparado || !plano)) router.replace("/preparando");
+  }, [caso, preparado, plano, router]);
 
-  if (!caso || !plano) return null;
+  useEffect(() => callar, []);
+
+  if (!caso || !preparado || !plano) return null;
 
   return (
-    <main className="relative flex h-dvh w-full flex-col bg-black">
-      <div className="pointer-events-none relative z-10 mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pt-6">
-        <div className="pointer-events-auto">
-          <Encabezado paso={5} />
-        </div>
-        {/* Se dice en voz alta que es un esquema, no un escaneo (transparencia, plan §10). */}
-        <DiceExperto texto="Este es tu equipo en esquema, con las piezas donde dice el manual. Giralo con el dedo." />
+    <main className="flex h-dvh w-full flex-col bg-black">
+      <div className="mx-auto w-full max-w-xl shrink-0 px-5 pt-6 pb-3">
+        <Encabezado paso={5} />
       </div>
-      <Visor
-        className="absolute inset-0"
-        plano={plano.plano}
-        piezas={preparado?.pack.piezas}
+      <GuiaExperto
+        className="min-h-0 flex-1"
         casoId={caso.id}
+        pack={preparado.pack}
+        plano={plano.plano}
+        origenPlano={plano.origen}
+        manualFileId={preparado.manualFileId}
+        // El experto arranca solo, con lo que la persona contó en la pantalla 1.
+        preguntaInicial={caso.sintoma}
+        decir={decir}
         onEvento={(e) => agregarEventos([e])}
       />
     </main>
