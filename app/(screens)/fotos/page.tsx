@@ -94,6 +94,12 @@ export default function CapturaGuiada() {
     }
   }
 
+  /** Vuelve a la foto anterior (para sacarla de nuevo) o, desde la primera, a la pantalla 1. */
+  function volver() {
+    if (actual > 0) setActual(Math.min(actual, pedidos?.length ?? 0) - 1);
+    else router.push("/");
+  }
+
   function saltar() {
     actualizar(actual, { salteada: true });
     setActual(actual + 1);
@@ -117,7 +123,11 @@ export default function CapturaGuiada() {
 
   return (
     <Pantalla>
-      <Encabezado paso={2} orbe={!pedidos || toma.revisando ? "pensando" : "quieto"} />
+      <Encabezado
+        paso={2}
+        orbe={!pedidos || toma.revisando ? "pensando" : "quieto"}
+        alVolver={toma.revisando ? undefined : volver}
+      />
 
       <DiceExperto texto={dice} />
 

@@ -5,14 +5,7 @@ import { useState } from "react";
 import type { Caso } from "@/shared";
 import { entenderSintoma } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
-import {
-  BotonPrincipal,
-  BotonSecundario,
-  DiceExperto,
-  Encabezado,
-  Flecha,
-  Pantalla,
-} from "./_ui/experto";
+import { BotonPrincipal, BotonSecundario, DiceExperto, Encabezado, Flecha, Pantalla } from "./_ui/experto";
 
 /** Pantalla 1 — Qué se rompió. */
 
@@ -22,6 +15,13 @@ const SUGERENCIAS = [
   "El ventilador hace mucho ruido",
   "No prende la pantalla",
 ];
+
+const ETIQUETA_CLASE: Record<Caso["clase"], string> = {
+  notebook: "Notebook",
+  split: "Aire split",
+  lavarropas: "Lavarropas",
+  otro: "Otro",
+};
 
 const NOMBRE_CLASE: Record<Caso["clase"], string> = {
   notebook: "una notebook",
@@ -101,6 +101,24 @@ export default function QueSeRompio() {
         </>
       ) : (
         <div className="mt-auto flex flex-col gap-3">
+          <p className="text-sm text-texto-suave">¿No es eso? Tocá el equipo correcto:</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(Object.keys(NOMBRE_CLASE) as Caso["clase"][]).map((clase) => (
+              <button
+                key={clase}
+                type="button"
+                aria-pressed={entendido.clase === clase}
+                onClick={() => setEntendido({ ...entendido, clase })}
+                className={`rounded-full border px-4 py-2 text-sm transition ${
+                  entendido.clase === clase
+                    ? "border-acento bg-acento/15 text-texto"
+                    : "border-borde text-texto-suave hover:border-texto-suave hover:text-texto"
+                }`}
+              >
+                {ETIQUETA_CLASE[clase]}
+              </button>
+            ))}
+          </div>
           <BotonPrincipal onClick={confirmar}>
             Sí, sigamos <Flecha />
           </BotonPrincipal>

@@ -34,10 +34,27 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
 
 const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
 
-/** Encabezado común: orbe + progreso del recorrido (1–6). */
-export function Encabezado({ paso, orbe = "quieto" }: { paso: number; orbe?: EstadoOrbe }) {
+/** Encabezado común: orbe + progreso del recorrido (1–6). Con `alVolver` muestra la flecha para atrás. */
+export function Encabezado({
+  paso,
+  orbe = "quieto",
+  alVolver,
+}: {
+  paso: number;
+  orbe?: EstadoOrbe;
+  alVolver?: () => void;
+}) {
   return (
     <header className="flex items-center gap-4">
+      {alVolver && (
+        <button
+          onClick={alVolver}
+          aria-label="Volver"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-texto-suave transition hover:bg-superficie hover:text-texto active:scale-95"
+        >
+          <FlechaAtras />
+        </button>
+      )}
       <Link href="/" aria-label="Volver al inicio">
         <Orbe estado={orbe} />
       </Link>
@@ -101,6 +118,14 @@ export function Flecha() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function FlechaAtras() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
     </svg>
   );
 }
