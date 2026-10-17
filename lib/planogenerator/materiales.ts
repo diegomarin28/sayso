@@ -17,7 +17,6 @@ export type Receta = {
 
 // Se busca por prefijo del id, en orden: el primero que coincide gana.
 const RECETAS: Array<[prefijo: string, receta: Receta]> = [
-  ...RECETAS_DISPOSITIVOS,
   ["tapa_inferior", { color: "#c3c9cf", metalness: 0.9, roughness: 0.3, opacity: 0.18 }],
   ["base", { color: "#aeb5bc", metalness: 0.95, roughness: 0.38 }],
   ["placa_madre", { color: "#1d6b45", metalness: 0.15, roughness: 0.55 }],
@@ -70,6 +69,7 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   // Plástico transparente de cajones y estantes: deja ver lo que hay detrás.
   ["bandeja", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
   ["estante", { color: "#cfe3ea", metalness: 0.1, roughness: 0.25, opacity: 0.55 }],
+  ...RECETAS_DISPOSITIVOS,
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };

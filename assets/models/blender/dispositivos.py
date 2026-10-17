@@ -619,8 +619,9 @@ def main():
     vacios, tipos = [], {}
     for nombre, equipos, crear in PIEZAS:
         vacio = crear()
+        vacio["ajuste"] = CORE["ajuste_de"](nombre)
         vacios.append(vacio)
-        tipos[nombre] = {"familia": FAMILIA, "descripcion": CORE["descripcion"](crear.__doc__), "equipos": equipos}
+        tipos[nombre] = {"familia": FAMILIA, "descripcion": CORE["descripcion"](crear.__doc__), "equipos": equipos, "ajuste": vacio["ajuste"]}
     cerrar_cuerpos(vacios)
     salida = Path(args.salida)
     salida.mkdir(parents=True, exist_ok=True)

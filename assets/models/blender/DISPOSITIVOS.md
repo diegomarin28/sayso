@@ -118,3 +118,7 @@ del plano interpretado del manual y de las validaciones del producto.
 - [junta_portafiltro](renders/dispositivos/junta_portafiltro.jpg)
 - [filtro_cafe](renders/dispositivos/filtro_cafe.jpg)
 
+
+## Ajuste de formas
+
+Las 42 piezas tienen una regla explícita en `AJUSTES` de `piezas.py`, exportada tanto al índice como a `extras.ajuste` del GLB. Los aros conservan su sección circular; rieles, rodillos y antena ajustan el tramo; conectores y conjuntos asimétricos escalan proporcionalmente. Placas, blindaje y recipientes rectangulares admiten ajuste libre. Los ejes son los del GLB (X, Z y -Y de Blender). Las recetas existentes tienen prioridad sobre las de esta familia.

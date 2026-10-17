@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import indice from "../../public/models/piezas/indice.json";
-import { archivosPara, bibliotecaDesdeEscena, modeloPara, type BibliotecaPiezas } from "./biblioteca";
+import { archivosPara, bibliotecaDesdeEscena, leerAjuste, modeloPara, type BibliotecaPiezas } from "./biblioteca";
 import { RECETAS_DETALLE, recetaPara } from "./materiales";
 import { construirEscena } from "./construir";
 
@@ -17,6 +17,20 @@ beforeAll(async () => {
 });
 
 describe("familia independiente dispositivos", () => {
+  it("las 42 reglas son explícitas y coinciden entre fuente, índice y GLB", () => {
+    const fuente = readFileSync("assets/models/blender/piezas.py", "utf8").split("AJUSTES = {")[1].split("\n}")[0];
+    for (const [id, entrada] of entradas) {
+      expect(entrada.ajuste, id).toMatch(/^(libre|proporcional|redondo:[xyz]{2}|tramo:[xyz](:redondo)?)$/);
+      expect(fuente, id).toContain(`"${id}": "${entrada.ajuste}"`);
+      expect(biblioteca.get(id)?.ajuste, id).toEqual(leerAjuste(entrada.ajuste));
+    }
+  });
+
+  it("las recetas existentes conservan prioridad sobre dispositivos", () => {
+    expect(recetaPara("conector_usb_a")).toBe(recetaPara("conector_generico"));
+    expect(recetaPara("placa_router")).toBe(recetaPara("placa_generica"));
+    expect(recetaPara("filtro_cafe")).toBe(recetaPara("filtro_generico"));
+  });
   it("cubre los seis equipos sin agregar piezas reservadas", () => {
     expect(entradas).toHaveLength(42);
     for (const equipo of ["aspiradora", "secador", "impresora", "consola", "router", "cafetera"])

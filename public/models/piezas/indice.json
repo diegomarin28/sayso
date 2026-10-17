@@ -5,7 +5,8 @@
   "movimiento": "movimiento.glb",
   "frio_calor": "frio_calor.glb",
   "estructura": "estructura.glb",
-  "carcasas": "carcasas.glb"
+  "carcasas": "carcasas.glb",
+  "dispositivos": "dispositivos.glb"
  },
  "tipos": {
   "base": {
@@ -439,6 +440,258 @@
    "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
    "equipos": "",
    "ajuste": "libre"
+  },
+  "deposito_polvo": {
+   "familia": "dispositivos",
+   "descripcion": "Depósito desmontable de polvo: recipiente abierto, fondo, borde y manija lateral.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "redondo:xz"
+  },
+  "filtro_hepa": {
+   "familia": "dispositivos",
+   "descripcion": "Filtro HEPA rectangular: marco, pliegues de papel y lengüeta de extracción.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "libre"
+  },
+  "cepillo_rotativo": {
+   "familia": "dispositivos",
+   "descripcion": "Cepillo de piso: rodillo, dos hileras helicoidales de cerdas y apoyos del eje.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "tramo:x:redondo"
+  },
+  "boquilla_suelo": {
+   "familia": "dispositivos",
+   "descripcion": "Boquilla de aspiración de piso: cuerpo ancho, abertura inferior y conexión articulada.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "proporcional"
+  },
+  "separador_ciclon": {
+   "familia": "dispositivos",
+   "descripcion": "Separador ciclónico: cono hueco, aro superior y entrada tangencial simplificada.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "proporcional"
+  },
+  "rueda_goma": {
+   "familia": "dispositivos",
+   "descripcion": "Rueda con banda de goma, cubo y eje: base móvil o aspiradora.",
+   "equipos": "aspiradora aspirador vacuum",
+   "ajuste": "redondo:yz"
+  },
+  "carcasa_secador": {
+   "familia": "dispositivos",
+   "descripcion": "Carcasa esquemática de secador: barril hueco, mango inclinado y boca de salida.",
+   "equipos": "secador secadora pelo cabello",
+   "ajuste": "proporcional"
+  },
+  "boquilla_concentradora": {
+   "familia": "dispositivos",
+   "descripcion": "Boquilla concentradora de secador: entrada circular y salida achatada abierta.",
+   "equipos": "secador secadora pelo cabello",
+   "ajuste": "proporcional"
+  },
+  "difusor_secador": {
+   "familia": "dispositivos",
+   "descripcion": "Difusor de secador: copa perforada y dedos redondeados para distribuir el aire.",
+   "equipos": "secador secadora pelo cabello",
+   "ajuste": "redondo:xz"
+  },
+  "selector_deslizante": {
+   "familia": "dispositivos",
+   "descripcion": "Selector deslizante genérico con carril, corredera estriada y terminales, sin pinout.",
+   "equipos": "secador secadora pelo cabello",
+   "ajuste": "proporcional"
+  },
+  "soporte_mica": {
+   "familia": "dispositivos",
+   "descripcion": "Soporte aislante de mica en cruz para secador: placas y ranuras ilustrativas, sin alambre calefactor.",
+   "equipos": "secador secadora pelo cabello",
+   "ajuste": "proporcional"
+  },
+  "cartucho_tinta": {
+   "familia": "dispositivos",
+   "descripcion": "Cartucho de tinta: cuerpo, etiqueta, contactos y salida inferior, sin compatibilidad de marca.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "proporcional"
+  },
+  "cartucho_toner": {
+   "familia": "dispositivos",
+   "descripcion": "Cartucho de tóner: depósito alargado, asa, extremos y rodillo visible.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "proporcional"
+  },
+  "cabezal_impresion": {
+   "familia": "dispositivos",
+   "descripcion": "Cabezal de inyección: bloque, conexiones de tinta y placa de boquillas inferior.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "proporcional"
+  },
+  "carro_impresion": {
+   "familia": "dispositivos",
+   "descripcion": "Carro de impresión: bastidor abierto, apoyos del riel y pestañas de retención.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "proporcional"
+  },
+  "rodillo_arrastre": {
+   "familia": "dispositivos",
+   "descripcion": "Rodillo de papel segmentado: tres camisas de goma sobre un eje metálico.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "tramo:x:redondo"
+  },
+  "riel_lineal": {
+   "familia": "dispositivos",
+   "descripcion": "Guía lineal de carro: barra rectificada y dos apoyos desmontables.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "tramo:x:redondo"
+  },
+  "cinta_encoder": {
+   "familia": "dispositivos",
+   "descripcion": "Cinta codificadora óptica: banda con marcas y ojales de sujeción, sin resolución calibrada.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "tramo:x"
+  },
+  "engranaje_arrastre": {
+   "familia": "dispositivos",
+   "descripcion": "Engranaje de arrastre de papel: rueda dentada, cubo y agujero central, no apto para fabricación.",
+   "equipos": "impresora printer multifuncion plotter",
+   "ajuste": "redondo:xz"
+  },
+  "unidad_optica": {
+   "familia": "dispositivos",
+   "descripcion": "Unidad óptica de consola: carcasa metálica, abertura de disco y conectores traseros.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "proporcional"
+  },
+  "blindaje_metalico": {
+   "familia": "dispositivos",
+   "descripcion": "Blindaje electrónico: chapa plegada con ventanas de ventilación y orejas de montaje.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "libre"
+  },
+  "placa_consola": {
+   "familia": "dispositivos",
+   "descripcion": "Placa genérica de consola: procesador, memorias, conectores y reguladores sin distribución de marca.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "libre"
+  },
+  "puerto_hdmi": {
+   "familia": "dispositivos",
+   "descripcion": "Puerto HDMI esquemático: carcasa trapezoidal abierta, lengüeta y contactos, sin pinout.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "proporcional"
+  },
+  "conector_usb_a": {
+   "familia": "dispositivos",
+   "descripcion": "Conector USB-A: caja metálica abierta y lengüeta con cuatro contactos.",
+   "equipos": "consola videojuegos playstation xbox nintendo router modem wifi enrutador ont impresora printer multifuncion plotter",
+   "ajuste": "proporcional"
+  },
+  "joystick_analogico": {
+   "familia": "dispositivos",
+   "descripcion": "Módulo de joystick analógico: caja, sensores laterales, eje y capuchón cóncavo simplificado.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "proporcional"
+  },
+  "boton_gatillo": {
+   "familia": "dispositivos",
+   "descripcion": "Gatillo genérico de mando: palanca curva con pivote y apoyo del resorte.",
+   "equipos": "consola videojuegos playstation xbox nintendo",
+   "ajuste": "proporcional"
+  },
+  "antena_wifi": {
+   "familia": "dispositivos",
+   "descripcion": "Antena externa articulada: cuerpo, bisagra y base roscada, sin frecuencia ni ganancia especificadas.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "tramo:y:redondo"
+  },
+  "placa_router": {
+   "familia": "dispositivos",
+   "descripcion": "Placa de router o módem: chip central, memorias, alimentación y conectores de antena ilustrativos.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "libre"
+  },
+  "puerto_rj45": {
+   "familia": "dispositivos",
+   "descripcion": "Puerto de red RJ45: entrada abierta, guía de pestaña, ocho contactos e indicadores.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "proporcional"
+  },
+  "jaula_sfp": {
+   "familia": "dispositivos",
+   "descripcion": "Jaula metálica de transceptor SFP: alojamiento rectangular y pestañas de retención, sin óptica interna.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "proporcional"
+  },
+  "conector_coaxial": {
+   "familia": "dispositivos",
+   "descripcion": "Conector coaxial de módem: cuerpo roscado, tuerca y centro aislante.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "proporcional"
+  },
+  "boton_reset": {
+   "familia": "dispositivos",
+   "descripcion": "Pulsador de reset: cuerpo táctil, actuador y cuatro patas para placa.",
+   "equipos": "router modem wifi enrutador ont",
+   "ajuste": "proporcional"
+  },
+  "deposito_agua": {
+   "familia": "dispositivos",
+   "descripcion": "Depósito desmontable de agua: recipiente abierto, borde, tapa y toma inferior.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "libre"
+  },
+  "portafiltro": {
+   "familia": "dispositivos",
+   "descripcion": "Portafiltro de espresso: copa abierta, orejas, mango aislante y dos salidas.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "proporcional"
+  },
+  "caldera_cafetera": {
+   "familia": "dispositivos",
+   "descripcion": "Caldera esquemática de cafetera: recipiente cerrado, tapas atornilladas y racores; sin interior presurizado funcional.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
+  },
+  "bloque_termico": {
+   "familia": "dispositivos",
+   "descripcion": "Bloque térmico de cafetera: bloque de aluminio con surcos, dos racores y soportes, sin circuito interno.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "proporcional"
+  },
+  "valvula_antirretorno": {
+   "familia": "dispositivos",
+   "descripcion": "Válvula en línea: cuerpo hexagonal y racores en ambos extremos; no indica sentido de flujo real.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "proporcional"
+  },
+  "molino_muelas": {
+   "familia": "dispositivos",
+   "descripcion": "Par de muelas de molino: anillo dentado y cono central con dientes simplificados, sin ajuste de molienda.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
+  },
+  "tolva_cafe": {
+   "familia": "dispositivos",
+   "descripcion": "Tolva de granos de café: recipiente cónico abierto, cuello inferior y borde.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
+  },
+  "lanza_vapor": {
+   "familia": "dispositivos",
+   "descripcion": "Lanza de vapor de cafetera: tubo curvo, empuñadura aislante y punta, sin parámetros de presión.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "proporcional"
+  },
+  "junta_portafiltro": {
+   "familia": "dispositivos",
+   "descripcion": "Junta anular de grupo de café: sello de goma con labio interior, sin medidas de compatibilidad.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
+  },
+  "filtro_cafe": {
+   "familia": "dispositivos",
+   "descripcion": "Canastillo de café: copa metálica abierta con perforaciones ilustrativas en el fondo.",
+   "equipos": "cafetera espresso cafe expreso",
+   "ajuste": "redondo:xz"
   }
  }
 }
