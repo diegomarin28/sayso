@@ -137,10 +137,11 @@ function aPaginasDelManual(c: Contenido, paginas: number[]): Contenido {
 }
 
 export async function armarKnowledgePack(
-  entrada: { ficha: Ficha; sintoma: string },
+  /** `tipoEquipo`: el de /api/intake/entender (ej. "celular", "heladera no frost"); ayuda con equipos fuera de las clases fijas. */
+  entrada: { ficha: Ficha; sintoma: string; tipoEquipo?: string },
   deps: Deps = {},
 ): Promise<Armado & { eventos: Evento[]; desdeCache: boolean }> {
-  const { ficha, sintoma } = entrada;
+  const { ficha, sintoma, tipoEquipo } = entrada;
   const enviar = deps.enviar ?? enviarMensaje;
   const cache = deps.cache ?? cacheEnMemoria;
   const casoId = ficha.casoId;
@@ -162,6 +163,8 @@ export async function armarKnowledgePack(
   /** Si algo falló (API, red, PDF), el resultado NO se guarda en la caché: se vuelve a intentar la próxima vez. */
   let huboFalla = false;
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
+  /** Para la IA: marca y modelo más el tipo de equipo, si se sabe. */
+  const equipoDescrito = tipoEquipo ? `${nombreEquipo} (${tipoEquipo})` : nombreEquipo;
   eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
 
   // 1. Caché de manuales (Supabase): si ya lo encontramos y verificamos antes, se reusa con sus vistas.
@@ -179,7 +182,7 @@ export async function armarKnowledgePack(
   }
   const manualDeCache = encontrado !== null;
   // 2. Si no, el bibliotecario lo busca (agente con búsqueda web + probar_pdf).
-  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: ficha.clase }, { enviar, fetch: deps.fetch });
+  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: tipoEquipo ?? ficha.clase }, { enviar, fetch: deps.fetch });
 
   // 3. Extracto: solo las páginas que importan. Si no se puede armar, no se manda el PDF entero: guía pública.
   let manual: Manual | null = null;
@@ -187,7 +190,7 @@ export async function armarKnowledgePack(
   if (encontrado) {
     try {
       const fijas = [vistas.explosionada, vistas.interior].filter((n): n is number => n !== null);
-      extracto = await prepararExtracto(new Uint8Array(encontrado.pdf.datos), nombreEquipo, sintoma, fijas, deps.llamar);
+      extracto = await prepararExtracto(new Uint8Array(encontrado.pdf.datos), equipoDescrito, sintoma, fijas, deps.llamar);
       const datos = Buffer.from(extracto.datos);
       const fileId = await (deps.subir ?? subirArchivo)(datos, nombreExtracto(extracto.paginas));
       manual = { url: encontrado.url, fileId, bytes: datos.length, titulo: encontrado.titulo, fuente: encontrado.fuente, paginas: extracto.paginas };
@@ -214,7 +217,7 @@ export async function armarKnowledgePack(
   let contenido: Contenido | null = null;
   if (manual) {
     try {
-      lectura = await leerManual(manual, tareaPack(nombreEquipo, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
+      lectura = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
       contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
@@ -233,7 +236,7 @@ export async function armarKnowledgePack(
   const conManual = manual !== null && contenido !== null && contenido.pasos.length > 0;
   if (!conManual) {
     try {
-      lectura = await guiaPublica(nombreEquipo, sintoma, enviar);
+      lectura = await guiaPublica(equipoDescrito, sintoma, enviar);
       contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública");
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"

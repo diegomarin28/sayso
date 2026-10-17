@@ -17,7 +17,7 @@ const SalidaCalidad = z.object({
 type SalidaCalidad = z.infer<typeof SalidaCalidad>;
 
 const QUE_DEBE_MOSTRAR: Record<z.infer<typeof TipoFoto>, string> = {
-  etiqueta: "la etiqueta o chapa del equipo, con el texto legible (modelo, número de serie)",
+  etiqueta: "la etiqueta o chapa del equipo, o una captura de pantalla de su configuración, con el texto legible (modelo, número de serie)",
   frente: "el equipo completo visto de frente",
   interior: "el interior del equipo",
   puertos: "un costado del equipo con los puertos o rejillas",
