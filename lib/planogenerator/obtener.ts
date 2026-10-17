@@ -1,5 +1,5 @@
 import type { Ficha } from "../../shared";
-import type { LlamarIA } from "../ia/claude";
+import type { EnviarMensaje, LlamarIA } from "../ia/claude";
 import type { Fetch } from "../knowledge/descargar";
 import { claveManual } from "../knowledge/manuales";
 import { cachePlanosEnMemoria, cubrePack, type CachePlanos } from "./cache";
@@ -24,7 +24,7 @@ const memoria = cachePlanosEnMemoria();
 
 export async function obtenerPlano(
   entrada: EntradaObtener,
-  deps: { cache?: CachePlanos; llamar?: LlamarIA; descargar?: Fetch } = {},
+  deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch } = {},
 ): Promise<ResultadoObtener> {
   const cache = deps.cache ?? memoria;
   const marca = entrada.ficha?.marca.valor ?? null;
@@ -40,7 +40,11 @@ export async function obtenerPlano(
 
   const paginas = paginasRecorte(entrada.manual?.paginaVistaInterior, entrada.manual?.paginasVistaExplosionada);
   const recorte = paginas && entrada.manualUrl ? await recortarManual(entrada.manualUrl, paginas, deps.descargar) : null;
-  const { plano, avisos, origen } = await generarPlano(recorte ? { ...entrada, recorte } : entrada, deps.llamar);
+  // El título tiene que ser el mismo con que el bibliotecario leyó el manual (sale en las fuentes del pack):
+  // es parte del prefijo de la caché de prompts.
+  const titulo = entrada.manual?.titulo ?? entrada.knowledgePack.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
+  const conTitulo = entrada.manual && titulo ? { ...entrada, manual: { ...entrada.manual, titulo } } : entrada;
+  const { plano, avisos, origen } = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
   if (clave && modelo && origen === "ia") {
     await cache.set(clave, marca ?? "", modelo, {
       plano,
