@@ -6,9 +6,11 @@ import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
 
 /**
- * Pantalla 6 — repuestos. Botón que abre un panel con los repuestos del manual (solo los que
- * tienen número de parte citado) y, para cada uno, dónde comprarlo (<OpcionesCompra>, Diego).
- * Buscar se hace al tocar: cada búsqueda cuesta. Nunca se compra ni se paga por la persona.
+ * Pantalla 6 — repuestos. Botón "Repuestos" con los del manual (los que tienen número de parte
+ * citado) y, cuando el experto dice que una pieza hay que cambiarla (`piezaACambiar`, de
+ * onCambiarPieza de <GuiaExperto>), un aviso que abre el panel con esa pieza primero.
+ * Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar: cada
+ * búsqueda cuesta. Nunca se compra ni se paga por la persona.
  */
 
 /** En modo fixture no se busca de verdad (gastaría IA y búsquedas web). */
@@ -16,22 +18,42 @@ const fuenteApagada: FuenteCompras = async () => {
   throw new Error("Modo de prueba: la búsqueda de repuestos está apagada.");
 };
 
+type Item = { pieza: string; numeroParte: string | null; pagina?: number };
+
 export function Repuestos({
   pack,
   ficha,
   casoId,
   onEvento,
+  piezaACambiar,
 }: {
   pack: KnowledgePack;
   ficha: Ficha;
   casoId: string;
   onEvento: (e: Evento) => void;
+  /** La pieza que el experto dijo que hay que cambiar (puede no tener número de parte). */
+  piezaACambiar?: string | null;
 }) {
   const [abierto, setAbierto] = useState(false);
+  /** El aviso se cierra por pieza: si el experto pide cambiar otra, vuelve a aparecer. */
+  const [avisoCerrado, setAvisoCerrado] = useState<string | null>(null);
   const modelo = ficha.modelo.valor;
-  if (pack.repuestos.length === 0 || !modelo) return null;
+
+  const items: Item[] = pack.repuestos.map((r) => ({
+    pieza: r.pieza,
+    numeroParte: r.numeroParte,
+    pagina: r.cita.pagina,
+  }));
+  // La pieza a cambiar va primero; si el manual no le da número de parte, se busca por modelo.
+  if (piezaACambiar) {
+    const i = items.findIndex((r) => r.pieza === piezaACambiar);
+    const [elegida] = i >= 0 ? items.splice(i, 1) : [{ pieza: piezaACambiar, numeroParte: null }];
+    items.unshift(elegida);
+  }
+  if (items.length === 0 || !modelo) return null;
 
   const nombre = (id: string) => pack.piezas.find((p) => p.id === id)?.nombre ?? id;
+  const avisar = piezaACambiar && avisoCerrado !== piezaACambiar && !abierto;
 
   return (
     <>
@@ -41,10 +63,32 @@ export function Repuestos({
         className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-borde bg-superficie px-4 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
       >
         Repuestos{" "}
-        <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">
-          {pack.repuestos.length}
-        </span>
+        <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
       </button>
+
+      {/* Aviso (no tapa el 3D mientras el experto explica): abre el panel con esa pieza primero. */}
+      {avisar && (
+        <div className="aparece fixed inset-x-0 bottom-24 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl items-center gap-3 rounded-2xl border border-acento/60 bg-fondo/95 p-3 pl-4 shadow-2xl">
+          <p className="min-w-0 flex-1 text-sm">
+            Hay que cambiar <span className="font-semibold">{nombre(piezaACambiar).toLowerCase()}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setAbierto(true)}
+            className="h-10 shrink-0 rounded-xl bg-acento px-3 text-sm font-semibold text-black active:scale-95"
+          >
+            Dónde comprarlo
+          </button>
+          <button
+            type="button"
+            onClick={() => setAvisoCerrado(piezaACambiar)}
+            aria-label="Cerrar aviso"
+            className="h-10 w-8 shrink-0 text-texto-suave"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Se oculta en vez de desmontarse: así no se pierden (ni se vuelven a pagar) las búsquedas. */}
       <div
@@ -65,19 +109,28 @@ export function Repuestos({
             </p>
             <button
               type="button"
-              onClick={() => setAbierto(false)}
+              onClick={() => {
+                setAbierto(false);
+                if (piezaACambiar) setAvisoCerrado(piezaACambiar);
+              }}
               className="h-10 shrink-0 rounded-full border border-borde px-4 text-sm"
             >
               Cerrar
             </button>
           </div>
-          {pack.repuestos.map((r) => (
+          {items.map((r) => (
             <div key={r.pieza} className="flex flex-col gap-3 border-t border-borde pt-5">
               <div>
+                {r.pieza === piezaACambiar && (
+                  <p className="mb-1 text-xs font-semibold tracking-widest text-acento uppercase">
+                    El experto recomienda cambiarla
+                  </p>
+                )}
                 <p className="text-lg font-semibold">{nombre(r.pieza)}</p>
                 <p className="font-mono text-xs text-texto-suave">
-                  N.º de parte {r.numeroParte}
-                  {r.cita.pagina ? ` · pág. ${r.cita.pagina} del manual` : ""}
+                  {r.numeroParte
+                    ? `N.º de parte ${r.numeroParte}${r.pagina ? ` · pág. ${r.pagina} del manual` : ""}`
+                    : "Sin número de parte en el manual: se busca por modelo"}
                 </p>
               </div>
               <OpcionesCompra

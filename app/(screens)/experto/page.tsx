@@ -45,6 +45,8 @@ export default function Experto() {
 
   // Preguntar con la voz: cada frase dictada se manda como si la hubiera escrito.
   const [dictada, setDictada] = useState<{ texto: string; id: number }>();
+  // Pantalla 6: la pieza que el experto dijo que hay que cambiar (abre las compras).
+  const [piezaACambiar, setPiezaACambiar] = useState<string | null>(null);
   const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
 
   if (!caso || !preparado || !plano) return null;
@@ -62,6 +64,7 @@ export default function Experto() {
               ficha={ficha}
               casoId={caso.id}
               onEvento={(e) => agregarEventos([e])}
+              piezaACambiar={piezaACambiar}
             />
           )}
         </div>
@@ -77,6 +80,7 @@ export default function Experto() {
         preguntaInicial={preguntaInicial}
         decir={decir}
         preguntaDictada={dictada}
+        onCambiarPieza={setPiezaACambiar}
         // Con NEXT_PUBLIC_DATOS=fixture el experto responde con el chat simulado de Diego: no gasta IA.
         fuente={USAR_FIXTURE ? fuenteSimulada : undefined}
         accesorioEntrada={
