@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Coreografia, Evento, PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type DatosPieza } from "../../lib/planogenerator";
+import { prepararPaso, type PasoPreparado } from "./paso";
 import {
   OBJETIVO_GENERAL,
   aplicarAccion,
@@ -17,8 +18,13 @@ import {
 
 export type VisorProps = {
   plano: PlanoDePiezas;
-  /** Cada objeto nuevo se reproduce (aunque sea el mismo paso otra vez). */
+  /**
+   * Cada objeto nuevo se reproduce (aunque sea el mismo paso otra vez).
+   * Siempre pasa antes por el filtro de seguridad: un paso de riesgo alto no se anima.
+   */
   coreografia?: Coreografia | null;
+  /** Lo que realmente se reproduce tras el filtro (ej. para mostrar la derivación en vez del texto de la IA). */
+  onPaso?: (paso: PasoPreparado) => void;
   casoId?: string;
   /** Eventos para el feed de actividad (ej. pieza que no existe en el modelo). */
   onEvento?: (evento: Evento) => void;
@@ -31,7 +37,7 @@ const SUAVIZADO = 6;
 const COLOR_RESALTE = new THREE.Color("#ff8a1f");
 const FOV = 35;
 
-export function Visor({ plano, coreografia, casoId = "sin-caso", onEvento, className }: VisorProps) {
+export function Visor({ plano, coreografia, casoId = "sin-caso", onEvento, onPaso, className }: VisorProps) {
   return (
     <div className={className} style={{ background: "#000", touchAction: "none" }}>
       <Canvas dpr={[1, 2]} camera={{ fov: FOV, near: 0.5, far: 1000, position: [0, 55, 60] }}>
@@ -41,23 +47,26 @@ export function Visor({ plano, coreografia, casoId = "sin-caso", onEvento, class
         <directionalLight position={[25, 40, 30]} intensity={3} />
         <directionalLight position={[-20, 25, 35]} intensity={1.2} />
         <directionalLight position={[-30, 15, -25]} intensity={1.4} color="#8fb4ff" />
-        <Escena plano={plano} coreografia={coreografia} casoId={casoId} onEvento={onEvento} />
+        <Escena plano={plano} coreografia={coreografia} casoId={casoId} onEvento={onEvento} onPaso={onPaso} />
       </Canvas>
     </div>
   );
 }
 
-type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> & Pick<VisorProps, "coreografia" | "onEvento">;
+type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
+  Pick<VisorProps, "coreografia" | "onEvento" | "onPaso">;
 
-function Escena({ plano, coreografia, casoId, onEvento }: EscenaProps) {
+function Escena({ plano, coreografia, casoId, onEvento, onPaso }: EscenaProps) {
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const escena = useMemo(() => prepararEscena(plano), [plano]);
   const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys()));
   const onEventoRef = useRef(onEvento);
+  const onPasoRef = useRef(onPaso);
   useEffect(() => {
     onEventoRef.current = onEvento;
-  }, [onEvento]);
+    onPasoRef.current = onPaso;
+  }, [onEvento, onPaso]);
 
   // Plano nuevo: estado en reposo, avisos al feed y liberar la escena anterior al desmontar.
   // (El ref de CameraControls ya está asignado cuando corren los efectos.)
@@ -68,11 +77,14 @@ function Escena({ plano, coreografia, casoId, onEvento }: EscenaProps) {
     return () => liberar(escena.raiz);
   }, [escena, camara, casoId]);
 
-  // Coreografía nueva: limpia resaltados y aplica las acciones una por una.
+  // Coreografía nueva: filtro de seguridad, limpia resaltados y aplica las acciones una por una.
   useEffect(() => {
     if (!coreografia) return;
+    const paso = prepararPaso(coreografia, { casoId });
+    paso.eventos.forEach((e) => onEventoRef.current?.(e));
+    onPasoRef.current?.(paso);
     estado.current = comenzarPaso(estado.current);
-    const timers = coreografia.acciones.map((accion, i) =>
+    const timers = paso.coreografia.acciones.map((accion, i) =>
       setTimeout(() => {
         const r = aplicarAccion(estado.current, accion, { casoId });
         estado.current = r.estado;
