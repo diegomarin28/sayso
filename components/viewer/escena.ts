@@ -222,7 +222,17 @@ export type ModoVista = "perspectiva" | "isometrica";
 const DIRECCION_PERSPECTIVA = new THREE.Vector3(0, 1.1, 1).normalize();
 const DIRECCION_ISOMETRICA = new THREE.Vector3(1, 1, 1).normalize();
 
-/** Hacia dónde mirar y cuánto alejarse para encuadrar una pieza (o "general"). */
+/** Lo que tapa la frase nunca deja menos que esto del lienzo para el 3D. */
+const FRACCION_LIBRE_MIN = 0.4;
+
+/**
+ * Hacia dónde mirar y cuánto alejarse para encuadrar una pieza (o "general").
+ * `reservadoArriba` (px): franja de arriba tapada por la frase del experto. La pieza se centra
+ * en lo que queda libre: `focal` va tal cual a `CameraControls.setFocalOffset(0, focal, 0)`
+ * (unidades del mundo, eje "arriba" de la cámara; en camera-controls un valor positivo sube
+ * los objetos en pantalla, así que para bajar la pieza es negativo).
+ * En un celular en vertical el ancho es el que limita: se encuadra para que entre en los dos ejes.
+ */
 export function encuadre(
   escena: EscenaPreparada,
   objetivo: string,
@@ -230,6 +240,7 @@ export function encuadre(
   camara: THREE.Camera,
   tamPantalla: { width: number; height: number },
   despiece = 0,
+  reservadoArriba = 0,
 ) {
   const nodo = escena.nodos.get(objetivo)?.nodo ?? escena.raiz;
   const esfera = new THREE.Box3().setFromObject(nodo).getBoundingSphere(new THREE.Sphere());
@@ -237,14 +248,51 @@ export function encuadre(
   // Con el despiece las piezas suben y se abren: se deja más margen.
   const radio = nodo === escena.raiz ? esfera.radius * (0.8 + 0.45 * despiece) : Math.max(esfera.radius * 2.6, 12);
   const objetivoPos = esfera.center;
+  const { width, height } = tamPantalla;
+  const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));
+  const libre = (height - reservado) / height;
 
   if (camara instanceof THREE.OrthographicCamera) {
     const posicion = objetivoPos.clone().addScaledVector(DIRECCION_ISOMETRICA, 200);
-    const zoomOrto = (Math.min(tamPantalla.width, tamPantalla.height) / (2 * radio)) * zoom;
-    return { posicion, objetivo: objetivoPos, zoomOrto };
+    const zoomOrto = (Math.min(width, height - reservado) / (2 * radio)) * zoom;
+    return { posicion, objetivo: objetivoPos, zoomOrto, focal: -reservado / 2 / zoomOrto };
   }
   const fov = camara instanceof THREE.PerspectiveCamera ? camara.fov : 35;
-  const distancia = radio / Math.sin(THREE.MathUtils.degToRad(fov / 2)) / zoom;
-  const posicion = objetivoPos.clone().addScaledVector(DIRECCION_PERSPECTIVA, Math.max(distancia, 8));
-  return { posicion, objetivo: objetivoPos, zoomOrto: null };
+  const tanV = Math.tan(THREE.MathUtils.degToRad(fov / 2));
+  // Medio ángulo que ve la cámara en lo libre (vertical) y a lo ancho.
+  const mitadV = Math.atan(tanV * libre);
+  const mitadH = Math.atan(tanV * (width / height));
+  const distancia = Math.max(radio / Math.sin(mitadV), radio / Math.sin(mitadH)) / zoom;
+  const d = Math.max(distancia, 8);
+  const posicion = objetivoPos.clone().addScaledVector(DIRECCION_PERSPECTIVA, d);
+  const unidadesPorPx = (2 * d * tanV) / height;
+  return { posicion, objetivo: objetivoPos, zoomOrto: null, focal: -(reservado / 2) * unidadesPorPx };
+}
+
+export type LadoEtiqueta = { h: "derecha" | "izquierda"; v: "arriba" | "abajo" };
+
+/** Largo de la línea guía de la etiqueta, en px (horizontal y vertical). */
+export const LINEA_ETIQUETA = { dx: 28, dy: 44 };
+const MARGEN_ETIQUETA = 8;
+
+/**
+ * Dónde va la etiqueta respecto de la pieza (`ancla`, en px del lienzo): arriba a la derecha
+ * si entra; abajo si arriba chocaría con la frase (`reservadoArriba`); a la izquierda si a la
+ * derecha se sale del lienzo.
+ */
+export function ladoEtiqueta(
+  ancla: { x: number; y: number },
+  etiqueta: { ancho: number; alto: number },
+  lienzo: { width: number; height: number },
+  reservadoArriba = 0,
+): LadoEtiqueta {
+  const { dx, dy } = LINEA_ETIQUETA;
+  const sobraArriba = ancla.y - dy - etiqueta.alto - (reservadoArriba + MARGEN_ETIQUETA);
+  const sobraAbajo = lienzo.height - MARGEN_ETIQUETA - (ancla.y + dy + etiqueta.alto);
+  const sobraDerecha = lienzo.width - MARGEN_ETIQUETA - (ancla.x + dx + etiqueta.ancho);
+  const sobraIzquierda = ancla.x - dx - etiqueta.ancho - MARGEN_ETIQUETA;
+  return {
+    v: sobraArriba >= 0 || sobraArriba >= sobraAbajo ? "arriba" : "abajo",
+    h: sobraDerecha >= 0 || sobraDerecha >= sobraIzquierda ? "derecha" : "izquierda",
+  };
 }
