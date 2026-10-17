@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo, planoEjemplo } from "../../shared";
-import { correrBateria, costoDe, tabla } from "./bateria";
+import { correrBateria, costoDe, tabla, tablaPlano, type ComparacionPlano, type EntradaPlano } from "./bateria";
 import { CASOS } from "./casos";
 
 const costo = (usd: number) => ({ tipo: "costo", datos: { usd } });
@@ -88,5 +88,53 @@ describe("batería de pruebas (sin IA)", () => {
   it("los casos cubren los nueve equipos pedidos, cada uno con una pregunta peligrosa", () => {
     expect(CASOS.map((c) => c.id)).toEqual(["notebook", "celular", "split", "heladera", "televisor", "lavarropas", "microondas", "airfryer", "reloj"]);
     for (const c of CASOS) expect(c.peligrosa.length).toBeGreaterThan(10);
+  });
+});
+
+describe("comparación del plano Sonnet vs Haiku (sin IA)", () => {
+  const comparacion = (camino = "recorte"): ComparacionPlano => ({
+    camino,
+    sonnet: { modelo: "claude-sonnet-5-5", usd: 0.015, segundos: 9, origen3D: "ia · 5 manual, 2 estimada" },
+    haiku: camino === "manual" ? null : { modelo: "claude-haiku-5-5", usd: 0.003, segundos: 4, origen3D: "ia · 4 manual, 3 estimada" },
+    coincidencia: camino === "manual" ? null : { puntos: 11, max: 14, porcentaje: 79 },
+    ...(camino === "manual" ? { nota: "con el manual entero el plano usa el modelo de lectura: no se compara" } : {}),
+  });
+
+  it("corre después del plano de la app, con la misma entrada, y suma su costo", async () => {
+    const { f } = appFalsa();
+    const entradas: EntradaPlano[] = [];
+    const r = await correrBateria(CASOS.slice(0, 2), {
+      base: "http://app",
+      topeUsd: 1,
+      fetch: f,
+      compararPlano: async (e) => (entradas.push(e), comparacion(entradas.length === 2 ? "manual" : "recorte")),
+    });
+    expect(entradas[0]).toMatchObject({ manualFileId: "file_1", paginaVistaInterior: 68, paginasVistaExplosionada: [51] });
+    expect(r.filas[0].usd).toBeCloseTo(porCaso + 0.015 + 0.003);
+    expect(r.filas[1].usd).toBeCloseTo(porCaso + 0.015);
+    const t = tablaPlano(r.filas);
+    expect(t).toContain("| Notebook | recorte | US$ 0.0150 · 9 s · ia · 5 manual, 2 estimada | US$ 0.0030 · 4 s · ia · 4 manual, 3 estimada | 11/14 (79 %) |");
+    expect(t).toMatch(/Celular \| manual .*\| — \| — \| con el manual entero/);
+    expect(t).toMatch(/Sonnet US\$ 0\.0300 · Haiku US\$ 0\.0030 · coincidencia media 79 % en 1 equipos/);
+  });
+
+  it("cuenta para el tope: si ya se pasó, no compara", async () => {
+    const { f } = appFalsa();
+    let llamadas = 0;
+    // Después de knowledge van 0,201 (el plano corre); después del plano, 0,221: con tope 0,21 la comparación no empieza.
+    const r = await correrBateria(CASOS.slice(0, 1), { base: "http://app", topeUsd: 0.21, fetch: f, compararPlano: async () => (llamadas++, comparacion()) });
+    expect(llamadas).toBe(0);
+    expect(r.filas[0].nota).toMatch(/corte antes de la comparación del plano/);
+  });
+
+  it("un error en la comparación no corta el caso; la IA en pausa sí", async () => {
+    const { f } = appFalsa();
+    const r = await correrBateria(CASOS.slice(0, 1), { base: "http://app", topeUsd: 1, fetch: f, compararPlano: async () => Promise.reject(new Error("se cayó la red")) });
+    expect(r.filas[0].nota).toMatch(/comparación del plano: se cayó la red/);
+    expect(r.filas[0].bloqueos).toBe("peligrosa bloqueada"); // las preguntas igual corrieron
+    const pausa = Object.assign(new Error("IA en pausa"), { name: "IAEnPausa" });
+    const r2 = await correrBateria(CASOS.slice(0, 2), { base: "http://app", topeUsd: 1, fetch: f, compararPlano: async () => Promise.reject(pausa) });
+    expect(r2.cortado).toBe(true);
+    expect(r2.filas[1].nota).toMatch(/no corrido/);
   });
 });

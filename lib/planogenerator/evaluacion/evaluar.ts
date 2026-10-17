@@ -15,17 +15,7 @@ import path from "node:path";
 import { PlanoDePiezas } from "../../../shared";
 import { planoDesdePlantilla } from "../generador";
 import { cargarCasos, imagenes, type CasoCargado } from "./caso";
-import { aPixel, aPlanta, type Punto } from "./planta";
-
-const UMBRALES = [0.35, 0.7];
-const puntaje = (d: number) => (d <= UMBRALES[0] ? 2 : d <= UMBRALES[1] ? 1 : 0);
-
-function centroNormalizado(plano: PlanoDePiezas, id: string): Punto | null {
-  const base = plano.piezas.find((p) => p.pieza === "base");
-  const p = plano.piezas.find((q) => q.pieza === id);
-  if (!base || !p) return null;
-  return [p.pos[0] / (base.dim[0] / 2), p.pos[2] / (base.dim[2] / 2)];
-}
+import { aPixel, aPlanta, centroNormalizado, puntaje } from "./planta";
 
 export function puntuar(plano: PlanoDePiezas, c: CasoCargado) {
   const ref = c.caso.referencia;

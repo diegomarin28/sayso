@@ -34,6 +34,11 @@ export const MODELO_DE = {
   reconocer: MODELOS.corto as string,
   /** Guía pública con búsqueda web (cuando no hay manual). */
   guiaPublica: MODELOS.corto as string,
+  /**
+   * Cartógrafo (/api/plano) con el recorte del manual, imágenes o solo texto. Con el manual entero
+   * usa `lectura` (comparte la caché del manual). La batería de pruebas compara Sonnet y Haiku.
+   */
+  plano: MODELOS.vision as string,
 };
 
 /** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */

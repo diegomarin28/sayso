@@ -14,7 +14,8 @@ import { paginasRecorte, recortarManual } from "./recorte";
  * (más la vista explosionada) en vez del manual entero. Si el recorte falla, lee el manual entero.
  */
 export type EntradaObtener = EntradaGenerador & { ficha?: Ficha; manualUrl?: string | null };
-export type ResultadoObtener = Omit<ResultadoGenerador, "propuesta"> & {
+export type ResultadoObtener = Omit<ResultadoGenerador, "propuesta" | "camino" | "modelo"> &
+  Partial<Pick<ResultadoGenerador, "camino" | "modelo">> & {
   desdeCache: boolean;
   /** Páginas del manual que leyó la IA si fue un recorte; null = manual entero, imágenes o caché. */
   paginasLeidas: number[] | null;
@@ -44,7 +45,7 @@ export async function obtenerPlano(
   // es parte del prefijo de la caché de prompts.
   const titulo = entrada.manual?.titulo ?? entrada.knowledgePack.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
   const conTitulo = entrada.manual && titulo ? { ...entrada, manual: { ...entrada.manual, titulo } } : entrada;
-  const { plano, avisos, origen } = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
+  const { plano, avisos, origen, camino, modelo: modeloIA } = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
   if (clave && modelo && origen === "ia") {
     await cache.set(clave, marca ?? "", modelo, {
       plano,
@@ -53,5 +54,5 @@ export async function obtenerPlano(
       piezasPedidas: entrada.knowledgePack.piezas.map((p) => p.id),
     });
   }
-  return { plano, avisos, origen, desdeCache: false, paginasLeidas: recorte && origen === "ia" ? recorte.paginas : null };
+  return { plano, avisos, origen, camino, modelo: modeloIA, desdeCache: false, paginasLeidas: recorte && origen === "ia" ? recorte.paginas : null };
 }
