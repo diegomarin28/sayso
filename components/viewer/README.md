@@ -30,7 +30,7 @@ import { Visor } from "@/components/viewer";
 - **Transiciones** con easing (`tween.ts`); el despiece es escalonado pieza por pieza (al armar, en orden inverso).
 - **Rendimiento:** con `efectos="auto"` el bloom está prendido y se apaga solo si el equipo no sostiene ~30 fps (también congela las sombras). `onEfectos` avisa el estado.
 - **Nunca negro** (`salud.ts`): antes de prender efectos se mira el WebGL del equipo (sin buffers de color flotante no hay bloom ni luz de entorno; en celulares, sin multisampling). Un vigía mira el centro de la imagen los primeros segundos: si queda negro, apaga los efectos y después la luz de entorno; si igual sigue negro, muestra un aviso con "Reintentar". Si el GLB rompe la escena, se arma con primitivas (`prepararEscenaSegura`). Si iOS pierde el contexto WebGL, el lienzo se rearma solo. Sin WebGL2, aviso en vez del lienzo.
-- **Probar en el celular con `npm run dev`:** abrir por la IP de la Mac (ej. `http://10.x.x.x:3000`) hace que Next bloquee sus recursos de desarrollo y la página no arranca (3D negro). Hace falta `allowedDevOrigins` en `next.config.ts`, o probar con `npm run build && npx next start -H 0.0.0.0`.
+- **Probar en el celular con `npm run dev`:** abrí la app por la IP de la Mac (ej. `http://10.x.x.x:3000`). `next.config.ts` permite las IPs de red de la máquina (`allowedDevOrigins`); sin eso, Next bloquea sus recursos de desarrollo y la página no arranca (3D negro). Si cambiás de red, reiniciá `npm run dev`.
 - Semántica de acciones: ver `reproductor.ts`. Son **idempotentes** (repetir un paso no acumula). `camara` acepta `"general"` para ver todo.
 - Página de prueba: `/lab/visor` (`npm run dev`).
 
