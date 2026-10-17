@@ -1,16 +1,18 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
+import { FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular } from "./iconos";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { esperar, reproducir, tiempoDeLectura, type EstadoGuia } from "./reproducir";
 
 /**
  * Pantallas 5 y 6: el experto explica sobre el 3D y la persona pregunta.
- * Autocontenido: visor + stream de /api/chat + frase que aparece y se desvanece + cita +
- * aviso de esquema genérico + caja para preguntar. La pantalla solo lo monta.
+ * Autocontenido: visor + stream de /api/chat + tarjeta del paso (número, cita, puntos para volver
+ * a verlo) + historial de la conversación + preguntas sugeridas + aviso de esquema genérico +
+ * caja para preguntar. La pantalla solo lo monta.
  */
 export type GuiaExpertoProps = {
   casoId: string;
@@ -42,7 +44,8 @@ export type GuiaExpertoProps = {
 
 /** Por debajo del máximo que acepta /api/chat (LIMITES.chat.maxHistorial, en el servidor). */
 const HISTORIAL_MAX = 20;
-const FUNDIDO_MS = 900;
+/** Pausa entre un paso y el siguiente, para que se note el cambio. */
+const PAUSA_ENTRE_PASOS_MS = 450;
 
 /** La pieza a cambiar de un paso, solo si existe en el plano y el paso no está bloqueado. */
 export function piezaACambiar(c: Coreografia, plano: PlanoDePiezas): string | null {
@@ -72,11 +75,23 @@ export function GuiaExperto({
   const [estado, setEstado] = useState<EstadoGuia>("esperando");
   const [detalle, setDetalle] = useState<string>();
   const [coreografia, setCoreografia] = useState<Coreografia | null>(null);
-  /** La frase que se muestra es la que ya pasó por el filtro de seguridad del visor. */
-  const [frase, setFrase] = useState<{ c: Coreografia; id: number; visible: boolean } | null>(null);
+  /**
+   * Pasos de la respuesta en curso, tal como los devolvió el visor (ya filtrados por seguridad:
+   * si un paso se bloquea, acá está el aviso y no el texto de la IA).
+   */
+  const [pasos, setPasos] = useState<Coreografia[]>([]);
+  const [indice, setIndice] = useState(0);
+  /** Ya llegaron todos los pasos de la respuesta: se puede volver a ver cualquiera. */
+  const [completa, setCompleta] = useState(false);
+  /** Lo que se ve en "Conversación": preguntas de la persona y pasos del experto. */
+  const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [texto, setTexto] = useState("");
   const historial = useRef<MensajeHistorial[]>([]);
   const actual = useRef<AbortController | null>(null);
+  const idMensaje = useRef(0);
+  /** Texto del paso que se está repitiendo: el visor lo devuelve otra vez y no hay que sumarlo. */
+  const repitiendo = useRef<string | null>(null);
+  const sugerencias = useMemo(() => preguntasSugeridas(pack), [pack]);
 
   const preguntar = useCallback(
     async (pregunta: string) => {
@@ -87,6 +102,11 @@ export function GuiaExperto({
       actual.current = ctl;
       const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia };
       historial.current = [...historial.current, { rol: "persona", texto: limpia }];
+      setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
+      setPasos([]);
+      setIndice(0);
+      setCompleta(false);
+      repitiendo.current = null;
       const dicho = await reproducir(
         fuente(pedido, ctl.signal),
         {
@@ -98,9 +118,8 @@ export function GuiaExperto({
           },
           decir: async (t, senal) => {
             await decir(t, senal);
-            // La frase se desvanece al terminar de decirla (salvo un bloqueo: queda a la vista).
-            setFrase((f) => (f && f.c.riesgo !== "alto" ? { ...f, visible: false } : f));
-            await esperar(FUNDIDO_MS / 2, senal);
+            // El paso queda a la vista hasta el siguiente (antes se desvanecía y no se entendía).
+            await esperar(PAUSA_ENTRE_PASOS_MS, senal);
           },
         },
         ctl.signal,
@@ -113,6 +132,7 @@ export function GuiaExperto({
         return null;
       });
       if (dicho) historial.current = [...historial.current, dicho];
+      if (!ctl.signal.aborted) setCompleta(true);
     },
     [casoId, pack, plano, manualFileId, fuente, decir, onCambiarPieza],
   );
@@ -144,6 +164,36 @@ export function GuiaExperto({
   };
 
   const ocupado = estado === "pensando" || estado === "buscando";
+
+  /** Volver a ver un paso ya explicado: lo anima y lo dice de nuevo. */
+  const verPaso = (i: number) => {
+    const c = pasos[i];
+    if (!c || ocupado) return;
+    actual.current?.abort();
+    const ctl = new AbortController();
+    actual.current = ctl;
+    repitiendo.current = c.dice;
+    setIndice(i);
+    setCoreografia({ ...c });
+    setEstado(c.riesgo === "alto" ? "bloqueado" : "hablando");
+    void decir(c.dice, ctl.signal).then(() => {
+      if (!ctl.signal.aborted) setEstado(c.riesgo === "alto" ? "bloqueado" : "esperando");
+    });
+  };
+
+  /** El visor devuelve cada paso después del filtro de seguridad: eso es lo que se muestra. */
+  const alPaso = (c: Coreografia) => {
+    if (repitiendo.current !== null && repitiendo.current === c.dice) {
+      repitiendo.current = null;
+      return;
+    }
+    setPasos((p) => {
+      setIndice(p.length);
+      return [...p, c];
+    });
+    setMensajes((m) => [...m, { rol: "experto", c, id: ++idMensaje.current }]);
+  };
+  const pasoActual = pasos[indice];
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
@@ -161,7 +211,7 @@ export function GuiaExperto({
             tipoEquipo={tipoEquipo}
             casoId={casoId}
             onEvento={onEvento}
-            onPaso={(p) => setFrase((f) => ({ c: p.coreografia, id: (f?.id ?? 0) + 1, visible: true }))}
+            onPaso={(p) => alPaso(p.coreografia)}
             efectos={efectos}
             reservadoArriba={reservado}
           />
@@ -174,7 +224,16 @@ export function GuiaExperto({
                 Esquema genérico, no es tu modelo exacto
               </p>
             )}
-            <Frase frase={frase} />
+            {pasoActual && (
+              <TarjetaPaso
+                key={`${indice}-${pasoActual.dice}`}
+                c={pasoActual}
+                indice={indice}
+                total={pasos.length}
+                completa={completa}
+                onElegir={verPaso}
+              />
+            )}
             <EstadoExperto estado={estado} detalle={detalle} />
             {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
             {horizontal && (
@@ -186,8 +245,10 @@ export function GuiaExperto({
         </div>
       </div>
 
+      <FilaSugerencias sugerencias={ocupado ? [] : sugerencias} mensajes={mensajes} onPreguntar={(t) => void preguntar(t)} />
+
       <form
-        className="flex shrink-0 items-center gap-2 border-t border-borde bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         onSubmit={(e) => {
           e.preventDefault();
           enviar();
@@ -216,68 +277,17 @@ export function GuiaExperto({
   );
 }
 
-/** Frase del experto: aparece palabra por palabra y se desvanece cuando termina de decirla. */
-function Frase({ frase }: { frase: { c: Coreografia; id: number; visible: boolean } | null }) {
-  if (!frase) return null;
-  const { c, id, visible } = frase;
-  const bloqueo = c.riesgo === "alto";
-  return (
-    <div
-      key={id}
-      aria-live="polite"
-      style={{ opacity: visible ? 1 : 0, transition: `opacity ${FUNDIDO_MS}ms ease-out` }}
-      className={
-        bloqueo
-          ? "rounded-2xl border border-peligro/60 bg-peligro/15 p-4"
-          : // Celular: fondo semitransparente para leer sobre el 3D.
-            "max-[440px]:rounded-xl max-[440px]:bg-black/55 max-[440px]:px-3 max-[440px]:py-2 max-[440px]:backdrop-blur-sm"
-      }
-    >
-      {/* Celular (angosto, o bajo en horizontal): letra más chica y máximo 2 renglones (el resto lo dice la voz). Un bloqueo se lee entero. */}
-      <p
-        className={`text-xl leading-snug font-medium max-[440px]:text-base [@media(max-height:500px)]:text-base ${
-          bloqueo ? "" : "max-[440px]:line-clamp-2 [@media(max-height:500px)]:line-clamp-2"
-        }`}
-      >
-        {c.dice.split(/\s+/).map((palabra, i) => (
-          <Fragment key={i}>
-            <span className="palabra" style={{ animationDelay: `${i * 55}ms` }}>
-              {palabra}
-            </span>{" "}
-          </Fragment>
-        ))}
-      </p>
-      <Cita c={c} />
-    </div>
-  );
-}
-
-/** Cada instrucción cita documento y página, o se marca NO VERIFICADO. */
-function Cita({ c }: { c: Coreografia }) {
-  if (c.riesgo === "alto") return null;
-  const verificada = c.cita?.estado === "VERIFICADO";
-  return (
-    <p className="mt-2 truncate text-xs text-texto-suave max-[440px]:mt-1">
-      {c.cita ? (
-        <>
-          {c.cita.doc}
-          {c.cita.pagina ? `, pág. ${c.cita.pagina}` : ""} ·{" "}
-          <span className={verificada ? "text-confirmado" : "text-probable"}>{verificada ? "verificado" : "no verificado"}</span>
-        </>
-      ) : (
-        <span className="text-probable">NO VERIFICADO</span>
-      )}
-    </p>
-  );
-}
-
 function EstadoExperto({ estado, detalle }: { estado: EstadoGuia; detalle?: string }) {
   const texto =
-    estado === "pensando" ? "Pensando…" : estado === "buscando" ? (detalle ?? "Buscando en el manual…") : estado === "error" ? detalle : null;
+    estado === "pensando"
+      ? "Pensando…"
+      : estado === "buscando"
+        ? (detalle ?? "Buscando en el manual…")
+        : estado === "error"
+          ? detalle
+          : null;
   if (!texto) return null;
-  return (
-    <p className={`text-sm ${estado === "error" ? "text-peligro" : "animate-pulse text-texto-suave"}`}>{texto}</p>
-  );
+  return <p className={`text-sm ${estado === "error" ? "text-peligro" : "animate-pulse text-texto-suave"}`}>{texto}</p>;
 }
 
 /** Alto (px) desde el borde de arriba del contenedor posicionado hasta el borde de abajo del elemento. */
