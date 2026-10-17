@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
@@ -143,6 +143,10 @@ export function GuiaExperto({
   };
 
   const ocupado = estado === "pensando" || estado === "buscando";
+  const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
+  // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
+  const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
+  const horizontal = useCelularHorizontal();
 
   return (
     <div className={`flex flex-col bg-black text-texto ${className}`}>
@@ -158,17 +162,26 @@ export function GuiaExperto({
             onEvento={onEvento}
             onPaso={(p) => setFrase((f) => ({ c: p.coreografia, id: (f?.id ?? 0) + 1, visible: true }))}
             efectos={efectos}
+            reservadoArriba={reservado}
           />
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-3 bg-gradient-to-b from-black via-black/70 to-transparent px-5 pt-5 pb-10">
-          {origenPlano === "plantilla" && (
-            <p className="self-start rounded-full border border-probable/50 bg-black/60 px-3 py-1 text-xs text-probable">
-              Esquema genérico, no es tu modelo exacto
-            </p>
-          )}
-          <Frase frase={frase} />
-          <EstadoExperto estado={estado} detalle={detalle} />
+        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black via-black/70 to-transparent px-5 pt-5 pb-10 max-[440px]:px-3 max-[440px]:pt-3 max-[440px]:pb-6">
+          <div ref={cabecera} className="flex flex-col gap-3 max-[440px]:gap-2">
+            {origenPlano === "plantilla" && (
+              <p className="self-start rounded-full border border-probable/50 bg-black/60 px-3 py-1 text-xs text-probable">
+                Esquema genérico, no es tu modelo exacto
+              </p>
+            )}
+            <Frase frase={frase} />
+            <EstadoExperto estado={estado} detalle={detalle} />
+            {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
+            {horizontal && (
+              <p className="self-start rounded-full border border-white/20 bg-black/75 px-4 py-1.5 text-sm text-white backdrop-blur">
+                ⟳ Girá el celular para ver mejor
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -190,9 +203,12 @@ export function GuiaExperto({
         <button
           type="submit"
           disabled={!texto.trim()}
-          className="h-12 shrink-0 rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30"
+          aria-label={etiquetaBoton}
+          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[399px]:w-12 max-[399px]:px-0"
         >
-          {ocupado ? "Cambiar" : "Preguntar"}
+          {/* En celulares angostos, solo el ícono: así la caja de texto tiene lugar. */}
+          <span className="max-[399px]:hidden">{etiquetaBoton}</span>
+          <FlechaEnviar className="hidden max-[399px]:block" />
         </button>
       </form>
     </div>
@@ -209,9 +225,19 @@ function Frase({ frase }: { frase: { c: Coreografia; id: number; visible: boolea
       key={id}
       aria-live="polite"
       style={{ opacity: visible ? 1 : 0, transition: `opacity ${FUNDIDO_MS}ms ease-out` }}
-      className={bloqueo ? "rounded-2xl border border-peligro/60 bg-peligro/15 p-4" : ""}
+      className={
+        bloqueo
+          ? "rounded-2xl border border-peligro/60 bg-peligro/15 p-4"
+          : // Celular: fondo semitransparente para leer sobre el 3D.
+            "max-[440px]:rounded-xl max-[440px]:bg-black/55 max-[440px]:px-3 max-[440px]:py-2 max-[440px]:backdrop-blur-sm"
+      }
     >
-      <p className="text-xl leading-snug font-medium">
+      {/* Celular (angosto, o bajo en horizontal): letra más chica y máximo 2 renglones (el resto lo dice la voz). Un bloqueo se lee entero. */}
+      <p
+        className={`text-xl leading-snug font-medium max-[440px]:text-base [@media(max-height:500px)]:text-base ${
+          bloqueo ? "" : "max-[440px]:line-clamp-2 [@media(max-height:500px)]:line-clamp-2"
+        }`}
+      >
         {c.dice.split(/\s+/).map((palabra, i) => (
           <Fragment key={i}>
             <span className="palabra" style={{ animationDelay: `${i * 55}ms` }}>
@@ -230,7 +256,7 @@ function Cita({ c }: { c: Coreografia }) {
   if (c.riesgo === "alto") return null;
   const verificada = c.cita?.estado === "VERIFICADO";
   return (
-    <p className="mt-2 text-xs text-texto-suave">
+    <p className="mt-2 truncate text-xs text-texto-suave max-[440px]:mt-1">
       {c.cita ? (
         <>
           {c.cita.doc}
@@ -251,4 +277,45 @@ function EstadoExperto({ estado, detalle }: { estado: EstadoGuia; detalle?: stri
   return (
     <p className={`text-sm ${estado === "error" ? "text-peligro" : "animate-pulse text-texto-suave"}`}>{texto}</p>
   );
+}
+
+function FlechaEnviar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
+/** Alto (px) desde el borde de arriba del contenedor posicionado hasta el borde de abajo del elemento. */
+function useAltoHastaAbajo<T extends HTMLElement>(): [RefObject<T | null>, number] {
+  const ref = useRef<T>(null);
+  const [alto, setAlto] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const medir = () => {
+      const padre = el.offsetParent as HTMLElement | null;
+      const arriba = padre ? padre.getBoundingClientRect().top : 0;
+      setAlto(Math.round(el.getBoundingClientRect().bottom - arriba));
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, alto];
+}
+
+/** Celular en horizontal (pantalla baja y apaisada): el 3D queda muy chico. */
+function useCelularHorizontal(): boolean {
+  const [horizontal, setHorizontal] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape) and (max-height: 500px)");
+    const cambiar = () => setHorizontal(mq.matches);
+    cambiar();
+    mq.addEventListener("change", cambiar);
+    return () => mq.removeEventListener("change", cambiar);
+  }, []);
+  return horizontal;
 }

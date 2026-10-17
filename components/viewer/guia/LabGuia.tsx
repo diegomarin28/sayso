@@ -15,6 +15,8 @@ export function LabGuia() {
   const [real, setReal] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [dictada, setDictada] = useState<{ texto: string; id: number }>();
+  // En el celular el panel va escondido: así la guía se ve del tamaño que tiene en la app.
+  const [panel, setPanel] = useState(false);
   // Cambiar de modo remonta la guía (arranca de nuevo con la pregunta inicial).
   const clave = `${origen}-${real}`;
 
@@ -43,7 +45,18 @@ export function LabGuia() {
           </button>
         }
       />
-      <aside className="flex max-h-[38dvh] shrink-0 flex-col gap-3 overflow-y-auto border-t border-borde p-4 text-sm text-texto md:max-h-none md:w-72 md:border-t-0 md:border-l">
+      <button
+        type="button"
+        aria-label={panel ? "Cerrar el panel de pruebas" : "Abrir el panel de pruebas"}
+        aria-expanded={panel}
+        onClick={() => setPanel((p) => !p)}
+        className="fixed right-3 bottom-24 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/75 text-lg text-white backdrop-blur md:hidden"
+      >
+        {panel ? "✕" : "⚙"}
+      </button>
+      <aside
+        className={`${panel ? "flex" : "hidden"} fixed inset-x-0 bottom-0 z-30 max-h-[70dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-borde bg-fondo p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-texto md:static md:flex md:max-h-none md:w-72 md:rounded-none md:border-t-0 md:border-l md:bg-transparent`}
+      >
         <h1 className="font-semibold">Lab · guía del experto</h1>
         <Opcion titulo="Plano" valor={origen} opciones={["ia", "plantilla"]} onCambio={setOrigen} />
         <Opcion

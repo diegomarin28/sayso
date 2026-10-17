@@ -6,7 +6,6 @@ import {
   Environment,
   Html,
   Lightformer,
-  Line,
   OrthographicCamera,
   PerformanceMonitor,
   PerspectiveCamera,
@@ -14,6 +13,7 @@ import {
 import { Canvas, createPortal, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
+import * as THREE from "three";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
@@ -22,9 +22,12 @@ import {
   COLOR_ACTIVO,
   animar,
   encuadre,
+  ladoEtiqueta,
+  LINEA_ETIQUETA,
   liberar,
   piezasResaltadas,
   prepararEscena,
+  type LadoEtiqueta,
   type ModoVista,
   type NodoAnimable,
 } from "./escena";
@@ -55,11 +58,18 @@ export type VisorProps = {
   /** Avisa si el posprocesado quedó encendido o apagado (útil con "auto"). */
   onEfectos?: (activos: boolean) => void;
   vistaInicial?: ModoVista;
+  /**
+   * Px de arriba del lienzo tapados por algo encima del visor (ej. la frase del experto). Las
+   * piezas se encuadran en lo que queda libre y las etiquetas nunca se meten en esa franja.
+   */
+  reservadoArriba?: number;
   className?: string;
 };
 
 /** Pausa entre acciones de un mismo paso, para que se lean como una secuencia. */
 const ESPACIO_ENTRE_ACCIONES_MS = 450;
+/** Si la frase cambia de alto más que esto, se vuelve a encuadrar la pieza. */
+const REENCUADRAR_DESDE_PX = 24;
 const FOV = 35;
 
 export function Visor({
@@ -73,6 +83,7 @@ export function Visor({
   efectos = "auto",
   onEfectos,
   vistaInicial = "perspectiva",
+  reservadoArriba = 0,
   className,
 }: VisorProps) {
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
@@ -106,6 +117,7 @@ export function Visor({
             onEvento={onEvento}
             onPaso={onPaso}
             sombrasEnVivo={efectosActivos}
+            reservadoArriba={reservadoArriba}
           />
         )}
         {efectos === "auto" && (
@@ -121,7 +133,7 @@ export function Visor({
       <button
         type="button"
         onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
-        className="absolute bottom-3 left-3 rounded-full border border-white/20 bg-black/70 px-3 py-1.5 text-xs text-white backdrop-blur"
+        className="absolute bottom-3 left-3 h-11 rounded-full border border-white/20 bg-black/70 px-4 text-xs text-white backdrop-blur active:scale-95"
       >
         {vista === "perspectiva" ? "Vista isométrica" : "Vista en perspectiva"}
       </button>
@@ -148,10 +160,13 @@ function LuzDeEstudio() {
 type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
   Pick<VisorProps, "coreografia" | "piezas" | "tipoEquipo" | "onEvento" | "onPaso"> & {
     sombrasEnVivo: boolean;
+    reservadoArriba: number;
     biblioteca: BibliotecaPiezas | null;
   };
 
-function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo }: EscenaProps) {
+function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo, reservadoArriba }: EscenaProps) {
+  // Por ref: la frase cambia de alto seguido y no hace falta re-renderizar; se usa al encuadrar y en cada cuadro.
+  const reservado = useRef(reservadoArriba);
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
@@ -178,8 +193,10 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     acciones.current.mirar = (objetivo, zoom, animado) => {
       const c = controles.current;
       if (!c) return;
-      const e = encuadre(escena, objetivo, zoom, camara, tam, estado.current.despiece);
+      const e = encuadre(escena, objetivo, zoom, camara, tam, estado.current.despiece, reservado.current);
       void c.setLookAt(e.posicion.x, e.posicion.y, e.posicion.z, e.objetivo.x, e.objetivo.y, e.objetivo.z, animado);
+      // Corre la vista para que la pieza quede en el centro de lo que no tapa la frase.
+      void c.setFocalOffset(0, e.focal, 0, animado);
       if (e.zoomOrto !== null) void c.zoomTo(e.zoomOrto, animado);
     };
   }, [escena, camara, tam]);
@@ -197,6 +214,15 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     const { objetivo, zoom } = estado.current.camara;
     acciones.current.mirar(objetivo, zoom, false);
   }, [camara, escena]);
+
+  // La frase cambió de alto (llegó una más larga o más corta): la pieza vuelve al centro de lo libre.
+  useEffect(() => {
+    const antes = reservado.current;
+    reservado.current = reservadoArriba;
+    if (Math.abs(reservadoArriba - antes) < REENCUADRAR_DESDE_PX) return;
+    const { objetivo, zoom } = estado.current.camara;
+    acciones.current.mirar(objetivo, zoom, true);
+  }, [reservadoArriba]);
 
   // Coreografía nueva: filtro de seguridad, limpia resaltados y aplica las acciones una por una.
   useEffect(() => {
@@ -228,7 +254,9 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
       {activos.map((id) => {
         const a = escena.nodos.get(id);
         const kp = delKp.get(id);
-        return a ? <Etiqueta key={id} animable={a} nombre={kp?.nombre} numeroKp={kp?.etiquetaManual} /> : null;
+        return a ? (
+          <Etiqueta key={id} animable={a} nombre={kp?.nombre} numeroKp={kp?.etiquetaManual} reservado={reservado} />
+        ) : null;
       })}
       <ContactShadows
         position={[0, escena.piso - 0.05, 0]}
@@ -245,33 +273,63 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
 
 // ---------- Etiquetas con línea guía ----------
 
-const ALTURA_ETIQUETA_CM = 4;
-const CORRIMIENTO_ETIQUETA_CM = 2.5;
+type EtiquetaProps = {
+  animable: NodoAnimable;
+  nombre?: string;
+  numeroKp?: string;
+  /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
+  reservado: { current: number };
+};
 
-function Etiqueta({ animable, nombre, numeroKp }: { animable: NodoAnimable; nombre?: string; numeroKp?: string }) {
+/**
+ * Etiqueta anclada arriba de la pieza. La línea guía y el recuadro se dibujan en px de pantalla
+ * hacia el lado donde entran (`ladoEtiqueta`): arriba a la derecha si se puede; abajo si arriba
+ * se encimaría con la frase; a la izquierda si a la derecha se sale del lienzo.
+ */
+function Etiqueta({ animable, nombre, numeroKp, reservado }: EtiquetaProps) {
   const datos = animable.nodo.userData as DatosPieza;
   const numero = datos.etiquetaManual ?? numeroKp;
   const base = animable.principal.position;
-  const arriba = datos.dim[1] / 2;
-  const desde: [number, number, number] = [base.x, base.y + arriba, base.z];
-  const hasta: [number, number, number] = [base.x + CORRIMIENTO_ETIQUETA_CM, base.y + arriba + ALTURA_ETIQUETA_CM, base.z];
+  const desde: [number, number, number] = [base.x, base.y + datos.dim[1] / 2, base.z];
+  const camara = useThree((st) => st.camera);
+  const tam = useThree((st) => st.size);
+  const caja = useRef<HTMLDivElement>(null);
+  const [lado, setLado] = useState<LadoEtiqueta>({ h: "derecha", v: "arriba" });
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
   }, []);
 
+  const punto = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    if (!caja.current) return;
+    punto.set(...desde);
+    animable.nodo.localToWorld(punto).project(camara);
+    const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
+    const nuevo = ladoEtiqueta(ancla, { ancho: caja.current.offsetWidth, alto: caja.current.offsetHeight }, tam, reservado.current);
+    setLado((l) => (l.h === nuevo.h && l.v === nuevo.v ? l : nuevo));
+  });
+
+  const sx = lado.h === "derecha" ? 1 : -1;
+  const sy = lado.v === "arriba" ? -1 : 1;
+  const { dx, dy } = LINEA_ETIQUETA;
   return createPortal(
-    <>
-      <Line points={[desde, hasta]} color={COLOR_ACTIVO} lineWidth={1.5} transparent opacity={0.9} />
-      <Html position={hasta} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
+    <Html position={desde} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
+      <div style={{ opacity: visible ? 1 : 0, transition: "opacity 300ms ease-out" }}>
+        <svg width={1} height={1} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+          <line x1={0} y1={0} x2={sx * dx} y2={sy * dy} stroke={COLOR_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
+          <circle cx={0} cy={0} r={2.5} fill={COLOR_ACTIVO} />
+        </svg>
         <div
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-black/80 py-1 pl-1 pr-2 text-xs font-medium text-white shadow-lg"
+          ref={caja}
+          className="absolute flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-black/80 py-1 pl-1 pr-2 text-xs font-medium text-white shadow-lg"
           style={{
+            left: sx * dx,
+            top: sy * dy,
             borderColor: COLOR_ACTIVO,
-            transform: `translate(2px, -100%) translateY(${visible ? 0 : 6}px)`,
-            opacity: visible ? 1 : 0,
-            transition: "opacity 300ms ease-out, transform 300ms ease-out",
+            transform: `translate(${sx > 0 ? 0 : -100}%, ${sy < 0 ? -100 : 0}%) translateY(${visible ? 0 : sy * -6}px)`,
+            transition: "transform 300ms ease-out",
           }}
         >
           {numero && (
@@ -284,8 +342,8 @@ function Etiqueta({ animable, nombre, numeroKp }: { animable: NodoAnimable; nomb
           )}
           <span className={numero ? "" : "pl-1"}>{nombre ?? nombreLegible(datos.pieza)}</span>
         </div>
-      </Html>
-    </>,
+      </div>
+    </Html>,
     animable.nodo,
   );
 }

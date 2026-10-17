@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { COLOR_ACTIVO, animar, prepararEscena } from "./escena";
+import { COLOR_ACTIVO, animar, encuadre, ladoEtiqueta, prepararEscena } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -75,5 +75,56 @@ describe("escena: transiciones", () => {
     expect(mitad).toBeLessThan(3.5);
     animar(escena, e, 3000);
     expect(n.nodo.position.y - n.reposo.y).toBeCloseTo(4);
+  });
+});
+
+describe("escena: encuadre en celular", () => {
+  const escena = prepararEscena(planoNotebookBase);
+  /** Proyecta `p` con la cámara encuadrada y el focal offset aplicado como camera-controls (positivo = la vista baja, los objetos suben). */
+  const proyectar = (camara: THREE.PerspectiveCamera, e: ReturnType<typeof encuadre>, p: THREE.Vector3) => {
+    camara.position.copy(e.posicion);
+    camara.lookAt(e.objetivo);
+    camara.position.addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(camara.quaternion), -e.focal);
+    camara.updateMatrixWorld();
+    return p.clone().project(camara);
+  };
+
+  it("con la frase arriba, la pieza queda en el centro de lo que queda libre", () => {
+    const tam = { width: 393, height: 515 };
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const e = encuadre(escena, "ventilador", 1.4, camara, tam, 0, 120);
+    const ndc = proyectar(camara, e, e.objetivo);
+    const pxY = ((1 - ndc.y) / 2) * tam.height;
+    expect(pxY).toBeCloseTo(120 + (tam.height - 120) / 2, 0);
+    expect(ndc.x).toBeCloseTo(0, 5);
+  });
+
+  it("sin frase no corre la vista; en vertical el ancho también entra", () => {
+    const tam = { width: 320, height: 568 };
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const e = encuadre(escena, "general", 1, camara, tam);
+    expect(Math.abs(e.focal)).toBe(0);
+    const derecha = new THREE.Vector3(1, 0, 0);
+    const caja = new THREE.Box3().setFromObject(escena.raiz);
+    const radio = caja.getBoundingSphere(new THREE.Sphere()).radius * 0.8;
+    const borde = proyectar(camara, e, e.objetivo.clone().addScaledVector(derecha, radio));
+    expect(Math.abs(borde.x)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("escena: lado de la etiqueta", () => {
+  const lienzo = { width: 393, height: 515 };
+  const etiqueta = { ancho: 120, alto: 26 };
+
+  it("arriba a la derecha si entra", () => {
+    expect(ladoEtiqueta({ x: 150, y: 300 }, etiqueta, lienzo, 100)).toEqual({ h: "derecha", v: "arriba" });
+  });
+
+  it("abajo si arriba se encimaría con la frase", () => {
+    expect(ladoEtiqueta({ x: 150, y: 160 }, etiqueta, lienzo, 100).v).toBe("abajo");
+  });
+
+  it("a la izquierda si a la derecha se sale del lienzo", () => {
+    expect(ladoEtiqueta({ x: 300, y: 300 }, etiqueta, lienzo, 0).h).toBe("izquierda");
   });
 });
