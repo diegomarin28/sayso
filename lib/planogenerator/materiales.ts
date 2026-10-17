@@ -41,6 +41,26 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ["marco", { color: "#9aa2ab", metalness: 0.9, roughness: 0.35 }],
   // Como la tapa inferior: translúcida, para ver lo que hay debajo.
   ["tapa_trasera", { color: "#2b3440", metalness: 0.4, roughness: 0.2, opacity: 0.22 }],
+  // Electrodomésticos.
+  ["fuente", { color: "#2a4a3e", metalness: 0.15, roughness: 0.5 }],
+  ["capacitor", { color: "#24406e", metalness: 0.2, roughness: 0.45 }],
+  ["transformador", { color: "#5b6168", metalness: 0.7, roughness: 0.45 }],
+  ["panel", { color: "#d9dcdf", metalness: 0.05, roughness: 0.45 }],
+  ["motor", { color: "#3b4249", metalness: 0.6, roughness: 0.45 }],
+  ["bomba", { color: "#4a4f55", metalness: 0.1, roughness: 0.55 }],
+  ["correa", { color: "#202224", metalness: 0, roughness: 0.85 }],
+  ["tambor", { color: "#c9ced3", metalness: 0.85, roughness: 0.3 }],
+  ["compresor", { color: "#1f2a24", metalness: 0.4, roughness: 0.45 }],
+  ["serpentin", { color: "#c4ccd2", metalness: 0.8, roughness: 0.35 }],
+  ["condensador", { color: "#1b1d20", metalness: 0.4, roughness: 0.5 }],
+  ["termostato", { color: "#d4d0c4", metalness: 0.05, roughness: 0.5 }],
+  ["resistencia", { color: "#7e8389", metalness: 0.7, roughness: 0.45 }],
+  ["valvula", { color: "#e3e5e7", metalness: 0.05, roughness: 0.45 }],
+  ["manguera", { color: "#6a6f74", metalness: 0, roughness: 0.8 }],
+  ["filtro", { color: "#cfd4d8", metalness: 0.05, roughness: 0.5 }],
+  ["puerta", { color: "#e8eaec", metalness: 0.2, roughness: 0.4 }],
+  // Carcasa del electrodoméstico: translúcida, como la tapa inferior, para ver lo de adentro.
+  ["carcasa", { color: "#dfe3e7", metalness: 0.3, roughness: 0.4, opacity: 0.16 }],
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };
@@ -52,7 +72,7 @@ export const RECETAS_DETALLE = {
   chip: { color: "#141619", metalness: 0.3, roughness: 0.45 },
   etiqueta: { color: "#d9dde1", metalness: 0, roughness: 0.8 },
   ranura: { color: "#4a4f56", metalness: 0.9, roughness: 0.3 },
-  // Partes de la biblioteca de Blender (piezas.glb).
+  // Partes de la biblioteca de Blender (public/models/piezas).
   cobre: { color: "#c87a45", metalness: 0.75, roughness: 0.3 },
   contactos: { color: "#d6a843", metalness: 0.9, roughness: 0.28 },
   metal: { color: "#b8bec5", metalness: 0.85, roughness: 0.3 },

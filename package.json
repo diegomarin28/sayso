@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "modelos:piezas": "blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas.glb"
+    "modelos:piezas": "blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

@@ -232,10 +232,14 @@ export function encuadre(
   despiece = 0,
 ) {
   const nodo = escena.nodos.get(objetivo)?.nodo ?? escena.raiz;
-  const esfera = new THREE.Box3().setFromObject(nodo).getBoundingSphere(new THREE.Sphere());
+  const caja = new THREE.Box3().setFromObject(nodo);
+  const esfera = caja.getBoundingSphere(new THREE.Sphere());
   // Una pieza se encuadra con su entorno para que se entienda dónde está.
   // Con el despiece las piezas suben y se abren: se deja más margen.
-  const radio = nodo === escena.raiz ? esfera.radius * (0.8 + 0.45 * despiece) : Math.max(esfera.radius * 2.6, 12);
+  // Un equipo alto (heladera) tiene que entrar entero a lo alto; uno chato (notebook) no cambia.
+  const alto = caja.getSize(new THREE.Vector3()).y / 2;
+  const radio =
+    nodo === escena.raiz ? Math.max(esfera.radius * (0.8 + 0.45 * despiece), alto * 1.15) : Math.max(esfera.radius * 2.6, 12);
   const objetivoPos = esfera.center;
 
   if (camara instanceof THREE.OrthographicCamera) {
