@@ -28,7 +28,7 @@ import {
   type NodoAnimable,
 } from "./escena";
 import { prepararPaso, type PasoPreparado } from "./paso";
-import { aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
+import { OBJETIVO_GENERAL, aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
 
 /** "auto": bloom encendido, se apaga solo si el equipo no sostiene ~30 fps. */
 export type ModoEfectos = "auto" | "si" | "no";
@@ -199,6 +199,7 @@ function Escena({ plano, coreografia, piezas, casoId, onEvento, onPaso, sombrasE
         actualizar(r.estado);
         if (r.evento) onEventoRef.current?.(r.evento);
         else if (accion.t === "camara") acciones.current.mirar(accion.objetivo, accion.zoom ?? 1, true);
+        else if (accion.t === "restaurar") acciones.current.mirar(OBJETIVO_GENERAL, 1, true);
       }, i * ESPACIO_ENTRE_ACCIONES_MS),
     );
     return () => timers.forEach(clearTimeout);
