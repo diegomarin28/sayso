@@ -20,8 +20,10 @@ export const MODELOS = {
 
 /** Qué modelo usa cada paso que podría ir con cualquiera de los dos (se decide midiendo calidad y costo). */
 export const MODELO_DE = {
-  /** Lectura del extracto del manual para armar el pack. */
-  lectura: MODELOS.vision as string,
+  /** Lectura del extracto del manual para armar el pack (demo de hackatón: lo más barato que dé buenos pasos). */
+  lectura: MODELOS.corto as string,
+  /** Bibliotecario: buscar el PDF del manual en la web. */
+  bibliotecario: MODELOS.corto as string,
   /** Chat respondiendo solo con el pack (sin PDF). */
   chatPack: MODELOS.vision as string,
 };
@@ -39,9 +41,9 @@ export const LIMITES = {
   },
   pdf: { maxBytes: 150 * 1024 * 1024, timeoutMs: 60_000, venceEnSeg: 7 * 24 * 3600 },
   bibliotecario: {
-    busquedas: 6,
-    paginas: 6,
-    vueltas: 12,
+    busquedas: 3,
+    paginas: 2,
+    vueltas: 6,
     /** Tope de texto por página abierta con web_fetch (los PDF no se cortan: se prueban con probar_pdf). */
     maxTokensPagina: 10_000,
   },
@@ -248,7 +250,10 @@ export async function nombreDeArchivo(fileId: string): Promise<string> {
  * Herramientas web según el modelo: Sonnet usa las versiones con filtrado dinámico;
  * Haiku, las básicas (las nuevas son solo para Sonnet y Opus).
  */
-export function herramientasWeb(modelo: string, maximos: { busquedas: number; paginas?: number }): Anthropic.ToolUnion[] {
+export function herramientasWeb(
+  modelo: string,
+  maximos: { busquedas: number; paginas?: number; maxTokensPagina?: number },
+): Anthropic.ToolUnion[] {
   const nuevas = modelo !== MODELOS.corto;
   const tools: Anthropic.ToolUnion[] = [
     nuevas
@@ -258,8 +263,8 @@ export function herramientasWeb(modelo: string, maximos: { busquedas: number; pa
   if (maximos.paginas) {
     tools.push(
       nuevas
-        ? { type: "web_fetch_20260209", name: "web_fetch", max_uses: maximos.paginas }
-        : { type: "web_fetch_20250910", name: "web_fetch", max_uses: maximos.paginas },
+        ? { type: "web_fetch_20260209", name: "web_fetch", max_uses: maximos.paginas, max_content_tokens: maximos.maxTokensPagina }
+        : { type: "web_fetch_20250910", name: "web_fetch", max_uses: maximos.paginas, max_content_tokens: maximos.maxTokensPagina },
     );
   }
   return tools;

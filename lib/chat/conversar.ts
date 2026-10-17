@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia, type Evento } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
-import { AcumuladorUso, LIMITES, MODELOS, registrarUso, streamClaude, totalUsd, type StreamIA, type Uso } from "../ia/claude";
+import { AcumuladorUso, LIMITES, MODELO_DE, MODELOS, registrarUso, streamClaude, totalUsd, type StreamIA, type Uso } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { eventoCosto } from "../intake/entrada";
 import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
@@ -240,7 +240,7 @@ export async function* conversar(
       yield* fase(
         stream,
         {
-          model: MODELOS.vision,
+          model: MODELO_DE.lectura,
           max_tokens: LIMITES.chat.maxTokensManual,
           output_config: { effort: LIMITES.lectura.effort },
           system: SYSTEM_LECTOR,
