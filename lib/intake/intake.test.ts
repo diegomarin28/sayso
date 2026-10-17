@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { Ficha, Foto, PedidoDeFoto } from "../../shared";
+import { Caso, Ficha, Foto, PedidoDeFoto } from "../../shared";
 import { ErrorIA, pedirJson, type LlamarIA } from "../ia/claude";
 import { decidirAceptacion, evaluarFoto } from "./calidad";
 import { estadoCampo, leerChapa } from "./chapa";
 import { EntradaCalidad } from "./entrada";
+import { entender } from "./entender";
 import { decidirPedidos, MAX_EXTRA, pedidosBase } from "./pedidos";
 
 /** Simula al modelo devolviendo, en orden, cada respuesta de la lista. */
@@ -130,5 +131,27 @@ describe("chapa", () => {
     expect(ficha.modelo).toEqual({ valor: "20XW-CTO1WW", estado: "confirmado", fuente: "chapa" });
     expect(ficha.serie.estado).toBe("probable");
     expect(ficha.anio.estado).toBe("desconocido");
+  });
+});
+
+describe("entender", () => {
+  it("saca clase y síntoma de la IA y arma un Caso válido", async () => {
+    const llamar = falso({ clase: "notebook", sintoma: "Se apaga sola." });
+    const r = await entender("mi compu portátil se apaga sola", llamar, "c9");
+    expect(Caso.parse(r.caso)).toMatchObject({ id: "c9", clase: "notebook", sintoma: "Se apaga sola.", estado: "captura" });
+    expect(r.porIA).toBe(true);
+    expect(r.seguridad.bloqueado).toBe(false);
+  });
+
+  it("si la IA falla, usa 'otro' y el texto tal cual", async () => {
+    const r = await entender("  algo raro  ", falso("basura"));
+    expect(r.caso.clase).toBe("otro");
+    expect(r.caso.sintoma).toBe("algo raro");
+    expect(r.porIA).toBe(false);
+  });
+
+  it("bloquea por el texto de la persona aunque la IA lo resuma suave", async () => {
+    const r = await entender("huele a gas cerca del calefón", falso({ clase: "otro", sintoma: "Hay un olor." }));
+    expect(r.seguridad.bloqueado).toBe(true);
   });
 });
