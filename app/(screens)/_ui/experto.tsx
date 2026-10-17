@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 export type EstadoOrbe = "quieto" | "pensando";
 
@@ -24,9 +24,12 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
       className={`text-[clamp(1.75rem,6.5vw,2.75rem)] leading-[1.1] font-semibold tracking-tight text-balance ${className}`}
     >
       {texto.split(" ").map((p, i) => (
-        <span key={i} className="palabra" style={{ animationDelay: `${i * 55}ms` }}>
-          {p}&nbsp;
-        </span>
+        // El espacio va afuera de la palabra animada: adentro, Safari dibuja restos entre palabras.
+        <Fragment key={i}>
+          <span className="palabra" style={{ animationDelay: `${i * 55}ms` }}>
+            {p}
+          </span>{" "}
+        </Fragment>
       ))}
     </p>
   );

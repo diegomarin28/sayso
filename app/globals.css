@@ -61,9 +61,11 @@ body {
 
 /* ---------- Texto del experto: aparece palabra por palabra ---------- */
 
+/* Sin filter: blur. En Safari de iPhone el desenfoque animado a veces no termina: deja
+   palabras borrosas y rayas de color entre ellas. */
 @keyframes palabra-aparece {
-  from { opacity: 0; filter: blur(6px); transform: translateY(0.25em); }
-  to { opacity: 1; filter: blur(0); transform: none; }
+  from { opacity: 0; transform: translateY(0.25em); }
+  to { opacity: 1; transform: none; }
 }
 
 .palabra {
