@@ -24,7 +24,8 @@ const EntradaProbar = z.object({ url: z.string() });
 export type ManualEncontrado = { url: string; titulo: string; fuente: z.infer<typeof Fuente>; pdf: Pdf };
 
 const SYSTEM_BUSCAR = `Sos el bibliotecario de un servicio de reparación. Tu tarea: conseguir el PDF del manual de SERVICIO del equipo indicado
-(Lenovo: "Hardware Maintenance Manual"; Dell: "Service Manual" u "Owner's Manual"; HP: "Maintenance and Service Guide"; Apple, Asus, Acer, etc.: su equivalente).
+(notebooks: "Hardware Maintenance Manual" en Lenovo, "Service Manual" en Dell, "Maintenance and Service Guide" en HP; celulares: "Repair Manual" o "Self Service Repair" en Apple, "Service Manual" en otras marcas;
+electrodomésticos —heladeras, lavarropas, aires, microondas—: "Service Manual", "Technical Service Manual" o "Manual de servicio técnico"; en cualquier otra marca o equipo, su equivalente).
 Cómo trabajar:
 1. Buscá con web_search. Probá variantes: "<modelo> hardware maintenance manual pdf", "<modelo> service manual filetype:pdf", y con site: en el dominio de descargas del fabricante.
 2. Si encontrás una página de soporte o de documentos, abrila con web_fetch y buscá el enlace directo al .pdf.
