@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { enviarMensaje, extraerJson, LIMITES, MODELOS, type EnviarMensaje } from "../ia/claude";
+import { enviarMensaje, extraerJson, LIMITES, type EnviarMensaje, herramientasWeb, MODELO_DE } from "../ia/claude";
 import { descargarPdf, tituloDelPdf, type Fetch, type Pdf } from "./descargar";
 
 /**
@@ -55,14 +55,13 @@ export async function buscarManual(
 ): Promise<ManualEncontrado | null> {
   const enviar = deps.enviar ?? enviarMensaje;
   const verificados = new Map<string, Pdf>();
+  // Haiku: buscar un PDF no necesita un modelo caro (con Sonnet una búsqueda llegó a 252.000 tokens).
   const tools: Anthropic.ToolUnion[] = [
-    { type: "web_search_20260209", name: "web_search", max_uses: LIMITES.bibliotecario.busquedas },
-    {
-      type: "web_fetch_20260209",
-      name: "web_fetch",
-      max_uses: LIMITES.bibliotecario.paginas,
-      max_content_tokens: LIMITES.bibliotecario.maxTokensPagina,
-    },
+    ...herramientasWeb(MODELO_DE.bibliotecario, {
+      busquedas: LIMITES.bibliotecario.busquedas,
+      paginas: LIMITES.bibliotecario.paginas,
+      maxTokensPagina: LIMITES.bibliotecario.maxTokensPagina,
+    }),
     PROBAR_PDF,
   ];
   const messages: Anthropic.MessageParam[] = [
@@ -75,7 +74,7 @@ export async function buscarManual(
   for (let vuelta = 0; vuelta < LIMITES.bibliotecario.vueltas; vuelta++) {
     // Caché automática: cada vuelta reenvía todo lo anterior (búsquedas y páginas); así se lee de la caché.
     const r = await enviar(
-      { model: MODELOS.vision, max_tokens: 8000, system: SYSTEM_BUSCAR, tools, messages, cache_control: { type: "ephemeral" } },
+      { model: MODELO_DE.bibliotecario, max_tokens: 4000, output_config: { effort: "low" }, system: SYSTEM_BUSCAR, tools, messages, cache_control: { type: "ephemeral" } },
       "bibliotecario: buscar manual",
     );
     messages.push({ role: "assistant", content: r.content });
@@ -94,7 +93,12 @@ export async function buscarManual(
           tool_use_id: uso.id,
           content: JSON.stringify(
             pdf
-              ? { esPdf: true, mb: Number((pdf.bytes / 1e6).toFixed(1)), tituloInterno: tituloDelPdf(pdf.datos) }
+              ? {
+                  esPdf: true,
+                  mb: Number((pdf.bytes / 1e6).toFixed(1)),
+                  tituloInterno: tituloDelPdf(pdf.datos),
+                  siguiente: "Si es el manual del equipo, respondé YA el JSON final (no sigas buscando).",
+                }
               : { esPdf: false, motivo: "No se pudo bajar o no es un PDF (puede ser una página web que lo muestra)." },
           ),
         });
