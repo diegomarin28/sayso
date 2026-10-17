@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { KnowledgePack, PlanoDePiezas, knowledgePackEjemplo } from "../../shared";
-import type { LlamarIA, PedidoIA } from "../ia/claude";
+import { MODELO_DE, MODELOS, type EnviarMensaje, type LlamarIA, type PedidoIA } from "../ia/claude";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
 import {
   generarPlano,
@@ -304,5 +304,43 @@ describe("origen de cada ubicación", () => {
     const { plano } = planoDesdePlantilla(kp);
     expect(new Set(plano.piezas.map((p) => p.origen))).toEqual(new Set(["plantilla"]));
     expect(plano.medidas).toEqual({ ancho: "plantilla", prof: "plantilla" });
+  });
+});
+
+describe("modelo del cartógrafo (comparación de la batería de pruebas)", () => {
+  const conPedido = () => {
+    const pedidos: PedidoIA[] = [];
+    const llamar: LlamarIA = async (p) => {
+      pedidos.push(p);
+      return JSON.stringify(propuestaBuena);
+    };
+    return { pedidos, llamar };
+  };
+  const recorte = { base64: "JVBERi0=", paginas: [68, 51] };
+
+  it("por defecto usa MODELO_DE.plano (Sonnet): el modelo de la app no cambia", async () => {
+    const { pedidos, llamar } = conPedido();
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte }, llamar);
+    expect(MODELO_DE.plano).toBe(MODELOS.vision);
+    expect(pedidos[0].modelo).toBe(MODELOS.vision);
+    expect(r).toMatchObject({ camino: "recorte", modelo: MODELOS.vision });
+  });
+
+  it("con `modelo` (solo la batería) usa ese modelo en el recorte", async () => {
+    const { pedidos, llamar } = conPedido();
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte, modelo: MODELOS.corto }, llamar);
+    expect(pedidos[0].modelo).toBe(MODELOS.corto);
+    expect(r.modelo).toBe(MODELOS.corto);
+  });
+
+  it("con el manual entero no aplica: usa el modelo de lectura (comparte la caché del manual)", async () => {
+    let modeloUsado: string | undefined;
+    const enviar: EnviarMensaje = async (params) => {
+      modeloUsado = params.model;
+      return { content: [{ type: "text", text: JSON.stringify(propuestaBuena), citations: null }], stop_reason: "end_turn" } as never;
+    };
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, manual: { fileId: "file_1" }, modelo: MODELOS.vision }, undefined, enviar);
+    expect(r).toMatchObject({ camino: "manual", modelo: MODELO_DE.lectura });
+    expect(modeloUsado).toBe(MODELO_DE.lectura);
   });
 });

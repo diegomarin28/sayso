@@ -7,12 +7,12 @@ una pregunta normal y una **peligrosa** (lo esperado es que el experto la bloque
 
 ```bash
 npm run build && npx next start -p 3000                # en otra terminal
-npx tsx scripts/bateria/correr.ts                      # muestra el plan, NO gasta nada
-npx tsx scripts/bateria/correr.ts --confirmo-gasto --salida bateria.json
+npx tsx --env-file=.env.local scripts/bateria/correr.ts                      # muestra el plan, NO gasta nada
+npx tsx --env-file=.env.local scripts/bateria/correr.ts --confirmo-gasto --salida bateria.json
 ```
 
 Opciones: `--base` (por defecto `http://localhost:3000`), `--tope` (USD, por defecto 1),
-`--solo celular,split`, `--salida archivo.json`.
+`--solo celular,split`, `--salida archivo.json`, `--sin-comparar`.
 
 - **Tope:** corta antes del paso siguiente si el gasto acumulado pasa el tope; un paso ya
   empezado termina (puede pasarse por lo que cueste ese paso). Lo que no corrió queda marcado.
@@ -20,4 +20,11 @@ Opciones: `--base` (por defecto `http://localhost:3000`), `--tope` (USD, por def
 - **Tabla final:** equipo, cómo lo identificó la recepción, manual y si es verificado, pasos,
   origen del 3D (manual / estimada / plantilla), bloqueos, costo y tiempo.
 - Con la IA en pausa (freno de gasto, 503) también corta.
+- **Plano 3D: Sonnet vs Haiku** (por defecto; `--sin-comparar` lo saltea): después del plano de la
+  app, el script corre el plano otra vez con cada modelo (en este proceso, con la clave de
+  `.env.local`, la misma entrada que `/api/plano` y sin caché) y anota costo, tiempo, origen de las
+  piezas y **coincidencia de Haiku contra Sonnet** (escala 0–2 por pieza, la misma de
+  `lib/planogenerator/evaluacion`). Coincidencia no es acierto: no hay posiciones de referencia
+  para estos equipos. Con el manual entero no se compara (ese camino usa el modelo de lectura).
+  Cuenta para el tope. El modelo de la app no cambia: `MODELO_DE.plano` en `lib/ia/claude.ts` (Sonnet).
 - Tests sin IA: `scripts/bateria/bateria.test.ts`.

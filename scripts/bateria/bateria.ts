@@ -10,7 +10,37 @@ import type { CasoPrueba } from "./casos";
  * termina (puede pasarse por lo que cueste ese paso). Sin IA real en los tests: `fetch` inyectable.
  */
 
-export type Opciones = { base: string; topeUsd: number; fetch?: typeof fetch; log?: (linea: string) => void; esperaMs?: number };
+/** Lo mismo que recibe /api/plano: para correr el plano otra vez con cada modelo. */
+export type EntradaPlano = {
+  casoId: string;
+  ficha: z.infer<typeof Ficha>;
+  knowledgePack: z.infer<typeof KnowledgePack>;
+  manualFileId: string | null;
+  manualUrl: string | null;
+  paginasVistaExplosionada: number[];
+  paginaVistaInterior: number | null;
+};
+
+export type CorridaPlano = { modelo: string; usd: number; segundos: number; origen3D: string };
+
+/** Plano con Sonnet y con Haiku para el mismo equipo. `haiku: null` = no se comparó (ver `nota`). */
+export type ComparacionPlano = {
+  camino: string;
+  sonnet: CorridaPlano;
+  haiku: CorridaPlano | null;
+  coincidencia: { puntos: number; max: number; porcentaje: number } | null;
+  nota?: string;
+};
+
+export type Opciones = {
+  base: string;
+  topeUsd: number;
+  fetch?: typeof fetch;
+  log?: (linea: string) => void;
+  esperaMs?: number;
+  /** Si está, después del plano de la app se corre el plano con Sonnet y con Haiku (cuenta para el tope). */
+  compararPlano?: (entrada: EntradaPlano) => Promise<ComparacionPlano>;
+};
 
 export type Fila = {
   id: string;
@@ -26,6 +56,8 @@ export type Fila = {
   origen3D: string;
   /** Ej. "peligrosa bloqueada" o "peligrosa NO bloqueada". */
   bloqueos: string;
+  /** Comparación del plano Sonnet vs Haiku (si se pidió). */
+  planoComparado?: ComparacionPlano;
   usd: number;
   segundos: number;
   /** Por qué no terminó (error, tope, IA en pausa). */
@@ -135,20 +167,29 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
   fila.pasos = k.pack.pasos.length;
 
   antes("plano");
-  const p = await post(
-    "/api/plano",
-    {
-      casoId: e.caso.id,
-      ficha: fi.ficha,
-      knowledgePack: k.pack,
-      manualFileId: k.manualFileId,
-      manualUrl: k.manualUrl,
-      paginasVistaExplosionada: k.paginasVistaExplosionada,
-      paginaVistaInterior: k.paginaVistaInterior,
-    },
-    RespPlano,
-  );
+  const entradaPlano: EntradaPlano = {
+    casoId: e.caso.id,
+    ficha: fi.ficha,
+    knowledgePack: k.pack,
+    manualFileId: k.manualFileId,
+    manualUrl: k.manualUrl,
+    paginasVistaExplosionada: k.paginasVistaExplosionada,
+    paginaVistaInterior: k.paginaVistaInterior,
+  };
+  const p = await post("/api/plano", entradaPlano, RespPlano);
   fila.origen3D = textoOrigen(p.origen, p.plano);
+
+  if (o.compararPlano) {
+    antes("la comparación del plano");
+    try {
+      fila.planoComparado = await o.compararPlano(entradaPlano);
+      fila.usd += fila.planoComparado.sonnet.usd + (fila.planoComparado.haiku?.usd ?? 0);
+    } catch (err) {
+      // El freno de gasto también vale acá; otro error no corta el caso (siguen las preguntas).
+      if ((err as Error).name === "IAEnPausa") throw new Corte("IA en pausa en la comparación del plano");
+      fila.nota = `comparación del plano: ${(err as Error).message}`;
+    }
+  }
 
   const historial: { rol: "persona" | "experto"; texto: string }[] = [];
   for (const [i, pregunta] of [caso.pregunta, caso.peligrosa].entries()) {
@@ -176,7 +217,7 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
   fila.bloqueos = bloqueos.join(", ");
 }
 
-function textoOrigen(origen: "ia" | "plantilla", plano: PlanoDePiezas): string {
+export function textoOrigen(origen: "ia" | "plantilla", plano: PlanoDePiezas): string {
   const cuenta = new Map<string, number>();
   for (const p of plano.piezas) cuenta.set(p.origen ?? "sin dato", (cuenta.get(p.origen ?? "sin dato") ?? 0) + 1);
   return `${origen} · ${[...cuenta].map(([k, n]) => `${n} ${k}`).join(", ")}`;
@@ -205,5 +246,29 @@ export function tabla(filas: Fila[], totalUsd: number): string {
     ...filasMd.map((l) => `| ${l} |`),
     "",
     `Total: US$ ${totalUsd.toFixed(3)} · ${filas.reduce((s, f) => s + f.segundos, 0).toFixed(0)} s`,
+  ].join("\n");
+}
+
+/** Segunda tabla: el plano 3D con Sonnet y con Haiku para los mismos equipos. */
+export function tablaPlano(filas: Fila[]): string {
+  const corrida = (c: CorridaPlano | null) => (c ? `US$ ${c.usd.toFixed(4)} · ${c.segundos.toFixed(0)} s · ${c.origen3D}` : "—");
+  const con = filas.filter((f) => f.planoComparado);
+  const comparados = con.filter((f) => f.planoComparado!.coincidencia);
+  const suma = (k: "sonnet" | "haiku") => con.reduce((s, f) => s + (f.planoComparado![k]?.usd ?? 0), 0);
+  const media = comparados.length
+    ? Math.round(comparados.reduce((s, f) => s + f.planoComparado!.coincidencia!.porcentaje, 0) / comparados.length)
+    : null;
+  return [
+    "| Equipo | Camino | Sonnet | Haiku | Coincidencia Haiku vs Sonnet | Nota |",
+    "|---|---|---|---|---|---|",
+    ...con.map((f) => {
+      const c = f.planoComparado!;
+      const coin = c.coincidencia ? `${c.coincidencia.puntos}/${c.coincidencia.max} (${c.coincidencia.porcentaje} %)` : "—";
+      return `| ${f.equipo} | ${c.camino} | ${corrida(c.sonnet)} | ${corrida(c.haiku)} | ${coin} | ${c.nota ?? ""} |`;
+    }),
+    "",
+    `Plano: Sonnet US$ ${suma("sonnet").toFixed(4)} · Haiku US$ ${suma("haiku").toFixed(4)}` +
+      (media === null ? "" : ` · coincidencia media ${media} % en ${comparados.length} equipos`) +
+      ". Coincidencia = cuánto ubican igual (escala 0–2 por pieza), no cuál acierta.",
   ].join("\n");
 }

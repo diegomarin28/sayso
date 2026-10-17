@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { FormaPieza, PlanoDePiezas, type KnowledgePack, type OrigenDato3D, type PiezaPlano } from "../../shared";
-import { bloqueImagen, enviarMensaje, ErrorIA, MODELOS, pedirJson, type EnviarMensaje, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import { bloqueImagen, enviarMensaje, ErrorIA, MODELO_DE, pedirJson, type EnviarMensaje, type ImagenEntrada, type LlamarIA } from "../ia/claude";
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
@@ -97,13 +97,24 @@ export type EntradaGenerador = {
    * completo. Mucho más barato y con casi la misma coincidencia.
    */
   recorte?: ManualRecortado;
+  /**
+   * Solo para comparar modelos (batería de pruebas): reemplaza a `MODELO_DE.plano`. Con el
+   * manual entero no aplica: ese camino usa el modelo de lectura para compartir la caché.
+   */
+  modelo?: string;
 };
+
+/** Qué leyó el cartógrafo: el manual entero (por caché), el recorte, imágenes sueltas o solo el pack. */
+export type CaminoPlano = "manual" | "recorte" | "imagenes" | "texto";
 
 export type ResultadoGenerador = {
   plano: PlanoDePiezas;
   /** Correcciones que hizo el código sobre la propuesta (para el feed y para medir calidad). */
   avisos: string[];
   origen: "ia" | "plantilla";
+  camino: CaminoPlano;
+  /** Modelo que ubicó las piezas. */
+  modelo: string;
   propuesta?: PropuestaPlano;
 };
 
@@ -126,15 +137,17 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
       } Para ubicar las piezas buscá en el manual las ilustraciones del interior con la tapa inferior sacada (por ejemplo en los procedimientos para sacar la tapa inferior, el ventilador o la batería) y citá esa página.`
     : "";
 
+  const camino: CaminoPlano = manual && !entrada.imagenes?.length ? "manual" : recorte ? "recorte" : entrada.imagenes?.length ? "imagenes" : "texto";
+  const modelo = camino === "manual" ? MODELO_DE.lectura : (entrada.modelo ?? MODELO_DE.plano);
   const tarea = `Equipo: ${kp.clase}, modelo ${kp.modelo}. ${paginas} ${guiaManual}\nPiezas del knowledge pack:\n${lista}\n\nUbicá cada pieza.`;
   try {
     const propuesta =
-      manual && !entrada.imagenes?.length
+      camino === "manual" && manual
         ? await ubicarLeyendoManual({ fileId: manual.fileId, titulo: manual.titulo ?? kp.modelo }, tarea, enviar)
         : await pedirJson(
             PropuestaPlano,
             {
-              modelo: MODELOS.vision,
+              modelo,
               system: SYSTEM_PLANO,
               contenido: [
                 ...(recorte
@@ -155,11 +168,17 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
           );
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
     const { plano, avisos } = planoDesdePropuesta(kp, propuesta);
-    return { plano, avisos, origen: "ia", propuesta };
+    return { plano, avisos, origen: "ia", camino, modelo, propuesta };
   } catch (e) {
     if (!(e instanceof ErrorIA)) throw e;
     const { plano, avisos } = planoDesdePlantilla(kp);
-    return { plano, avisos: [`La IA no pudo ubicar las piezas (${e.message}): se usa la plantilla genérica.`, ...avisos], origen: "plantilla" };
+    return {
+      plano,
+      avisos: [`La IA no pudo ubicar las piezas (${e.message}): se usa la plantilla genérica.`, ...avisos],
+      origen: "plantilla",
+      camino,
+      modelo,
+    };
   }
 }
 

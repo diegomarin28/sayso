@@ -1,3 +1,5 @@
+import type { PlanoDePiezas } from "../../../shared";
+
 /**
  * Geometría para comparar posiciones contra un dibujo en perspectiva: la carcasa se
  * marca con sus 4 esquinas (atrás-izq, atrás-der, frente-der, frente-izq) y se
@@ -33,4 +35,19 @@ export function aPlanta(p: Punto, e: Esquinas): Punto {
     v += (J[0][0] * r[1] - J[1][0] * r[0]) / det;
   }
   return [2 * u - 1, 2 * v - 1];
+}
+
+/**
+ * Puntaje por pieza (escala 0–2 de docs/3d-estrategia.md) según la distancia entre centros en la
+ * planta normalizada (x, z de -1 a 1): ≤ 0,35 → 2; ≤ 0,7 → 1; si no → 0.
+ */
+export const UMBRALES_PUNTAJE = [0.35, 0.7] as const;
+export const puntaje = (d: number) => (d <= UMBRALES_PUNTAJE[0] ? 2 : d <= UMBRALES_PUNTAJE[1] ? 1 : 0);
+
+/** Centro de una pieza en la planta normalizada del plano (x, z de -1 a 1 respecto de la base). */
+export function centroNormalizado(plano: PlanoDePiezas, id: string): Punto | null {
+  const base = plano.piezas.find((p) => p.pieza === "base");
+  const p = plano.piezas.find((q) => q.pieza === id);
+  if (!base || !p) return null;
+  return [p.pos[0] / (base.dim[0] / 2), p.pos[2] / (base.dim[2] / 2)];
 }
