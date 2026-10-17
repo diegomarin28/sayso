@@ -125,7 +125,22 @@ export async function evaluarFoto(
 }
 
 export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {
-  if (USAR_FIXTURE || imagenes.length === 0) {
+  if (imagenes.length === 0 && !USAR_FIXTURE) {
+    // Sin foto de la etiqueta no hay nada que leer: la ficha sale vacía y la persona escribe el modelo.
+    const nada = { valor: null, estado: "desconocido" as const };
+    return RespChapa.parse({
+      ficha: {
+        casoId: caso.id,
+        clase: caso.clase,
+        marca: nada,
+        modelo: nada,
+        serie: nada,
+        anio: nada,
+        confirmadaPorUsuario: false,
+      },
+    });
+  }
+  if (USAR_FIXTURE) {
     await esperar(1800);
     return RespChapa.parse({
       ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },

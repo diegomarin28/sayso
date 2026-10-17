@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Foto, PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
-import { prepararImagen } from "../_datos/imagen";
+import { ErrorImagen, prepararImagen } from "../_datos/imagen";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BotonPrincipal, Camara, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
@@ -231,9 +231,9 @@ export default function CapturaGuiada() {
             <span>
               Foto {actual + 1} de {pedidos!.length}
             </span>
-            {pedido.tipo !== "etiqueta" && !toma.revisando && !aceptada && (
+            {!toma.revisando && !aceptada && (
               <button onClick={saltar} className="underline underline-offset-4 hover:text-texto">
-                No puedo, saltar
+                {pedido.tipo === "etiqueta" ? "No encuentro la etiqueta" : "No puedo, saltar"}
               </button>
             )}
           </div>
@@ -277,5 +277,7 @@ function Esquinas({ color }: { color: string }) {
 }
 
 function mensajeDeError(e: unknown) {
-  return e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.";
+  if (e instanceof ErrorApi || e instanceof ErrorImagen) return e.message;
+  console.error("[fotos]", e);
+  return "Algo salió mal. Probá de nuevo.";
 }
