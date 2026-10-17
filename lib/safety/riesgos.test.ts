@@ -87,6 +87,7 @@ describe("compresor", () => {
     "Quiero abrir el compresor",
     "¿Se puede reparar el compresor yo mismo?",
     "el compresor hay que sacarlo y soldarlo",
+    "¿Cómo desconecto el compresor?",
   ])("bloquea la acción: %s", (t) => {
     expect(evaluarPedido(t).bloqueado).toBe(true);
   });
@@ -97,4 +98,26 @@ describe("compresor", () => {
       expect(evaluarPedido(t).bloqueado).toBe(false);
     },
   );
+});
+
+describe("compresor en lo que dice el experto", () => {
+  it("mostrarlo y advertir no corta la respuesta (paso 3 de la heladera en /lab/visor)", () => {
+    const paso = "Abajo, atrás, está el compresor. No lo abras ni toques los caños: tienen gas a presión.";
+    expect(evaluarRiesgo(paso, { ignorarNegadas: true }).bloqueado).toBe(false);
+    expect(evaluarRiesgo("Cambiá el filtro. Atrás está el compresor.", { ignorarNegadas: true }).bloqueado).toBe(false);
+  });
+
+  it("indicar una acción sobre el compresor sí bloquea", () => {
+    expect(evaluarRiesgo("Ahora desconectá el compresor y sacalo.", { ignorarNegadas: true }).bloqueado).toBe(true);
+  });
+});
+
+describe("caños de gas", () => {
+  it.each(["¿Puedo cortar los caños de cobre del split?", "Hay que soldar la cañería", "los caños hay que abrirlos para purgar"])("bloquea la acción: %s", (t) => {
+    expect(evaluarPedido(t).bloqueado).toBe(true);
+  });
+
+  it("nombrarlos no bloquea", () => {
+    expect(evaluarPedido("¿Por dónde pasan los caños?").bloqueado).toBe(false);
+  });
 });
