@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
-import { SUFIJO_MALLA, construirEscena, type DatosPieza } from "../../lib/planogenerator";
+import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
 import { desplazamientoDespiece, type EstadoEscena } from "./reproductor";
 import { crearTween, seguir, type Tween } from "./tween";
 
@@ -55,8 +55,8 @@ export type EscenaPreparada = {
   despiece: { ultimo: number; subiendo: boolean };
 };
 
-export function prepararEscena(plano: PlanoDePiezas): EscenaPreparada {
-  const { raiz, nodos, avisos } = construirEscena(plano);
+export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas): EscenaPreparada {
+  const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca });
   const animables = new Map<string, NodoAnimable>();
   const ids = [...nodos.keys()];
   const profundidad = (id: string) => ancestrosDe(nodos.get(id)!, raiz).length;

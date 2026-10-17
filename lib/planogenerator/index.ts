@@ -1,3 +1,4 @@
+export * from "./biblioteca";
 export * from "./construir";
 export * from "./detalles";
 export * from "./materiales";

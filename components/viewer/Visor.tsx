@@ -16,7 +16,8 @@ import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing"
 import { ToneMappingMode } from "postprocessing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
-import type { DatosPieza } from "../../lib/planogenerator";
+import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
+import { useBibliotecaPiezas } from "./biblioteca";
 import {
   COLOR_ACTIVO,
   animar,
@@ -74,6 +75,8 @@ export function Visor({
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
   const [rindeBien, setRindeBien] = useState(true);
   const efectosActivos = efectos === "si" || (efectos === "auto" && rindeBien);
+  // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
+  const biblioteca = useBibliotecaPiezas();
 
   useEffect(() => {
     onEfectos?.(efectosActivos);
@@ -89,15 +92,18 @@ export function Visor({
           <PerspectiveCamera makeDefault position={[0, 55, 60]} fov={FOV} near={0.5} far={1000} />
         )}
         <LuzDeEstudio />
-        <Escena
-          plano={plano}
-          coreografia={coreografia}
-          piezas={piezas}
-          casoId={casoId}
-          onEvento={onEvento}
-          onPaso={onPaso}
-          sombrasEnVivo={efectosActivos}
-        />
+        {biblioteca !== undefined && (
+          <Escena
+            plano={plano}
+            biblioteca={biblioteca}
+            coreografia={coreografia}
+            piezas={piezas}
+            casoId={casoId}
+            onEvento={onEvento}
+            onPaso={onPaso}
+            sombrasEnVivo={efectosActivos}
+          />
+        )}
         {efectos === "auto" && (
           <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={() => setRindeBien(false)} />
         )}
@@ -136,13 +142,16 @@ function LuzDeEstudio() {
 }
 
 type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
-  Pick<VisorProps, "coreografia" | "piezas" | "onEvento" | "onPaso"> & { sombrasEnVivo: boolean };
+  Pick<VisorProps, "coreografia" | "piezas" | "onEvento" | "onPaso"> & {
+    sombrasEnVivo: boolean;
+    biblioteca: BibliotecaPiezas | null;
+  };
 
-function Escena({ plano, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo }: EscenaProps) {
+function Escena({ plano, biblioteca, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo }: EscenaProps) {
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
-  const escena = useMemo(() => prepararEscena(plano), [plano]);
+  const escena = useMemo(() => prepararEscena(plano, biblioteca ?? undefined), [plano, biblioteca]);
   const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys()));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
