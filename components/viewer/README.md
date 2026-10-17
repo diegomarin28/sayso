@@ -48,10 +48,12 @@ import { GuiaExperto } from "@/components/viewer";
   preguntaInicial={caso.sintoma}  // arranca explicando solo
   decir={hablar}                  // C3: TTS; resolver cuando termina. Sin esto, tiempo de lectura.
   accesorioEntrada={<BotonMicrofono />}
+  preguntaDictada={dictada}       // C3: { texto, id }; cada id nuevo se pregunta solo
   onEvento={agregarEvento}
 />
 ```
 
 - Los pasos se muestran **en orden**: cada uno anima el 3D y se espera a que termine de decirse antes del siguiente. Una pregunta nueva corta la respuesta en curso.
 - Bloqueo (riesgo alto): la derivación queda a la vista en rojo, el 3D vuelve al reposo y no se anima nada más.
+- **Micrófono:** pasá lo transcripto en `preguntaDictada` con un `id` nuevo cada vez (ej. un contador). Se pregunta como si se hubiera escrito y corta la respuesta en curso.
 - Ejemplo: `/lab/guia` (con `npm run dev`), con respuestas simuladas (sin gastar IA) o la API real.

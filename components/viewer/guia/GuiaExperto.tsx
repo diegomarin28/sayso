@@ -27,6 +27,8 @@ export type GuiaExpertoProps = {
   onEvento?: (e: Evento) => void;
   /** Lugar al lado de la caja de texto, ej. el botón de micrófono. */
   accesorioEntrada?: ReactNode;
+  /** Lo que dictó la persona (C3). Cada `id` nuevo se pregunta como si lo hubiera escrito. */
+  preguntaDictada?: { texto: string; id: number };
   /** Para /lab y tests: de dónde salen las respuestas (por defecto, /api/chat). */
   fuente?: FuenteChat;
   efectos?: ModoEfectos;
@@ -49,6 +51,7 @@ export function GuiaExperto({
   decir = decirConTiempoDeLectura,
   onEvento,
   accesorioEntrada,
+  preguntaDictada,
   fuente = fuenteApi,
   efectos,
   className = "",
@@ -107,6 +110,16 @@ export function GuiaExperto({
     // Solo al montar: una pregunta inicial por caso.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pregunta dictada: solo cuando cambia el id (el mismo texto dos veces son dos preguntas).
+  const preguntarRef = useRef(preguntar);
+  useEffect(() => {
+    preguntarRef.current = preguntar;
+  }, [preguntar]);
+  useEffect(() => {
+    if (preguntaDictada) void preguntarRef.current(preguntaDictada.texto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preguntaDictada?.id]);
 
   const enviar = () => {
     void preguntar(texto);
