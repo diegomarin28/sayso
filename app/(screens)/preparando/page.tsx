@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Orbe, Pantalla } from "../_ui/experto";
+import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
 import { desbloquearAudio } from "@/lib/voice/hablar";
