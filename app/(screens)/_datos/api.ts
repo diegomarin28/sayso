@@ -48,16 +48,28 @@ const RespPedidos = conEventos({ pedidos: z.array(PedidoDeFoto) });
 const RespCalidad = conEventos({ foto: Foto });
 const RespChapa = conEventos({ ficha: Ficha });
 const RespFicha = conEventos({ ficha: Ficha, listaParaPreparar: z.boolean() });
+const RespEntender = conEventos({
+  caso: Caso,
+  /** Lo que contó la persona es de riesgo alto (gas, batería hinchada...): mostrar antes de seguir. */
+  bloqueo: z.object({ clases: z.array(z.string()), derivacion: z.string().optional() }).optional(),
+});
+export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 
-export async function entenderSintoma(texto: string): Promise<Caso> {
-  await esperar(600);
-  return Caso.parse({
-    id: crypto.randomUUID(),
-    clase: "notebook", // TODO(A1): lo decide la IA a partir del texto
-    sintoma: texto.trim(),
-    estado: "captura",
-    creadoEn: new Date().toISOString(),
-  });
+/** La IA saca el equipo y el síntoma del texto. Si no puede, viene clase "otro" y la persona elige. */
+export async function entenderSintoma(texto: string): Promise<z.infer<typeof RespEntender>> {
+  if (USAR_FIXTURE) {
+    await esperar(600);
+    return RespEntender.parse({
+      caso: {
+        id: crypto.randomUUID(),
+        clase: "notebook",
+        sintoma: texto.trim(),
+        estado: "captura",
+        creadoEn: new Date().toISOString(),
+      },
+    });
+  }
+  return llamar("/api/intake/entender", { texto }, RespEntender);
 }
 
 export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedidos>> {
@@ -92,7 +104,6 @@ export async function evaluarFoto(
   casoId: string,
   tipo: PedidoDeFoto["tipo"],
   imagen: ImagenB64,
-  url: string,
   intento: number,
 ): Promise<z.infer<typeof RespCalidad>> {
   if (USAR_FIXTURE) {
@@ -105,15 +116,30 @@ export async function evaluarFoto(
         id: `foto-${tipo}-${intento}`,
         casoId,
         tipoPedido: tipo,
-        url,
+        url: `pendiente:${tipo}`,
       },
     });
   }
-  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen, url }, RespCalidad);
+  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen }, RespCalidad);
 }
 
 export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {
-  if (USAR_FIXTURE || imagenes.length === 0) {
+  if (imagenes.length === 0 && !USAR_FIXTURE) {
+    // Sin foto de la etiqueta no hay nada que leer: la ficha sale vacía y la persona escribe el modelo.
+    const nada = { valor: null, estado: "desconocido" as const };
+    return RespChapa.parse({
+      ficha: {
+        casoId: caso.id,
+        clase: caso.clase,
+        marca: nada,
+        modelo: nada,
+        serie: nada,
+        anio: nada,
+        confirmadaPorUsuario: false,
+      },
+    });
+  }
+  if (USAR_FIXTURE) {
     await esperar(1800);
     return RespChapa.parse({
       ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },

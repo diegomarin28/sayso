@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Caso } from "@/shared";
-import { entenderSintoma } from "./_datos/api";
+import type { Caso, Evento } from "@/shared";
+import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
 import { BotonPrincipal, BotonSecundario, DiceExperto, Encabezado, Flecha, Pantalla } from "./_ui/experto";
 
@@ -32,30 +32,53 @@ const NOMBRE_CLASE: Record<Caso["clase"], string> = {
 
 export default function QueSeRompio() {
   const router = useRouter();
-  const { setCaso } = useFlujo();
+  const { setCaso, agregarEventos } = useFlujo();
   const [texto, setTexto] = useState("");
   const [pensando, setPensando] = useState(false);
   const [entendido, setEntendido] = useState<Caso | null>(null);
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [bloqueo, setBloqueo] = useState<Bloqueo | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function enviar() {
     if (!texto.trim()) return;
     setPensando(true);
-    const caso = await entenderSintoma(texto);
-    setPensando(false);
-    setEntendido(caso);
+    setError(null);
+    try {
+      const r = await entenderSintoma(texto);
+      setEntendido(r.caso);
+      setEventos(r.eventos);
+      setBloqueo(r.bloqueo ?? null);
+    } catch (e) {
+      setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.");
+    } finally {
+      setPensando(false);
+    }
   }
 
   function confirmar() {
     if (!entendido) return;
-    setCaso(entendido);
+    setCaso(entendido); // primero el caso: los eventos lo referencian al guardarse
+    agregarEventos(eventos);
     router.push("/fotos");
+  }
+
+  function corregir() {
+    setEntendido(null);
+    setBloqueo(null);
   }
 
   const dice = pensando
     ? "Dejame entender…"
-    : entendido
-      ? `Entendí: es ${NOMBRE_CLASE[entendido.clase]} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
-      : "Hola. Contame qué se rompió.";
+    : error
+      ? error
+      : bloqueo
+        ? "Pará un momento. Esto puede ser peligroso."
+        : entendido?.clase === "otro"
+          ? "No me quedó claro qué equipo es. Elegilo abajo."
+          : entendido
+            ? `Entendí: es ${NOMBRE_CLASE[entendido.clase]} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
+            : "Hola. Contame qué se rompió.";
 
   return (
     <Pantalla>
@@ -101,7 +124,20 @@ export default function QueSeRompio() {
         </>
       ) : (
         <div className="mt-auto flex flex-col gap-3">
-          <p className="text-sm text-texto-suave">¿No es eso? Tocá el equipo correcto:</p>
+          {bloqueo && (
+            <div
+              role="alert"
+              className="mb-3 rounded-2xl border border-peligro/50 bg-peligro/10 p-4 text-peligro"
+            >
+              <p className="font-semibold">⚠ Riesgo alto</p>
+              <p className="mt-1 text-sm">
+                {bloqueo.derivacion ?? "Esto lo tiene que ver un técnico. No lo abras ni lo manipules."}
+              </p>
+            </div>
+          )}
+          <p className="text-sm text-texto-suave">
+            {entendido.clase === "otro" ? "¿Qué equipo es?" : "¿No es eso? Tocá el equipo correcto:"}
+          </p>
           <div className="mb-3 flex flex-wrap gap-2">
             {(Object.keys(NOMBRE_CLASE) as Caso["clase"][]).map((clase) => (
               <button
@@ -120,9 +156,9 @@ export default function QueSeRompio() {
             ))}
           </div>
           <BotonPrincipal onClick={confirmar}>
-            Sí, sigamos <Flecha />
+            {bloqueo ? "Entendí, sigamos con cuidado" : "Sí, sigamos"} <Flecha />
           </BotonPrincipal>
-          <BotonSecundario onClick={() => setEntendido(null)}>No, lo corrijo</BotonSecundario>
+          <BotonSecundario onClick={corregir}>No, lo corrijo</BotonSecundario>
         </div>
       )}
     </Pantalla>
