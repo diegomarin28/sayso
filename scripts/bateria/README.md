@@ -28,3 +28,17 @@ Opciones: `--base` (por defecto `http://localhost:3000`), `--tope` (USD, por def
   para estos equipos. Con el manual entero no se compara (ese camino usa el modelo de lectura).
   Cuenta para el tope. El modelo de la app no cambia: `MODELO_DE.plano` en `lib/ia/claude.ts` (Sonnet).
 - Tests sin IA: `scripts/bateria/bateria.test.ts`.
+
+## Precalentar (dejar equipos en la caché antes de las pruebas)
+
+Solo corre `/api/knowledge` y `/api/plano` (sin recepción ni chat), tope **0,50 USD**:
+
+```bash
+npx tsx scripts/bateria/correr.ts --precalentar                                   # muestra la lista, NO gasta
+npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto                  # los 9 equipos de la batería
+npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto --equipos "HP|250 G9|notebook; Samsung|Galaxy A15|celular"
+```
+
+- Formato de `--equipos`: `Marca|Modelo|tipo de equipo`, separados por `;`. La clase sale del tipo (notebook, split, lavarropas u otro).
+- Qué queda guardado: el **manual** (búsqueda y vistas) y el **plano 3D** por marca + modelo; el **pack** por marca + modelo + síntoma (se precalienta con un síntoma general: con otro síntoma se vuelve a armar, pero desde el manual ya guardado, que es lo barato).
+- La tabla dice si cada equipo **ya estaba** en la caché (no gastó).

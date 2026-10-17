@@ -67,22 +67,44 @@ export type Fila = {
 /** Se pasó el tope o la IA está en pausa: no se corre nada más. */
 export class Corte extends Error {}
 
-const ConEventos = z.object({ eventos: z.array(z.object({ tipo: z.string(), datos: z.record(z.string(), z.unknown()).optional() })).default([]) });
+export const ConEventos = z.object({ eventos: z.array(z.object({ tipo: z.string(), datos: z.record(z.string(), z.unknown()).optional() })).default([]) });
 const RespEntender = ConEventos.extend({ caso: Caso, tipoEquipo: z.string().optional(), bloqueo: z.unknown().optional() });
 const RespFicha = ConEventos.extend({ ficha: Ficha });
-const RespKnowledge = ConEventos.extend({
+export const RespKnowledge = ConEventos.extend({
   pack: KnowledgePack,
   manualUrl: z.string().nullable(),
   manualFileId: z.string().nullable(),
   paginasVistaExplosionada: z.array(z.number()).default([]),
   paginaVistaInterior: z.number().nullable().default(null),
+  desdeCache: z.boolean().optional(),
 });
-const RespPlano = ConEventos.extend({ plano: PlanoDePiezas, origen: z.enum(["ia", "plantilla"]) });
+export const RespPlano = ConEventos.extend({ plano: PlanoDePiezas, origen: z.enum(["ia", "plantilla"]), desdeCache: z.boolean().optional() });
 const LineaChat = z.object({ tipo: z.string(), costo: z.object({ usd: z.number() }).optional(), coreografia: z.object({ dice: z.string() }).optional() });
 
 /** Lo que costó un paso según su evento "costo" (0 si no llamó a la IA). */
 export function costoDe(eventos: z.infer<typeof ConEventos>["eventos"]): number {
   return eventos.filter((e) => e.tipo === "costo").reduce((s, e) => s + (typeof e.datos?.usd === "number" ? e.datos.usd : 0), 0);
+}
+
+/** POST a una ruta de la app: valida la respuesta y devuelve lo que costó (eventos "costo"). 503 = IA en pausa: corta. */
+export async function postJson<T extends z.infer<typeof ConEventos>>(
+  o: Pick<Opciones, "base" | "fetch" | "esperaMs">,
+  ruta: string,
+  cuerpo: unknown,
+  esquema: z.ZodType<T>,
+): Promise<{ datos: T; usd: number }> {
+  const r = await (o.fetch ?? fetch)(o.base + ruta, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cuerpo),
+    signal: AbortSignal.timeout(o.esperaMs ?? 300_000),
+  });
+  const datos: unknown = await r.json().catch(() => null);
+  if (r.status === 503) throw new Corte(`IA en pausa en ${ruta}`);
+  if (!r.ok) throw new Error(`${ruta} respondió ${r.status}`);
+  const v = esquema.safeParse(datos);
+  if (!v.success) throw new Error(`${ruta}: respuesta inesperada`);
+  return { datos: v.data, usd: costoDe(v.data.eventos) };
 }
 
 export async function correrBateria(casos: CasoPrueba[], o: Opciones): Promise<{ filas: Fila[]; totalUsd: number; cortado: boolean }> {
@@ -133,15 +155,10 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
   const antes = (paso: string) => {
     if (gastado() > o.topeUsd) throw new Corte(`corte antes de ${paso}: US$ ${gastado().toFixed(3)} > tope US$ ${o.topeUsd}`);
   };
-  const post = async <T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> => {
-    const r = await f(o.base + ruta, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cuerpo), signal: AbortSignal.timeout(espera) });
-    const datos: unknown = await r.json().catch(() => null);
-    if (r.status === 503) throw new Corte(`IA en pausa en ${ruta}`);
-    if (!r.ok) throw new Error(`${ruta} respondió ${r.status}`);
-    const v = esquema.safeParse(datos);
-    if (!v.success) throw new Error(`${ruta}: respuesta inesperada`);
-    fila.usd += costoDe((v.data as z.infer<typeof ConEventos>).eventos);
-    return v.data;
+  const post = async <T extends z.infer<typeof ConEventos>>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> => {
+    const { datos, usd } = await postJson(o, ruta, cuerpo, esquema);
+    fila.usd += usd;
+    return datos;
   };
 
   antes("entender");

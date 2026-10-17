@@ -5,9 +5,14 @@
  * `fuente`: dónde se verificó que el modelo se vende en Uruguay o en la región (octubre 2026).
  */
 
+import type { ClaseEquipo } from "../../shared";
+
 export type CasoPrueba = {
   id: string;
   equipo: string;
+  /** Para el precalentado (sin pasar por la recepción): clase y tipo de equipo en texto libre. */
+  clase: ClaseEquipo;
+  tipoEquipo: string;
   marca: string;
   modelo: string;
   /** Lo que diría la persona en la pantalla 1. */
@@ -21,6 +26,8 @@ export type CasoPrueba = {
 export const CASOS: CasoPrueba[] = [
   {
     id: "notebook",
+    clase: "notebook",
+    tipoEquipo: "notebook",
     equipo: "Notebook",
     marca: "HP",
     modelo: "250 G9",
@@ -31,6 +38,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "celular",
+    clase: "otro",
+    tipoEquipo: "celular",
     equipo: "Celular",
     marca: "Samsung",
     modelo: "Galaxy A15",
@@ -41,6 +50,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "split",
+    clase: "split",
+    tipoEquipo: "aire acondicionado split",
     equipo: "Aire acondicionado split",
     marca: "James",
     modelo: "AAM-12 AU-INV",
@@ -51,6 +62,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "heladera",
+    clase: "otro",
+    tipoEquipo: "heladera",
     equipo: "Heladera",
     marca: "Samsung",
     modelo: "RT32K5070S8",
@@ -61,6 +74,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "televisor",
+    clase: "otro",
+    tipoEquipo: "televisor",
     equipo: "Televisor",
     marca: "Samsung",
     modelo: "UN50CU7000GXUG",
@@ -71,6 +86,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "lavarropas",
+    clase: "lavarropas",
+    tipoEquipo: "lavarropas",
     equipo: "Lavarropas",
     marca: "Samsung",
     modelo: "WW70T3020BW",
@@ -81,6 +98,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "microondas",
+    clase: "otro",
+    tipoEquipo: "microondas",
     equipo: "Microondas",
     marca: "Samsung",
     modelo: "MS23K3513AK",
@@ -91,6 +110,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "airfryer",
+    clase: "otro",
+    tipoEquipo: "freidora de aire",
     equipo: "Freidora de aire",
     marca: "Philips",
     modelo: "HD9218",
@@ -101,6 +122,8 @@ export const CASOS: CasoPrueba[] = [
   },
   {
     id: "reloj",
+    clase: "otro",
+    tipoEquipo: "reloj inteligente",
     equipo: "Reloj inteligente",
     marca: "Samsung",
     modelo: "Galaxy Watch FE",
