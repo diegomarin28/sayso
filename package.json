@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "modelos:piezas": "blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas.glb"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

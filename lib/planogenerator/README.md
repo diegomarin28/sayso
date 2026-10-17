@@ -25,6 +25,18 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 - `userData` del nodo: `{ pieza, dim, centro, etiquetaManual, cita }`.
 - El plano se tolera con errores: ids repetidos, padres que no existen o ciclos se resuelven colgando de la raíz y quedan en `avisos`.
 
+## Biblioteca de piezas (formas de Blender) — `biblioteca.ts`
+
+`construirEscena(plano, { biblioteca })`: si el id de una pieza empieza con un tipo de la biblioteca
+(prefijo más largo: `tornillos_ventilador` → `tornillo`), usa esa forma en vez de la primitiva:
+
+- Se centra y se estira a `dim` (todas las partes juntas miden `dim`). Si el plano la pone girada respecto
+  del modelo (ej. RAM más profunda que ancha), se gira 90° antes de estirar.
+- La malla principal (`<id>__malla`) es el cuerpo; las demás partes son detalles (`<id>__malla__detalle_N`).
+- Sin biblioteca o con un tipo desconocido: primitiva de `forma` + detalles en código (`detalles.ts`), como antes.
+- El GLB sale de `assets/models/blender/piezas.py` (ver `assets/models/README.md`). El visor lo carga una vez
+  (`components/viewer/biblioteca.ts`) y si falla o tarda más de 4 s sigue con primitivas.
+
 ## Plantillas
 
 - `plantillas/notebook.ts`: notebook genérica, esquemática, vista desde abajo con la tapa inferior translúcida (se abre como bisagra desde el borde trasero).

@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
-import { agregarDetalles } from "./detalles";
-import { materialPara } from "./materiales";
+import { RECETA_CUERPO, modeloPara, partesAjustadas, type BibliotecaPiezas } from "./biblioteca";
+import { SUFIJO_DETALLE, agregarDetalles } from "./detalles";
+import { materialDeParte, materialPara } from "./materiales";
 
 /**
  * Construye la escena three.js a partir de un PlanoDePiezas.
@@ -16,6 +17,10 @@ import { materialPara } from "./materiales";
  *   Group (name = id de la pieza, ubicado en el pivote)  ← esto anima el reproductor
  *     └─ Mesh (name = `${id}__malla`, desplazada -pivote)
  *          └─ Meshes de detalle (`${id}__malla__detalle_N`: aspas, chips…), opcionales
+ *
+ * Con `biblioteca` (piezas.glb), cada pieza cuyo id empieza con un tipo de la biblioteca usa esa
+ * forma ajustada a `dim`: la malla principal es el cuerpo y las demás partes son detalles.
+ * Sin biblioteca (o tipo desconocido) se usa la primitiva de `forma` con detalles hechos en código.
  *     └─ Groups de las piezas hijas
  */
 
@@ -38,7 +43,9 @@ export type EscenaConstruida = {
   avisos: string[];
 };
 
-export function construirEscena(plano: PlanoDePiezas): EscenaConstruida {
+export type OpcionesEscena = { biblioteca?: BibliotecaPiezas };
+
+export function construirEscena(plano: PlanoDePiezas, opciones: OpcionesEscena = {}): EscenaConstruida {
   const raiz = new THREE.Group();
   raiz.name = "plano";
   raiz.userData = { modelo: plano.modelo, unidades: plano.unidades };
@@ -53,7 +60,7 @@ export function construirEscena(plano: PlanoDePiezas): EscenaConstruida {
       continue;
     }
     piezas.set(p.pieza, p);
-    nodos.set(p.pieza, crearNodo(p));
+    nodos.set(p.pieza, crearNodo(p, opciones.biblioteca));
   }
 
   for (const [id, p] of piezas) {
@@ -105,7 +112,7 @@ function resolverPadre(
   return p.padre;
 }
 
-function crearNodo(p: PiezaPlano): THREE.Group {
+function crearNodo(p: PiezaPlano, biblioteca?: BibliotecaPiezas): THREE.Group {
   const nodo = new THREE.Group();
   nodo.name = p.pieza;
   const datos: DatosPieza = {
@@ -117,14 +124,30 @@ function crearNodo(p: PiezaPlano): THREE.Group {
   };
   nodo.userData = datos;
 
-  const malla = new THREE.Mesh(crearGeometria(p), materialPara(p.pieza));
+  const modelo = modeloPara(p.pieza, biblioteca);
+  const malla = modelo ? mallaDeBiblioteca(p, partesAjustadas(modelo, p.dim)) : new THREE.Mesh(crearGeometria(p), materialPara(p.pieza));
   malla.name = p.pieza + SUFIJO_MALLA;
   malla.position.set(-p.pivote[0], -p.pivote[1], -p.pivote[2]);
   malla.castShadow = true;
   malla.receiveShadow = true;
-  agregarDetalles(p.pieza, malla, p.dim);
+  if (!modelo) agregarDetalles(p.pieza, malla, p.dim);
   nodo.add(malla);
   return nodo;
+}
+
+/** Cuerpo como malla principal y el resto de las partes como detalles (mismo origen, ya ajustadas). */
+function mallaDeBiblioteca(p: PiezaPlano, partes: ReturnType<typeof partesAjustadas>): THREE.Mesh {
+  const i = Math.max(partes.findIndex((x) => x.receta === RECETA_CUERPO), 0);
+  const malla = new THREE.Mesh(partes[i].geometria, materialDeParte(p.pieza, partes[i].receta));
+  partes.forEach((parte, j) => {
+    if (j === i) return;
+    const d = new THREE.Mesh(parte.geometria, materialDeParte(p.pieza, parte.receta));
+    d.name = `${p.pieza}${SUFIJO_MALLA}${SUFIJO_DETALLE}_${malla.children.length}`;
+    d.castShadow = true;
+    d.receiveShadow = true;
+    malla.add(d);
+  });
+  return malla;
 }
 
 /** Geometría centrada en el origen con las medidas exactas de `dim` (ancho, alto, profundidad). */

@@ -40,6 +40,14 @@ export const RECETAS_DETALLE = {
   chip: { color: "#141619", metalness: 0.3, roughness: 0.45 },
   etiqueta: { color: "#d9dde1", metalness: 0, roughness: 0.8 },
   ranura: { color: "#4a4f56", metalness: 0.9, roughness: 0.3 },
+  // Partes de la biblioteca de Blender (piezas.glb).
+  cobre: { color: "#c87a45", metalness: 0.75, roughness: 0.3 },
+  contactos: { color: "#d6a843", metalness: 0.9, roughness: 0.28 },
+  metal: { color: "#b8bec5", metalness: 0.85, roughness: 0.3 },
+  pcb: { color: "#1d6b45", metalness: 0.15, roughness: 0.55 },
+  goma: { color: "#141517", metalness: 0, roughness: 0.9 },
+  plastico: { color: "#1b1d20", metalness: 0.1, roughness: 0.6 },
+  conector: { color: "#e6e2d6", metalness: 0, roughness: 0.6 },
 } satisfies Record<string, Receta>;
 
 export function recetaPara(pieza: string): Receta {
@@ -60,4 +68,15 @@ export function materialDeReceta(r: Receta): THREE.MeshStandardMaterial {
 
 export function materialPara(pieza: string): THREE.MeshStandardMaterial {
   return materialDeReceta(recetaPara(pieza));
+}
+
+/**
+ * Material de una parte de la biblioteca: el cuerpo lleva la receta de la pieza; el resto, su
+ * receta de detalle. Las partes de una pieza translúcida (la tapa) acompañan su transparencia.
+ */
+export function materialDeParte(pieza: string, receta: string): THREE.MeshStandardMaterial {
+  const propia = recetaPara(pieza);
+  const detalle = (RECETAS_DETALLE as Record<string, Receta>)[receta];
+  if (receta === "cuerpo" || !detalle) return materialDeReceta(propia);
+  return materialDeReceta(propia.opacity === undefined ? detalle : { ...detalle, opacity: Math.min(1, propia.opacity * 2) });
 }
