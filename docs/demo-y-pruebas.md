@@ -18,7 +18,18 @@ Para ensayar el flujo completo y medir los controles de calidad del plan (§9). 
 
 **Decir en voz alta (transparencia, plan §10):** la IA decide qué fotos pedir, lee la chapa, busca y lee el manual y arma la coreografía; el código valida, guarda, anima y **bloquea**. El 3D es un esquema del tipo de equipo con las piezas donde dice el manual, no un escaneo.
 
-**Plan B:** si falla el micrófono, se escribe (el campo siempre está). Si falla internet, video de respaldo (grabar en la hora 13) y un caso ya guardado en Supabase.
+**Plan B:** si falla el micrófono, se escribe (el campo siempre está). Si falla internet o la IA, **modo demo** (abajo); si falla todo, video de respaldo (grabar en la hora 13).
+
+### Modo demo de respaldo (sin IA ni internet)
+
+Recorre las 6 pantallas igual que la app real, con la notebook ficticia "EJEMPLO NB-15" de los fixtures (`lib/demo/modo.ts`).
+
+- **Prender:** abrir https://sayso-smoky.vercel.app/?demo=1, o tocar **5 veces seguidas** la barra de pasos de arriba ("1/6 · PROBLEMA"). Sale el aviso "Modo demo: sin IA ni internet" y vuelve a la pantalla 1. Un punto gris chiquito arriba a la derecha indica que está prendido.
+- **Apagar:** `?demo=0` o los mismos 5 toques.
+- **Sin internet:** con el modo prendido, abrir la app **una vez con internet**: el celular guarda una copia (pantallas, fotos de ejemplo y piezas 3D). Después anda en modo avión. Probarlo antes de la demo: prender, recorrer una vez, poner modo avión y recorrer de nuevo.
+- **Recorrido:** tocar "Se apaga sola" → Seguir → Sí, sigamos → tocar el recuadro de la foto 4 veces (la primera de la etiqueta sale movida y se rechaza) → Leer la chapa → Sí, es este → Ver al experto → el 3D arranca solo con la coreografía → tocar **"¿Dónde está el SSD?"** (lo resalta) y **"¿Puedo abrir la batería?"** (bloqueo con derivación).
+- La voz es la del navegador (no ElevenLabs). El micrófono del navegador necesita internet: en modo demo, preguntar con los botones o escribiendo. Repuestos queda apagado.
+- Las fotos de ejemplo salen de `assets/models/blender/fotos_demo.py` (Blender) → `public/demo/fotos/`.
 
 **QR al link de producción:** `docs/qr-demo.png` (para imprimir o proyectar) y `docs/qr-demo.svg` (para la presentación, escala sin perder calidad). Apunta a https://sayso-smoky.vercel.app. Probarlo con la cámara de un iPhone y de un Android antes de imprimir.
 

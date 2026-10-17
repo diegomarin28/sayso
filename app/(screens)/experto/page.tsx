@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GuiaExperto } from "@/components/viewer";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
+import { PREGUNTAS_DEMO } from "@/lib/demo/modo";
+import { useModoDemo } from "@/lib/demo/useModoDemo";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { useDictado } from "@/lib/voice/useDictado";
-import { USAR_FIXTURE } from "../_datos/api";
+import { usarFixture } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { Encabezado, Microfono } from "../_ui/experto";
@@ -48,6 +50,7 @@ export default function Experto() {
   // Pantalla 6: la pieza que el experto dijo que hay que cambiar (abre las compras).
   const [piezaACambiar, setPiezaACambiar] = useState<string | null>(null);
   const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
+  const demo = useModoDemo();
 
   if (!caso || !preparado || !plano) return null;
 
@@ -80,9 +83,11 @@ export default function Experto() {
         preguntaInicial={preguntaInicial}
         decir={decir}
         preguntaDictada={dictada}
+        // Modo demo: las dos preguntas del guion, para tocar (sin micrófono ni internet).
+        sugerencias={demo ? PREGUNTAS_DEMO : undefined}
         onCambiarPieza={setPiezaACambiar}
         // Con NEXT_PUBLIC_DATOS=fixture el experto responde con el chat simulado de Diego: no gasta IA.
-        fuente={USAR_FIXTURE ? fuenteSimulada : undefined}
+        fuente={usarFixture() ? fuenteSimulada : undefined}
         accesorioEntrada={
           <button
             type="button"

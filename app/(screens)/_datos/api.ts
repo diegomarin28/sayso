@@ -13,15 +13,17 @@ import {
   planoEjemplo,
 } from "../../../shared";
 import { mensajePausa } from "../../../lib/ia/pausa";
+import { sinIA } from "../../../lib/demo/modo";
 import type { ImagenB64 } from "./imagen";
 
 /**
  * Fuente de datos de las pantallas: llama a `/api/intake/*`, `/api/ficha`, `/api/knowledge` (carril A) y `/api/plano` (carril B).
- * Con `NEXT_PUBLIC_DATOS=fixture` responde con los fixtures de `shared/` sin gastar IA
- * (sirve para trabajar sin claves y como plan B de la demo).
+ * Con `NEXT_PUBLIC_DATOS=fixture` o el modo demo (lib/demo/modo.ts) responde con los fixtures de
+ * `shared/` sin gastar IA ni usar internet (para trabajar sin claves y como plan B de la demo).
  */
 
-export const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
+/** Se mira en cada llamada: el modo demo se puede prender desde el celular sin recompilar. */
+export const usarFixture = sinIA;
 
 /** Error que se le puede mostrar a la persona tal cual. */
 export class ErrorApi extends Error {}
@@ -91,7 +93,7 @@ export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 
 /** La IA saca el equipo y el síntoma del texto. Si no puede, viene clase "otro" y la persona elige. */
 export async function entenderSintoma(texto: string): Promise<z.infer<typeof RespEntender>> {
-  if (USAR_FIXTURE) {
+  if (usarFixture()) {
     await esperar(600);
     return RespEntender.parse({
       caso: {
@@ -107,7 +109,7 @@ export async function entenderSintoma(texto: string): Promise<z.infer<typeof Res
 }
 
 export async function pedidosDeFoto(caso: Caso): Promise<z.infer<typeof RespPedidos>> {
-  if (USAR_FIXTURE) {
+  if (usarFixture()) {
     await esperar(300);
     return RespPedidos.parse({
       pedidos: [
@@ -138,7 +140,7 @@ export async function evaluarFoto(
   imagen: ImagenB64,
   intento: number,
 ): Promise<z.infer<typeof RespCalidad>> {
-  if (USAR_FIXTURE) {
+  if (usarFixture()) {
     // La primera foto de la etiqueta sale "movida", como en el fixture.
     await esperar(1600);
     const base = tipo === "etiqueta" && intento === 1 ? fotosEjemplo[0] : fotosEjemplo[1];
@@ -156,7 +158,7 @@ export async function evaluarFoto(
 }
 
 export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.infer<typeof RespChapa>> {
-  if (imagenes.length === 0 && !USAR_FIXTURE) {
+  if (imagenes.length === 0 && !usarFixture()) {
     // Sin foto de la etiqueta no hay nada que leer: la ficha sale vacía y la persona escribe el modelo.
     const nada = { valor: null, estado: "desconocido" as const };
     return RespChapa.parse({
@@ -171,7 +173,7 @@ export async function leerChapa(caso: Caso, imagenes: ImagenB64[]): Promise<z.in
       },
     });
   }
-  if (USAR_FIXTURE) {
+  if (usarFixture()) {
     await esperar(1800);
     return RespChapa.parse({
       ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
@@ -193,7 +195,7 @@ export async function confirmarFicha(
   confirmados: NombreCampo[],
   correcciones: Partial<Record<NombreCampo, string | null>>,
 ): Promise<z.infer<typeof RespFicha>> {
-  if (USAR_FIXTURE) {
+  if (usarFixture()) {
     await esperar(300);
     const nueva = { ...ficha, confirmadaPorUsuario: true };
     return RespFicha.parse({
@@ -216,7 +218,7 @@ export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
 export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<typeof RespKnowledge>> {
-  if (USAR_FIXTURE)
+  if (usarFixture())
     return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(2500);
       return RespKnowledge.parse({
@@ -245,7 +247,7 @@ export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
  * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
  */
 export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
-  if (USAR_FIXTURE)
+  if (usarFixture())
     return unaVez(`plano-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(1200);
       return RespPlano.parse({ plano: planoEjemplo, origen: "ia" });

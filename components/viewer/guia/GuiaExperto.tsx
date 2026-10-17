@@ -30,6 +30,8 @@ export type GuiaExpertoProps = {
   onEvento?: (e: Evento) => void;
   /** Lugar al lado de la caja de texto, ej. el botón de micrófono. */
   accesorioEntrada?: ReactNode;
+  /** Preguntas para tocar, arriba de la caja de texto (ej. las del modo demo: no hace falta el micrófono). */
+  sugerencias?: string[];
   /** Lo que dictó la persona (C3). Cada `id` nuevo se pregunta como si lo hubiera escrito. */
   preguntaDictada?: { texto: string; id: number };
   /** Se llama cuando un paso dice que una pieza hay que cambiarla (coreografía con "cambiar"). Solo ids del plano y nunca en un paso bloqueado. */
@@ -63,6 +65,7 @@ export function GuiaExperto({
   decir = decirConTiempoDeLectura,
   onEvento,
   accesorioEntrada,
+  sugerencias,
   preguntaDictada,
   onCambiarPieza,
   fuente = fuenteApi,
@@ -186,8 +189,24 @@ export function GuiaExperto({
         </div>
       </div>
 
+      {sugerencias && sugerencias.length > 0 && (
+        <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3">
+          {sugerencias.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => void preguntar(s)}
+              className="shrink-0 rounded-full border border-borde px-4 py-2 text-sm text-texto-suave transition hover:border-texto-suave hover:text-texto active:scale-95"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
       <form
-        className="flex shrink-0 items-center gap-2 border-t border-borde bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className={`flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+          sugerencias?.length ? "" : "border-t border-borde"
+        }`}
         onSubmit={(e) => {
           e.preventDefault();
           enviar();

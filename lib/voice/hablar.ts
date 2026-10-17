@@ -7,10 +7,12 @@
  * habilita con un silencio; después ese mismo reproductor puede hablar solo.
  */
 
+import { sinIA } from "../demo/modo";
+
 export type Hablando = { detener: () => void; termino: Promise<void> };
 
-/** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): voz del navegador, no gasta ElevenLabs. */
-const SIN_ELEVENLABS = process.env.NEXT_PUBLIC_DATOS === "fixture";
+/** Modo de prueba o demo (lib/demo/modo.ts): voz del navegador, no gasta ElevenLabs ni usa internet. Se mira en cada llamada. */
+const SIN_ELEVENLABS = sinIA;
 
 let actual: Hablando | null = null;
 let reproductor: HTMLAudioElement | null = null;
@@ -68,7 +70,7 @@ export function hablar(texto: string): Hablando {
   let detenido = false;
 
   const termino = (async () => {
-    if (SIN_ELEVENLABS) return hablarConNavegador(texto, () => detenido);
+    if (SIN_ELEVENLABS()) return hablarConNavegador(texto, () => detenido);
     try {
       const res = await fetch("/api/voz/hablar", {
         method: "POST",

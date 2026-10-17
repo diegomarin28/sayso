@@ -1,4 +1,5 @@
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
+import { sinIA } from "../../../lib/demo/modo";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -16,11 +17,9 @@ type Cambio = {
 
 let cola: Promise<unknown> = Promise.resolve();
 
-/** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): no se llenan las tablas con casos de ejemplo. */
-const NO_GUARDAR = process.env.NEXT_PUBLIC_DATOS === "fixture";
-
 export function guardar(cambio: Cambio): void {
-  if (NO_GUARDAR) return;
+  // Modo de prueba o demo: no se llenan las tablas con casos de ejemplo (y no hace falta internet).
+  if (sinIA()) return;
   cola = cola
     .then(async () => {
       const res = await fetch("/api/casos", {

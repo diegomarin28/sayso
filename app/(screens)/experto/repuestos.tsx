@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
-import { USAR_FIXTURE } from "../_datos/api";
+import { usarFixture } from "../_datos/api";
 
 /**
  * Pantalla 6 — repuestos. Botón "Repuestos" con los del manual (los que tienen número de parte
@@ -141,7 +141,7 @@ export function Repuestos({
                 modelo={modelo}
                 marca={ficha.marca.valor}
                 onEvento={onEvento}
-                fuente={USAR_FIXTURE ? fuenteApagada : undefined}
+                fuente={usarFixture() ? fuenteApagada : undefined}
               />
             </div>
           ))}

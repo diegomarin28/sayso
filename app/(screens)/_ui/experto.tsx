@@ -70,7 +70,8 @@ export function Encabezado({
             />
           ))}
         </div>
-        <p className="mt-2 text-xs font-medium tracking-widest text-texto-suave uppercase">
+        {/* Cinco toques acá prenden o apagan el modo demo (activador-demo.tsx). */}
+        <p data-activador-demo className="mt-2 text-xs font-medium tracking-widest text-texto-suave uppercase select-none">
           {paso}/6 · {PASOS[paso - 1]}
         </p>
       </div>

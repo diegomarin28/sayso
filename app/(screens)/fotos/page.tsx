@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PedidoDeFoto } from "@/shared";
+import { fotoDeEjemplo } from "@/lib/demo/modo";
+import { useModoDemo } from "@/lib/demo/useModoDemo";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
@@ -32,6 +34,8 @@ export default function CapturaGuiada() {
   const [errorPedidos, setErrorPedidos] = useState<string | null>(null);
 
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
+  // Modo demo: en vez de abrir la cámara, cada toque "saca" la foto de ejemplo de ese pedido.
+  const demo = useModoDemo();
 
   useEffect(() => {
     if (!caso || pedidos) return;
@@ -87,6 +91,14 @@ export default function CapturaGuiada() {
     } catch (e) {
       actualizar(i, { revisando: false, error: mensajeDeError(e) });
     }
+  }
+
+  async function sacarDeEjemplo() {
+    if (!pedido) return;
+    const url = fotoDeEjemplo(pedido.tipo, toma.intentos + 1);
+    const res = await fetch(url).catch(() => null);
+    if (!res?.ok) return actualizar(actual, { error: "No encuentro la foto de ejemplo." });
+    await alSacar(new File([await res.blob()], url.split("/").pop()!, { type: "image/jpeg" }));
   }
 
   /** Vuelve a la foto anterior (para sacarla de nuevo) o, desde la primera, a la pantalla 1. */
@@ -185,16 +197,22 @@ export default function CapturaGuiada() {
               toma.revisando ? "pointer-events-none" : ""
             }`}
           >
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => {
-                alSacar(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
+            {demo ? (
+              <button type="button" className="sr-only" onClick={() => void sacarDeEjemplo()}>
+                Sacar la foto
+              </button>
+            ) : (
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(e) => {
+                  alSacar(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            )}
             {toma.url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -224,7 +242,7 @@ export default function CapturaGuiada() {
           </label>
 
           {/* La foto grande abre la cámara; esto deja elegir una que ya esté en el celular. */}
-          {!toma.revisando && !aceptada && (
+          {!toma.revisando && !aceptada && !demo && (
             <label className="-mt-4 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-borde text-sm font-medium text-texto transition hover:border-texto-suave active:scale-[0.98]">
               <input
                 type="file"
