@@ -80,3 +80,21 @@ describe("filtrarCoreografia", () => {
     expect(coreografia.dice).toMatch(/técnico/);
   });
 });
+
+describe("compresor", () => {
+  it.each([
+    "¿Cómo cambio el compresor de la heladera?",
+    "Quiero abrir el compresor",
+    "¿Se puede reparar el compresor yo mismo?",
+    "el compresor hay que sacarlo y soldarlo",
+  ])("bloquea la acción: %s", (t) => {
+    expect(evaluarPedido(t).bloqueado).toBe(true);
+  });
+
+  it.each(["El compresor hace mucho ruido", "¿Dónde está el compresor?", "la heladera no arranca, se escucha el compresor"])(
+    "nombrarlo no bloquea: %s",
+    (t) => {
+      expect(evaluarPedido(t).bloqueado).toBe(false);
+    },
+  );
+});

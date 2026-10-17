@@ -205,3 +205,24 @@ describe("conversar", () => {
     expect(ev).toEqual([{ tipo: "error", mensaje: expect.any(String) }]);
   });
 });
+
+describe("cambiar", () => {
+  const base2 = { casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null };
+
+  it("[[cambiar:pieza]] completa coreografia.cambiar si la pieza existe", async () => {
+    const stream = streamFalso(["[[resaltar:ventilador]] [[cambiar:ventilador]] Según el manual, el ventilador se reemplaza. "]);
+    const ev = await todos(conversar({ ...base2, pregunta: "¿Qué hago?" }, stream));
+    const p = ev[0];
+    if (p.tipo !== "paso") throw new Error();
+    expect(p.coreografia.cambiar).toBe("ventilador");
+    Coreografia.parse(p.coreografia);
+  });
+
+  it("una pieza que no está en el plano no se manda", async () => {
+    const stream = streamFalso(["[[cambiar:capacitor_inventado]] Hay que cambiarlo. "]);
+    const ev = await todos(conversar({ ...base2, pregunta: "¿Qué hago?" }, stream));
+    const p = ev[0];
+    if (p.tipo !== "paso") throw new Error();
+    expect(p.coreografia.cambiar).toBeUndefined();
+  });
+});

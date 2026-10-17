@@ -24,7 +24,9 @@ export const TABLA_RIESGOS: readonly ClaseRiesgo[] = [
       /\brefrigerante/,
       /\b(carg|recarg|purg|solt|liber|vaci)\w*\b.{0,20}\bgas\b/,
       /\br-?(22|32|134a?|290|410a?|600a?)\b/,
-      /\bcompresor/,
+      // Nombrar el compresor no bloquea ("el compresor hace ruido"); actuar sobre él sí.
+      /\b(abr|cambi|reemplaz|desarm|desmont|cort|sold|carg|recarg|sac|quit|repar|arregl|manipul)\w*\b.{0,30}\bcompresor/,
+      /\bcompresor\b.{0,30}\b(abr|cambi|reemplaz|desarm|desmont|cort|sold|carg|recarg|sac|quit|repar|arregl)\w*/,
       /\b(cano|canos|caneria|tuberia)s?\b.{0,25}\b(cobre|gas|soldar|cortar|abrir)/,
       /\bsoldar\b.{0,25}\b(cano|caneria|tuberia)/,
     ],

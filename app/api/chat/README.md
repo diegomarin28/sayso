@@ -19,3 +19,4 @@ Responde un **stream NDJSON** (una línea JSON por evento), frase por frase:
 - Si viene `plano` (el `PlanoDePiezas` del visor), solo salen ids de piezas de ese plano; sin plano, se usan las del pack + la plantilla genérica.
 
 Prueba real: `npx tsx --env-file=.env.local lib/chat/probar-chat.ts <pack.json fuera del repo> "Lenovo" "ThinkPad E14 Gen 2" "¿Dónde está el SSD?"`
+- `coreografia.cambiar`: cuando el manual o el pack dicen que hay que reemplazar una pieza, la IA marca `[[cambiar:PIEZA]]` y el código lo pone en la coreografía (solo ids del plano). Sirve para abrir las compras.
