@@ -69,24 +69,31 @@ function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: 
     : manualAdjunto
       ? `${publicas} y el manual oficial adjunto (que no trae el diagnóstico de este síntoma). Si un paso o una pieza está en el manual oficial, citá el manual`
       : publicas;
-  return `Prepará una guía de reparación casera a partir de ${origen}.
+  return `Prepará una guía de reparación casera con ${origen}.
 Escribí SOLO líneas con este formato exacto, una por renglón, sin títulos ni markdown:
 PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la vista explosionada (o vacío)
 PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
-${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
+FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
+${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
+1. Chequeos sin abrir (3 a 6 pasos): primero descartá lo que NO es una falla de hardware y lo que se revisa con el equipo cerrado, según el tipo de equipo y el síntoma: apagar del todo y reiniciar, configuración y ajustes, actualizar el sistema o el firmware, modo seguro o restablecer (avisando qué se pierde), las pruebas de diagnóstico del fabricante, cables, cargador, enchufe, pilas o accesorios, limpieza por fuera. Cada chequeo dice cómo se hace y qué cambia si ese era el problema.
+2. Desarme y reparación: si después de los chequeos sigue igual, el procedimiento COMPLETO sin saltear nada: preparar (herramientas, apagar, desenchufar o descargar la batería), abrir el equipo, sacar cada pieza que haya que sacar antes para llegar, y revisar, limpiar o cambiar la pieza del síntoma.
+3. Armado y prueba: volver a armar en orden inverso (cables, tornillos, adhesivos), la prueba final y qué quiere decir si sigue igual.
+Reglas:
 - Ids de pieza en minúsculas con guion bajo, que EMPIECEN con el tipo de pieza (así el 3D sabe dibujarla), por ejemplo ventilador_evaporador o carcasa_heladera. En una notebook, si la pieza coincide, usá estos ids tal cual: ${IDS_PLANTILLA.join(", ")}.
 - Tipos de pieza que el 3D sabe dibujar:
 ${tiposParaPrompt()}
-- Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
-- Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
-- NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
+- Incluí las piezas que se mencionan en los pasos. Máximo ${LIMITES.pack.maxPasos} pasos entre las tres partes: si no alcanzan, juntá en un paso acciones chicas seguidas sobre la misma pieza, pero nunca saltees una pieza que haya que sacar.
+- Si ${fuente} no trae una parte del procedimiento, NO escribas que falta, que el manual no lo detalla ni que hay que consultar el manual, una web o un servicio técnico: escribí una línea FALTA con esa parte y seguí con lo que sí está.
+- Cada PIEZA, REPUESTO y cada PASO de las partes 2 y 3 tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala. Los chequeos sin abrir de la parte 1 que ${fuente} no trae pueden ser los habituales para este tipo de equipo y este síntoma: van sin cita (se muestran sin verificar), nunca con datos inventados de este modelo.
+- NUNCA inventes números de parte, piezas ni pasos de desarme que no estén en ${fuente}.
 - Todo lo que se le dice a la persona (nombre y ubicación de la PIEZA, PASO, ADVERTENCIA) va en castellano rioplatense: traducí, nunca copies frases del manual en inglés ni las pegues al final (el original ya queda en la cita), y sin negritas ni markdown.
-- Sin manual oficial, igual armá pasos CONCRETOS para el síntoma (no consejos genéricos): primero lo que se revisa sin abrir (cables, control, fuente o fusible externo, pruebas de diagnóstico del fabricante) y después, si hace falta, cómo abrir y qué pieza revisar.
-- Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: si hay que abrirlo, el PASO 1 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
+- Sin manual oficial, igual armá pasos CONCRETOS para el síntoma, no consejos genéricos.
+- Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: el primer paso de la parte 2 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
 - Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
+- Lo de riesgo alto va al FINAL de la parte 2, después de todo lo que se puede hacer sin riesgo: en ese paso la guía se corta y se deriva a un técnico. Una precaución ("si la batería está hinchada, no la uses") no es un paso de riesgo alto.
 
 <equipo>${equipo}</equipo>
 <sintoma>${sintoma}</sintoma>`;
@@ -469,6 +476,8 @@ export async function armarKnowledgePack(
       ? evento(casoId, "bibliotecario", "pack_armado", `Armé la guía: ${pack.piezas.length} piezas y ${pack.pasos.length} pasos (${verificados} con cita verificada).`, {
           descartadas: contenido.descartadas.length,
           verificado: pack.verificado,
+          // Partes del procedimiento que la fuente no trae (líneas FALTA): el experto las busca si se las piden.
+          ...(contenido.faltantes.length ? { faltantes: contenido.faltantes.map((f) => f.procedimiento) } : {}),
         })
       : evento(casoId, "bibliotecario", "guia_vacia", "No conseguí pasos para este equipo: te muestro el esquema genérico (NO VERIFICADO).", diagnostico(lectura, contenido)),
   );

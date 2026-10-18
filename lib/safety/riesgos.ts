@@ -155,12 +155,28 @@ export function normalizar(texto: string): string {
 /** "no abras la batería" o "nunca pinches la batería" es una advertencia, no un pedido. */
 const NEGACION = /\b(no|nunca|jamas|evita|evitar|sin)\b[^.;,]{0,12}$/;
 
+/**
+ * Precaución de la IA, no un pedido: "Si la batería está hinchada, no la uses" o "revisá si la batería está
+ * hinchada; si lo está, tomá precauciones". Las tres cosas a la vez: el riesgo está dentro de un "si…", hay una
+ * indicación que protege y no hay ninguna acción peligrosa. Si falta una, se bloquea como siempre.
+ */
+const CONDICIONAL = /\bsi\b/;
+const PROTEGE = /\b(no (la|lo|las|los) (uses|toques|cargues|uses mas|enchufes)|no se vuelve a usar|deja(la|lo)? de usar|precaucion|cuidado|reemplaz\w*|autorizad\w*|tecnico)/;
+const ACCION_PELIGROSA =
+  /\b(pinch|perfor|cort|romp|aplast|dobl|calent|sold|desinfl|puente|descarg|presion|palanc|cuchill|destornill)\w*|\b(abr|sac|quit|extra|despeg)(a|ar|i|ir|e|er)?(la|las|lo|los)\b|\babr\w* (la |las )?(bateria|celdas?|fuente|capacitor)/;
+
+/** `inicio` y `fin`: lo que encontró el patrón; el "si" tiene que estar ahí o hasta 30 letras antes. */
+function esPrecaucion(texto: string, inicio: number, fin: number): boolean {
+  return CONDICIONAL.test(texto.slice(Math.max(0, inicio - 30), fin)) && PROTEGE.test(texto) && !ACCION_PELIGROSA.test(texto);
+}
+
 function coincide(texto: string, patron: RegExp, ignorarNegadas: boolean): boolean {
   const re = new RegExp(patron.source, patron.flags.includes("g") ? patron.flags : patron.flags + "g");
   for (const m of texto.matchAll(re)) {
     if (!ignorarNegadas) return true;
     const antes = texto.slice(Math.max(0, m.index - 20), m.index);
-    if (!NEGACION.test(antes)) return true;
+    // Solo en texto de la IA: lo negado ("no abras la batería") y las precauciones no son pedidos.
+    if (!NEGACION.test(antes) && !esPrecaucion(texto, m.index, m.index + m[0].length)) return true;
   }
   return false;
 }

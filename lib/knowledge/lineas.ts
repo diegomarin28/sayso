@@ -79,6 +79,9 @@ export type ClaseVista = "explosionada" | "interior";
  */
 export type Vistas = Record<ClaseVista, number | null>;
 
+/** Un tramo del procedimiento que la fuente no trae (línea FALTA): el código lo busca y completa la guía. */
+export type Faltante = { procedimiento: string; /** Cuántos PASO había antes de la línea: ahí va lo que se complete. */ despuesDe: number };
+
 export type Contenido = {
   piezas: Pieza[];
   pasos: PasoReparacion[];
@@ -86,6 +89,7 @@ export type Contenido = {
   advertencias: string[];
   vistas: Vistas;
   descartadas: string[];
+  faltantes: Faltante[];
 };
 
 /** "VISTA|explosionada|…" o "VISTA|interior|…" (tolera mayúsculas y tildes). */
@@ -117,7 +121,7 @@ function esIngles(fragmento: string): boolean {
 
 export function enCastellano(texto: string): string {
   // Cortes posibles: negritas, fin de frase, dos puntos, punto y coma, o una palabra pegada a otra en mayúscula.
-  const marcado = texto.replace(/\*\*/g, "\u0000").replace(/([.:;!?])(?:\s+|(?=[A-ZÁÉÍÓÚÑ¿¡]))/g, "$1\u0000").replace(/([a-záéíóúñ])([A-Z][a-z])/g, "$1\u0000$2");
+  const marcado = texto.replace(/\*\*/g, "\u0000").replace(/([.:;!?])(?:\s+|(?=[A-ZÁÉÍÓÚÑ¿¡]))/g, "$1\u0000").replace(/(^|[^A-Za-zÁÉÍÓÚÑáéíóúñ])([a-záéíóúñ]{3,})([A-Z][a-z])/g, "$1$2\u0000$3");
   const partes = marcado.split("\u0000");
   const primeraInglesa = partes.findIndex((p, i) => i > 0 && esIngles(p));
   const queda = (primeraInglesa === -1 ? partes : partes.slice(0, primeraInglesa)).join(" ");
@@ -136,6 +140,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
     advertencias: [],
     vistas: { explosionada: null, interior: null },
     descartadas: [],
+    faltantes: [],
   };
   const idsPiezas = new Set<string>();
 
@@ -196,6 +201,9 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       const pagina = l.citas.find((c) => c.type === "page_location");
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
       else r.descartadas.push(l.texto);
+    } else if (tipo === "FALTA" && campos[1]) {
+      const procedimiento = enCastellano(campos.slice(1).join(" ")) || campos.slice(1).join(" ");
+      r.faltantes.push({ procedimiento: procedimiento.slice(0, 200), despuesDe: r.pasos.length });
     } else if (tipo === "ADVERTENCIA" && campos[1]) {
       const aviso = enCastellano(campos.slice(1).join(" | "));
       if (aviso && !NOTA_DE_FUENTES.test(aviso)) r.advertencias.push(aviso);
