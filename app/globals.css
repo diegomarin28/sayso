@@ -47,6 +47,7 @@
 body {
   background-color: var(--fondo);
   color: var(--texto);
+  overflow-x: clip; /* el fundido de la barra de abajo ocupa todo el ancho (100vw) */
 }
 body::before {
   content: "";
@@ -104,12 +105,17 @@ body::before {
 
 /* ---------- Marca: la pieza 3D flota mientras el experto piensa (marca.tsx) ---------- */
 
-@keyframes marca-flota {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-2.5px) rotate(-6deg); }
+/* Pensando: las capas del celular se separan y se vuelven a juntar. */
+@keyframes marca-sube {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
-.marca-pieza { transform-box: fill-box; transform-origin: center; }
-.marca[data-estado="pensando"] .marca-pieza { animation: marca-flota 1.1s ease-in-out infinite; }
+@keyframes marca-baja {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+.marca[data-estado="pensando"] .marca-capa-arriba { animation: marca-sube 1.2s ease-in-out infinite; }
+.marca[data-estado="pensando"] .marca-capa-abajo { animation: marca-baja 1.2s ease-in-out infinite; }
 
 /* ---------- Texto del experto: aparece palabra por palabra ---------- */
 
@@ -198,6 +204,47 @@ body::before {
 .prep-listo .prep-trazo { animation: none; stroke-dashoffset: 0; }
 .prep-listo .prep-pieza { animation: none; opacity: 1; }
 
+/* ---------- Carga de "entender": onda de voz y palabras que se leen ---------- */
+
+@keyframes onda {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+.onda-barra { transform-origin: center; animation: onda 1.1s ease-in-out infinite; }
+
+@keyframes palabra-lee {
+  0% { color: var(--texto-suave); background: transparent; }
+  4% { color: #000; background: var(--acento); }
+  14% { color: var(--texto); background: rgb(79 209 224 / 0.12); }
+  100% { color: var(--texto-suave); background: transparent; }
+}
+.palabra-lee { animation-name: palabra-lee; animation-timing-function: ease-out; animation-iteration-count: infinite; }
+
+/* ---------- Revisar la foto: cuadro de enfoque que salta y rejilla ---------- */
+
+@keyframes enfoque {
+  0%, 18% { left: 12%; top: 14%; width: 34%; height: 34%; }
+  25%, 43% { left: 54%; top: 20%; width: 30%; height: 30%; }
+  50%, 68% { left: 40%; top: 52%; width: 36%; height: 36%; }
+  75%, 93% { left: 10%; top: 50%; width: 28%; height: 28%; }
+  100% { left: 12%; top: 14%; width: 34%; height: 34%; }
+}
+.foco-foto {
+  position: absolute;
+  border: 2px solid var(--dato);
+  border-radius: 10px;
+  box-shadow: 0 0 16px 2px rgb(79 209 224 / 0.45);
+  animation: enfoque 4s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+.rejilla-foto {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(79 209 224 / 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(79 209 224 / 0.18) 1px, transparent 1px);
+  background-size: 33.34% 33.34%;
+}
+
 /* ---------- Escaneo sobre fotos ---------- */
 
 @keyframes escaneo {
@@ -251,12 +298,12 @@ body::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marca-pieza, .linea-escaneo { animation: none; }
+  .marca-capa-arriba, .marca-capa-abajo, .linea-escaneo { animation: none; }
   body::before, .mic-invita, .mic-grabando { animation: none; }
   .palabra { animation: none; opacity: 1; }
   .aparece { animation: none; }
   .linea-pensando { animation: none; opacity: 1; }
-  .lupa-etiqueta { animation: none; }
+  .lupa-etiqueta, .foco-foto, .onda-barra, .palabra-lee { animation: none; }
   .prep-linea, .prep-trazo { animation: none; stroke-dashoffset: 0; }
   .prep-cita, .prep-pieza { animation: none; opacity: 1; }
   .prep-lectura, .prep-hoja { animation: none; opacity: 0; }

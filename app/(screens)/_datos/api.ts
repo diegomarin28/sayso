@@ -13,6 +13,7 @@ import {
   planoEjemplo,
 } from "../../../shared";
 import { mensajePausa } from "../../../lib/ia/pausa";
+import { entenderSimulado } from "./entender-simulado";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -94,12 +95,13 @@ export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 /** La IA saca el equipo y el síntoma del texto. Si no puede, viene clase "otro" y la persona elige. */
 export async function entenderSintoma(texto: string): Promise<z.infer<typeof RespEntender>> {
   if (USAR_FIXTURE) {
-    await esperar(600);
+    await esperar(1800); // lo suficiente para ver la carga de "entender"
+    const { clase, tipoEquipo } = entenderSimulado(texto);
     return RespEntender.parse({
-      tipoEquipo: "notebook",
+      tipoEquipo,
       caso: {
         id: crypto.randomUUID(),
-        clase: "notebook",
+        clase,
         sintoma: texto.trim(),
         estado: "captura",
         creadoEn: new Date().toISOString(),

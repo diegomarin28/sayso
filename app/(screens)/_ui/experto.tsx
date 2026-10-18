@@ -6,7 +6,7 @@ import { Simbolo, type EstadoMarca } from "./marca";
 
 export type EstadoOrbe = EstadoMarca;
 
-/** El "experto": el símbolo de Sayso (tuerca con barras de voz que se mueven cuando piensa). */
+/** El "experto": el símbolo de Sayso (el celular en capas, que se separan cuando piensa). */
 export function Orbe({ estado = "quieto", tam = 44 }: { estado?: EstadoOrbe; tam?: number }) {
   return <Simbolo estado={estado} tam={tam} />;
 }
@@ -34,10 +34,10 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
 const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
 
 /**
- * Encabezado común: orbe + progreso del recorrido (1–6) + botón "Atrás" a la derecha.
- * El orbe queda siempre pegado a la izquierda y la barra de pasos mide siempre lo mismo
- * (sin `alVolver` el botón queda invisible). `volverApagado` lo muestra deshabilitado
- * (ej. mientras se revisa una foto) para que no aparezca y desaparezca.
+ * Encabezado común: el símbolo + el progreso del recorrido (1–6), siempre igual en todas las
+ * pantallas. "Atrás" va debajo, chico, solo donde se puede volver: así el símbolo no se mueve y
+ * no queda lugar vacío. `volverApagado` lo deja a la vista pero deshabilitado (ej. mientras se
+ * revisa una foto) para que no aparezca y desaparezca.
  */
 export function Encabezado({
   paso,
@@ -51,41 +51,44 @@ export function Encabezado({
   volverApagado?: boolean;
 }) {
   return (
-    <header className="flex items-center gap-4">
-      <Link href="/" aria-label="Sayso: volver al inicio">
-        <Orbe estado={orbe} />
-      </Link>
-      <div className="flex-1">
-        <div className="flex gap-1.5" aria-hidden>
-          {PASOS.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
-                i < paso ? "bg-acento" : "bg-borde"
-              }`}
-            />
-          ))}
+    <header className="flex flex-col gap-3">
+      <div className="flex items-center gap-4">
+        <Link href="/" aria-label="Sayso: volver al inicio">
+          <Orbe estado={orbe} />
+        </Link>
+        <div className="flex-1">
+          <div className="flex gap-1.5" aria-hidden>
+            {PASOS.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
+                  i < paso ? "bg-acento" : "bg-borde"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-xs font-medium tracking-widest text-texto-suave uppercase">
+            {paso}/6 · {PASOS[paso - 1]}
+          </p>
         </div>
-        <p className="mt-2 text-xs font-medium tracking-widest text-texto-suave uppercase">
-          {paso}/6 · {PASOS[paso - 1]}
-        </p>
       </div>
-      {/* Sin `alVolver` el botón queda invisible pero ocupa su lugar: la barra de pasos mide
-          lo mismo en todas las pantallas. */}
-      <button
-        onClick={alVolver}
-        disabled={!alVolver || volverApagado}
-        aria-hidden={!alVolver}
-        tabIndex={alVolver ? undefined : -1}
-        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95 disabled:opacity-30 max-[380px]:px-3 ${
-          alVolver ? "" : "invisible"
-        }`}
-      >
-        <FlechaAtras />
-        {/* En celulares muy angostos queda solo la flecha, para que entre el progreso. */}
-        <span className="max-[380px]:sr-only">Atrás</span>
-      </button>
+      {alVolver && <BotonVolver onClick={alVolver} disabled={volverApagado} />}
     </header>
+  );
+}
+
+/** "← Atrás": chico, arriba a la izquierda, debajo del progreso. */
+export function BotonVolver({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="-ml-1 flex h-9 items-center gap-1.5 self-start rounded-full px-1 pr-3 text-sm font-medium text-texto-suave transition hover:text-texto active:scale-95 disabled:opacity-30"
+    >
+      <FlechaAtras size={20} />
+      Atrás
+    </button>
   );
 }
 
@@ -104,7 +107,12 @@ export function Pantalla({ children }: { children: ReactNode }) {
  */
 export function BarraAccion({ children }: { children: ReactNode }) {
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-3 bg-gradient-to-t from-fondo from-75% to-fondo/0 px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
+    <div className="sticky bottom-0 z-20 mt-auto -mb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-3 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* El fundido ocupa todo el ancho de la pantalla: no se ve como un recuadro de otro color. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-gradient-to-t from-fondo/95 via-fondo/70 to-transparent"
+      />
       {children}
     </div>
   );
@@ -151,11 +159,11 @@ export function Flecha() {
   );
 }
 
-export function FlechaAtras() {
+export function FlechaAtras({ size = 24 }: { size?: number }) {
   return (
     <svg
-      width="24"
-      height="24"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

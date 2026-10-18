@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
 import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
 import { vistaPrevia } from "../_datos/imagen";
+import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
-/** Pantalla 3 — Ficha del equipo: lo leído de la chapa, cada dato con su estado. */
+/** Pantalla 3 — Ficha del equipo: lo leído de la etiqueta, cada dato con su estado. */
 
 type ClaveCampo = "marca" | "modelo" | "serie" | "anio";
 
@@ -123,10 +124,10 @@ export default function FichaDelEquipo() {
     : faltaModelo
       ? "Me falta el modelo para buscar el manual. Tocá “Modelo” y escribilo como figura en la etiqueta."
       : !ficha
-        ? "Leyendo la chapa…"
+        ? "Leyendo la etiqueta…"
         : dudosos > 0
-          ? "Esto leí en la chapa. Revisalo: podés corregir o completar cualquier dato."
-          : "Esto leí en la chapa. ¿Es tu equipo?";
+          ? "Esto leí en la etiqueta. Revisalo: podés corregir o completar cualquier dato."
+          : "Esto leí en la etiqueta. ¿Es tu equipo?";
 
   return (
     <Pantalla>
@@ -161,6 +162,7 @@ export default function FichaDelEquipo() {
             )}
             <div className="lupa-etiqueta" aria-hidden />
           </div>
+          <FichaDescifrando />
           <LineaPensando lineas={fotoEtiqueta ? LINEAS.etiqueta : LINEAS.frente} />
         </div>
       ) : (

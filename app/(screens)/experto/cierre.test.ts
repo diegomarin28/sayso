@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo, planoEjemplo } from "../../../shared";
 import { guardarLocal, leerCaso, listarCasos } from "../_datos/mis-casos";
-import { fuenteConRetomar, pasosAlRetomar, preguntaAlRetomar } from "./cierre";
+import { fuenteConFin, fuenteConRetomar, pasosAlRetomar, pasosSigueIgual, piezaCandidata, preguntaAlRetomar } from "./cierre";
 
 const pieza = knowledgePackEjemplo.pasos.find((p) => p.piezas.length)!.piezas[0];
 
@@ -73,5 +73,36 @@ describe("mis casos (en este dispositivo)", () => {
   it("descarta lo que no valida en vez de romper", () => {
     guardarLocal({ caso: { ...casoEjemplo, id: "tres", clase: "heladera" as never } });
     expect(leerCaso("tres")).toBeNull();
+  });
+});
+
+describe("¿Se resolvió? → sigue igual (sin IA en fixture)", () => {
+  it("propone cambiar la pieza del último paso, que está en el plano", () => {
+    const ultimo = [...knowledgePackEjemplo.pasos].sort((a, b) => b.orden - a.orden)[0];
+    expect(piezaCandidata(knowledgePackEjemplo, planoEjemplo)).toBe(ultimo.piezas[0]);
+  });
+
+  it("el paso trae `cambiar` (abre las compras) y termina con fin", () => {
+    const eventos = pasosSigueIgual(knowledgePackEjemplo, planoEjemplo);
+    const paso = eventos[0];
+    expect(paso.tipo === "paso" && paso.coreografia.cambiar).toBe(piezaCandidata(knowledgePackEjemplo, planoEjemplo));
+    expect(eventos.at(-1)?.tipo).toBe("fin");
+  });
+
+  it("sin piezas en el plano no inventa nada", () => {
+    expect(pasosSigueIgual(knowledgePackEjemplo, { ...planoEjemplo, piezas: [] })).toEqual([]);
+  });
+
+  it("fuenteConFin avisa al terminar la respuesta", async () => {
+    let avisos = 0;
+    const base = fuenteConRetomar(
+      async function* () {},
+      "x",
+      pasosSigueIgual(knowledgePackEjemplo, planoEjemplo),
+    );
+    const fuente = fuenteConFin(base, () => avisos++);
+    const pedido = { pregunta: "x" } as Parameters<typeof fuente>[0];
+    for await (const e of fuente(pedido, new AbortController().signal)) void e;
+    expect(avisos).toBe(1);
   });
 });

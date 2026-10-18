@@ -199,3 +199,59 @@ export function fuenteConRetomar(base: FuenteChat, pregunta: string, eventos: Ev
     })();
   };
 }
+
+/** Lo que se le pregunta al experto cuando la persona dice que, después de los pasos, sigue igual. */
+export const PREGUNTA_SIGUE_IGUAL = "Hice los pasos y sigue igual. ¿Qué pieza tengo que cambiar?";
+
+/**
+ * La pieza candidata a cambiar según la guía guardada: la primera pieza del último paso que
+ * existe en el plano (la que se trabajó al final). Null si la guía no nombra ninguna.
+ */
+export function piezaCandidata(pack: KnowledgePack, plano: PlanoDePiezas): string | null {
+  const enPlano = new Set(plano.piezas.map((p) => p.pieza));
+  const pasos = [...pack.pasos].sort((a, b) => b.orden - a.orden);
+  for (const p of pasos) {
+    const pieza = p.piezas.find((x) => enPlano.has(x));
+    if (pieza) return pieza;
+  }
+  return null;
+}
+
+/**
+ * Respuesta sin IA (modo fixture) a "sigue igual": un paso que marca la pieza a cambiar, así la
+ * pantalla ofrece comprarla. Con la IA real responde el experto.
+ */
+export function pasosSigueIgual(pack: KnowledgePack, plano: PlanoDePiezas): EventoChat[] {
+  const pieza = piezaCandidata(pack, plano);
+  if (!pieza) return [];
+  const nombre = pack.piezas.find((p) => p.id === pieza)?.nombre ?? pieza;
+  return [
+    {
+      tipo: "paso",
+      coreografia: Coreografia.parse({
+        paso: 1,
+        dice: `Si después de esto sigue igual, lo más probable es que haya que cambiar esta pieza: ${nombre.toLowerCase()}. Te muestro dónde comprarla.`,
+        acciones: [
+          { t: "restaurar" },
+          { t: "camara", objetivo: pieza, zoom: 1.4 },
+          { t: "resaltar", pieza },
+        ],
+        riesgo: "bajo",
+        cambiar: pieza,
+      }),
+    },
+    { tipo: "fin", pasos: 1 },
+  ];
+}
+
+/** Fuente que avisa cuando el experto terminó de responder (evento "fin"): ahí se pregunta "¿Se resolvió?". */
+export function fuenteConFin(base: FuenteChat, alTerminar: () => void): FuenteChat {
+  return (pedido, senal) =>
+    (async function* () {
+      for await (const e of base(pedido, senal)) {
+        // Antes de entregarlo: quien lee puede dejar de pedir eventos apenas recibe el "fin".
+        if (e.tipo === "fin" && !senal.aborted) alTerminar();
+        yield e;
+      }
+    })();
+}
