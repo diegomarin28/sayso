@@ -4,9 +4,9 @@ import { Rasgos3D, type KnowledgePack, type PlanoDePiezas } from '../../shared';
 export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'rasgos3D'> & Partial<Pick<KnowledgePack,'piezas'>>, tipo?: string): PlanoDePiezas {
   // Un plano de caché puede conservar una forma de un pack anterior: retirar solo nuestras
   // formas explícitas antes de aplicar los datos actuales. Sin ellas, devuelve la misma referencia.
-  const viejas=plano.piezas.some(p=>p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato)@/));
+  const viejas=plano.piezas.some(p=>p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato|camara_celular_dato|pantalla_celular_dato|marco_celular_dato)@/));
   if(viejas) plano={...plano,piezas:plano.piezas.map(p=>{
-    if(!p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato)@/))return p;
+    if(!p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato|camara_celular_dato|pantalla_celular_dato|marco_celular_dato)@/))return p;
     const {formaBiblioteca: _anterior,...base}=p;return base;
   })};
   const datos=Rasgos3D.safeParse(pack.rasgos3D);
@@ -32,6 +32,15 @@ export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'
   if(tipo==='televisor' && datos.data.televisor?.apoyo) {
     const nombre='carcasa_tv_dato@pie_'+datos.data.televisor.apoyo;
     return {...plano,piezas:plano.piezas.map(p=>!p.padre?{...p,formaBiblioteca:nombre}:p)};
+  }
+  const celular=datos.data.celular;
+  if(tipo==='celular' && celular && (celular.camarasTraseras!==undefined || typeof celular.muesca==='boolean' || celular.bordes!==undefined)) {
+    return {...plano,piezas:plano.piezas.map(p=>{
+      if(p.pieza==='camara_trasera' && celular.camarasTraseras!==undefined)return {...p,formaBiblioteca:'camara_celular_dato@'+celular.camarasTraseras};
+      if(p.pieza==='pantalla' && typeof celular.muesca==='boolean')return {...p,formaBiblioteca:'pantalla_celular_dato@'+(celular.muesca?'con_muesca':'sin_muesca')};
+      if(!p.padre && celular.bordes)return {...p,formaBiblioteca:'marco_celular_dato@'+celular.bordes};
+      return p;
+    })};
   }
   if(tipo==='tablet' && typeof datos.data.tablet?.botonFrontal==='boolean') {
     const nombre='pantalla_tablet_dato@'+(datos.data.tablet.botonFrontal?'con_boton':'sin_boton');

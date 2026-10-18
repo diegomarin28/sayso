@@ -18,7 +18,8 @@
   "impresoras_demo": "impresoras_demo.glb",
   "tablet_variantes": "tablet_variantes.glb",
   "tv_variantes": "tv_variantes.glb",
-  "auriculares_variantes": "auriculares_variantes.glb"
+  "auriculares_variantes": "auriculares_variantes.glb",
+  "celular_variantes": "celular_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3627,6 +3628,83 @@
     6.9,
     1.6,
     8.5
+   ]
+  },
+  "camara_celular_dato@1": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "camara_celular_dato@2": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "camara_celular_dato@3": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "pantalla_celular_dato@sin_muesca": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo de pantalla completo: vidrio frontal hacia -Y GLB y chapa con flex hacia el interior.",
+   "caja": [
+    7.2,
+    0.3575,
+    15.6
+   ]
+  },
+  "pantalla_celular_dato@con_muesca": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo de pantalla completo: vidrio frontal hacia -Y GLB y chapa con flex hacia el interior.",
+   "caja": [
+    7.2,
+    0.355,
+    15.6
+   ]
+  },
+  "marco_celular_dato@redondeados": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Marco hueco de celular, esquinas redondeadas y perfil del borde según dato del pack.",
+   "caja": [
+    7.4,
+    0.8,
+    15.86
+   ]
+  },
+  "marco_celular_dato@rectos": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Marco hueco de celular, esquinas redondeadas y perfil del borde según dato del pack.",
+   "caja": [
+    7.4,
+    0.8,
+    15.86
    ]
   }
  }
