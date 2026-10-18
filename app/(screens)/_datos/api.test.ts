@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo } from "../../../shared";
-import { ErrorApi, generarPlano, leerChapa, pedidosDeFoto, prepararExperto } from "./api";
+import { ErrorApi, ErrorCortado, TIEMPO_MAXIMO_MS, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, leerChapa, pedidosDeFoto, prepararExperto } from "./api";
 
 /** Bajar costos: cada llamada a la IA se hace una sola vez por caso, aunque se vaya atrás y adelante. */
 
@@ -160,5 +160,53 @@ describe("Ver la foto del paso (#176)", () => {
     vi.stubGlobal("fetch", vi.fn(() => respuesta(sinFotos)));
     const r = await prepararExperto({ ...ficha, casoId: "caso-sin-fotos" }, "no carga");
     expect(r.fotosPasos).toEqual({});
+  });
+});
+
+describe("Preparando: sin espera infinita (tiempo máximo, cancelar y reintentar)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+  /** Un fetch que nunca responde (red colgada), salvo que lo corten. */
+  const colgado = (init?: RequestInit) =>
+    new Promise<Response>((_, rechazar) => init?.signal?.addEventListener("abort", () => rechazar(new DOMException("abortado", "AbortError"))));
+  const plano = () => respuesta({ plano: { modelo: "m", unidades: "cm", piezas: [] }, origen: "ia", eventos: [] });
+
+  it("a los ~150 s se corta con ErrorCortado y el reintento hace un pedido nuevo (no reusa el colgado)", async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockImplementationOnce((_: string, init?: RequestInit) => colgado(init)).mockImplementation(plano);
+    vi.stubGlobal("fetch", fetch);
+    const f = { ...ficha, casoId: "caso-colgado" };
+    const primero = generarPlano(f, knowledge);
+    const resultado = expect(primero).rejects.toThrow(ErrorCortado);
+    await vi.advanceTimersByTimeAsync(TIEMPO_MAXIMO_MS - 1);
+    expect(hayPedidosEnCurso()).toBe(true);
+    await vi.advanceTimersByTimeAsync(1);
+    await resultado;
+    await expect(primero).rejects.toThrow(/tardando demasiado/);
+    expect(hayPedidosEnCurso()).toBe(false);
+    await expect(generarPlano(f, knowledge)).resolves.toMatchObject({ origen: "ia" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancelarPedidosEnCurso (volvió la red) corta lo colgado y se puede volver a pedir", async () => {
+    const fetch = vi.fn().mockImplementationOnce((_: string, init?: RequestInit) => colgado(init)).mockImplementation(() => respuesta(knowledge));
+    vi.stubGlobal("fetch", fetch);
+    const f = { ...ficha, casoId: "caso-cancelado" };
+    const primero = prepararExperto(f, "se apaga");
+    await Promise.resolve();
+    expect(hayPedidosEnCurso()).toBe(true);
+    cancelarPedidosEnCurso();
+    await expect(primero).rejects.toThrow(/Se cortó la conexión/);
+    await expect(prepararExperto(f, "se apaga")).resolves.toMatchObject({ desdeCache: false });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("sin red sigue siendo ErrorApi (no ErrorCortado): la pantalla espera a que vuelva", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+    const e = await generarPlano({ ...ficha, casoId: "caso-sin-red" }, knowledge).catch((x) => x);
+    expect(e).toBeInstanceOf(ErrorApi);
+    expect(e).not.toBeInstanceOf(ErrorCortado);
   });
 });

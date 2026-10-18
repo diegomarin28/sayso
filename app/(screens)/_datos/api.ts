@@ -28,12 +28,30 @@ export const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
 /** Error que se le puede mostrar a la persona tal cual. */
 export class ErrorApi extends Error {}
 
+/** El pedido se cortó: tardó más que `TIEMPO_MAXIMO_MS` o se canceló al volver la red (`cancelarPedidosEnCurso`). */
+export class ErrorCortado extends ErrorApi {}
+
+/** Ninguna llamada espera más que esto (la más larga, el manual, tarda hasta ~2 min). */
+export const TIEMPO_MAXIMO_MS = 150_000;
+
+/** Los pedidos en camino, para poder cortarlos si quedaron colgados (el iPhone pausa la red en segundo plano). */
+const enCurso = new Set<AbortController>();
+
+/** ¿Hay algún pedido esperando respuesta? */
+export const hayPedidosEnCurso = () => enCurso.size > 0;
+
+/** Corta los pedidos en camino: fallan con `ErrorCortado` y se pueden volver a pedir. */
+export function cancelarPedidosEnCurso() {
+  for (const c of enCurso) c.abort("cancelado");
+}
+
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Las llamadas que cuestan IA se hacen una sola vez por clave mientras dure la sesión: si la
  * pantalla se monta dos veces, o la persona va atrás y adelante (incluso con la respuesta en
- * camino), se reusa la misma promesa. Si falla, se borra para poder reintentar.
+ * camino), se reusa la misma promesa. Si falla, se corta por tiempo o se cancela, se borra para poder
+ * reintentar (un pedido colgado guardado acá haría que reintentar devuelva la misma promesa colgada).
  */
 const yaPedidas = new Map<string, Promise<unknown>>();
 function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
@@ -41,7 +59,9 @@ function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
   if (previa) return previa as Promise<T>;
   const p = pedir();
   yaPedidas.set(clave, p);
-  p.catch(() => yaPedidas.delete(clave));
+  p.catch(() => {
+    if (yaPedidas.get(clave) === p) yaPedidas.delete(clave);
+  });
   return p;
 }
 
@@ -49,17 +69,34 @@ function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
 const claveEquipo = (f: Ficha) => `${f.casoId}|${f.marca.valor ?? ""}|${f.modelo.valor ?? ""}`;
 
 async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> {
+  // Tiempo máximo para todo el pedido (respuesta y cuerpo): sin esto, una red que se cae a mitad deja la
+  // pantalla esperando para siempre.
+  const control = new AbortController();
+  const reloj = setTimeout(() => control.abort("tiempo"), TIEMPO_MAXIMO_MS);
+  enCurso.add(control);
+  const cortado = () =>
+    new ErrorCortado(
+      control.signal.reason === "tiempo" ? "Está tardando demasiado. Probá de nuevo." : "Se cortó la conexión. Probá de nuevo.",
+    );
   let res: Response;
+  let datos: unknown;
   try {
-    res = await fetch(ruta, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cuerpo),
-    });
-  } catch {
-    throw new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+    try {
+      res = await fetch(ruta, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo),
+        signal: control.signal,
+      });
+    } catch {
+      throw control.signal.aborted ? cortado() : new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+    }
+    datos = await res.json().catch(() => null);
+    if (control.signal.aborted) throw cortado();
+  } finally {
+    clearTimeout(reloj);
+    enCurso.delete(control);
   }
-  const datos: unknown = await res.json().catch(() => null);
   const pausa = mensajePausa(res.status, datos);
   if (pausa) throw new ErrorApi(pausa); // freno de gasto: no es un error de la app
   if (!res.ok) {

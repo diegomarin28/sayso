@@ -108,20 +108,30 @@ export async function decidirPedidos(
     }
     // La etiqueta es obligatoria (sin ella no hay modelo): si la IA no la pidió, va la de la lista fija.
     if (!vistos.has("etiqueta")) pedidos.unshift(base.find((b) => b.tipo === "etiqueta") ?? base[0]);
-    const finales = ajustarPorTipo(pedidos, sintoma, tipoEquipo).slice(0, LIMITES.foto.maxPedidos);
+    const finales = ajustarPorTipo(pedidos, sintoma, tipoEquipo, clase).slice(0, LIMITES.foto.maxPedidos);
     if (finales.length >= 2) return { pedidos: finales, porIA: true };
   } catch {
     // Respaldo: lista fija.
   }
-  return { pedidos: ajustarPorTipo(base, sintoma, tipoEquipo), porIA: false };
+  return { pedidos: ajustarPorTipo(base, sintoma, tipoEquipo, clase), porIA: false };
 }
 
 /** Tipos de equipo que tienen el modelo o el número de serie grabado en la parte de atrás. */
 const DATOS_ATRAS = new Set(["celular", "tablet", "reloj"]);
+/**
+ * Equipos con pantalla y sistema operativo: el modelo también aparece en la pantalla de Información o «Acerca de»
+ * del sistema. Por tipo (las plantillas) y, para la computadora de escritorio, que no tiene plantilla, por palabra.
+ */
+const CON_SISTEMA = new Set(["notebook", "notebook_sin_ventilador", "celular", "tablet", "reloj", "consola"]);
+const COMPUTADORA = /\b(computadora|computador|pc|ordenador|escritorio|desktop|all.?in.?one)\b/;
 /** Un pedido que solo se puede cumplir con el equipo prendido (menús, Ajustes, Información, pantalla de…). */
 const NECESITA_PRENDIDO = /ajustes|configuraci[oó]n|settings|men[uú]|acerca\s+de|informaci[oó]n|general\s*>|desbloque|prend[eé]\s+(el|la)|encend[eé]/;
 /** Pedir el puerto o la carga de un equipo que no tiene puerto (un reloj se carga por atrás). */
 const DE_CARGA = /puerto|carga|cargador|conector|usb|lightning/;
+
+/** La alternativa a la etiqueta, sin marcas: cada sistema la llama distinto, pero dice Información o Acerca de. */
+const CAPTURA = (equipo: string) =>
+  `Si no la encontrás o no se lee, y ${equipo} prende: sacá una captura de la pantalla de Información o «Acerca de» del sistema, donde dice el modelo, y elegila de la galería.`;
 
 const sinTildes = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
@@ -130,12 +140,23 @@ const sinTildes = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "
  * - Si no prende, nada que necesite el equipo prendido: la etiqueta pasa a la parte de atrás (donde están
  *   grabados el modelo o el número de serie en un celular, una tablet o un reloj) y siempre va el frente.
  * - Un reloj inteligente se carga por la parte de atrás: lo de "puerto" o "carga" pasa a ser esa foto.
+ * - Un equipo con pantalla y sistema (computadora, celular, tablet, reloj, consola) que prende: además de la
+ *   etiqueta, sirve una captura de la pantalla de Información o «Acerca de» del sistema (`CON_SISTEMA`).
  */
-export function ajustarPorTipo(pedidos: PedidoDeFoto[], sintoma: string, tipoEquipo?: string): PedidoDeFoto[] {
-  const tipo = tipoEquipo ? elegirPlantilla({ clase: "otro", piezas: [] }, tipoEquipo)?.id : undefined;
+export function ajustarPorTipo(pedidos: PedidoDeFoto[], sintoma: string, tipoEquipo?: string, clase?: ClaseEquipo): PedidoDeFoto[] {
+  const tipo = tipoEquipo ? elegirPlantilla({ clase: "otro", piezas: [] }, tipoEquipo)?.id : clase === "notebook" ? "notebook" : undefined;
   const atras = !!tipo && DATOS_ATRAS.has(tipo);
   const apagado = noPrende(sintoma);
-  const equipo = tipo === "reloj" ? "el reloj" : tipo === "tablet" ? "la tablet" : tipo === "celular" ? "el celular" : "el equipo";
+  const computadora = !tipo && COMPUTADORA.test(sinTildes(tipoEquipo ?? ""));
+  const conSistema = (!!tipo && CON_SISTEMA.has(tipo)) || computadora;
+  const equipo =
+    tipo === "reloj" ? "el reloj"
+    : tipo === "tablet" ? "la tablet"
+    : tipo === "celular" ? "el celular"
+    : tipo?.startsWith("notebook") ? "la notebook"
+    : tipo === "consola" ? "la consola"
+    : computadora ? "la computadora"
+    : "el equipo";
   const etiquetaAtras: PedidoDeFoto = {
     tipo: "etiqueta",
     instruccion: atras
@@ -153,6 +174,11 @@ export function ajustarPorTipo(pedidos: PedidoDeFoto[], sintoma: string, tipoEqu
     return p;
   });
   res = res.filter((p, i) => p.instruccion && res.findIndex((q) => q.instruccion === p.instruccion) === i);
+  if (conSistema && !apagado) {
+    res = res.map((p) =>
+      p.tipo === "etiqueta" && !NECESITA_PRENDIDO.test(sinTildes(p.instruccion)) ? { ...p, instruccion: `${p.instruccion} ${CAPTURA(equipo)}` } : p,
+    );
+  }
   if (apagado && !res.some((p) => p.tipo === "frente")) {
     res.push({ tipo: "frente", instruccion: `Sacá una foto de frente a ${equipo}, completo, aunque esté apagado.` });
   }
