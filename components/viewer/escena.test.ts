@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena } from "./escena";
+import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, usarColorActivo } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -15,7 +15,7 @@ const con = (estado: EstadoEscena, ...acciones: Parameters<typeof aplicarAccion>
   acciones.reduce((e, a) => aplicarAccion(e, a, ctx).estado, estado);
 
 describe("escena: modo rayos X", () => {
-  it("la pieza activa queda sólida y naranja; las demás grises translúcidas; sus hijas quedan normales", () => {
+  it("la pieza activa queda sólida y del color de resaltado; las demás grises translúcidas; sus hijas quedan normales", () => {
     const { escena, estado } = preparar();
     const e = con(estado, { t: "resaltar", pieza: "ventilador" });
     animar(escena, e, 0);
@@ -27,6 +27,21 @@ describe("escena: modo rayos X", () => {
     expect(material(escena, "placa_madre").opacity).toBeCloseTo(0.1);
     expect(material(escena, "placa_madre").transparent).toBe(true);
     expect(material(escena, "tornillos_ventilador").opacity).toBe(1);
+  });
+
+  it("el resaltado toma el color del tema (tema.ts: --dato de la app), en la pieza y en su brillo", () => {
+    usarColorActivo("#4fd1e0");
+    try {
+      const { escena, estado } = preparar();
+      const e = con(estado, { t: "resaltar", pieza: "ventilador" });
+      animar(escena, e, 0);
+      animar(escena, e, 5000);
+      const cian = new THREE.Color("#4fd1e0").getHexString();
+      expect(material(escena, "ventilador").color.getHexString()).toBe(cian);
+      expect(material(escena, "ventilador").emissive.getHexString()).toBe(cian);
+    } finally {
+      usarColorActivo(COLOR_ACTIVO);
+    }
   });
 
   it("sin piezas resaltadas todo vuelve a su material original", () => {

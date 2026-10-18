@@ -19,7 +19,6 @@ import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
 import { useBibliotecaPiezas } from "./biblioteca";
 import {
-  COLOR_ACTIVO,
   animar,
   continuarAnimacion,
   encuadre,
@@ -32,6 +31,7 @@ import {
   type EscenaPreparada,
   type ModoVista,
   type NodoAnimable,
+  usarColorActivo,
 } from "./escena";
 import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
@@ -40,13 +40,14 @@ import {
   bajarRendimiento,
   calidadInicial,
   dprPara,
-  esNegro,
+  esPlana,
   puntosVigia,
   RENDIMIENTO_PLENO,
   soporteDe,
   Vigia,
   type Calidad,
 } from "./salud";
+import { CSS_ACTIVO, colorActivoDelDocumento } from "./tema";
 import { OBJETIVO_GENERAL, aplicarAccion, cerrar, comenzarPaso, estadoInicial, soloVuelveAGeneral, type EstadoEscena } from "./reproductor";
 
 /**
@@ -124,6 +125,8 @@ export function Visor({
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
   const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
   const soportaWebGL2 = useSoportaWebGL2();
+  // Una vez al montar (el lienzo solo existe en el cliente) y antes de preparar la escena: ver tema.ts.
+  useState(() => usarColorActivo(colorActivoDelDocumento()));
   // Un plano mixto no se muestra como verificado entero (ver origen.ts).
   const origen = useMemo(() => {
     const r = resumenOrigen(plano);
@@ -196,17 +199,18 @@ export function Visor({
 
   if (soportaWebGL2 === false) {
     return (
-      <div className={className} style={{ position: "relative", background: "#000" }}>
+      <div className={className} style={{ position: "relative", background: "var(--escena)" }}>
         <AvisoVisor falla="sin_webgl" />
       </div>
     );
   }
 
   return (
-    <div className={className} style={{ position: "relative", background: "#000", touchAction: "none" }}>
+    <div className={className} style={{ position: "relative", background: "var(--escena)", touchAction: "none" }}>
       <Resguardo key={intento} onError={() => setFalla("error")}>
         <Canvas dpr={dprPara(rendimiento)} onCreated={alCrear}>
-          <color attach="background" args={["#000000"]} />
+          {/* Sin fondo propio: el lienzo es transparente y se ve var(--escena) del contenedor tal cual
+              (un color de fondo en la escena pasaría por el tone mapping del posprocesado y saldría más oscuro). */}
           {vista === "isometrica" ? (
             <OrthographicCamera makeDefault position={[100, 100, 100]} near={0.1} far={2000} zoom={10} />
           ) : (
@@ -245,7 +249,7 @@ export function Visor({
       {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
       {!falla && controles && (
         <p
-          className="pointer-events-none absolute bottom-16 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11px] text-white/80 backdrop-blur"
+          className="pointer-events-none absolute bottom-16 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-borde bg-superficie/80 px-3 py-1 text-[11px] text-texto-suave backdrop-blur"
           title="De dónde sale la ubicación de las piezas del 3D"
         >
           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${origen.verificado ? "bg-confirmado" : "bg-probable"}`} />
@@ -256,7 +260,7 @@ export function Visor({
         <button
           type="button"
           onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
-          className="absolute bottom-3 left-3 h-11 rounded-full border border-white/20 bg-black/70 px-4 text-xs text-white backdrop-blur active:scale-95"
+          className="absolute bottom-3 left-3 h-11 rounded-full border border-borde bg-superficie/80 px-4 text-xs text-texto backdrop-blur active:scale-95"
         >
           {vista === "perspectiva" ? "Vista isométrica" : "Vista en perspectiva"}
         </button>
@@ -285,10 +289,10 @@ const TEXTO_FALLA: Record<Falla, string> = {
 
 function AvisoVisor({ falla, onReintentar }: { falla: Falla; onReintentar?: () => void }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black px-8 text-center text-sm text-white/80">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-escena px-8 text-center text-sm text-texto-suave">
       <p>{TEXTO_FALLA[falla]}</p>
       {onReintentar && (
-        <button type="button" onClick={onReintentar} className="rounded-full border border-white/30 px-4 py-1.5 text-xs text-white">
+        <button type="button" onClick={onReintentar} className="rounded-full border border-borde px-4 py-1.5 text-xs text-texto">
           Reintentar
         </button>
       )}
@@ -339,6 +343,7 @@ class Resguardo extends Component<{ children: ReactNode; onError: (e: unknown) =
 function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolean; onNegro: () => void; onListo: () => void }) {
   const vigia = useRef(new Vigia());
   const pixeles = useMemo(() => new Uint8Array(4 * LADO_VIGIA * LADO_VIGIA), []);
+  const esquina = useMemo(() => new Uint8Array(4), []);
   const avisado = useRef(false);
   useFrame(({ gl, scene, camera }) => {
     if (renderizaSolo) gl.render(scene, camera);
@@ -353,10 +358,12 @@ function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolea
     if (avisado.current) return;
     gl.setRenderTarget(null);
     const ctx = gl.getContext();
-    // Negro solo si TODA la grilla está negra (un objeto oscuro en el centro no es una falla).
+    // Falla solo si TODA la grilla es del color de la esquina (el fondo, o negro si se rompió todo):
+    // un objeto oscuro en el centro no es una falla.
+    ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, esquina);
     const negro = puntosVigia(ctx.drawingBufferWidth, ctx.drawingBufferHeight, LADO_VIGIA, PUNTOS_VIGIA).every(([x, y]) => {
       ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
-      return esNegro(pixeles);
+      return esPlana(pixeles, esquina);
     });
     if (v.registrar(negro) === "negro") {
       avisado.current = true;
@@ -592,25 +599,25 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaPro
     <Html position={desde} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
       <div style={{ opacity: visible ? 1 : 0, transition: "opacity 300ms ease-out" }}>
         <svg width={1} height={1} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-          <line ref={linea} x1={0} y1={0} x2={LINEA_ETIQUETA.dx} y2={-LINEA_ETIQUETA.dy} stroke={COLOR_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
-          <circle cx={0} cy={0} r={2.5} fill={COLOR_ACTIVO} />
+          <line ref={linea} x1={0} y1={0} x2={LINEA_ETIQUETA.dx} y2={-LINEA_ETIQUETA.dy} stroke={CSS_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
+          <circle cx={0} cy={0} r={2.5} fill={CSS_ACTIVO} />
         </svg>
         <div
           ref={caja}
-          className="absolute flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-black/80 py-1 pl-1 pr-2 text-xs font-medium text-white shadow-lg"
-          style={{ left: LINEA_ETIQUETA.dx, top: -LINEA_ETIQUETA.dy, borderColor: COLOR_ACTIVO }}
+          className="absolute flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-superficie/90 py-1 pl-1 pr-2 text-xs font-medium text-texto shadow-lg"
+          style={{ left: LINEA_ETIQUETA.dx, top: -LINEA_ETIQUETA.dy, borderColor: CSS_ACTIVO }}
         >
           {numero && (
             <span
               className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-black"
-              style={{ background: COLOR_ACTIVO }}
+              style={{ background: CSS_ACTIVO }}
             >
               {numero}
             </span>
           )}
           <span className={`flex flex-col leading-tight ${numero ? "" : "pl-1"}`}>
             <span>{nombre ?? nombreLegible(datos.pieza)}</span>
-            <span className="text-[10px] font-normal text-white/60">{origen}</span>
+            <span className="text-[10px] font-normal text-texto-suave">{origen}</span>
           </span>
         </div>
       </div>

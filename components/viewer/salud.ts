@@ -4,7 +4,8 @@
  * - Antes de prender efectos se mira qué soporta el WebGL del equipo: el bloom y la luz de
  *   entorno necesitan buffers de color flotante; en celulares, sin multisampling (en iOS el
  *   posprocesado con multisampling se come la memoria del lienzo y se pierde el contexto).
- * - Al arrancar, un vigía mira la imagen (una grilla de puntos) unos segundos. Si queda negro, se apaga
+ * - Al arrancar, un vigía mira la imagen (una grilla de puntos) unos segundos. Si queda negra o plana (solo
+ *   el color de fondo: `esPlana`), se apaga
  *   lo que puede fallar (primero los efectos, después la luz de entorno); si igual sigue negro,
  *   el visor muestra un aviso en vez del lienzo vacío.
  * - Si no llega a 30 fps (`bajarRendimiento`): primero se apaga el bloom y, si sigue lento, se dibuja a
@@ -81,10 +82,14 @@ export function puntosVigia(ancho: number, alto: number, lado: number, n = 3): A
   return puntos;
 }
 
-/** Negro = ningún píxel (RGBA) con R, G o B por encima del umbral. */
-export function esNegro(pixeles: Uint8Array, umbral = 8): boolean {
+/**
+ * Plana = todos los píxeles (RGBA) con R, G y B a no más del umbral de `referencia` (el color de una
+ * esquina del lienzo). Así se ve el 3D roto con cualquier fondo: todo negro (contexto perdido,
+ * posprocesado roto) o solo el color de fondo (la escena no se dibujó).
+ */
+export function esPlana(pixeles: Uint8Array, referencia: ArrayLike<number>, umbral = 8): boolean {
   for (let i = 0; i < pixeles.length; i += 4) {
-    if (pixeles[i] > umbral || pixeles[i + 1] > umbral || pixeles[i + 2] > umbral) return false;
+    for (let c = 0; c < 3; c++) if (Math.abs(pixeles[i + c] - referencia[c]) > umbral) return false;
   }
   return true;
 }
