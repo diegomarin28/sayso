@@ -35,6 +35,12 @@ describe("prepararPaso (filtro de seguridad antes de animar)", () => {
     expect(r.eventos[0]).toMatchObject({ agente: "seguridad", tipo: "paso_bloqueado", casoId: "caso-demo-1" });
   });
 
+  it("el aviso del bloqueo depende del tipo de equipo, aunque el paso no lo nombre (#113)", () => {
+    const alto: Coreografia = { paso: 2, dice: "Sacá el capacitor de la placa.", riesgo: "alto", acciones: [{ t: "resaltar", pieza: "placa" }] };
+    expect(prepararPaso(alto, { ...ctx, tipoEquipo: "celular" }).coreografia.dice).toMatch(/batería de litio/);
+    expect(prepararPaso(alto, { ...ctx, tipoEquipo: "heladera" }).coreografia.dice).toMatch(/Desenchufá/);
+  });
+
   it("si la IA ya marcó riesgo alto, se bloquea aunque el texto parezca inocente", () => {
     const r = prepararPaso({ ...coreografiaEjemplo[1], riesgo: "alto" }, ctx);
     expect(r.evaluacion.bloqueado).toBe(true);

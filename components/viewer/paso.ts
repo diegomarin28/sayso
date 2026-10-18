@@ -12,8 +12,9 @@ export type PasoPreparado = {
   eventos: Evento[];
 };
 
-export function prepararPaso(original: Coreografia, ctx: { casoId: string }): PasoPreparado {
-  const { coreografia, evaluacion } = filtrarCoreografia(original);
+/** `tipoEquipo`: el aviso de seguridad depende del equipo (a batería: la batería de litio; enchufado: desenchufar), aunque el paso no lo nombre. */
+export function prepararPaso(original: Coreografia, ctx: { casoId: string; tipoEquipo?: string }): PasoPreparado {
+  const { coreografia, evaluacion } = filtrarCoreografia(original, { tipoEquipo: ctx.tipoEquipo });
   const eventos: Evento[] = evaluacion.bloqueado
     ? [
         {

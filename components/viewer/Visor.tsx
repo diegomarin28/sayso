@@ -470,7 +470,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   // Coreografía nueva: filtro de seguridad, limpia resaltados y aplica las acciones una por una.
   useEffect(() => {
     if (!coreografia) return;
-    const paso = prepararPaso(coreografia, { casoId });
+    const paso = prepararPaso(coreografia, { casoId, tipoEquipo });
     paso.eventos.forEach((e) => onEventoRef.current?.(e));
     onPasoRef.current?.(paso);
     const { actualizar } = acciones.current;
