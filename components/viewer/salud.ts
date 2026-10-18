@@ -7,6 +7,8 @@
  * - Al arrancar, un vigía mira la imagen (una grilla de puntos) unos segundos. Si queda negro, se apaga
  *   lo que puede fallar (primero los efectos, después la luz de entorno); si igual sigue negro,
  *   el visor muestra un aviso en vez del lienzo vacío.
+ * - Si no llega a 30 fps (`bajarRendimiento`): primero se apaga el bloom y, si sigue lento, se dibuja a
+ *   densidad 1 (un cuarto de los píxeles en una pantalla densa: es lo que más pesa en una GPU chica).
  */
 
 export type SoporteGL = {
@@ -28,6 +30,20 @@ export function calidadInicial(s: SoporteGL): Calidad {
     multisampling: s.tactil ? 0 : Math.min(MULTISAMPLING_MAX, s.maxMuestras),
     entorno: s.colorFlotante,
   };
+}
+
+/** Escalones de rendimiento: lo que ya se apagó porque el equipo no llegaba a 30 fps. */
+export type Rendimiento = { sinBloom: boolean; dprBajo: boolean };
+export const RENDIMIENTO_PLENO: Rendimiento = { sinBloom: false, dprBajo: false };
+
+/** El escalón siguiente: sin bloom si todavía está prendido; si no, densidad 1. */
+export function bajarRendimiento(r: Rendimiento, bloomPrendido: boolean): Rendimiento {
+  return bloomPrendido ? { ...r, sinBloom: true } : { ...r, dprBajo: true };
+}
+
+/** Densidad de píxeles del lienzo: hasta 2 (pantallas densas); con el escalón bajo, 1. */
+export function dprPara(r: Rendimiento): number | [number, number] {
+  return r.dprBajo ? 1 : [1, 2];
 }
 
 /** Lo siguiente a apagar cuando la imagen queda negra. null = ya no queda nada para apagar. */
