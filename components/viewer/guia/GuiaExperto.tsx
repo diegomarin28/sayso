@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
 import { ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
-import { FlechaEnviar, GirarCelular } from "./iconos";
+import { FlechaEnviar, GirarCelular, Libro } from "./iconos";
 import { paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { conPiezaNombrada } from "./pieza-nombrada";
+import { datosTransparencia, DeDondeSale } from "./transparencia";
 import { esperar, Reproductor, tiempoDeLectura, type EstadoControles, type EstadoGuia, type ModoAvance } from "./reproducir";
 
 /**
@@ -213,6 +214,9 @@ export function GuiaExperto({
   // Página del manual del paso actual, si tiene imagen (nunca en un paso bloqueado).
   const [paginaAbierta, setPaginaAbierta] = useState<PaginaManual | null>(null);
   const cerrarPagina = useCallback(() => setPaginaAbierta(null), []);
+  // "¿De dónde sale esto?": manual, origen del 3D y citas de esta respuesta (plan §10).
+  const [transparenciaAbierta, setTransparenciaAbierta] = useState(false);
+  const transparencia = useMemo(() => datosTransparencia(pack, plano, origenPlano, pasos), [pack, plano, origenPlano, pasos]);
   const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
@@ -278,7 +282,20 @@ export function GuiaExperto({
         </div>
       </div>
 
-      <FilaSugerencias sugerencias={ocupado ? [] : sugerencias} mensajes={mensajes} onPreguntar={(t) => void preguntar(t)} />
+      <FilaSugerencias
+        sugerencias={ocupado ? [] : sugerencias}
+        mensajes={mensajes}
+        onPreguntar={(t) => void preguntar(t)}
+        extra={
+          <button
+            type="button"
+            onClick={() => setTransparenciaAbierta(true)}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-borde px-3 text-sm font-medium whitespace-nowrap text-texto"
+          >
+            <Libro size={16} /> ¿De dónde sale esto?
+          </button>
+        }
+      />
 
       <form
         className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
@@ -307,6 +324,7 @@ export function GuiaExperto({
         </button>
       </form>
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
+      {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>
   );
 }
