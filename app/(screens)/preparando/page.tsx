@@ -17,6 +17,7 @@ import {
 import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
 import { ResumenGuia } from "../_ui/resumen-guia";
+import { usePrecargaPiezas } from "@/components/viewer";
 import { desbloquearAudio } from "@/lib/voice/hablar";
 
 /**
@@ -40,6 +41,8 @@ export default function Preparando() {
   const [segundos, setSegundos] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
+  // Las formas del 3D se bajan mientras espera a la IA (#133): el visor abre sin esperar la red.
+  usePrecargaPiezas(tipoEquipo, preparado?.pack);
 
   const listaParaPreparar = ficha?.modelo.estado === "confirmado";
 

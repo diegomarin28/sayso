@@ -2,7 +2,9 @@
 
 import type { KnowledgePack } from "@/shared";
 import type { Plano } from "../_datos/api";
+import { resumenOrigen, textoResumen, todoDelManual } from "../../../components/viewer/origen";
 import { AnimacionPreparando } from "./animacion-preparando";
+import { Alerta } from "./experto";
 
 /**
  * Pantalla 4, al terminar: qué encontró el experto. La notebook armada, el manual (con su
@@ -35,9 +37,7 @@ export function ResumenGuia({
         <AnimacionPreparando acto={plano ? "listo" : "plano"} equipo={equipo} />
         {plano && (
           <p className="text-center text-xs text-texto-suave">
-            {plano.origen === "ia"
-              ? `${plano.plano.piezas.length} piezas ubicadas según el manual`
-              : "Esquema genérico: no pude ubicar las piezas con el manual"}
+            {textoPlano(plano)}
           </p>
         )}
       </div>
@@ -120,13 +120,25 @@ export function ResumenGuia({
         )}
 
         {pack.advertencias.length > 0 && (
-          <p className="rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm text-probable">
-            ⚠ {pack.advertencias[0]}
+          <p className="flex items-start gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm text-probable">
+            <Alerta /> {pack.advertencias[0]}
           </p>
         )}
       </div>
     </div>
   );
+}
+
+/**
+ * De dónde salen las ubicaciones del 3D (C10): "según el manual" solo si todo sale del manual;
+ * si no, el mismo resumen que muestra el visor ("4 del manual · 3 estimadas · 1 genérica").
+ */
+export function textoPlano(plano: Plano): string {
+  if (plano.origen === "plantilla") return "Esquema genérico: no pude ubicar las piezas con el manual";
+  const r = resumenOrigen(plano.plano);
+  const n = plano.plano.piezas.length;
+  if (todoDelManual(r)) return `${n} ${n === 1 ? "pieza ubicada" : "piezas ubicadas"} según el manual`;
+  return `Piezas en el 3D: ${textoResumen(r).toLowerCase()}`;
 }
 
 /** Ícono de documento con sello (verde si está verificado, amarillo si no). */

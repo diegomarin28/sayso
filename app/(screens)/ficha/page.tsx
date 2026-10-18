@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
 import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
 import { vistaPrevia } from "../_datos/imagen";
+import { usePrecargaPiezas } from "@/components/viewer";
 import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
@@ -48,6 +49,8 @@ export default function FichaDelEquipo() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [faltaModelo, setFaltaModelo] = useState(false);
+  // El 3D se empieza a bajar ya (#133): con el tipo de equipo alcanza para las formas.
+  usePrecargaPiezas(tipoEquipo);
 
   const aceptadas = fotos.filter((f) => f.aceptada && imagenes[f.id]);
   const etiquetas = aceptadas.filter((f) => f.tipoPedido === "etiqueta");
@@ -167,9 +170,12 @@ export default function FichaDelEquipo() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-sm text-texto-suave">
-            <Lapiz /> Podés corregir o completar cualquier dato.
-          </p>
+          {/* Si el título ya lo dice (hay datos dudosos), no se repite. */}
+          {dudosos === 0 && (
+            <p className="flex items-center gap-2 text-sm text-texto-suave">
+              <Lapiz /> Podés corregir o completar cualquier dato.
+            </p>
+          )}
           <div className="chapa relative rounded-3xl border border-white/10 p-5 pt-7 sm:p-6 sm:pt-8">
             {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
               <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
