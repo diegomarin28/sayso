@@ -218,6 +218,11 @@ def conector_lightning():
         caja((0.06, 0.25, 0.02), (x, -0.1, 0.21), "contactos")
     for x in (-0.6, 0.6):
         caja((0.3, 0.5, 0.08), (x, 0, 0.06), "metal")
+    # Tramo de flex hacia adentro (+Y), como el USB-C: se lee como "el puerto de carga" aunque se vea chico.
+    caja((0.62, 0.95, 0.02), (0, 0.8, 0.012), "cobre")
+    caja((0.66, 0.3, 0.06), (0, 1.15, 0.04), "pcb", bisel=0.01)
+    for x in (-0.2, -0.07, 0.07, 0.2):
+        caja((0.07, 0.2, 0.008), (x, 1.15, 0.075), "contactos")
 
 
 @pieza("placa_tcon", "televisor monitor imac", "#34695b", 0.15)

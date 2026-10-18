@@ -709,22 +709,24 @@ def soporte():
 # ---------- Piezas de celular (boca arriba, la parte de abajo del equipo hacia -Y) ----------
 
 def pantalla():
-    """Módulo de pantalla: vidrio con esquinas redondeadas sobre el panel, chapa trasera, flex con conector
-    y el agujero de la cámara frontal. Sirve también para la pantalla de una notebook (se estira)."""
+    """Módulo de pantalla visto desde ADENTRO (como se lo ve con el celular abierto por atrás): vidrio
+    abajo, panel, chapa trasera con lámina de grafito y el flex que sale por el borde de abajo, se dobla
+    sobre la chapa y termina en su conector. Así se lee como una capa distinta de la batería y la placa.
+    Sirve para celular, tablet y la pantalla trasera de una cámara (se estira)."""
     W, D, R = 7.2, 15.6, 0.9
-    caja((0.9, 0.45, 0.1), (0, -D / 2 + 2.6, 0.05), "plastico", bisel=0.02)
-    caja((0.7, 0.3, 0.01), (0, -D / 2 + 2.6, 0.105), "contactos")
-    caja((1.6, 2.2, 0.02), (0, -D / 2 + 1.6, 0.11), "plastico")
-    prisma(redondeado(W - 0.3, D - 0.4, R - 0.15, 8), 0.04, (0, 0, 0.14), "metal")
-    prisma(redondeado(W - 0.06, D - 0.06, R - 0.03, 8), 0.12, (0, 0, 0.22))
-    prisma(redondeado(W, D, R, 8), 0.07, (0, 0, 0.315), "vidrio", bisel=0.025)
-    cilindro(0.17, 0.012, (0, D / 2 - 0.65, 0.355), "goma", seg=24)
-    aro = cilindro(0.21, 0.008, (0, D / 2 - 0.65, 0.354), "metal", seg=24)
-    restar(aro, cilindro(0.17, 0.1, (0, D / 2 - 0.65, 0.354), mat=None, seg=24))
-    # Receptor frontal y puntos de anclaje: sin contenido de pantalla ficticio.
-    caja((0.85, 0.08, 0.012), (0, D / 2 - 0.3, 0.36), "metal", bisel=0.03)
-    for x in (-0.3, -0.15, 0, 0.15, 0.3):
-        caja((0.06, 0.06, 0.008), (x, D / 2 - 0.3, 0.37), "goma")
+    prisma(redondeado(W, D, R, 8), 0.07, (0, 0, 0.035), "vidrio", bisel=0.025)
+    prisma(redondeado(W - 0.06, D - 0.06, R - 0.03, 8), 0.12, (0, 0, 0.13))
+    prisma(redondeado(W - 0.3, D - 0.4, R - 0.15, 8), 0.04, (0, 0, 0.21), "metal")
+    caja((W - 1.6, D - 4.6, 0.008), (0, 0.7, 0.234), "goma")  # lámina de grafito
+    # Flex: sale por el borde de abajo (-Y), se dobla y corre sobre la chapa hasta el conector.
+    caja((1.6, 0.22, 0.24), (0, -D / 2 + 0.08, 0.12), "cobre", bisel=0.05)
+    caja((1.6, 2.6, 0.02), (0, -D / 2 + 1.4, 0.245), "cobre")
+    caja((1.0, 0.5, 0.1), (0, -D / 2 + 2.7, 0.29), "plastico", bisel=0.02)
+    caja((0.8, 0.32, 0.01), (0, -D / 2 + 2.7, 0.345), "contactos")
+    # Cámara frontal: el hueco del panel se ve como un aro en la chapa.
+    aro = cilindro(0.3, 0.012, (0, D / 2 - 0.7, 0.236), "metal", seg=24)
+    restar(aro, cilindro(0.2, 0.1, (0, D / 2 - 0.7, 0.236), mat=None, seg=24))
+    cilindro(0.2, 0.006, (0, D / 2 - 0.7, 0.233), "optica", seg=24)
     return armar("pantalla")
 
 
@@ -822,7 +824,9 @@ def camara_modulo():
 
 
 def conector_usb_c():
-    """Conector de carga USB-C: carcasa ovalada con la boca hacia -Y, lengüeta con contactos y alas para atornillar."""
+    """Puerto de carga USB-C con su tramo de flex: carcasa ovalada con la boca hacia -Y, lengüeta con
+    contactos, alas para atornillar y el flex de cobre hacia adentro con su refuerzo. El flex hace que se
+    lea como "el puerto de carga" aunque se vea chico."""
     carcasa = caja((0.9, 0.75, 0.32), (0, 0, 0.16), bisel=0.15, seg=4)
     restar(carcasa, caja((0.8, 0.8, 0.22), (0, -0.2, 0.16), mat=None))
     caja((0.66, 0.5, 0.07), (0, -0.05, 0.16), "plastico")
@@ -832,16 +836,33 @@ def conector_usb_c():
         ala = caja((0.3, 0.32, 0.03), (sx * 0.6, 0.12, 0.015), "metal")
         restar(ala, cilindro(0.06, 0.2, (sx * 0.62, 0.12, 0.015), mat=None, seg=12))
     caja((0.7, 0.12, 0.03), (0, 0.42, 0.015), "metal")
+    flex_de_carga(0.48)
     return armar("conector@usb_c")
 
 
+def flex_de_carga(desde):
+    """Tramo de flex de un puerto de carga, hacia adentro (+Y): cinta de cobre, refuerzo y contactos."""
+    caja((0.62, 0.95, 0.02), (0, desde + 0.47, 0.012), "cobre")
+    caja((0.66, 0.3, 0.06), (0, desde + 0.82, 0.04), "pcb", bisel=0.01)
+    for x in (-0.2, -0.07, 0.07, 0.2):
+        caja((0.07, 0.2, 0.008), (x, desde + 0.82, 0.075), "contactos")
+
+
 def parlante_celular():
-    """Parlante de celular: caja de plástico con la salida de sonido hacia -Y, rejilla y contactos de resorte."""
-    prisma(redondeado(1.8, 1.0, 0.15), 0.35, (0, 0, 0.175), bisel=0.03)
-    caja((1.2, 0.06, 0.14), (0, -0.52, 0.18), "metal")
-    caja((0.9, 0.5, 0.004), (-0.2, 0.05, 0.352), "etiqueta")
-    for x in (0.55, 0.75):
-        caja((0.12, 0.25, 0.06), (x, 0.25, 0.38), "contactos", bisel=0.01)
+    """Parlante de celular: módulo con la salida de sonido hacia -Y, rejilla ranurada arriba, junta de goma,
+    contactos de resorte y orejas para atornillar. La rejilla lo distingue de un chip o de una batería."""
+    W, D = 2.0, 1.2
+    prisma(redondeado(W, D, 0.18), 0.36, (0, 0, 0.18), bisel=0.04)
+    caja((1.3, 0.16, 0.18), (0, -D / 2 - 0.05, 0.18), "metal", bisel=0.03)  # boca de salida
+    caja((1.1, 0.06, 0.1), (0, -D / 2 - 0.12, 0.18), "goma")
+    rejilla = prisma(redondeado(W - 0.5, D - 0.4, 0.1), 0.03, (-0.15, 0, 0.375), "metal")
+    restar(rejilla, varios([("caja", (W - 0.75, 0.05, 0.1), (-0.15, -0.25 + k * 0.1, 0.375)) for k in range(6)]))
+    caja((W - 0.75, D - 0.55, 0.004), (-0.15, 0, 0.362), "ranura")
+    for x in (0.62, 0.8):
+        caja((0.12, 0.28, 0.08), (x, 0.25, 0.4), "contactos", bisel=0.01)
+    for sx in (-1, 1):
+        oreja = caja((0.3, 0.34, 0.04), (sx * (W / 2 + 0.1), 0.2, 0.02), "metal")
+        restar(oreja, cilindro(0.065, 0.2, (sx * (W / 2 + 0.12), 0.2, 0.02), mat=None, seg=12))
     return armar("parlante@celular", EQUIPOS_CELULAR)
 
 
