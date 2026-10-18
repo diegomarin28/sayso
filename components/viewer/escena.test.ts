@@ -402,6 +402,18 @@ describe("resaltado de una pieza grande (#231: no rellenar todo de celeste)", ()
     });
   }
 
+  // Dos variantes: el panel frontal (tapado por la tapa trasera) y la tapa trasera (tapada por el panel).
+  for (const [plano, grande, otra] of [
+    [planoTablet, "pantalla", "tapa_trasera"],
+    [planoCelular, "tapa_trasera", "pantalla"],
+  ] as const) {
+    it(`resaltado ${grande}, la otra pieza grande (${otra}) pasa a fantasma: no la tapa`, () => {
+      const escena = resaltar(plano, grande);
+      expect(escena.nodos.get(otra)!.grande).toBe(true);
+      expect(mat(escena, otra).opacity).toBeLessThan(0.6);
+    });
+  }
+
   it("una pieza chica (la batería) sigue sólida y lo demás pasa a fantasma, como antes", () => {
     const escena = resaltar(planoTablet, "bateria");
     expect(escena.nodos.get("bateria")!.grande).toBe(false);

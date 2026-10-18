@@ -341,8 +341,9 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
 
     // Rayos X: si hay piezas activas, lo que no es activo ni hijo de activo queda fantasma.
     const esActiva = activos.has(id);
-    // Si lo resaltado es solo una pieza grande (el panel, la carcasa), lo de adentro sigue a la vista (#231).
-    const esFantasma = activos.size > 0 && !soloGrandes && !esActiva && !a.ancestros.some((p) => activos.has(p));
+    // Si lo resaltado es solo una pieza grande (el panel, la carcasa), lo de adentro sigue a la vista (#231);
+    // las otras grandes sí pasan a fantasma: la tapa trasera sólida taparía el panel frontal resaltado.
+    const esFantasma = activos.size > 0 && (!soloGrandes || a.grande) && !esActiva && !a.ancestros.some((p) => activos.has(p));
     const [foco] = seguir(a.tw.foco, [esActiva ? 1 : 0], ahora, DURACION.foco);
     const [fantasma] = seguir(a.tw.fantasma, [esFantasma ? 1 : 0], ahora, DURACION.foco);
     const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido);
