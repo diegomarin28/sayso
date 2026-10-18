@@ -1,8 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { COMPATIBILIDAD, textoEnvio, textoTotal } from "../../components/compras/textos";
-import type { EnviarMensaje } from "../ia/claude";
+import { PRECIOS, type EnviarMensaje } from "../ia/claude";
 import { buscarOpciones } from "./agente";
+import { COMPRAS, PEOR_PEDIDO_TOKENS } from "./config";
 import { costoDe } from "./costo";
 import type { Propuesta } from "./esquemas";
 import { claveUrl, elegirOpciones, montoVisto, recolectarEvidencia } from "./verificar";
@@ -126,6 +127,33 @@ describe("verificar", () => {
 
 const uso = (u: Partial<Anthropic.Usage>): Pick<Anthropic.Message, "usage"> => ({
   usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: null, cache_read_input_tokens: null, server_tool_use: null, ...u } as Anthropic.Usage,
+});
+
+describe("costo de una búsqueda (sin IA: con usos simulados)", () => {
+  it("el peor pedido posible queda debajo de la tarifa larga de Haiku (100K tokens)", () => {
+    const largo = PRECIOS[COMPRAS.modelo].largo!;
+    expect(PEOR_PEDIDO_TOKENS).toBeLessThan(largo.desde);
+  });
+
+  it("la búsqueda real del conector (166K tokens, 4 búsquedas) costaba US$ 0,13; con los topes nuevos, el peor caso es menos de la mitad", () => {
+    const real = costoDe([uso({ input_tokens: 166_250, output_tokens: 2_854, server_tool_use: { web_search_requests: 4, web_fetch_requests: 3 } })]);
+    expect(real.usd).toBeCloseTo(0.13, 2);
+    const peor = costoDe([uso({ input_tokens: PEOR_PEDIDO_TOKENS, output_tokens: COMPRAS.maxTokens, server_tool_use: { web_search_requests: COMPRAS.busquedas, web_fetch_requests: COMPRAS.lecturas } })]);
+    expect(peor.usd).toBeLessThan(real.usd / 2);
+    expect(peor.usd).toBeLessThan(0.05);
+  });
+
+  it("el agente pide las herramientas con esos topes", async () => {
+    const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const enviar: EnviarMensaje = async (p) => {
+      pedidos.push(structuredClone(p));
+      return mensaje([texto(JSON.stringify({ cotizacion: null, candidatos: [] }))]);
+    };
+    await buscarOpciones(PEDIDO, { enviar });
+    const tools = pedidos[0].tools as Array<{ name: string; max_uses?: number; max_content_tokens?: number }>;
+    expect(tools.find((t) => t.name === "web_search")!.max_uses).toBe(COMPRAS.busquedas);
+    expect(tools.find((t) => t.name === "web_fetch")).toMatchObject({ max_uses: COMPRAS.lecturas, max_content_tokens: COMPRAS.tokensPorPagina });
+  });
 });
 
 describe("costo", () => {

@@ -1,5 +1,5 @@
 /**
- * Prueba real del agente de compras. Llama a Claude de verdad (búsqueda y lectura web, ~0,05 USD).
+ * Prueba real del agente de compras. Llama a Claude de verdad (búsqueda y lectura web, ~0,04 USD).
  *
  *   npx tsx --env-file=.env.local lib/compras/probar.ts "ventilador" "5F10S13875" "ThinkPad E14 Gen 2" "Lenovo"
  */
