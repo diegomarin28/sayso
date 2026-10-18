@@ -5,6 +5,9 @@ Hackatón Build 101 (17–18 oct 2026). Guía de reparación con IA: captura gui
 **Agentes (Claude Code / Codex): empezá por `CONTEXT.md`.**
 
 ## Arrancar
+
+Hace falta **Node 22 o más nuevo** (`.nvmrc`; con nvm: `nvm use`). Con Node 20 fallan `@supabase/supabase-js` en los scripts y algunos tests de `lib/knowledge`.
+
 ```bash
 npm install
 cp .env.example .env.local   # completar claves
