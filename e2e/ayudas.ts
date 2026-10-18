@@ -205,8 +205,11 @@ export function escucharConsola(page: Page, libreta: Libreta) {
  * - texto cortado dentro de su caja (observación).
  */
 export async function revisarPantalla(page: Page, libreta: Libreta) {
-  const r = await page.evaluate(() => {
-    const vw = window.innerWidth;
+  // El ancho del celular, no `innerWidth`: en celular, si algo es más ancho que la pantalla, el
+  // navegador agranda la página entera (innerWidth crece) y el desborde no se vería.
+  const anchoCelular = page.viewportSize()?.width ?? 0;
+  const r = await page.evaluate((anchoCelular) => {
+    const vw = anchoCelular || window.innerWidth;
     const nombreDe = (el: Element) =>
       (el.getAttribute("aria-label") || el.textContent || el.getAttribute("placeholder") || el.tagName)
         .replace(/\s+/g, " ")
@@ -258,14 +261,14 @@ export async function revisarPantalla(page: Page, libreta: Libreta) {
     const girar = document.querySelector(".solo-vertical");
     return {
       vw,
-      desborde: document.documentElement.scrollWidth - vw,
+      desborde: Math.max(document.documentElement.scrollWidth, window.innerWidth) - vw,
       fuera,
       deslizar,
       chicos,
       cortados,
       cartelGirar: !!girar && getComputedStyle(girar).display !== "none",
     };
-  });
+  }, anchoCelular);
   if (r.desborde > 1) libreta.anotar("problema", `Scroll horizontal: la página mide ${r.desborde}px más que la pantalla (${r.vw}px)`);
   for (const f of r.fuera) libreta.anotar("problema", `Se sale de la pantalla: ${f}`);
   for (const f of r.deslizar) libreta.anotar("observación", `Hay que deslizar de costado para verlo: ${f}`);
