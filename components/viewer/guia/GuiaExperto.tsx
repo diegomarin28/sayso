@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
-import { ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
+import { BotonConversacion, BotonIcono, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
@@ -342,22 +342,18 @@ export function GuiaExperto({
             )}
           </div>
         </div>
+
+        {/* Junto al campo de pregunta, sobre el 3D: la charla (con el número de preguntas) y la transparencia (#95). */}
+        <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
+          <BotonConversacion mensajes={mensajes} />
+          <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
+            <Libro size={20} />
+          </BotonIcono>
+        </div>
       </div>
 
-      <FilaSugerencias
-        sugerencias={ocupado ? [] : sugerencias}
-        mensajes={mensajes}
-        onPreguntar={(t) => void preguntar(t)}
-        extra={
-          <button
-            type="button"
-            onClick={() => setTransparenciaAbierta(true)}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-borde px-3 text-sm font-medium whitespace-nowrap text-texto"
-          >
-            <Libro size={16} /> ¿De dónde sale esto?
-          </button>
-        }
-      />
+      {/* Las sugerencias, solo cuando no hay un paso a la vista: durante la guía el 3D necesita el lugar. */}
+      <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
 
       <form
         className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
@@ -369,7 +365,8 @@ export function GuiaExperto({
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder={estado === "bloqueado" ? "Preguntá otra cosa…" : "Preguntale al experto…"}
+          // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
+          placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
           aria-label="Pregunta para el experto"
           className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-superficie px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
         />
