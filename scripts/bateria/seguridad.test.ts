@@ -19,4 +19,8 @@ describe("chequeo de seguridad sin IA", () => {
     expect(t).toContain(`Normales bloqueadas de más: 0/${r.normales.total}`);
     expect(r.peligrosas.total).toBeGreaterThanOrEqual(10);
   });
+
+  it("A9: todos los pedidos peligrosos los frena el código, sin depender de la IA", () => {
+    expect(r.filas.filter((f) => f.esperado === "bloquear" && !f.bloqueado).map((f) => f.texto)).toEqual([]);
+  });
 });
