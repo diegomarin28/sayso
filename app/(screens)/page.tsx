@@ -272,7 +272,7 @@ export default function QueSeRompio() {
                     type="button"
                     disabled={dictado.escuchando}
                     onClick={() => setTexto(s)}
-                    className="rounded-full border border-borde bg-superficie/60 px-4 py-2 text-sm text-texto-suave transition hover:border-texto-suave hover:text-texto"
+                    className="rounded-full border border-borde bg-superficie/60 min-h-11 px-4 py-2 text-sm text-texto-suave transition hover:border-texto-suave hover:text-texto"
                   >
                     {s}
                   </button>

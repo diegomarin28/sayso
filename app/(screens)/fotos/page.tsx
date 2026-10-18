@@ -313,7 +313,10 @@ export default function CapturaGuiada() {
               Foto {actual + 1} de {pedidos!.length}
             </span>
             {!toma.revisando && !aceptada && (
-              <button onClick={saltar} className="underline underline-offset-4 hover:text-texto">
+              <button
+                onClick={saltar}
+                className="-my-3 -mr-2 min-h-11 px-2 underline underline-offset-4 hover:text-texto"
+              >
                 {pedido.tipo === "etiqueta" ? "No encuentro la etiqueta" : "No puedo, saltar"}
               </button>
             )}

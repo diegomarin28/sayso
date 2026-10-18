@@ -74,7 +74,7 @@ export function DeDondeSale({ datos, onCerrar }: { datos: DatosTransparencia; on
       <div className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-4 border-b border-borde px-5 py-4">
           <p className="font-semibold">¿De dónde sale esto?</p>
-          <button type="button" onClick={onCerrar} className="h-10 rounded-full border border-borde px-4 text-sm">
+          <button type="button" onClick={onCerrar} className="h-11 rounded-full border border-borde px-4 text-sm">
             Cerrar
           </button>
         </div>

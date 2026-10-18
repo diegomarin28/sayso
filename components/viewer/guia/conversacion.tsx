@@ -54,7 +54,8 @@ export function TarjetaPaso({
               : "El experto dice"}
         </p>
         {total > 1 && (
-          <div className="flex items-center gap-1.5" role="group" aria-label="Pasos">
+          // El punto se ve chico, pero se toca en 44 px de alto: el botón es más grande que el punto.
+          <div className="-my-4 -mr-1 flex items-center" role="group" aria-label="Pasos">
             {Array.from({ length: total }, (_, i) => (
               <button
                 key={i}
@@ -62,10 +63,15 @@ export function TarjetaPaso({
                 onClick={() => onElegir(i)}
                 aria-label={`Ver el paso ${i + 1}`}
                 aria-current={i === indice}
-                className={`h-2.5 cursor-pointer rounded-full transition-all hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/60"}`}
-              />
+                className="group flex h-11 cursor-pointer items-center px-1"
+              >
+                <span
+                  aria-hidden
+                  className={`block h-2.5 rounded-full transition-all group-hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/60"}`}
+                />
+              </button>
             ))}
-            {!completa && <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
+            {!completa && <span className="mx-1 h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
           </div>
         )}
       </div>
@@ -122,10 +128,13 @@ export function ControlesGuia({
   onSiguiente: () => void;
   onModo: (auto: boolean) => void;
 }) {
-  const boton = "flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30";
+  // Hasta 400 px (iPhone SE, 320) todo más apretado y "Auto" en vez de "Automático": si no, la fila
+  // mide ~355 px, se sale de la tarjeta y corre la pantalla de costado.
+  const boton =
+    "flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30 max-[400px]:px-2.5";
   const auto = c.modo === "auto";
   return (
-    <div className="mt-3 flex items-center gap-2" role="group" aria-label="Controles de la guía">
+    <div className="mt-3 flex items-center gap-2 max-[400px]:gap-1.5" role="group" aria-label="Controles de la guía">
       <button type="button" onClick={onAnterior} disabled={!c.hayAnterior} aria-label="Paso anterior" className={`${boton} border-borde bg-superficie text-texto`}>
         <Anterior size={18} />
       </button>
@@ -145,9 +154,9 @@ export function ControlesGuia({
         aria-label="Paso siguiente"
         className={`${boton} flex-1 ${c.esperando && !c.pausado ? "border-acento bg-acento text-fondo" : "border-borde bg-superficie text-texto"}`}
       >
-        Siguiente <Siguiente size={18} />
+        Siguiente <Siguiente size={18} className="max-[360px]:hidden" />
       </button>
-      <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs text-texto-suave select-none">
+      <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs text-texto-suave select-none max-[400px]:gap-1">
         <input type="checkbox" checked={auto} onChange={(e) => onModo(e.target.checked)} className="peer sr-only" />
         <span
           aria-hidden
@@ -155,7 +164,8 @@ export function ControlesGuia({
         >
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-texto transition-all ${auto ? "left-[18px]" : "left-0.5"}`} />
         </span>
-        Automático
+        <span className="max-[400px]:hidden">Automático</span>
+        <span className="hidden max-[400px]:inline">Auto</span>
       </label>
     </div>
   );
@@ -222,12 +232,13 @@ export function FilaSugerencias({
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
   return (
     <>
-      <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 [scrollbar-width:none]">
+      {/* Se desliza de costado: el borde derecho se funde para que se note que hay más preguntas. */}
+      <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
         {mensajes.length > 0 && (
           <button
             type="button"
             onClick={() => setAbierta(true)}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-acento/60 bg-acento/10 px-3 text-sm font-medium text-texto"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-acento/60 bg-acento/10 px-3 text-sm font-medium text-texto"
           >
             <Globo /> Conversación{preguntas > 0 ? ` (${preguntas})` : ""}
           </button>
@@ -238,7 +249,7 @@ export function FilaSugerencias({
             key={s}
             type="button"
             onClick={() => onPreguntar(s)}
-            className="h-9 shrink-0 rounded-full border border-borde px-3 text-sm whitespace-nowrap text-texto-suave transition hover:border-texto-suave hover:text-texto"
+            className="h-11 shrink-0 rounded-full border border-borde px-3 text-sm whitespace-nowrap text-texto-suave transition hover:border-texto-suave hover:text-texto"
           >
             {s}
           </button>
@@ -262,7 +273,7 @@ export function FilaSugerencias({
               <button
                 type="button"
                 onClick={() => setAbierta(false)}
-                className="h-10 rounded-full border border-borde px-4 text-sm"
+                className="h-11 rounded-full border border-borde px-4 text-sm"
               >
                 Cerrar
               </button>

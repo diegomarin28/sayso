@@ -352,7 +352,7 @@ export function GuiaExperto({
           <button
             type="button"
             onClick={() => setTransparenciaAbierta(true)}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-borde px-3 text-sm font-medium whitespace-nowrap text-texto"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde px-3 text-sm font-medium whitespace-nowrap text-texto"
           >
             <Libro size={16} /> ¿De dónde sale esto?
           </button>
@@ -369,7 +369,8 @@ export function GuiaExperto({
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder={estado === "bloqueado" ? "Preguntá otra cosa…" : "Preguntale al experto…"}
+          // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
+          placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
           aria-label="Pregunta para el experto"
           className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-superficie px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
         />
