@@ -11,7 +11,7 @@ import { citaDesde } from "../knowledge/lineas";
 import { repoManuales } from "../knowledge/manuales";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { paginaOriginal, paginasDelArchivo } from "../knowledge/extracto";
-import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, manualGuardado, urlsDeFuente, type DepsConsulta, type FuenteConsulta } from "./consulta";
+import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, manualGuardado, urlsDeFuente, type DepsConsulta, type FuenteConsulta } from "../knowledge/consulta";
 import { Segmentador, type Segmento } from "./segmentos";
 
 /**
@@ -100,7 +100,7 @@ const alcance = (primera: boolean) => (primera ? GUIA_DESDE_FUENTE : SEGUIMIENTO
 
 /** Lectura de la fuente armada para la pregunta (manual oficial o guía pública). */
 function reglasConsulta(piezas: string[], oficial: boolean, primera = false): string {
-  const fuente = oficial ? "el manual de servicio oficial adjunto (las partes que importan para esta pregunta)" : "la guía pública adjunta (de iFixit, no es del fabricante)";
+  const fuente = oficial ? "el manual oficial adjunto (las partes que importan para esta pregunta)" : "la guía pública adjunta (de iFixit, no es del fabricante)";
   return `${COMUNES}
 ${alcance(primera)}
 Basate en ${fuente} y citalo en cada frase. Si ahí NO está lo que pregunta (por ejemplo, no tiene el procedimiento de esa pieza), respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
@@ -141,7 +141,7 @@ export function pideProcedimiento(pregunta: string): boolean {
 function reglasManual(piezas: string[], primera = false): string {
   return `${COMUNES}
 ${alcance(primera)}
-Basate en el manual de servicio adjunto y citalo. Si ahí NO está lo que pregunta, respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
+Basate en el manual oficial adjunto y citalo. Si ahí NO está lo que pregunta, respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
 ${marcas3D(piezas)}`;
 }
 

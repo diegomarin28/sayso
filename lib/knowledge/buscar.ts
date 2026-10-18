@@ -5,7 +5,7 @@ import { descargarPdf, tituloDelPdf, type Fetch, type Pdf } from "./descargar";
 import { leerPaginaWeb, pareceIndice, type PaginaWeb } from "./manualweb";
 
 /**
- * Bibliotecario: agente con herramientas que busca el manual de servicio del modelo.
+ * Bibliotecario: agente con herramientas que busca el manual oficial del modelo (de servicio o, si no hay, de usuario).
  * - web_search / web_fetch (de la API) para encontrar y abrir páginas.
  * - probar_pdf (nuestra): el CÓDIGO baja la URL y verifica que sea un PDF real.
  * - probar_manual_web (nuestra): el CÓDIGO baja la URL y verifica que sea el índice de un manual
@@ -31,20 +31,22 @@ export type ManualEncontrado = { url: string; titulo: string; fuente: z.infer<ty
   | { formato: "web"; indice: PaginaWeb }
 );
 
-const SYSTEM_BUSCAR = `Sos el bibliotecario de un servicio de reparación. Tu tarea: conseguir el manual de SERVICIO o de REPARACIÓN del equipo indicado (en PDF o como páginas web oficiales)
-(notebooks: "Hardware Maintenance Manual" en Lenovo, "Service Manual" en Dell, "Maintenance and Service Guide" en HP; celulares: "Repair Manual" o "Self Service Repair" en Apple, "Service Manual" en otras marcas;
-electrodomésticos —heladeras, lavarropas, aires, microondas—: "Service Manual", "Technical Service Manual" o "Manual de servicio técnico"; en cualquier otra marca o equipo, su equivalente).
+const SYSTEM_BUSCAR = `Sos el bibliotecario de un servicio de reparación. Tu tarea: conseguir el manual de SERVICIO o de REPARACIÓN del equipo indicado (en PDF o como páginas web oficiales).
+Según el fabricante se llama "Service Manual", "Hardware Maintenance Manual", "Maintenance and Service Guide", "Repair Manual", "Self Service Repair", "Technical Service Manual" o "Manual de servicio técnico" (u otro nombre equivalente).
 Cómo trabajar:
 1. Buscá con web_search. Probá variantes: "<modelo> hardware maintenance manual pdf", "<modelo> service manual filetype:pdf", y con site: en el dominio de descargas del fabricante.
 2. Si encontrás una página de soporte o de documentos, abrila con web_fetch y buscá el enlace directo al .pdf.
    Nunca abras un PDF con web_fetch (es carísimo y no hace falta leerlo): los enlaces a PDF se prueban con probar_pdf.
 3. Probá cada enlace candidato con probar_pdf. Solo vale un enlace que probar_pdf confirme como PDF.
    Algunos fabricantes publican el manual de reparación oficial como PÁGINAS WEB, con un índice y una página por sección, sin PDF
-   (por ejemplo Apple, para iPhone 12 y posteriores: "<modelo> Repair Manual" en support.apple.com, del programa Self Service Repair).
+   (suele llamarse "<modelo> Repair Manual" o "Self Service Repair", en el sitio de soporte del fabricante).
    Para esos, probá la página del índice con probar_manual_web y respondé con "formato":"web". Un manual oficial del fabricante, aunque sea web, va antes que una guía de terceros.
 4. Preferí el sitio del fabricante; después iFixit; después otros. Un manual que cubre varios modelos hermanos (ej. "E14 Gen 2 / E15 Gen 2") vale si nombra el modelo.
 5. Si no aparece el del modelo exacto, buscá el de su SERIE o LÍNEA: en televisores y electrodomésticos los manuales de servicio suelen ser por serie o por chasis
    (ej. "<marca> <serie> service manual", "<marca> <modelo> chassis"), y valen para todos los modelos de esa serie. Usalo antes de rendirte.
+6. Si no hay manual de servicio del modelo ni de su serie, aceptá el manual de USUARIO oficial del fabricante ("User Manual", "User Guide",
+   "Owner's Manual", "Guía del usuario", "Manual de usuario") del modelo, en PDF o web, si trae mantenimiento, limpieza o solución de problemas:
+   tiene procedimientos citables que una guía de terceros no tiene. Un manual de servicio siempre va antes que uno de usuario.
 Cuando termines, respondé SOLO con JSON, sin texto alrededor:
 {"encontrado":true,"url":"<la URL que probar_pdf o probar_manual_web confirmó>","titulo":"<título del manual>","fuente":"fabricante|ifixit|otro","formato":"pdf|web"}
 o {"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null} si no lo conseguiste.
