@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PlanoDePiezas,
   coreografiaEjemplo,
@@ -94,6 +94,7 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
 
   return (
     <main className="flex min-h-screen flex-col bg-black text-neutral-100 md:flex-row">
+      <Medidor efectos={efectosActivos} />
       <Visor
         className="h-[60vh] w-full md:h-screen md:flex-1"
         plano={plano}
@@ -176,6 +177,43 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
         </Seccion>
       </aside>
     </main>
+  );
+}
+
+/**
+ * Para medir en un celular de verdad (la placa de video de la Mac no se puede frenar): cuadros por
+ * segundo del último segundo y el peor desde que abrió, la densidad del lienzo (baja a 1 si el visor no
+ * llega a 30 fps) y si siguen los efectos (se apagan primero). No tapa los toques.
+ */
+const SEGUNDOS_DE_CARGA = 2;
+
+function Medidor({ efectos }: { efectos: boolean }) {
+  const [m, setM] = useState({ fps: 0, peor: 0, densidad: 0 });
+  useEffect(() => {
+    let cuadros = 0;
+    let segundos = 0;
+    let desde = performance.now();
+    let peor = 0;
+    let id = requestAnimationFrame(function cuadro(t) {
+      cuadros++;
+      if (t - desde >= 1000) {
+        const fps = Math.round((cuadros * 1000) / (t - desde));
+        // Los primeros segundos (mientras carga) no cuentan para el peor.
+        if (++segundos > SEGUNDOS_DE_CARGA) peor = peor ? Math.min(peor, fps) : fps;
+        const lienzo = document.querySelector("canvas");
+        const densidad = lienzo ? +(lienzo.width / Math.max(lienzo.getBoundingClientRect().width, 1)).toFixed(1) : 0;
+        setM({ fps, peor, densidad });
+        cuadros = 0;
+        desde = t;
+      }
+      id = requestAnimationFrame(cuadro);
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return (
+    <p className="pointer-events-none fixed right-2 top-2 z-50 rounded-md bg-neutral-900/85 px-2 py-1 font-mono text-[11px] text-neutral-100">
+      {m.fps} fps (peor {m.peor}) · densidad {m.densidad} · efectos {efectos ? "sí" : "no"}
+    </p>
   );
 }
 
