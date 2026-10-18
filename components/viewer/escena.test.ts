@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
+import { planoCelular, planoHeladera, planoTablet } from "../../lib/planogenerator/plantillas/equipos";
+import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -369,5 +369,55 @@ describe("separarEtiquetas (#179: varias piezas resaltadas a la vez)", () => {
     expect(separarEtiquetas([r(10, 300), r(250, 300)], lienzo)).toEqual([r(10, 300), r(250, 300)]);
     const [, b] = separarEtiquetas([r(20, 110), r(20, 112)], lienzo, 100);
     expect(b.y).toBeGreaterThanOrEqual(110 + 36);
+  });
+});
+
+describe("resaltado de una pieza grande (#231: no rellenar todo de celeste)", () => {
+  const mat = (escena: ReturnType<typeof prepararEscena>, id: string) => escena.nodos.get(id)!.principal.material as THREE.MeshStandardMaterial;
+  const borde = (escena: ReturnType<typeof prepararEscena>, id: string) => escena.nodos.get(id)!.mallas[0].borde.material;
+  const resaltar = (plano: Parameters<typeof prepararEscena>[0], pieza: string) => {
+    const escena = prepararEscena(plano);
+    const e = con(estadoInicial(escena.nodos.keys()), { t: "resaltar", pieza });
+    animar(escena, e, 0);
+    animar(escena, e, 5000);
+    return escena;
+  };
+
+  // Dos variantes por tipo: el panel frontal de una tablet y la tapa trasera de un celular.
+  for (const [nombre, plano, grande, adentro] of [
+    ["tablet: panel frontal", planoTablet, "pantalla", "bateria"],
+    ["celular: tapa trasera", planoCelular, "tapa_trasera", "bateria"],
+  ] as const) {
+    it(`${nombre}: translúcida con contorno de color, y lo de adentro sigue a la vista`, () => {
+      const escena = resaltar(plano, grande);
+      expect(escena.nodos.get(grande)!.grande).toBe(true);
+      expect(mat(escena, grande).opacity).toBeCloseTo(OPACIDAD_GRANDE_ACTIVA, 2);
+      expect(mat(escena, grande).transparent).toBe(true);
+      expect(borde(escena, grande).color.getHexString()).toBe(new THREE.Color(COLOR_ACTIVO).getHexString());
+      expect(borde(escena, grande).opacity).toBeCloseTo(1, 2);
+      // La batería (adentro) no pasa a fantasma: queda como estaba.
+      const original = prepararEscena(plano);
+      expect(mat(escena, adentro).opacity).toBeCloseTo(mat(original, adentro).opacity, 3);
+      expect(mat(escena, adentro).color.getHexString()).toBe(mat(original, adentro).color.getHexString());
+    });
+  }
+
+  // Dos variantes: el panel frontal (tapado por la tapa trasera) y la tapa trasera (tapada por el panel).
+  for (const [plano, grande, otra] of [
+    [planoTablet, "pantalla", "tapa_trasera"],
+    [planoCelular, "tapa_trasera", "pantalla"],
+  ] as const) {
+    it(`resaltado ${grande}, la otra pieza grande (${otra}) pasa a fantasma: no la tapa`, () => {
+      const escena = resaltar(plano, grande);
+      expect(escena.nodos.get(otra)!.grande).toBe(true);
+      expect(mat(escena, otra).opacity).toBeLessThan(0.6);
+    });
+  }
+
+  it("una pieza chica (la batería) sigue sólida y lo demás pasa a fantasma, como antes", () => {
+    const escena = resaltar(planoTablet, "bateria");
+    expect(escena.nodos.get("bateria")!.grande).toBe(false);
+    expect(mat(escena, "bateria").opacity).toBeCloseTo(1, 3);
+    expect(mat(escena, "placa_madre").opacity).toBeLessThan(0.6);
   });
 });

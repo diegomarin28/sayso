@@ -56,6 +56,13 @@ export function usarColorActivo(color: string) {
   brilloActivo = BRILLO_ACTIVO * Math.min(1, LUMINANCIA_REFERENCIA / Math.max(luminancia(ACTIVO), 1e-3));
 }
 
+/** Una pieza que ocupa al menos esta parte de la planta del equipo es "grande" (ver `NodoAnimable.grande`). */
+export const FRACCION_PIEZA_GRANDE = 0.5;
+/** Resaltada, una pieza grande queda así de translúcida: se ve que es ella y se ve lo de adentro (#231). */
+export const OPACIDAD_GRANDE_ACTIVA = 0.3;
+/** Y brilla menos que una pieza chica: con tanta superficie, el brillo entero lava todo a celeste. */
+const BRILLO_GRANDE = 0.45;
+
 const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
 const ESCALON_DESPIECE_MS = 70;
 
@@ -88,6 +95,11 @@ export type NodoAnimable = {
   despiezado: Vec3;
   /** Tapa, puerta o carcasa: opaca con el equipo cerrado, translúcida cuando se abre. */
   cubierta: boolean;
+  /**
+   * Pieza grande (una cubierta, o que ocupa al menos `FRACCION_PIEZA_GRANDE` de la planta del equipo: el panel
+   * frontal de una tablet, la carcasa trasera): resaltada no se rellena opaca, que taparía todo (#231).
+   */
+  grande: boolean;
   tw: Record<"desp" | "despiece" | "rot" | "visible" | "foco" | "fantasma", Tween>;
 };
 
@@ -137,6 +149,7 @@ export function prepararEscena(
       orden: enOrden.indexOf(id),
       despiezado: despiece.get(id) ?? [0, 0, 0],
       cubierta: ES_CUBIERTA.test(id),
+      grande: false, // se calcula abajo, con la caja del equipo entero
       tw: {
         desp: crearTween([0, 0, 0]),
         despiece: crearTween([0, 0, 0]),
@@ -148,6 +161,14 @@ export function prepararEscena(
     });
   }
   const caja = new THREE.Box3().setFromObject(raiz);
+  const planta = (c: THREE.Box3) => {
+    const [a, b] = c.getSize(new THREE.Vector3()).toArray().sort((x, y) => y - x);
+    return a * b;
+  };
+  const plantaEquipo = planta(caja);
+  for (const a of animables.values()) {
+    a.grande = a.cubierta || (!!a.principal && planta(new THREE.Box3().setFromObject(a.principal)) >= FRACCION_PIEZA_GRANDE * plantaEquipo);
+  }
   const radio = Math.max(caja.getBoundingSphere(new THREE.Sphere()).radius, 1);
   const direccion = direccionDeCamara(caja.getSize(new THREE.Vector3()));
   const cubiertas: Cubiertas = {};
@@ -291,6 +312,7 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     escena.despiece.ultimo = estado.despiece;
   }
   const activos = new Set(piezasResaltadas(estado));
+  const soloGrandes = activos.size > 0 && [...activos].every((id) => escena.nodos.get(id)?.grande);
   const latido = 1 + 0.25 * Math.sin(ahora / 260);
   const [apertura] = seguir(escena.apertura, [estado.abierto ? 1 : 0], ahora, DURACION.fundido);
   const total = escena.nodos.size;
@@ -319,12 +341,14 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
 
     // Rayos X: si hay piezas activas, lo que no es activo ni hijo de activo queda fantasma.
     const esActiva = activos.has(id);
-    const esFantasma = activos.size > 0 && !esActiva && !a.ancestros.some((p) => activos.has(p));
+    // Si lo resaltado es solo una pieza grande (el panel, la carcasa), lo de adentro sigue a la vista (#231);
+    // las otras grandes sí pasan a fantasma: la tapa trasera sólida taparía el panel frontal resaltado.
+    const esFantasma = activos.size > 0 && (!soloGrandes || a.grande) && !esActiva && !a.ancestros.some((p) => activos.has(p));
     const [foco] = seguir(a.tw.foco, [esActiva ? 1 : 0], ahora, DURACION.foco);
     const [fantasma] = seguir(a.tw.fantasma, [esFantasma ? 1 : 0], ahora, DURACION.foco);
     const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido);
 
-    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, a.cubierta ? 1 - apertura : null);
+    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, a.cubierta ? 1 - apertura : null, a.grande);
   }
 }
 
@@ -337,16 +361,25 @@ const BORDE_CUBIERTA_ABIERTA = 0.45;
  * `cerrada`: null si no es una cubierta; si lo es, 1 = equipo cerrado (opaca aunque su receta o su
  * la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
  */
-function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: number, latido: number, cubierta: number | null = null) {
+function pintar(
+  m: MallaAnimable,
+  foco: number,
+  fantasma: number,
+  visible: number,
+  latido: number,
+  cubierta: number | null = null,
+  grande = false,
+) {
   const cerrada = cubierta ?? 0;
   const mat = m.malla.material;
   mat.color.copy(m.color).lerp(FANTASMA, fantasma).lerp(ACTIVO, foco);
   mat.metalness = lerp(m.metalness, 0.1, foco);
   mat.roughness = lerp(m.roughness, 0.45, foco);
-  mat.emissiveIntensity = foco * brilloActivo * latido;
+  mat.emissiveIntensity = foco * brilloActivo * latido * (grande ? BRILLO_GRANDE : 1);
 
+  // Una pieza chica resaltada se ve sólida; una grande, translúcida con contorno: no tapa lo de adentro (#231).
   const base = cubierta === null ? m.opacidad : lerp(Math.min(m.opacidad, OPACIDAD_CUBIERTA_ABIERTA), 1, cerrada);
-  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible;
+  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), grande ? OPACIDAD_GRANDE_ACTIVA : 1, foco) * visible;
   mat.opacity = opacidad;
   const transparente = (m.transparente && cerrada < 0.999) || opacidad < 0.999;
   if (mat.transparent !== transparente) {
@@ -357,11 +390,12 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   m.malla.visible = opacidad > 0.01;
 
   const b = m.borde.material;
-  b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(BORDE_ACTIVO, foco);
+  // El contorno de una pieza grande resaltada va en el color de resaltado pleno: es lo que la marca.
+  b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(grande ? ACTIVO : BORDE_ACTIVO, foco);
   // El punteado se marca un poco más que el borde sólido: es la señal de "no verificado".
   const punteado = m.incierta && !m.cubierta;
   const bordeCubierta = m.cubierta && cubierta !== null ? lerp(BORDE_CUBIERTA_ABIERTA, 1, cerrada) : 1;
-  b.opacity = lerp(lerp(punteado ? 0.45 : 0.22, 0.4, fantasma), punteado ? 0.85 : 0.7, foco) * visible * bordeCubierta;
+  b.opacity = lerp(lerp(punteado ? 0.45 : 0.22, 0.4, fantasma), grande ? 1 : punteado ? 0.85 : 0.7, foco) * visible * (grande ? lerp(bordeCubierta, 1, foco) : bordeCubierta);
   m.borde.visible = b.opacity > 0.01;
 }
 
