@@ -118,6 +118,42 @@ body::before {
 .marca[data-estado="pensando"] .marca-capa-arriba { animation: marca-sube 1.2s ease-in-out infinite; }
 .marca[data-estado="pensando"] .marca-capa-abajo { animation: marca-baja 1.2s ease-in-out infinite; }
 
+/* ---------- Pantalla de carga al abrir la app (pantalla-inicio.tsx) ---------- */
+
+.inicio {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(60% 45% at 30% 30%, rgb(139 107 255 / 0.18), transparent 70%),
+    radial-gradient(55% 45% at 70% 75%, rgb(79 209 224 / 0.12), transparent 70%),
+    var(--fondo);
+  animation: inicio-sale 0.5s ease-in 1.7s forwards;
+}
+@keyframes inicio-sale {
+  to { opacity: 0; visibility: hidden; }
+}
+/* Las capas llegan separadas y se juntan: el celular se arma. */
+@keyframes inicio-arriba {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes inicio-abajo {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes inicio-aparece {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.inicio .marca-capa-abajo { animation: inicio-abajo 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.inicio .marca-capa-medio { animation: inicio-aparece 0.6s ease-out 0.15s both; }
+.inicio .marca-capa-arriba { animation: inicio-arriba 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+.inicio-nombre { animation: inicio-aparece 0.6s ease-out 0.6s both; }
+.inicio-lema { animation: inicio-aparece 0.6s ease-out 0.85s both; }
+
 /* ---------- Texto del experto: aparece palabra por palabra ---------- */
 
 /* Sin filter: blur. En Safari de iPhone el desenfoque animado a veces no termina: deja
@@ -300,6 +336,9 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .marca-capa-arriba, .marca-capa-abajo, .linea-escaneo { animation: none; }
+  .inicio .marca-capa-arriba, .inicio .marca-capa-medio, .inicio .marca-capa-abajo,
+  .inicio-nombre, .inicio-lema { animation: none; }
+  .inicio { animation: inicio-sale 0.3s ease-in 0.8s forwards; }
   body::before, .mic-invita, .mic-grabando { animation: none; }
   .palabra { animation: none; opacity: 1; }
   .aparece { animation: none; }

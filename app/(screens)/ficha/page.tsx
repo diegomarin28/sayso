@@ -11,7 +11,7 @@ import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la etiqueta, cada dato con su estado. */
 
@@ -24,10 +24,16 @@ const CAMPOS: { clave: ClaveCampo; etiqueta: string; ejemplo: string }[] = [
   { clave: "anio", etiqueta: "Año", ejemplo: "Ej.: 2021" },
 ];
 
+/**
+ * Lo que leyó la IA no queda confirmado hasta que la persona lo revisa (puede haber leído mal):
+ * "confirmado" de la IA se muestra como "Leído" y cada dato pide "Correcto" o corregirlo.
+ */
+const REVISADO = { texto: "Revisado por vos", clase: "text-confirmado border-confirmado/40 bg-confirmado/10" };
+
 const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
   confirmado: {
-    texto: "Confirmado",
-    clase: "text-confirmado border-confirmado/40 bg-confirmado/10",
+    texto: "Leído · revisalo",
+    clase: "text-dato border-dato/40 bg-dato/10",
   },
   probable: {
     texto: "Probable",
@@ -50,6 +56,8 @@ export default function FichaDelEquipo() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [faltaModelo, setFaltaModelo] = useState(false);
+  /** Los datos que la persona marcó como correctos (los que corrigió también cuentan como revisados). */
+  const [revisados, setRevisados] = useState<Set<ClaveCampo>>(new Set());
   // El 3D se empieza a bajar ya (#133): con el tipo de equipo alcanza para las formas.
   usePrecargaPiezas(tipoEquipo);
 
@@ -102,8 +110,10 @@ export default function FichaDelEquipo() {
     if (!ficha) return;
     setEnviando(true);
     setError(null);
-    // "Sí, es este" = la persona miró todo lo que está a la vista.
-    const confirmados = CAMPOS.map((c) => c.clave).filter((c) => !(c in correcciones) && ficha[c].valor);
+    // Confirmados = los que la persona marcó como correctos (lo corregido va en `correcciones`).
+    const confirmados = CAMPOS.map((c) => c.clave).filter(
+      (c) => revisados.has(c) && !(c in correcciones) && ficha[c].valor,
+    );
     try {
       const r = await confirmarFicha(ficha, confirmados, correcciones);
       agregarEventos(r.eventos);
@@ -122,7 +132,9 @@ export default function FichaDelEquipo() {
     }
   }
 
-  const dudosos = ficha ? CAMPOS.filter((c) => ficha[c.clave].estado !== "confirmado").length : 0;
+  const revisado = (c: ClaveCampo) => revisados.has(c) || c in correcciones;
+  /** Datos con valor que la persona todavía no revisó: hasta que no los revise, no se sigue. */
+  const sinRevisar = ficha ? CAMPOS.filter((c) => ficha[c.clave].valor && !revisado(c.clave)).length : 0;
   const sinModelo = !!ficha && !ficha.modelo.valor;
   /** De dónde salió lo leído: la etiqueta (o lo que se usó en su lugar) o la foto del equipo. */
   const deDonde = fotoEtiqueta ? "Esto leí en la etiqueta." : "No había etiqueta: esto saqué de la foto del equipo.";
@@ -134,8 +146,8 @@ export default function FichaDelEquipo() {
         ? fotoEtiqueta
           ? "Leyendo la etiqueta…"
           : "Mirando la foto del equipo…"
-        : dudosos > 0
-          ? `${deDonde} Revisalo: podés corregir o completar cualquier dato.`
+        : sinRevisar > 0
+          ? `${deDonde} Revisá cada dato: puedo haber leído mal.`
           : `${deDonde} ¿Es tu equipo?`;
 
   return (
@@ -176,12 +188,6 @@ export default function FichaDelEquipo() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {/* Si el título ya lo dice (hay datos dudosos), no se repite. */}
-          {dudosos === 0 && (
-            <p className="flex items-center gap-2 text-sm text-texto-suave">
-              <Lapiz /> Podés corregir o completar cualquier dato.
-            </p>
-          )}
           {/* Sin modelo (ej. un aire sin etiqueta): dónde más suele estar, para escribirlo. */}
           {sinModelo && (
             <div className="aparece rounded-2xl border border-dato/40 bg-dato/10 p-4 text-sm">
@@ -208,8 +214,9 @@ export default function FichaDelEquipo() {
             <dl className="flex flex-col gap-2">
               {CAMPOS.map(({ clave, etiqueta, ejemplo }) => {
                 const campo = ficha[clave];
-                const estilo = ESTILO_ESTADO[campo.estado];
                 const vacio = !campo.valor;
+                const ok = !vacio && revisado(clave);
+                const estilo = ok ? REVISADO : ESTILO_ESTADO[campo.estado];
                 return (
                   <div key={clave}>
                     <dt className="mb-1 flex items-center justify-between gap-2 text-xs text-texto-suave">
@@ -218,7 +225,7 @@ export default function FichaDelEquipo() {
                         className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${estilo.clase}`}
                       >
                         {estilo.texto}
-                        {campo.fuente === "foto" ? " · por la foto" : ""}
+                        {!ok && campo.fuente === "foto" ? " · por la foto" : ""}
                       </span>
                     </dt>
                     {editando === clave ? (
@@ -252,14 +259,14 @@ export default function FichaDelEquipo() {
                         </div>
                       </form>
                     ) : (
-                      <dd>
+                      <dd className="flex gap-2">
                         <button
                           onClick={() => {
                             setEditando(clave);
                             setBorrador(campo.valor ?? "");
                           }}
                           aria-label={`${vacio ? "Completar" : "Editar"} ${etiqueta}`}
-                          className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition hover:border-texto-suave active:scale-[0.99] ${
+                          className={`flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition hover:border-texto-suave active:scale-[0.99] ${
                             vacio
                               ? "border-dashed border-acento/60 bg-acento/5"
                               : "border-white/10 bg-black/20"
@@ -279,11 +286,23 @@ export default function FichaDelEquipo() {
                               "+ Completar"
                             ) : (
                               <>
-                                <Lapiz /> Editar
+                                {/* Mientras falte revisarlo, solo el lápiz: deja lugar al dato y a "Correcto". */}
+                                <Lapiz /> {ok ? "Editar" : <span className="sr-only">Editar</span>}
                               </>
                             )}
                           </span>
                         </button>
+                        {/* "Correcto": la persona confirma lo que leyó la IA (o lo corrige con Editar). */}
+                        {!vacio && !ok && (
+                          <button
+                            type="button"
+                            onClick={() => setRevisados((r) => new Set(r).add(clave))}
+                            aria-label={`${etiqueta} correcto`}
+                            className="flex min-h-12 shrink-0 items-center gap-1 rounded-xl border border-confirmado/60 bg-confirmado/15 px-2.5 text-sm font-semibold text-confirmado active:scale-95"
+                          >
+                            <Check size={16} /> Correcto
+                          </button>
+                        )}
                       </dd>
                     )}
                   </div>
@@ -296,8 +315,12 @@ export default function FichaDelEquipo() {
 
       {ficha && (
         <BarraAccion>
-          <p className="text-center text-xs text-texto-suave">Lo que escribís vos queda como confirmado.</p>
-          <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
+          <p className="text-center text-xs text-texto-suave">
+            {sinRevisar > 0
+              ? `Tocá «Correcto» en cada dato o corregilo (${sinRevisar} sin revisar).`
+              : "Lo que revisaste o escribiste queda como confirmado."}
+          </p>
+          <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando || sinRevisar > 0}>
             {enviando ? "Guardando…" : "Sí, es este"} <Flecha />
           </BotonPrincipal>
         </BarraAccion>
