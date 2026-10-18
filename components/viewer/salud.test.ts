@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { planoNotebookBase, type BibliotecaPiezas } from "../../lib/planogenerator";
 import { prepararEscena, prepararEscenaSegura } from "./escena";
-import { bajarCalidad, bajarRendimiento, calidadInicial, dprPara, esPlana, puntosVigia, RENDIMIENTO_PLENO, Vigia, type SoporteGL } from "./salud";
+import { bajarCalidad, bajarRendimiento, calidadInicial, dprPara, esPlana, imagenPlana, lineasVigia, RENDIMIENTO_PLENO, Vigia, type SoporteGL } from "./salud";
 
 const iphone: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 4, tactil: true };
 const mac: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 8, tactil: false };
@@ -109,25 +109,67 @@ describe("prepararEscenaSegura", () => {
   });
 });
 
-describe("puntosVigia", () => {
-  it("reparte una grilla de 3×3 por la imagen (no solo el centro) y nunca se sale del lienzo", () => {
-    const puntos = puntosVigia(800, 600, 24);
-    expect(puntos).toHaveLength(9);
-    const xs = new Set(puntos.map(([x]) => x));
-    const ys = new Set(puntos.map(([, y]) => y));
-    expect(xs.size).toBe(3);
-    expect(ys.size).toBe(3);
-    for (const [x, y] of puntos) {
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(x + 24).toBeLessThanOrEqual(800);
-      expect(y + 24).toBeLessThanOrEqual(600);
+describe("lineasVigia e imagenPlana (#238: una TV de frente no es un 3D negro)", () => {
+  it("filas y columnas enteras repartidas por la imagen, sin salirse del lienzo", () => {
+    const t = lineasVigia(800, 600, 9);
+    expect(t).toHaveLength(18);
+    expect(t.filter((x) => x.alto === 1 && x.ancho === 800)).toHaveLength(9);
+    expect(t.filter((x) => x.ancho === 1 && x.alto === 600)).toHaveLength(9);
+    for (const x of t) {
+      expect(x.x + x.ancho).toBeLessThanOrEqual(800);
+      expect(x.y + x.alto).toBeLessThanOrEqual(600);
     }
-    expect(puntos).toContainEqual([388, 288]); // el centro sigue estando
-    expect(puntosVigia(800, 600, 16, 5)).toHaveLength(25);
   });
 
-  it("en un lienzo más chico que el cuadrado, mira desde la esquina", () => {
-    for (const [x, y] of puntosVigia(10, 10, 24)) expect([x, y]).toEqual([0, 0]);
+  /** Imagen de prueba (RGBA, y = 0 abajo como en readPixels) y su lector de tramos. */
+  const imagen = (ancho: number, alto: number, pintar: (x: number, y: number) => [number, number, number, number]) => {
+    const px = new Uint8Array(ancho * alto * 4);
+    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) px.set(pintar(x, y), (y * ancho + x) * 4);
+    const leer = ({ x, y, ancho: w, alto: h }: { x: number; y: number; ancho: number; alto: number }) => {
+      const out = new Uint8Array(w * h * 4);
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.set(px.subarray(((y + j) * ancho + x + i) * 4, ((y + j) * ancho + x + i) * 4 + 4), (j * w + i) * 4);
+      return out;
+    };
+    return { leer, esquina: px.slice(0, 4) };
+  };
+  const FONDO: [number, number, number, number] = [0, 0, 0, 0]; // lienzo transparente
+  const VIDRIO: [number, number, number, number] = [4, 5, 7, 255]; // pantalla apagada, casi negra
+  const BORDE: [number, number, number, number] = [150, 158, 168, 255]; // bisel o contorno de pieza
+
+  /** Un equipo de frente que ocupa casi todo el lienzo: vidrio negro con un borde claro de 2 px (y un pie abajo). */
+  const deFrente = (ancho: number, alto: number, margen: number, pie: boolean) =>
+    imagen(ancho, alto, (x, y) => {
+      const dentro = x >= margen && x < ancho - margen && y >= margen + (pie ? 40 : 0) && y < alto - margen;
+      if (!dentro) return pie && y < margen + 40 && y >= margen && Math.abs(x - ancho / 2) < 30 ? BORDE : FONDO;
+      const borde = x < margen + 2 || x >= ancho - margen - 2 || y < margen + (pie ? 40 : 0) + 2 || y >= alto - margen - 2;
+      return borde ? BORDE : VIDRIO;
+    });
+
+  it("una TV y un monitor de frente (casi todo pantalla negra) NO son un 3D roto", () => {
+    for (const [ancho, alto, margen, pie] of [
+      [390, 500, 6, true], // TV con pie, ocupando casi todo
+      [600, 400, 30, false], // monitor sin pie, con algo de fondo alrededor
+    ] as const) {
+      const { leer, esquina } = deFrente(ancho, alto, margen, pie);
+      expect(imagenPlana(leer, ancho, alto, esquina)).toBe(false);
+    }
+  });
+
+  it("solo el fondo, o todo negro (contexto perdido), SÍ es un 3D roto", () => {
+    const vacia = imagen(390, 500, () => FONDO);
+    expect(imagenPlana(vacia.leer, 390, 500, vacia.esquina)).toBe(true);
+    const negra = imagen(390, 500, () => [0, 0, 0, 255]);
+    expect(imagenPlana(negra.leer, 390, 500, negra.esquina)).toBe(true);
+  });
+
+  it("con la grilla de puntos de antes la TV caía toda en el vidrio negro (el bug)", () => {
+    const { leer, esquina } = deFrente(390, 500, 6, true);
+    // 5×5 cuadraditos de 16 px en el centro de cada celda, como el vigía viejo.
+    const plano = [1, 2, 3, 4, 5].every((i) =>
+      [1, 2, 3, 4, 5].every((j) => esPlana(leer({ x: Math.floor((390 * i) / 6) - 8, y: Math.floor((500 * j) / 6) - 8, ancho: 16, alto: 16 }), esquina)),
+    );
+    // La esquina es fondo transparente (0,0,0,0) y el vidrio (4,5,7) queda dentro del umbral: se veía "plana".
+    expect(plano).toBe(true);
+    expect(imagenPlana(leer, 390, 500, esquina)).toBe(false);
   });
 });
