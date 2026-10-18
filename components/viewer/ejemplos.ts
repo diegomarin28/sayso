@@ -181,6 +181,25 @@ const sinOpcionales = (plano: PlanoDePiezas, tipo: string): PlanoDePiezas => {
   return { ...plano, piezas: plano.piezas.filter((p) => !opcionales.includes(p.pieza)) };
 };
 
+/**
+ * Tablet en la mano (la pantalla hacia la cámara): se abre por adelante. Los pasos solo dicen qué hacer; el
+ * desarme en vivo (`conDesarme`) despega la pantalla y desvanece los tornillos, como en la guía (#233).
+ */
+export const coreografiaTablet: Coreografia[] = [
+  paso(1, "Despegá la pantalla con la púa, de a poco, empezando por un costado.", [
+    { t: "camara", objetivo: "pantalla", zoom: 1.1 },
+    { t: "resaltar", pieza: "pantalla" },
+  ]),
+  paso(2, "Adentro, la batería ocupa casi todo: está pegada, no la dobles.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.2 },
+    { t: "resaltar", pieza: "bateria" },
+  ]),
+  paso(3, "Abajo está el conector de carga.", [
+    { t: "camara", objetivo: "conector_carga", zoom: 1.5 },
+    { t: "resaltar", pieza: "conector_carga" },
+  ]),
+];
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
@@ -198,7 +217,7 @@ export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string
   consola: { plano: sinOpcionales(planoConsola, "consola"), tipoEquipo: "consola de videojuegos" },
   router: { plano: planoRouter, tipoEquipo: "router" },
   cafetera: { plano: planoCafetera, tipoEquipo: "cafetera" },
-  tablet: { plano: planoTablet, tipoEquipo: "tablet" },
+  tablet: { plano: planoTablet, tipoEquipo: "tablet", coreografia: coreografiaTablet },
   auriculares: { plano: planoAuriculares, tipoEquipo: "auriculares" },
   auriculares_vincha: { plano: conRaizVisible(planoAuricularesVincha, raizVisibleVincha), tipoEquipo: "auriculares de vincha" },
   reloj: { plano: planoReloj, tipoEquipo: "reloj inteligente" },

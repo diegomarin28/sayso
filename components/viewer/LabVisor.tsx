@@ -12,6 +12,7 @@ import {
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
 import { EJEMPLOS } from "./ejemplos";
+import { conDesarme } from "./guia/desarme";
 import { CLAVE_PLANO_GUARDADO } from "./lab-guardado";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
@@ -124,7 +125,8 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
     }
   };
   // Copia nueva en cada clic: así el mismo paso se puede reproducir otra vez.
-  const reproducir = (c: Coreografia) => setCoreografia({ ...c });
+  // Como en la guía: un paso que saca una tapa (o despega la pantalla) desarma el modelo (#233).
+  const reproducir = (c: Coreografia) => setCoreografia({ ...conDesarme(c, plano) });
 
   return (
     <main className="flex min-h-screen flex-col bg-black text-neutral-100 md:flex-row">
