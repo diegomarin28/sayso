@@ -1,17 +1,23 @@
-import type { Ficha } from "../../shared";
+import type { Ficha, PlanoDePiezas } from "../../shared";
 import type { EnviarMensaje, LlamarIA } from "../ia/claude";
 import type { Fetch } from "../knowledge/descargar";
 import { claveManual } from "../knowledge/manuales";
-import { cachePlanosEnMemoria, cubrePack, type CachePlanos } from "./cache";
+import { cachePlanosEnMemoria, cubrePack, type CachePlanos, type PlanoGuardado } from "./cache";
 import { ajustarPlanoAlTipo } from "./carcasa";
+import { sumarDelManual } from "./completar";
 import { elegirPlantilla } from "./plantillas/por-tipo";
-import { terminarPlano, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
+import { ES_ESTRUCTURA, terminarPlano, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
 import { paginasRecorte, recortarManual } from "./recorte";
 
 /**
  * Plano para un caso: si ya hay uno guardado para esa marca + modelo que cubre las piezas
  * del pack, se reusa; si no, lo genera el cartógrafo y se guarda (solo si salió de la IA:
  * la plantilla genérica nunca se cachea).
+ * Si el guardado no cubre el pack (otro síntoma nombra otras piezas), no se regenera entero:
+ * - sin manual, la IA solo podría estimar (y lo estimado sigue al esqueleto del tipo): las piezas
+ *   nuevas se suman sin IA, como en `terminarPlano` (esqueleto del tipo o piezas sueltas);
+ * - con manual, la IA ubica solo las que faltan y se suman las que vio en una página (`sumarDelManual`);
+ *   el guardado crece con ellas.
  * Para generarlo, si el bibliotecario encontró la vista interior, la IA lee solo esas páginas
  * (más la vista explosionada) en vez del manual entero. Si el recorte falla, lee el manual entero.
  */
@@ -34,31 +40,69 @@ export async function obtenerPlano(
   const modelo = entrada.ficha?.modelo.valor ?? null;
   const clave = modelo ? claveManual(marca, modelo) : null;
 
+  const kp = entrada.knowledgePack;
+  const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
+  // Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
+  // Y se termina igual que uno nuevo: esqueleto del tipo, medidas con sentido y piezas sueltas (`terminarPlano`).
+  const terminar = (plano: PlanoDePiezas) => terminarPlano(tipo ? ajustarPlanoAlTipo(plano, tipo) : plano, kp, tipo);
+
+  let guardado: PlanoGuardado | null = null;
   if (clave) {
-    const guardado = await cache.get(clave);
-    if (guardado && cubrePack(guardado, entrada.knowledgePack)) {
-      // Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
-      const tipo = elegirPlantilla(entrada.knowledgePack, entrada.tipoEquipo);
-      // Y se termina igual que uno nuevo: esqueleto del tipo, medidas con sentido y piezas sueltas (`terminarPlano`).
-      const { plano, avisos } = terminarPlano(tipo ? ajustarPlanoAlTipo(guardado.plano, tipo) : guardado.plano, entrada.knowledgePack, tipo);
+    guardado = await cache.get(clave);
+    if (guardado && cubrePack(guardado, kp)) {
+      const { plano, avisos } = terminar(guardado.plano);
       return { plano, avisos: [...guardado.avisos, ...avisos], origen: "ia", desdeCache: true, paginasLeidas: null };
     }
   }
+  const pedidas = new Set(guardado?.piezasPedidas ?? []);
+  const faltan = kp.piezas.filter((p) => !pedidas.has(p.id));
+  const conManual = Boolean(entrada.manual || entrada.imagenes?.length);
+  // La base y la tapa no se ubican: si solo faltan esas, tampoco hace falta la IA.
+  if (guardado && (!conManual || faltan.every((p) => ES_ESTRUCTURA.has(p.id)))) {
+    const { plano, avisos } = terminar(guardado.plano);
+    const donde = tipo ? `según el esqueleto de ${tipo.nombre}` : "en el lugar libre más cercano";
+    const aviso = `Plano guardado de este modelo: ${faltan.map((p) => `"${p.id}"`).join(", ")} se suma(n) ${donde}, sin IA.`;
+    return { plano, avisos: [...guardado.avisos, aviso, ...avisos], origen: "ia", desdeCache: true, paginasLeidas: null };
+  }
 
+  // Con un plano guardado y el manual, la IA ubica solo lo que falta.
+  const aGenerar: EntradaObtener = guardado ? { ...entrada, knowledgePack: { ...kp, piezas: faltan } } : entrada;
   const paginas = paginasRecorte(entrada.manual?.paginaVistaInterior, entrada.manual?.paginasVistaExplosionada);
   const recorte = paginas && entrada.manualUrl ? await recortarManual(entrada.manualUrl, paginas, deps.descargar) : null;
   // El título tiene que ser el mismo con que el bibliotecario leyó el manual (sale en las fuentes del pack):
   // es parte del prefijo de la caché de prompts.
-  const titulo = entrada.manual?.titulo ?? entrada.knowledgePack.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
-  const conTitulo = entrada.manual && titulo ? { ...entrada, manual: { ...entrada.manual, titulo } } : entrada;
-  const { plano, avisos, origen, camino, modelo: modeloIA } = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
+  const titulo = entrada.manual?.titulo ?? kp.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
+  const conTitulo = aGenerar.manual && titulo ? { ...aGenerar, manual: { ...aGenerar.manual, titulo } } : aGenerar;
+  const generado = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
+  const { camino, modelo: modeloIA } = generado;
+  const paginasLeidas = recorte && generado.origen === "ia" ? recorte.paginas : null;
+
+  if (guardado) {
+    const { plano: sumado, sumadas } = generado.origen === "ia" ? sumarDelManual(guardado.plano, generado.plano, faltan.map((p) => p.id)) : { plano: guardado.plano, sumadas: [] };
+    const { plano, avisos: terminado } = terminar(sumado);
+    const aviso = sumadas.length
+      ? `Plano guardado de este modelo: la IA ubicó en el manual solo lo que faltaba (${sumadas.join(", ")}).`
+      : "Plano guardado de este modelo: lo que faltaba no está en una página del manual, se suma según el esqueleto.";
+    const avisos = [...guardado.avisos, aviso, ...terminado];
+    if (clave && modelo && generado.origen === "ia") {
+      await cache.set(clave, marca ?? "", modelo, {
+        plano,
+        avisos: [...guardado.avisos, ...(sumadas.length ? [aviso] : [])],
+        manualUrl: entrada.manualUrl ?? guardado.manualUrl,
+        piezasPedidas: [...new Set([...guardado.piezasPedidas, ...faltan.map((p) => p.id)])],
+      });
+    }
+    return { plano, avisos, origen: "ia", camino, modelo: modeloIA, desdeCache: false, paginasLeidas: sumadas.length ? paginasLeidas : null };
+  }
+
+  const { plano, avisos, origen } = generado;
   if (clave && modelo && origen === "ia") {
     await cache.set(clave, marca ?? "", modelo, {
       plano,
       avisos,
       manualUrl: entrada.manualUrl ?? null,
-      piezasPedidas: entrada.knowledgePack.piezas.map((p) => p.id),
+      piezasPedidas: kp.piezas.map((p) => p.id),
     });
   }
-  return { plano, avisos, origen, camino, modelo: modeloIA, desdeCache: false, paginasLeidas: recorte && origen === "ia" ? recorte.paginas : null };
+  return { plano, avisos, origen, camino, modelo: modeloIA, desdeCache: false, paginasLeidas };
 }

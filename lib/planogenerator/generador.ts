@@ -288,7 +288,7 @@ export function paginaDelManual(pagina: number | null, paginas: number[]): numbe
 }
 
 /** Piezas que arma el sistema, no la IA. */
-const ES_ESTRUCTURA = new Set(["base", "tapa_inferior"]);
+export const ES_ESTRUCTURA = new Set(["base", "tapa_inferior"]);
 const PLACA = "placa_madre";
 const ALTO_BASE = 1.2;
 const ALTO_PLACA = 0.18;
