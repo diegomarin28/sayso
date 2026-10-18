@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha, type PasoReparacion } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
+import { formasDePantallaDe } from "../planogenerator/plantillas/por-tipo";
 import { tiposParaPrompt } from "../planogenerator/tipos";
 import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
@@ -64,6 +65,11 @@ const IDS_PLANTILLA = planoNotebookBase.piezas.map((p) => p.pieza);
 /** `publicasAdjuntas`: sin manual, pero con las páginas de una guía pública ya guardadas (van adjuntas, sin búsqueda web). */
 function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[], publicasAdjuntas = false, manualAdjunto = false): string {
   const fuente = conManual ? "el manual" : "las fuentes";
+  // Solo para los tipos con más de una forma de pantalla (un reloj cuadrado o redondo): el 3D dibuja esa forma.
+  const formas = formasDePantallaDe(equipo);
+  const forma = formas.length
+    ? `FORMA|${formas.join(" o ")}: la forma de la pantalla de este modelo, según ${fuente} (fotos, dibujos o medidas). Una sola línea; si no se sabe, no la escribas.\n`
+    : "";
   const publicas = publicasAdjuntas ? "las guías públicas adjuntas (no son del fabricante)" : "fuentes públicas de la web (buscá con la herramienta)";
   const origen = conManual
     ? "el manual oficial adjunto"
@@ -77,7 +83,7 @@ PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué 
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
 FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
-${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
+${forma}${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
 1. Chequeos sin abrir (3 a 6 pasos): primero descartá lo que NO es una falla de hardware y lo que se revisa con el equipo cerrado, según el tipo de equipo y el síntoma: apagar del todo y reiniciar, configuración y ajustes, actualizar el sistema o el firmware, modo seguro o restablecer (avisando qué se pierde), las pruebas de diagnóstico del fabricante, cables, cargador, enchufe, pilas o accesorios, limpieza por fuera. Cada chequeo dice cómo se hace y qué cambia si ese era el problema.
 2. Desarme y reparación: si después de los chequeos sigue igual, el procedimiento COMPLETO sin saltear nada: preparar (herramientas, apagar, desenchufar o descargar la batería), abrir el equipo, sacar cada pieza que haya que sacar antes para llegar, y revisar, limpiar o cambiar la pieza del síntoma.
 3. Armado y prueba: volver a armar en orden inverso (cables, tornillos, adhesivos), la prueba final y qué quiere decir si sigue igual.
@@ -491,6 +497,7 @@ export async function armarKnowledgePack(
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
     repuestos: contenido.repuestos,
+    ...(contenido.formaPantalla ? { formaPantalla: contenido.formaPantalla } : {}),
   });
   // Sin pasos igual se sigue: la persona llega al 3D (plantilla) con la guía marcada NO VERIFICADO.
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
