@@ -9,7 +9,7 @@ import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { Encabezado, Microfono } from "../_ui/experto";
+import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
 import { fuenteConRetomar, PanelCierre, pasosAlRetomar, preguntaAlRetomar } from "./cierre";
 import { Repuestos } from "./repuestos";
 
@@ -120,26 +120,56 @@ export default function Experto() {
         // Con NEXT_PUBLIC_DATOS=fixture el experto responde con el chat simulado de Diego: no gasta IA.
         fuente={arranque.fuente}
         accesorioEntrada={
-          <button
-            type="button"
-            onClick={() => {
-              callar(); // si el experto está hablando, se calla para escuchar
-              desbloquearAudio();
-              dictado.alternar();
-            }}
-            disabled={dictado.conectando}
-            aria-pressed={dictado.escuchando}
-            aria-label={dictado.escuchando ? "Dejar de escuchar" : "Preguntar con la voz"}
-            title={dictado.error ?? (dictado.parcial || undefined)}
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition active:scale-95 disabled:opacity-40 ${
-              dictado.escuchando ? "animate-pulse bg-peligro text-white" : "border border-borde text-texto"
-            }`}
-          >
-            <Microfono />
-          </button>
+          dictado.escuchando ? (
+            <>
+              <button
+                type="button"
+                onClick={dictado.descartar}
+                aria-label="Descartar lo grabado"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-borde text-texto-suave transition active:scale-95"
+              >
+                <Papelera />
+              </button>
+              <button
+                type="button"
+                onClick={dictado.terminar}
+                aria-label="Terminar de grabar y preguntar"
+                className="flex h-12 w-12 shrink-0 animate-pulse items-center justify-center rounded-2xl bg-peligro text-white transition active:scale-95"
+              >
+                <Detener />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                callar(); // si el experto está hablando, se calla para escuchar
+                desbloquearAudio();
+                void dictado.empezar();
+              }}
+              disabled={dictado.conectando}
+              aria-label="Preguntar con la voz"
+              title={dictado.error ?? undefined}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-borde text-texto transition active:scale-95 disabled:opacity-40"
+            >
+              <Microfono />
+            </button>
+          )
         }
         onEvento={(e) => agregarEventos([e])}
       />
+      {/* Lo que se va diciendo, en vivo: se pregunta recién al tocar ■ (o se descarta). */}
+      {dictado.escuchando && (
+        <div className="aparece pointer-events-none fixed inset-x-0 bottom-28 z-30 mx-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-peligro/50 bg-fondo/95 px-4 py-3 text-sm shadow-2xl">
+          <p className="text-xs font-semibold tracking-widest text-peligro uppercase">Te escucho</p>
+          <p className="mt-1">{dictado.texto || "Hablá tranquilo. Tocá ■ cuando termines."}</p>
+        </div>
+      )}
+      {dictado.error && !dictado.escuchando && (
+        <p className="fixed inset-x-0 bottom-28 z-30 mx-auto w-fit rounded-full bg-fondo/95 px-4 py-2 text-sm text-probable">
+          {dictado.error}
+        </p>
+      )}
       {cerrando && (
         <PanelCierre
           pack={preparado.pack}
