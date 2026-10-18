@@ -311,6 +311,8 @@ export function generarPlano(
         manualUrl: preparado.manualUrl,
         paginasVistaExplosionada: preparado.paginasVistaExplosionada,
         paginaVistaInterior: preparado.paginaVistaInterior,
+        // Sin manual, el 3D ubica las piezas mirando las fotos de la guía con el equipo abierto (#235).
+        fotosPasos: Object.keys(preparado.fotosPasos ?? {}).length ? preparado.fotosPasos : undefined,
       },
       RespPlano,
     ),

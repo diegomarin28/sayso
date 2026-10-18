@@ -26,6 +26,8 @@ const EntradaPlano = z.object({
   /** Alternativa sin manual subido: imágenes de páginas (o, más adelante, fotos del interior). */
   imagenes: z.array(ImagenSchema).max(MAX_IMAGENES_PLANO).optional(),
   paginas: z.array(z.number().int().positive()).optional(),
+  /** De /api/knowledge: URL del paso de la guía → foto. Sin manual, el cartógrafo mira primero estas (#235). */
+  fotosPasos: z.record(z.string().url().max(500), z.string().url().max(500)).optional(),
 });
 
 /**
@@ -45,6 +47,7 @@ export function POST(req: Request) {
         manualUrl: e.manualUrl,
         imagenes: e.imagenes,
         paginas: e.paginas,
+        fotosPasos: e.fotosPasos,
         manual: e.manualFileId
           ? { fileId: e.manualFileId, paginasVistaExplosionada: e.paginasVistaExplosionada, paginaVistaInterior: e.paginaVistaInterior }
           : undefined,
