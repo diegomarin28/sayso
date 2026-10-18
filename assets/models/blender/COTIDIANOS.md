@@ -165,6 +165,23 @@ Reutilizadas: `motor`, `capacitor@motor`, `selector_deslizante`, `cable@redondo`
 
 ### Reloj inteligente
 
+Actualización #234/#247: `relojes_demo.py` publica **relojes_demo.glb**, seis formas
+complementarias (25 KB), sin reexportar cotidianos. `formaPantalla` del pack selecciona
+`caja_reloj@redonda` + `pantalla@reloj_redonda`, o `caja_reloj@cuadrada` +
+`pantalla@reloj_cuadrada`. El visor/generador se conecta en el otro chat.
+Dorso cuadrado y base magnética separados; corona, correa y sensor se reutilizan por nombre.
+Ver `relojes-cobertura.json`. Ejes: X ancho, Y alto, Z largo en GLB; pivote geométrico centrado.
+No usa nombres de marcas para elegir forma. Pruebas de geometría en tamaños 1 y 0,86.
+
+![Redondo](renders/relojes_demo/montaje_redonda_1.jpg)
+![Cuadrado](renders/relojes_demo/montaje_cuadrada_1.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/relojes_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/relojes_demo.py -- --salida /tmp/relojes --renders assets/models/blender/renders/relojes_demo`.
+Los montajes son genéricos de revisión, no nuevos casos ni planos comerciales. La base de carga se muestra al lado del reloj.
+
+
+
 ![Reloj inteligente](renders/cotidianos/hoja_smartwatch.jpg)
 
 Nuevas:
