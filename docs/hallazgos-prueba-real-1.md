@@ -28,5 +28,5 @@ Cada ítem tiene dueño. Al arreglarlo, marcá [x] y poné el PR.
 - [ ] B2. iPhone demasiado ancho: revisar proporciones/medidas del celular.
 - [ ] B3. El 3D arranca "abierto" (rayos X). Tiene que arrancar cerrado (carcasa opaca) y abrirse cuando la guía lo indica.
 - [ ] B4. Etiqueta de la pieza: se corta en el borde y se buguea al girar el modelo.
-- [ ] B5. Controles de la guía: pausar, paso anterior, paso siguiente; que no avance solo si no lo estoy mirando (opción de avanzar manual).
-- [ ] B6. Resaltar mejor la pieza que se nombra (ej. batería) sin tener que escribir.
+- [x] B5. Controles de la guía: pausar, paso anterior, paso siguiente; que no avance solo si no lo estoy mirando (opción de avanzar manual). — PR B5/B6 (guía: controles y pieza nombrada)
+- [x] B6. Resaltar mejor la pieza que se nombra (ej. batería) sin tener que escribir. — PR B5/B6 (guía: controles y pieza nombrada)
