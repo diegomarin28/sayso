@@ -231,6 +231,8 @@ export const planoImpresora: PlanoDePiezas = {
       ["cartucho_tinta_negro", [4, 5.3, 3.6], [-8.5, 17.5, -5]],
       ["cartucho_tinta_color", [4, 5.3, 3.6], [-3.5, 17.5, -5]],
       ["rodillo_arrastre", [28, 2, 2], [0, 5, 2]],
+      // La de tinta también levanta la hoja de la bandeja con un rodillo de recogida (no es solo de las láser).
+      ["rodillo_recogida", [20, 1.6, 1.6], [0, 3.2, 7], "cilindro"],
       ["engranaje_arrastre", [0.7, 6, 6], [15, 5, 2]],
       ["motor_arrastre", [5, 4, 4], [18, 5, -4]],
       ["placa_control", [12, 1.5, 9], [10, 3, -14]],
@@ -344,6 +346,42 @@ export const planoCafetera: PlanoDePiezas = {
     ]),
   ],
 };
+
+/**
+ * Auriculares de vincha (over-ear), acostados sobre la mesa y vistos desde arriba: las dos copas con sus
+ * almohadillas hacia abajo, unidas por la vincha atrás. Adentro de cada copa, el parlante (driver); la batería,
+ * la placa y el conector de carga en las copas. La raíz es la vincha: mide todo el equipo para escalar el
+ * esqueleto, pero se dibuja solo el arco de atrás (`raizVisibleVincha`, ver `raizVisible` en `por-tipo.ts`).
+ */
+export const planoAuricularesVincha: PlanoDePiezas = {
+  modelo: "Auriculares de vincha genéricos (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("diadema", [22, 4.5, 15.4], [0, 2.25, -1.85]),
+    ...hijos("diadema", [
+      ["deslizador_izquierdo", [1.4, 1, 6], [-8.6, 3.9, -5.6]],
+      ["deslizador_derecho", [1.4, 1, 6], [8.6, 3.9, -5.6]],
+      ["copa_izquierda", [7, 2.9, 8.6], [-7.5, 3.05, 1.5], "cilindro"],
+      ["copa_derecha", [7, 2.9, 8.6], [7.5, 3.05, 1.5], "cilindro"],
+      ["almohadilla_copa_izquierda", [6.8, 1.6, 8.4], [-7.5, 0.8, 1.5], "cilindro"],
+      ["almohadilla_copa_derecha", [6.8, 1.6, 8.4], [7.5, 0.8, 1.5], "cilindro"],
+      ["parlante_izquierdo", [4, 0.6, 4], [-7.5, 1.9, 1.5], "cilindro"],
+      ["parlante_derecho", [4, 0.6, 4], [7.5, 1.9, 1.5], "cilindro"],
+      ["bateria", [3.2, 0.8, 2.4], [7.5, 3.4, 1.2]],
+      ["placa", [4, 0.2, 3.4], [-7.5, 3.7, 1.5]],
+      ["conector_carga", [0.9, 0.35, 0.5], [7.5, 3.1, 5.6]],
+      ["boton_encendido", [0.5, 0.4, 0.8], [-10.9, 3.1, 2.5]],
+    ]),
+  ],
+};
+
+export const raizVisibleVincha: Pick<PiezaPlano, "pos" | "dim"> = { dim: [15, 1.2, 2.6], pos: [0, 3.9, -8.2] };
+
+/** El plano como se ve: la raíz con su lugar y medidas visibles (para mostrar el esqueleto solo, en el lab). */
+export const conRaizVisible = (plano: PlanoDePiezas, visible: Pick<PiezaPlano, "pos" | "dim">): PlanoDePiezas => ({
+  ...plano,
+  piezas: plano.piezas.map((p) => (p.padre ? p : { ...p, ...visible })),
+});
 
 // ---------- Cosas de todos los días (lo que más probablemente traiga alguien en la mano) ----------
 

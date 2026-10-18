@@ -18,7 +18,9 @@ const NOMBRES = Object.keys(INDICE.tipos);
  * esqueleto: un TV sin pantalla visto de frente no se reconoce. Y las demás piezas del esqueleto que el plano
  * no tiene (ni por id ni por tipo de pieza) también se suman, como genéricas: una láser cuyo pack nombra solo
  * el tóner igual muestra la fusora, la unidad láser, la placa y la fuente (el visor las pinta en gris, ver
- * `piezasGenericas`). Origen "plantilla".
+ * `piezasGenericas`). Origen "plantilla". Las `opcionales` del tipo (los joysticks junto a una consola) no: van
+ * solo si el pack las nombra. Y si la raíz del tipo es más chica que el equipo (`raizVisible`: la vincha de
+ * unos auriculares), al final queda de ese tamaño y en su lugar.
  * Se aplica en la forma final del plano (después de `ajustarPlanoAlTipo`): al generar y al leer de la caché.
  */
 export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
@@ -45,8 +47,8 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   // plantilla son del mismo tipo: si el plano no tiene ninguna, van todas).
   const genericas = sinRaiz.plano.piezas
     .map((t) => t.pieza)
-    .filter((idT) => !usadas.has(idT) && !cara.includes(idT) && !esta.has(idT) && !ids.includes(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)));
-  if (!usadas.size && !cara.length && !genericas.length) return { plano, avisos: renombradas.avisos };
+    .filter((idT) => !usadas.has(idT) && !cara.includes(idT) && !esta.has(idT) && !ids.includes(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)))
+    .filter((idT) => !plantilla.opcionales.includes(idT));
 
   // Un equipo parado se ve desde atrás, abierto (+z, hacia la cámara, es la espalda: ver `pararPlano`); el
   // esqueleto lo dibuja de frente (+z es la pantalla). Por eso en un parado la profundidad va espejada.
@@ -81,6 +83,9 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   const nuevas: PiezaPlano[] = ids.filter((id) => !esta.has(id) && deLaPlantilla.has(id)).map((id) => nueva(id, deLaPlantilla.get(id)!));
   const deLaCara = cara.map((idT) => nueva(idT, plantilla.plano.piezas.find((p) => p.pieza === idT)!));
   const delEsqueleto = genericas.map((idT) => nueva(idT, plantilla.plano.piezas.find((p) => p.pieza === idT)!));
+
+  // La raíz, del tamaño de lo que se ve de ella (con la misma escala que el resto del esqueleto).
+  if (plantilla.raizVisible) piezas = piezas.map((p) => (p === raiz ? { ...p, ...lugar({ ...raizT, ...plantilla.raizVisible }), origen: "plantilla" as const } : p));
 
   const movidas = corrimiento.size;
   return {

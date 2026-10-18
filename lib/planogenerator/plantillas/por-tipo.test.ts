@@ -175,8 +175,8 @@ describe("lo que traiga el jurado en la mano", () => {
   it.each([
     ["los auriculares de mi hija", "auriculares"],
     ["Galaxy Buds 2", "auriculares"],
-    ["vincha bluetooth JBL Tune 510BT", "auriculares"],
-    ["cascos gamer HyperX", "auriculares"],
+    ["vincha bluetooth JBL Tune 510BT", "auriculares_vincha"],
+    ["cascos gamer HyperX", "auriculares_vincha"],
     ["un joystick de la Play", "mando"],
     ["el control de la Play 4", "mando"],
     ["un Joy-Con de la Switch", "mando"],
