@@ -429,7 +429,8 @@ export async function botonesTapados(page: Page): Promise<string[]> {
  */
 export async function altoDel3D(page: Page) {
   return page.evaluate(() => {
-    const lienzo = document.querySelector("canvas");
+    // Hay más de un <canvas> (el fondo animado de Sayso ocupa toda la pantalla): el del 3D es el del visor.
+    const lienzo = document.querySelector('div[style*="touch-action: none"] canvas');
     if (!lienzo) return null;
     const vh = window.innerHeight;
     const vw = window.innerWidth;
@@ -449,7 +450,15 @@ export async function altoDel3D(page: Page) {
       if (visibles >= 2) filasConTresD++;
     }
     const b = lienzo.getBoundingClientRect();
+    // Qué hay arriba en el centro a distintas alturas (para entender la medida si falla).
+    const arriba = [0.1, 0.3, 0.5, 0.7, 0.9].map((fy) => {
+      const el = document.elementFromPoint(vw / 2, vh * fy);
+      if (!el) return `${fy}: nada`;
+      const clase = (el.getAttribute("class") ?? "").split(/\s+/).slice(0, 4).join(".");
+      return `${fy}: ${el.tagName.toLowerCase()}${clase ? `.${clase}` : ""}${esEl3D(el) ? " (3D)" : ""}`;
+    });
     return {
+      arriba,
       pantalla: vh,
       lienzo: Math.round(b.height),
       visible: Math.round((filasConTresD / filas) * vh),
@@ -536,4 +545,9 @@ export async function girar3D(page: Page, lienzo: Locator, ms = 2800) {
     await page.waitForTimeout(ms / pasos);
   }
   await page.mouse.up();
+}
+
+/** El lienzo del visor 3D: el `<canvas>` que está dentro del visor (fondo negro, `touch-action: none`), no otros de la página. */
+export function lienzo3D(page: Page): Locator {
+  return page.locator('div[style*="touch-action: none"] canvas').first();
 }

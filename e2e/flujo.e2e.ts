@@ -7,6 +7,7 @@ import {
   escucharConsola,
   fotoDeEjemplo,
   girar3D,
+  lienzo3D,
   medir3D,
   muestrearLadosEtiqueta,
   saltosRapidos,
@@ -180,7 +181,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     // ---------- 5. Experto 3D ----------
     libreta.pantalla = "5 · Experto";
     await test.step("5 · el experto arranca solo y el 3D dibuja algo", async () => {
-      const lienzo = page.locator("canvas").first();
+      const lienzo = lienzo3D(page);
       await expect(lienzo).toBeVisible();
 
       // Arranca solo con el síntoma de la pantalla 1 (fixture: dos pasos del manual).
@@ -243,7 +244,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     // ---------- 5b. La etiqueta de la pieza no salta de lado ----------
     libreta.pantalla = "5 · Experto";
     await test.step("5b · la etiqueta de la pieza no cambia de lado más de una vez por segundo", async () => {
-      const lienzo = page.locator("canvas").first();
+      const lienzo = lienzo3D(page);
       // 3 s mirando de qué lado está cada etiqueta mientras la persona gira el 3D con el dedo.
       const [muestra] = await Promise.all([muestrearLadosEtiqueta(page, 3000, 100), girar3D(page, lienzo, 2800)]);
       info.annotations.push({ type: "lados-etiqueta", description: JSON.stringify(muestra) });
@@ -277,7 +278,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await revisarPantalla(page, libreta);
       await captura(page, info, "12-experto-respuesta");
 
-      const medida = await medir3D(page, page.locator("canvas").first());
+      const medida = await medir3D(page, lienzo3D(page));
       info.annotations.push({ type: "medida-3d-respuesta", description: JSON.stringify(medida) });
       if (!medida || medida.fraccionNoNegra <= 0.03)
         libreta.anotar("problema", `Después de la respuesta el 3D se ve negro (${JSON.stringify(medida)})`);
