@@ -67,6 +67,20 @@ describe("escena: modo rayos X", () => {
     expect(brillo("#7a2a00").intensidad).toBeCloseTo(naranja.intensidad, 5);
   });
 
+  it("las piezas genéricas (el pack no las nombra) van en gris; las demás, con su receta", () => {
+    const conReceta = prepararEscena(planoNotebookBase);
+    const escena = prepararEscena(planoNotebookBase, undefined, undefined, new Set(["ram"]));
+    const gris = new THREE.Color("#8d96a1").getHexString();
+    expect(material(escena, "ram").color.getHexString()).toBe(gris);
+    expect(material(conReceta, "ram").color.getHexString()).not.toBe(gris);
+    expect(material(escena, "ssd").color.getHexString()).toBe(material(conReceta, "ssd").color.getHexString());
+    // Resaltada, igual toma el color de resaltado (la guía puede nombrarla).
+    const e = con(estadoInicial(escena.nodos.keys()), { t: "resaltar", pieza: "ram" });
+    animar(escena, e, 0);
+    animar(escena, e, 5000);
+    expect(material(escena, "ram").color.getHexString()).toBe(new THREE.Color(COLOR_ACTIVO).getHexString());
+  });
+
   it("sin piezas resaltadas todo vuelve a su material original", () => {
     const { escena, estado } = preparar();
     const original = material(escena, "placa_madre").color.getHexString();

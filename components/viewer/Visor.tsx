@@ -35,7 +35,7 @@ import {
   type NodoAnimable,
   usarColorActivo,
 } from "./escena";
-import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
+import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import {
   bajarCalidad,
@@ -410,7 +410,12 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const controles = useRef<CameraControls>(null);
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
-  const escena = useMemo(() => prepararEscenaSegura(plano, biblioteca, tipoEquipo), [plano, biblioteca, tipoEquipo]);
+  // Por texto: `piezas` puede llegar como un array nuevo con lo mismo y no hace falta rearmar la escena.
+  const claveGenericas = [...piezasGenericas(plano, piezas)].sort().join(",");
+  const escena = useMemo(
+    () => prepararEscenaSegura(plano, biblioteca, tipoEquipo, new Set(claveGenericas ? claveGenericas.split(",") : [])),
+    [plano, biblioteca, tipoEquipo, claveGenericas],
+  );
   const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);

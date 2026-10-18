@@ -78,7 +78,7 @@ export function guiaDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreogra
       // La descripción solo si agrega algo (a veces repite el nombre).
       const descripcion = normal(pieza.descripcion) && normal(pieza.descripcion) !== normal(pieza.nombre) ? ` ${frase(pieza.descripcion)}` : "";
       salida.push({
-        dice: `Ubicá ${texto}: ${frase(minuscula(pieza.ubicacion))}${descripcion} Te ${pronombre} marco en naranja.`,
+        dice: `Ubicá ${texto}: ${frase(minuscula(pieza.ubicacion))}${descripcion} Te ${pronombre} marco en el 3D.`,
         acciones: irA([interna]),
         riesgo: "bajo",
       });
