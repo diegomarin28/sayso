@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { fuenteApi, GuiaExperto } from "@/components/viewer";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
+import { avisoRiesgoAlto } from "./aviso-riesgo";
 import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
@@ -85,6 +86,8 @@ export default function Experto() {
   const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
 
   if (!caso || !preparado || !plano) return null;
+  // Antes del primer paso: hasta dónde llega la guía si el pack tiene un paso de riesgo alto (sin IA).
+  const aviso = avisoRiesgoAlto(preparado.pack);
 
   return (
     <main className="flex h-dvh w-full flex-col bg-fondo">
@@ -121,6 +124,13 @@ export default function Experto() {
           </button>
         </div>
       </div>
+      {aviso && (
+        <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pb-2 sm:px-6">
+          <p role="note" className="rounded-xl border border-borde bg-superficie px-3 py-2 text-sm text-texto">
+            {aviso}
+          </p>
+        </div>
+      )}
       <GuiaExperto
         className="min-h-0 flex-1"
         casoId={caso.id}
