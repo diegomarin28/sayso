@@ -101,7 +101,37 @@ export type Uso = {
   cacheLeida: number;
   busquedas: number;
   usd: number;
+  /** Si esta llamada fue una escalada de Haiku a Sonnet, el motivo. */
+  escalada?: MotivoEscalada;
 };
+
+// ---------- Escalada de modelo ----------
+
+/**
+ * Escalada de modelo (configuración en un solo lugar): cada paso arranca con el modelo barato y
+ * pasa al más capaz UNA sola vez si (a) la salida no valida con Zod, (b) el propio modelo marca
+ * confianza baja, (c) en la chapa queda "probable" algún dato escrito en la etiqueta, o
+ * (d) la lectura del manual no dio ningún paso. Queda registrada en el costo y en el feed.
+ */
+export const ESCALADA = {
+  activa: true,
+  desde: MODELOS.corto as string,
+  hacia: MODELOS.vision as string,
+};
+
+export type MotivoEscalada = "no_valido" | "confianza_baja" | "chapa_probable" | "sin_pasos";
+
+export const TEXTO_ESCALADA: Record<MotivoEscalada, string> = {
+  no_valido: "la respuesta no tenía el formato pedido",
+  confianza_baja: "el modelo no estaba seguro",
+  chapa_probable: "la etiqueta quedó dudosa",
+  sin_pasos: "la lectura no dio pasos",
+};
+
+/** Puede escalar un pedido hecho con este modelo. */
+export function puedeEscalar(modelo: string): boolean {
+  return ESCALADA.activa && modelo === ESCALADA.desde && ESCALADA.hacia !== ESCALADA.desde;
+}
 
 /** Lo que devuelve la API en `usage` (mensaje completo o delta del stream). */
 type UsoApi = {
@@ -182,6 +212,8 @@ export type PedidoIA = {
   maxTokens?: number;
   /** Nombre del paso, para el registro de costos (ej. "recepcion: calidad de foto"). */
   etapa?: string;
+  /** Si este pedido es una escalada, el motivo (queda en el costo). */
+  escalada?: MotivoEscalada;
 };
 
 /** Devuelve el texto crudo de la respuesta. Se reemplaza en los tests. */
@@ -206,7 +238,7 @@ function obtenerCliente(): Anthropic {
 
 // Las tres llamadas a Claude pasan por el freno de gasto (lib/ia/freno.ts) antes de gastar.
 
-export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, formato, maxTokens, etapa }) => {
+export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, formato, maxTokens, etapa, escalada }) => {
   await frenar();
   const respuesta = await obtenerCliente().messages.create({
     model: modelo,
@@ -215,7 +247,7 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
     system,
     messages: [{ role: "user", content: contenido }],
   });
-  registrarUso(calcularUso(etapa ?? "sin etapa", modelo, respuesta.usage));
+  registrarUso({ ...calcularUso(etapa ?? "sin etapa", modelo, respuesta.usage), ...(escalada ? { escalada } : {}) });
   if (respuesta.stop_reason === "refusal") {
     throw new ErrorIA("El modelo rechazó el pedido", respuesta.stop_details);
   }
@@ -226,12 +258,16 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
 };
 
 /** Llamada completa (con streaming para pedidos largos, ej. un PDF). Se reemplaza en los tests. */
-export type EnviarMensaje = (params: Anthropic.MessageCreateParamsNonStreaming, etapa?: string) => Promise<Anthropic.Message>;
+export type EnviarMensaje = (
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  etapa?: string,
+  escalada?: MotivoEscalada,
+) => Promise<Anthropic.Message>;
 
-export const enviarMensaje: EnviarMensaje = async (params, etapa) => {
+export const enviarMensaje: EnviarMensaje = async (params, etapa, escalada) => {
   await frenar();
   const mensaje = await obtenerCliente().messages.stream(params).finalMessage();
-  registrarUso(calcularUso(etapa ?? "sin etapa", params.model, mensaje.usage));
+  registrarUso({ ...calcularUso(etapa ?? "sin etapa", params.model, mensaje.usage), ...(escalada ? { escalada } : {}) });
   if (mensaje.stop_reason === "refusal") throw new ErrorIA("El modelo rechazó el pedido", mensaje.stop_details);
   return mensaje;
 };
@@ -318,6 +354,55 @@ export async function pedirJson<T>(
     ultimoError = r.error;
   }
   throw new ErrorIA("La respuesta del modelo no validó dos veces", ultimoError);
+}
+
+/** Un solo intento: JSON que valida, o ErrorIA. */
+async function unIntento<T>(esquema: z.ZodType<T>, pedido: PedidoIA, llamar: LlamarIA): Promise<T> {
+  const texto = await llamar(pedido);
+  let json: unknown;
+  try {
+    json = JSON.parse(texto);
+  } catch (e) {
+    throw new ErrorIA("La respuesta del modelo no es JSON", e);
+  }
+  const r = esquema.safeParse(json);
+  if (!r.success) throw new ErrorIA("La respuesta del modelo no validó", r.error);
+  return r.data;
+}
+
+/**
+ * Como `pedirJson`, pero con escalada: si el pedido va con el modelo barato y la salida no valida
+ * (en vez de reintentar con el mismo modelo) o `revisar` devuelve un motivo, se repite UNA vez con el
+ * más capaz. Si la escalada falla, queda lo del primer intento (si había). Sin escalada posible,
+ * se comporta como `pedirJson`.
+ */
+export async function pedirJsonConEscalada<T>(
+  esquema: z.ZodType<T>,
+  pedido: Omit<PedidoIA, "formato"> & { formato?: z.ZodType },
+  llamar: LlamarIA = llamarClaude,
+  revisar?: (r: T) => MotivoEscalada | null,
+): Promise<{ resultado: T; escalada: MotivoEscalada | null }> {
+  const completo: PedidoIA = { ...pedido, formato: pedido.formato ?? esquema };
+  if (!puedeEscalar(completo.modelo)) return { resultado: await pedirJson(esquema, completo, llamar), escalada: null };
+
+  let primero: T | null = null;
+  let motivo: MotivoEscalada | null = null;
+  try {
+    primero = await unIntento(esquema, completo, llamar);
+    motivo = revisar?.(primero) ?? null;
+  } catch (e) {
+    if (!(e instanceof ErrorIA)) throw e;
+    motivo = "no_valido";
+  }
+  if (!motivo && primero !== null) return { resultado: primero, escalada: null };
+
+  try {
+    const segundo = await unIntento(esquema, { ...completo, modelo: ESCALADA.hacia, escalada: motivo ?? "no_valido" }, llamar);
+    return { resultado: segundo, escalada: motivo };
+  } catch (e) {
+    if (primero !== null && e instanceof ErrorIA) return { resultado: primero, escalada: motivo };
+    throw e;
+  }
 }
 
 /** Bloque de imagen en base64 para mandar al modelo. */
