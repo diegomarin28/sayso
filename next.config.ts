@@ -1,21 +1,15 @@
-import { networkInterfaces } from "node:os";
 import type { NextConfig } from "next";
 
 /**
- * IPs de esta máquina en la red local (ej. 10.252.61.22), solo en desarrollo. Sin esto,
- * `npm run dev` bloquea sus recursos internos cuando la app se abre desde el celular por la IP:
- * la página no arranca y el 3D queda en negro. En producción (Vercel) no aplica.
+ * Desde qué orígenes se puede usar `npm run dev` además de localhost (el celular por la IP de la Mac).
+ * Rangos de red local, no las IPs del momento: esas se leían una sola vez al arrancar y, si cambiaba la
+ * red (otro Wi-Fi), el servidor rechazaba la recarga en caliente y la página se recargaba sola cada
+ * tanto (B8). Solo en desarrollo; en producción (Vercel) no aplica.
  */
-const ipsDeRed =
-  process.env.NODE_ENV === "production"
-    ? []
-    : Object.values(networkInterfaces())
-        .flat()
-        .filter((i) => i && i.family === "IPv4" && !i.internal)
-        .map((i) => i!.address);
+const redLocal = ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ipsDeRed,
+  allowedDevOrigins: redLocal,
   // Binario nativo (dibuja páginas del manual a PNG en /api/knowledge): no se empaqueta, se carga de node_modules.
   serverExternalPackages: ["@napi-rs/canvas"],
   /* config options here */
