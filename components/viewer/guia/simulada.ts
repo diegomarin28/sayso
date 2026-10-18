@@ -14,7 +14,7 @@ const pausa = (ms: number, senal: AbortSignal) =>
 
 export const fuenteSimulada: FuenteChat = async function* (pedido, senal) {
   await pausa(900, senal);
-  const evaluacion = evaluarPedido(pedido.pregunta);
+  const evaluacion = evaluarPedido(pedido.pregunta, { tipoEquipo: pedido.tipoEquipo });
   if (evaluacion.bloqueado) {
     yield {
       tipo: "bloqueo",

@@ -24,6 +24,8 @@ export type PedidoChat = {
   manualFileId?: string | null;
   historial: MensajeHistorial[];
   pregunta: string;
+  /** El aviso de seguridad depende del equipo (a batería o enchufado), aunque la pregunta no lo nombre. */
+  tipoEquipo?: string;
 };
 
 /** De dónde salen los eventos: la API real o, en /lab y tests, una simulación. */
