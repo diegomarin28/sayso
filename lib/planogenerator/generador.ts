@@ -5,7 +5,14 @@ import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
 import { ajustarPlanoAlTipo, FACTOR_ALTO_DUDOSO } from "./carcasa";
-import { caraTipica, elegirPlantilla, planoDesdePlantillaDeTipo, proporcionDeLaCara, type PlantillaDeEquipo } from "./plantillas/por-tipo";
+import {
+  caraTipica,
+  elegirPlantilla,
+  planoDesdePlantillaDeTipo,
+  proporcionDeLaCara,
+  propuestaDePlantillaDeTipo,
+  type PlantillaDeEquipo,
+} from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
 
 /**
@@ -176,7 +183,9 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // como planta y después parado (ver carcasa.ts).
     const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
     const avisosCara: string[] = [];
-    const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta);
+    // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
+    const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
+    const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
     const plano = tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano;
     const avisos = [...avisosCara, ...armado.avisos];
     return { plano, avisos, origen: "ia", camino, modelo, propuesta };
@@ -290,6 +299,8 @@ export function planoDesdePropuesta(
   kp: KnowledgePack,
   propuesta: PropuestaPlano,
   plantilla: PlanoDePiezas = planoNotebookBase,
+  /** Posiciones para completar lo que la IA no ubicó (por defecto, las de `plantilla`; ver `propuestaDePlantillaDeTipo`). */
+  desdePlantilla: PiezaPropuesta[] = propuestaDesdePlantilla(plantilla),
 ): { plano: PlanoDePiezas; avisos: string[]; medidas: MedidasBase } {
   const avisos: string[] = [];
   const validos = new Map(kp.piezas.map((p) => [p.id, p]));
@@ -319,7 +330,6 @@ export function planoDesdePropuesta(
   for (const p of elegidas.values()) origenes.set(p.pieza, origenDeLaIA(p));
 
   // 2. Completar con la plantilla lo que la IA no ubicó.
-  const desdePlantilla = propuestaDesdePlantilla(plantilla);
   for (const id of validos.keys()) {
     if (ES_ESTRUCTURA.has(id) || elegidas.has(id)) continue;
     const p = desdePlantilla.find((q) => q.pieza === id);

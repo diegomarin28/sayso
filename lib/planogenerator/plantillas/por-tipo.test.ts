@@ -106,3 +106,52 @@ describe("respaldo de /api/plano cuando la IA no puede ubicar las piezas", () =>
     expect(await cache.get(claveManual(fichaEjemplo.marca.valor, fichaEjemplo.modelo.valor!))).toBeFalsy();
   });
 });
+
+describe("lo que traiga el jurado en la mano", () => {
+  it.each([
+    ["AirPods Pro", "auriculares"],
+    ["Apple Watch Series 8", "reloj"],
+    ["mouse Logitech", "mouse"],
+    ["teclado mecánico", "teclado"],
+    ["control de PlayStation", "mando"],
+    ["joystick de Xbox", "mando"],
+    ["PlayStation 5", "consola"],
+    ["parlante JBL", "parlante"],
+    ["cargador de celular", "cargador"],
+    ["control remoto del aire", "control_remoto"],
+    ["iPad Air", "tablet"],
+    ["Samsung Galaxy S21 celular", "celular"],
+  ])("%s → %s", (dicho, id) => {
+    expect(elegirPlantilla(pack("otro", []), dicho)?.id).toBe(id);
+  });
+
+  it("también se reconoce por las piezas del pack (sin que la recepción diga qué es)", () => {
+    expect(elegirPlantilla(pack("otro", ["sensor_mouse", "rueda_scroll", "microswitch_izquierdo"]))?.id).toBe("mouse");
+    expect(elegirPlantilla(pack("otro", ["estuche_auriculares", "almohadilla_silicona"]))?.id).toBe("auriculares");
+  });
+
+  it("si la IA no ubica nada, el respaldo es el esqueleto del aparato, con origen plantilla", async () => {
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack("otro", ["bateria", "placa", "sensor_mouse"]), tipoEquipo: "mouse" }, iaQueFalla);
+    expect(r.origen).toBe("plantilla");
+    expect(r.plano.piezas.find((p) => !p.padre)?.pieza).toBe("carcasa_mouse");
+    expect(r.plano.piezas.every((p) => p.origen === "plantilla")).toBe(true);
+  });
+});
+
+describe("completar lo que la IA no ubicó con el esqueleto del tipo", () => {
+  it("TV: la IA ubica una pieza; las demás del pack salen del esqueleto del TV (no de la notebook) y no queda vacío", async () => {
+    const kp = pack("otro", ["placa_principal", "fuente", "tira_led_1", "parlante_izquierdo"]);
+    const propuesta = {
+      base_ancho_cm: 100, base_prof_cm: 58, medidas_fuente: "estimada",
+      piezas: [{ pieza: "placa_principal", x: 0.3, z: 0, ancho: 0.2, prof: 0.3, alto_cm: 1.5, capa: "sobre_base", sobre: null, forma: "caja", etiquetaManual: null, pagina: 4, confianza: "alta" }],
+    };
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo: "televisor" }, async () => JSON.stringify(propuesta));
+    const ids = r.plano.piezas.map((p) => p.pieza);
+    for (const id of ["placa_principal", "fuente", "tira_led_1", "parlante_izquierdo"]) expect(ids, id).toContain(id);
+    const de = (id: string) => r.plano.piezas.find((p) => p.pieza === id)!;
+    expect(de("fuente").origen).toBe("plantilla");
+    expect(de("placa_principal").origen).toBe("manual");
+    // Del esqueleto del TV: la tira de LED arriba de los parlantes (en la notebook no hay tiras ni parlantes así).
+    expect(de("tira_led_1").pos[1]).toBeGreaterThan(de("parlante_izquierdo").pos[1]);
+  });
+});

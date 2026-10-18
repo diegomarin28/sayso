@@ -6,6 +6,15 @@ import type { Coreografia, PlanoDePiezas } from "../../shared";
  * están las coreografías de ejemplo.
  */
 import {
+  planoAuriculares,
+  planoCargador,
+  planoControlRemoto,
+  planoMando,
+  planoMouse,
+  planoParlanteBluetooth,
+  planoReloj,
+  planoTablet,
+  planoTeclado,
   planoAire,
   planoAspiradora,
   planoCafetera,
@@ -21,6 +30,15 @@ import {
 } from "../../lib/planogenerator/plantillas/equipos";
 
 export {
+  planoAuriculares,
+  planoCargador,
+  planoControlRemoto,
+  planoMando,
+  planoMouse,
+  planoParlanteBluetooth,
+  planoReloj,
+  planoTablet,
+  planoTeclado,
   planoAire,
   planoAspiradora,
   planoCafetera,
@@ -72,4 +90,13 @@ export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string
   consola: { plano: planoConsola, tipoEquipo: "consola de videojuegos" },
   router: { plano: planoRouter, tipoEquipo: "router" },
   cafetera: { plano: planoCafetera, tipoEquipo: "cafetera" },
+  tablet: { plano: planoTablet, tipoEquipo: "tablet" },
+  auriculares: { plano: planoAuriculares, tipoEquipo: "auriculares" },
+  reloj: { plano: planoReloj, tipoEquipo: "reloj inteligente" },
+  mouse: { plano: planoMouse, tipoEquipo: "mouse" },
+  teclado: { plano: planoTeclado, tipoEquipo: "teclado" },
+  joystick: { plano: planoMando, tipoEquipo: "joystick" },
+  parlante: { plano: planoParlanteBluetooth, tipoEquipo: "parlante bluetooth" },
+  cargador: { plano: planoCargador, tipoEquipo: "cargador" },
+  control_remoto: { plano: planoControlRemoto, tipoEquipo: "control remoto" },
 };

@@ -12,7 +12,7 @@ export type EquipoGaleria = {
   id: string;
   titulo: string;
   detalle: string;
-  grupo: "equipos" | "dispositivos";
+  grupo: "equipos" | "dispositivos" | "en_la_mano";
   plano: PlanoDePiezas;
   tipoEquipo: string;
   /**
@@ -38,6 +38,15 @@ export const GALERIA: EquipoGaleria[] = [
   { id: "consola", titulo: "Consola", detalle: "Placa, lectora, fuente, mandos", grupo: "dispositivos", ...de("consola") },
   { id: "router", titulo: "Router", detalle: "Placa, antenas, puertos RJ45, SFP", grupo: "dispositivos", ...de("router") },
   { id: "cafetera", titulo: "Cafetera", detalle: "Caldera, bomba, portafiltro, molino", grupo: "dispositivos", ...de("cafetera") },
+  { id: "tablet", titulo: "Tablet", detalle: "Batería, placa, cámara, parlantes", grupo: "en_la_mano", ...de("tablet") },
+  { id: "auriculares", titulo: "Auriculares", detalle: "Estuche, batería, contactos de carga", grupo: "en_la_mano", ...de("auriculares") },
+  { id: "reloj", titulo: "Reloj inteligente", detalle: "Pantalla, batería, sensor, bobina de carga", grupo: "en_la_mano", ...de("reloj") },
+  { id: "mouse", titulo: "Mouse", detalle: "Sensor, rueda, botones, pila", grupo: "en_la_mano", ...de("mouse") },
+  { id: "teclado", titulo: "Teclado", detalle: "Teclas, membrana, controlador", grupo: "en_la_mano", ...de("teclado") },
+  { id: "joystick", titulo: "Joystick", detalle: "Palancas, botones, gatillos, vibración", grupo: "en_la_mano", ...de("joystick") },
+  { id: "parlante", titulo: "Parlante bluetooth", detalle: "Parlantes, radiadores pasivos, batería", grupo: "en_la_mano", ...de("parlante") },
+  { id: "cargador", titulo: "Cargador", detalle: "Clavija, transformador, capacitor, USB", grupo: "en_la_mano", ...de("cargador") },
+  { id: "control_remoto", titulo: "Control remoto", detalle: "Botones, LED infrarrojo, pilas", grupo: "en_la_mano", ...de("control_remoto") },
 ];
 
 /** Cuántas formas sabe dibujar la biblioteca, contando las variantes (sale del índice de Blender). */
