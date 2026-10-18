@@ -2,7 +2,7 @@ import indice from "../../public/models/piezas/indice.json";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
 import { ES_TAPA } from "./cubiertas";
-import { emparejar, equivalentes, type PlantillaDeEquipo } from "./plantillas/por-tipo";
+import { emparejar, equivalentes, PLANTILLAS_POR_TIPO, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
 const NOMBRES = Object.keys(INDICE.tipos);
@@ -96,6 +96,47 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
       ...(delEsqueleto.length ? [`${delEsqueleto.length} pieza(s) genéricas de ${plantilla.nombre} que el pack no nombra: ${delEsqueleto.map((p) => p.pieza).join(", ")}.`] : []),
       ...(movidas ? [`${movidas} pieza(s) sin página del manual se ubicaron según el esqueleto de ${plantilla.nombre}.`] : []),
       ...nuevas.map((p) => `"${p.pieza}" no estaba en el plano: va donde la pone el esqueleto de ${plantilla.nombre}.`),
+    ],
+  };
+}
+
+/**
+ * Un plano guardado guarda también lo que le sumó el esqueleto del tipo que se eligió ENTONCES. Si hoy el tipo
+ * es otro (una de tinta que se armó como láser, una consola con los joysticks del mando, unos de vincha armados
+ * como in-ear), eso sobra: se sacan las piezas de origen "plantilla" que ni el pack nombra ni el esqueleto de
+ * hoy tiene, y la raíz de otra plantilla pasa a ser la de este tipo (sin su forma). Las tapas que puso el
+ * esqueleto se sacan siempre: `conTapa` las vuelve a poner envolviendo lo que quedó. Lo de la IA no se toca.
+ * Se aplica antes de `seguirPlantilla`, que suma lo que falte del esqueleto de hoy.
+ */
+export function sinEsqueletoAjeno(plano: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
+  const raiz = plano.piezas.find((p) => !p.padre);
+  const raizT = plantilla.plano.piezas.find((p) => !p.padre);
+  if (!raiz || !raizT) return { plano, avisos: [] };
+  const delPack = new Set(ids);
+  const deHoy = new Set(plantilla.plano.piezas.filter((p) => !plantilla.opcionales.includes(p.pieza)).map((p) => p.pieza));
+  const sobra = (p: PiezaPlano) => p.padre && p.origen === "plantilla" && !delPack.has(p.pieza) && (ES_TAPA.test(p.pieza) || !deHoy.has(p.pieza));
+  const quitadas = new Set(plano.piezas.filter(sobra).map((p) => p.pieza));
+  // La raíz de OTRA plantilla (no un nombre de la IA), si el plano no usa ya el id de la de hoy.
+  const raicesAjenas = new Set(PLANTILLAS_POR_TIPO.map((t) => t.plano.piezas.find((p) => !p.padre)?.pieza).filter((id) => id && id !== raizT.pieza));
+  const renombrar = raicesAjenas.has(raiz.pieza) && !delPack.has(raiz.pieza) && !plano.piezas.some((p) => p.pieza === raizT.pieza);
+  if (!quitadas.size && !renombrar) return { plano, avisos: [] };
+
+  const nuevaRaiz = renombrar ? raizT.pieza : raiz.pieza;
+  const piezas = plano.piezas
+    .filter((p) => !quitadas.has(p.pieza))
+    .map((p) => {
+      // Lo que colgaba de la raíz o de una pieza que se sacó cuelga de la raíz.
+      if (p !== raiz) return p.padre === raiz.pieza || quitadas.has(p.padre ?? "") ? { ...p, padre: nuevaRaiz } : p;
+      if (!renombrar) return p;
+      const { formaBiblioteca: _vieja, ...sinForma } = p;
+      void _vieja;
+      return { ...sinForma, pieza: nuevaRaiz, ...(raizT.formaBiblioteca ? { formaBiblioteca: raizT.formaBiblioteca } : {}) };
+    });
+  return {
+    plano: { ...plano, piezas },
+    avisos: [
+      ...(renombrar ? [`El plano guardado se armó como otro tipo de equipo ("${raiz.pieza}"): ahora es ${plantilla.nombre}.`] : []),
+      ...(quitadas.size ? [`Sobraban ${quitadas.size} pieza(s) de un esqueleto anterior: ${[...quitadas].join(", ")}.`] : []),
     ],
   };
 }

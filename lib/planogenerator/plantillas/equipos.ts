@@ -271,16 +271,20 @@ export const planoImpresoraLaser: PlanoDePiezas = {
   ],
 };
 
-/** Consola de videojuegos sin carcasa (y un mando al lado): placa, blindaje, lectora, fuente y ventilador. */
-const placaConsola = pieza("placa_consola", [20, 1.2, 16.4], [-4, 0.6, 0]);
+/**
+ * Consola de videojuegos de mesa sin carcasa: placa, blindaje, lectora, fuente y ventilador. Todo arriba de la
+ * placa, que ocupa toda la planta (es la raíz: con ella se escala el esqueleto a la consola del plano; si algo
+ * quedara afuera, la consola se vería más ancha de lo que es). El mando no viene: es opcional (`OPCIONALES`).
+ */
+const placaConsola = pieza("placa_consola", [30, 1.2, 26], [0, 0.6, 0]);
 const cuerpoConsola = hijos("placa_consola", [
-  ["disipador", [8, 1, 8], [-6, 1.7, -1]],
-  ["blindaje_metalico", [22, 1.2, 20], [-4, 4, 0]],
-  ["unidad_optica", [14, 2.3, 14.7], [-4, 6.4, 0]],
-  ["fuente", [10, 3, 14], [13, 1.5, 0]],
-  ["ventilador", [8, 3, 8], [-17, 1.5, -5]],
-  ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -8.4]],
-  ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 8.4]],
+  ["disipador", [8, 1, 8], [-3, 1.7, 1]],
+  ["blindaje_metalico", [16, 1.2, 16], [-2, 4.4, 2]],
+  ["unidad_optica", [14, 2.3, 14.7], [-2, 6.2, 2]],
+  ["fuente", [8, 3, 14], [10, 2.7, 0]],
+  ["ventilador", [8, 2.4, 8], [-10, 2.4, -8]],
+  ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -12.4]],
+  ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 12.2]],
 ]);
 export const planoConsola: PlanoDePiezas = {
   modelo: "Consola genérica (ejemplo del lab)",
@@ -288,7 +292,7 @@ export const planoConsola: PlanoDePiezas = {
   piezas: [
     placaConsola,
     ...cuerpoConsola,
-    // Las piezas del mando van al costado, afuera de la tapa.
+    // Opcionales: solo si el pack nombra el mando (drift de un joystick). Van al costado, afuera de la tapa.
     ...hijos("placa_consola", [
       ["joystick_analogico_izquierdo", [2.5, 2.7, 2], [26, 1.4, 4]],
       ["joystick_analogico_derecho", [2.5, 2.7, 2], [33, 1.4, 6]],

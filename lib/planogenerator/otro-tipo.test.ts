@@ -101,3 +101,73 @@ describe("auriculares de vincha (Bose QC45, JBL Tune 510BT): copas y vincha, sin
     expect(elegirPlantilla({ clase: "otro", piezas: [{ id: "almohadilla_oreja" }], modelo: "Sony WH-CH520" }, "auriculares")?.id).toBe("auriculares_vincha");
   });
 });
+
+/** Un plano guardado ya terminado con el esqueleto de OTRO tipo: la raíz de esa plantilla y lo que le sumó. */
+const guardadoComo = (raiz: string, dim: Vec3, piezas: Array<[string, Vec3, Vec3, PiezaPlano["origen"]]>): PlanoDePiezas => ({
+  modelo: "guardado",
+  unidades: "cm",
+  piezas: [
+    { pieza: raiz, forma: "caja", dim, pos: [0, dim[1] / 2, 0], pivote: [0, 0, 0], origen: "estimada" },
+    ...piezas.map(([pieza, d, pos, origen]): PiezaPlano => ({ pieza, forma: "caja", dim: d, pos, pivote: [0, 0, 0], padre: raiz, origen })),
+  ],
+});
+
+describe("planos de la caché armados con el esqueleto de otro tipo (#239): se limpian al leerlos", () => {
+  it.each([["Canon PIXMA G3110"], ["Epson EcoTank L3250"]])("impresora de tinta guardada como láser: %s", async (modelo) => {
+    const viejo = guardadoComo("carcasa_impresora", [44, 22, 34], [
+      ["placa_control", [12, 1.5, 9], [10, 3, -12], "estimada"],
+      ["rodillo_recogida", [22, 1.6, 1.6], [0, 6.5, -13], "plantilla"],
+      ["cartucho_toner", [27, 9, 9], [0, 12.5, 4], "plantilla"],
+      ["unidad_fusora", [26, 6.2, 6.3], [0, 10, -12], "plantilla"],
+      ["unidad_laser", [20, 4, 12], [0, 19, -3], "plantilla"],
+      ["rodillo_transferencia", [26, 1.6, 1.6], [0, 7.2, 6], "plantilla"],
+      ["puerta_frontal", [30, 9.5, 1.6], [0, 11.75, 18.3], "plantilla"],
+    ]);
+    const plano = await leer(viejo, pack(modelo, ["rodillo_recogida", "placa_control"]), "impresora");
+    for (const laser of ["cartucho_toner", "unidad_fusora", "unidad_laser", "rodillo_transferencia", "puerta_frontal"]) expect(ids(plano)).not.toContain(laser);
+    expect(ids(plano)).toEqual(expect.arrayContaining(["cabezal_impresion", "rodillo_recogida", "placa_control"]));
+    expect(plano.piezas.find((p) => !p.padre)!.pieza).toBe("bandeja_papel");
+    expect(plano.piezas.every((p) => !p.padre || ids(plano).includes(p.padre))).toBe(true);
+  });
+
+  it.each([["Xbox Series S"], ["PlayStation 5 Digital"]])("consola guardada con los joysticks y la tapa que los envolvía: %s", async (modelo) => {
+    const viejo = guardadoComo("placa_consola", [29, 1.2, 24], [
+      ["ventilador", [8, 3, 8], [-8, 1.5, -5], "estimada"],
+      ["joystick_analogico_izquierdo", [2.5, 2.7, 2], [26, 1.4, 4], "plantilla"],
+      ["boton_gatillo_derecho", [4, 1.2, 2.5], [34, 0.6, -2], "plantilla"],
+      ["tapa_consola", [72, 9, 25], [17, 4.5, 0], "plantilla"],
+    ]);
+    const plano = await leer(viejo, pack(modelo, ["ventilador", "disipador"]), "consola");
+    expect(ids(plano)).not.toContain("joystick_analogico_izquierdo");
+    expect(ids(plano)).not.toContain("boton_gatillo_derecho");
+    // La tapa se vuelve a armar envolviendo lo que quedó: ya no llega hasta donde estaban los gatillos (x = 53).
+    const tapa = plano.piezas.find((p) => p.pieza === "tapa_consola")!;
+    expect(tapa.dim[0]).toBeLessThan(72 * 0.75);
+    expect(tapa.pos[0] + tapa.dim[0] / 2).toBeLessThan(36);
+  });
+
+  it.each([["Bose QuietComfort 45"], ["JBL Tune 510BT"]])("auriculares de vincha guardados como in-ear con estuche: %s", async (modelo) => {
+    const viejo = guardadoComo("estuche_auriculares", [19, 8, 17], [
+      ["bateria", [3, 0.8, 2.4], [5, 2, 1], "estimada"],
+      ["carcasa_auricular_izquierdo", [5.7, 3.9, 6.9], [-4, 6, 0], "plantilla"],
+      ["placa_estuche", [15, 0.3, 13], [0, 0.4, 0], "plantilla"],
+      ["contacto_resorte_derecho", [1.1, 1.7, 1.1], [4, 2.7, 0], "plantilla"],
+    ]);
+    const plano = await leer(viejo, pack(modelo, ["bateria", "almohadilla_oreja_izquierda"]), "auriculares");
+    for (const inEar of ["estuche_auriculares", "carcasa_auricular_izquierdo", "placa_estuche", "contacto_resorte_derecho"]) expect(ids(plano)).not.toContain(inEar);
+    const raiz = plano.piezas.find((p) => !p.padre)!;
+    expect(raiz.pieza).toBe("diadema");
+    expect(raiz.dim[2]).toBeLessThan(17 * 0.3);
+    expect(ids(plano)).toEqual(expect.arrayContaining(["copa_izquierda", "copa_derecha", "bateria"]));
+  });
+
+  it("un plano guardado del mismo tipo no cambia (lo que sumó su esqueleto sigue)", async () => {
+    const viejo = guardadoComo("placa_consola", [29, 1.2, 24], [
+      ["ventilador", [8, 3, 8], [-8, 1.5, -5], "estimada"],
+      ["unidad_optica", [14, 2.3, 14.7], [-4, 6.4, 0], "plantilla"],
+    ]);
+    const plano = await leer(viejo, pack("Xbox One X", ["ventilador"]), "consola");
+    expect(plano.piezas.find((p) => p.pieza === "unidad_optica")!.origen).toBe("plantilla");
+    expect(plano.piezas.find((p) => !p.padre)!.pieza).toBe("placa_consola");
+  });
+});
