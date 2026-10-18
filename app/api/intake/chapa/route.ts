@@ -19,7 +19,8 @@ export function POST(req: Request) {
         }),
       );
     }
-    if (ficha.modelo.estado === "desconocido" && entrada.imagenesFrente.length) {
+    // Falta la marca o el modelo y hay foto del frente: se reconoce por la foto (el logo suele dar la marca).
+    if ((ficha.marca.estado === "desconocido" || ficha.modelo.estado === "desconocido") && entrada.imagenesFrente.length) {
       const r = await reconocerPorFoto({ clase: entrada.clase, tipoEquipo: entrada.tipoEquipo, imagenes: entrada.imagenesFrente });
       ficha = fichaConFoto(ficha, r);
       eventos.push(
@@ -27,9 +28,9 @@ export function POST(req: Request) {
           entrada.casoId,
           "identificador",
           "equipo_reconocido_por_foto",
-          ficha.modelo.estado === "probable" && ficha.modelo.fuente === "foto"
+          ficha.marca.fuente === "foto" || ficha.modelo.fuente === "foto"
             ? `Por la foto parece ${[ficha.marca.valor, ficha.modelo.valor].filter(Boolean).join(" ")}. Confirmalo en la ficha.`
-            : "No pude reconocer el modelo por la foto: escribilo vos en la ficha.",
+            : "No pude reconocer el equipo por la foto: completá la marca y el modelo en la ficha.",
           { confianza: r.confianza },
         ),
       );

@@ -226,3 +226,32 @@ describe("cambiar", () => {
     expect(p.coreografia.cambiar).toBeUndefined();
   });
 });
+
+describe("pregunta de seguimiento (A7)", () => {
+  const seis = ["Uno. ", "Dos. ", "Tres. ", "Cuatro. ", "Cinco. ", "Seis. "];
+  const base3 = { casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null };
+
+  it("con historial, responde corto: corta en 4 frases", async () => {
+    const ev = await todos(
+      conversar({ ...base3, historial: [{ rol: "experto", texto: "Primero sacá la tapa." }], pregunta: "¿Y la batería?" }, streamFalso(seis)),
+    );
+    expect(ev.filter((e) => e.tipo === "paso")).toHaveLength(4);
+    expect(ev.at(-1)).toMatchObject({ tipo: "fin", pasos: 4 });
+  });
+
+  it("sin historial no hay tope", async () => {
+    const ev = await todos(conversar({ ...base3, pregunta: "¿Qué hago?" }, streamFalso(seis)));
+    expect(ev.filter((e) => e.tipo === "paso")).toHaveLength(6);
+  });
+
+  it("las reglas piden responder solo lo nuevo y mover solo esa pieza", async () => {
+    let sistema = "";
+    const stream: StreamIA = async function* (p) {
+      sistema = JSON.stringify(p.system);
+      yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Ok. " } } as Anthropic.RawMessageStreamEvent;
+    };
+    await todos(conversar({ ...base3, pregunta: "¿Dónde está el SSD?" }, stream));
+    expect(sistema).toMatch(/SOLO lo que pregunta/);
+    expect(sistema).toMatch(/solo para esa pieza/);
+  });
+});

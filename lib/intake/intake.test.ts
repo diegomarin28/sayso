@@ -201,3 +201,12 @@ describe("chapa: marca y año deducidos (A1)", () => {
     expect(estadoCampo({ valor: "iPhone 13", lectura: "clara" }, t)).toEqual({ valor: "iPhone 13", estado: "confirmado", fuente: "chapa" });
   });
 });
+
+describe("marca por el logo del frente (A2)", () => {
+  it("si la etiqueta dio el modelo pero no la marca, la foto completa la marca sin pisar el modelo", () => {
+    const desdeEtiqueta = { ...fichaVacia("c1", "otro"), modelo: { valor: "55P635", estado: "probable" as const, fuente: "chapa" } };
+    const f = fichaConFoto(desdeEtiqueta, { marca: "TCL", modelo: null, confianza: "alta" });
+    expect(f.marca).toEqual({ valor: "TCL", estado: "probable", fuente: "foto" });
+    expect(f.modelo).toEqual({ valor: "55P635", estado: "probable", fuente: "chapa" });
+  });
+});

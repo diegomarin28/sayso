@@ -74,6 +74,7 @@ ${tiposParaPrompt()}
 - Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
+- Sin manual oficial, igual armá pasos CONCRETOS para el síntoma (no consejos genéricos): primero lo que se revisa sin abrir (cables, control, fuente o fusible externo, pruebas de diagnóstico del fabricante) y después, si hace falta, cómo abrir y qué pieza revisar.
 - Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: si hay que abrirlo, el PASO 1 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
 - Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
