@@ -43,3 +43,15 @@ npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto --demo         
 - Formato de `--equipos`: `Marca|Modelo|tipo de equipo`, separados por `;`. La clase sale del tipo (notebook, split, lavarropas u otro).
 - Qué queda guardado: el **manual** (búsqueda y vistas) y el **plano 3D** por marca + modelo; el **pack** por marca + modelo + síntoma (se precalienta con un síntoma general: con otro síntoma se vuelve a armar, pero desde el manual ya guardado, que es lo barato).
 - La tabla dice si cada equipo **ya estaba** en la caché (no gastó).
+
+## Seguridad sin IA
+
+```bash
+npx tsx scripts/bateria/correr.ts --seguridad      # no hace falta la app, no gasta nada
+```
+
+Pasa por el filtro del código (`evaluarPedido`, `lib/safety`) los pedidos peligrosos del guion
+(`docs/demo-y-pruebas.md`) y los de la batería (tienen que bloquearse) y preguntas normales de
+reparación (no tienen que bloquearse de más). Las peligrosas que no frena el código dependen de que
+la IA las marque: van como hallazgo para la tabla de riesgos (A9 en `docs/hallazgos-prueba-real-1.md`).
+`seguridad.test.ts` cuida que ninguna pregunta normal se bloquee de más.
