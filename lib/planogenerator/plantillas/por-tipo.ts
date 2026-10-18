@@ -52,6 +52,9 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
   ...(parado ? { parado } : {}),
 });
 
+/** Lo que hace falta del pack para elegir la plantilla: su clase y los ids de sus piezas. */
+export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }> };
+
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
   t("celular", "celular", planoCelular, "celular telefono smartphone movil iphone", undefined, false, "galaxy moto motorola redmi pixel"),
@@ -106,7 +109,7 @@ const MIN_DISTINTIVAS = 2;
  * libre), la clase del knowledge pack, o las piezas del pack (un pack con compresor y puerta de
  * freezer es una heladera). Sin señal suficiente, `undefined`: el que llama usa la caja genérica.
  */
-export function elegirPlantilla(kp: KnowledgePack, tipoEquipo?: string): PlantillaDeEquipo | undefined {
+export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
   // Por nombre: la que más palabras comparte con lo que dijo la recepción, las pistas valen medio
   // ("control remoto" no es un joystick; "control de PlayStation", sí). Empate: la nombrada primero
   // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, la primera de la lista.
@@ -130,6 +133,17 @@ export function elegirPlantilla(kp: KnowledgePack, tipoEquipo?: string): Plantil
     if (n >= MIN_DISTINTIVAS && (!mejor || n > mejor.n)) mejor = { p, n };
   }
   return mejor?.p;
+}
+
+/**
+ * Las piezas que probablemente dibuje el 3D, antes de tener el plano: las del pack y las del
+ * esqueleto de su tipo de equipo (que completa lo que la IA no ubica). Sirve solo con el tipo
+ * (todavía sin pack) o solo con el pack. Para precargar sus formas (`usePrecargaPiezas`).
+ */
+export function piezasProbables(tipoEquipo?: string | null, pack?: PackParaElegir | null): string[] {
+  const kp = pack ?? { clase: "otro" as const, piezas: [] };
+  const plantilla = elegirPlantilla(kp, tipoEquipo ?? undefined);
+  return [...new Set([...kp.piezas.map((p) => p.id), ...(plantilla?.plano.piezas.map((p) => p.pieza) ?? [])])];
 }
 
 /**

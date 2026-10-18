@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PackParaElegir } from "../../lib/planogenerator/plantillas/por-tipo";
 import { IndicePiezas, archivosPara, bibliotecaDesdeEscena, type BibliotecaPiezas } from "../../lib/planogenerator";
 import { cargadorGlb } from "../../lib/planogenerator/cargador";
 
@@ -50,6 +51,28 @@ export async function cargarBiblioteca(ids: string[]): Promise<BibliotecaPiezas 
   const biblioteca: BibliotecaPiezas = new Map();
   for (const p of partes) for (const [nombre, modelo] of p ?? []) biblioteca.set(nombre, modelo);
   return biblioteca;
+}
+
+/**
+ * Baja y deja listas las formas que probablemente use el 3D, ANTES de abrirlo: con el tipo de equipo
+ * (apenas se sabe) y con el pack (cuando llega). Para "preparando", que de todos modos espera a la IA:
+ * el visor después las encuentra en memoria y arranca con las piezas reales, sin esperar la red. Elegir
+ * la plantilla vive en un módulo aparte (con el índice de piezas), que se baja solo cuando hace falta.
+ */
+export function precargarPiezas(tipoEquipo?: string | null, pack?: PackParaElegir | null): Promise<unknown> {
+  if (!tipoEquipo?.trim() && !pack?.piezas.length) return Promise.resolve();
+  return import("../../lib/planogenerator/plantillas/por-tipo")
+    .then(({ piezasProbables }) => cargarBiblioteca(piezasProbables(tipoEquipo, pack)))
+    .catch((e: unknown) => console.warn("[visor] no se pudo precargar las piezas:", e));
+}
+
+/** `precargarPiezas` cada vez que cambia el tipo de equipo o llega el pack. No renderiza nada. */
+export function usePrecargaPiezas(tipoEquipo?: string | null, pack?: PackParaElegir | null): void {
+  const clase = pack?.clase;
+  const ids = pack?.piezas.map((p) => p.id).join(",") ?? "";
+  useEffect(() => {
+    void precargarPiezas(tipoEquipo, clase !== undefined ? { clase, piezas: ids ? ids.split(",").map((id) => ({ id })) : [] } : null);
+  }, [tipoEquipo, clase, ids]);
 }
 
 type EstadoBiblioteca = { clave: string; biblioteca: BibliotecaPiezas | null };
