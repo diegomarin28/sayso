@@ -20,6 +20,19 @@ Las hojas por equipo muestran las piezas nuevas; los IDs reutilizados se enumera
 Incluye 52 renders individuales y 13 hojas. Las piezas de cada hoja se normalizan para poder
 compararlas: esa vista no representa su tamaño relativo, un montaje ni un despiece real.
 
+## Revisar los GLB finales comprimidos
+
+Los renders de las familias nuevas se revisaron después de comprimir, usando
+`decodificar.mts` para reconstruir las recetas reales del visor. No son capturas
+del producto: la auditoría de cámara, etiquetas y coreografía en iPhone sigue aparte.
+
+```sh
+node --import tsx assets/models/blender/decodificar.mts public/models/piezas /tmp/sayso-revision
+blender -b --factory-startup --python-exit-code 1 --python assets/models/blender/revisar_publicados.py -- --script notebook_demo.py --glb /tmp/sayso-revision/notebook_demo.glb --renders assets/models/blender/renders/notebook_demo
+```
+
+Cambiar script y GLB por la familia a revisar. Sin APIs, credenciales ni costo de IA.
+
 ## Reglas de forma y materiales
 
 Cada pieza nueva tiene regla explícita en `AJUSTES` de `piezas.py`, exportada al índice y a
@@ -212,6 +225,26 @@ Nuevas:
 
 Reutilizadas: `parlante`, `bateria@celular`, `placa`, `conector@usb_c`, `boton_reset`.
 
+### Tablet completa — #233
+
+`tablet_demo.py` publica **tablet_demo.glb** (12 KB): `marco@tablet` hueco,
+`tapa_trasera@tablet`, `pantalla@tablet` y `bateria@tablet`. Placa, cámara y tornillos
+se reutilizan por nombre. Son piezas distintas, sin fusionar todo en una sola malla;
+el plano puede desplazar el frente, levantar la trasera y quitar tornillos por separado.
+La cara activa mira a +Y en el GLB (+Z de Blender), sin girar la tablet sobre su espalda.
+El modelo cerrado tiene el frente completo y opaco; el render abierto usa esas mismas piezas.
+
+Cobertura: `tablet-cobertura.json`, dos tamaños de 17,5 × 25 y 21,35 × 30,5 cm.
+La cámara inicial, el cierre y los pasos de apertura del producto los conecta el otro
+chat por #233; agregar mallas no cambia por sí solo la coreografía existente.
+
+![Tablet completa](renders/tablet_demo/tablet_cerrada_1.jpg)
+![Las mismas piezas separadas](renders/tablet_demo/tablet_abierta_1.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/tablet_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/tablet_demo.py -- --salida /tmp/tablet --renders assets/models/blender/renders/tablet_demo`.
+Test: `npx vitest run assets/models/blender/tablet-demo.test.ts`.
+
 ### Control remoto
 
 ![Control remoto](renders/cotidianos/hoja_control_remoto.jpg)
@@ -239,24 +272,3 @@ Nuevas:
 - [nucleo_ferrita](renders/cotidianos/nucleo_ferrita.jpg) — `redondo:xz`.
 
 Reutilizadas: `fuente`, `transformador`, `capacitor`, `conector@usb_c`, `conector_usb_a`, `cable@redondo`.
-
-
-## Tablet completa — #233
-
-`tablet_demo.py` publica **tablet_demo.glb** (12 KB): `marco@tablet` hueco,
-`tapa_trasera@tablet`, `pantalla@tablet` y `bateria@tablet`. Placa, cámara y tornillos
-se reutilizan por nombre. Son piezas distintas, sin fusionar todo en una sola malla;
-el plano puede desplazar el frente, levantar la trasera y quitar tornillos por separado.
-La cara activa mira a +Y en el GLB (+Z de Blender), sin girar la tablet sobre su espalda.
-El modelo cerrado tiene el frente completo y opaco; el render abierto usa esas mismas piezas.
-
-Cobertura: `tablet-cobertura.json`, dos tamaños de 17,5 × 25 y 21,35 × 30,5 cm.
-La cámara inicial, el cierre y los pasos de apertura del producto los conecta el otro
-chat por #233; agregar mallas no cambia por sí solo la coreografía existente.
-
-![Tablet completa](renders/tablet_demo/tablet_cerrada_1.jpg)
-![Las mismas piezas separadas](renders/tablet_demo/tablet_abierta_1.jpg)
-
-Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/tablet_demo.py`.
-Renders: `blender -b --factory-startup --python assets/models/blender/tablet_demo.py -- --salida /tmp/tablet --renders assets/models/blender/renders/tablet_demo`.
-Test: `npx vitest run assets/models/blender/tablet-demo.test.ts`.
