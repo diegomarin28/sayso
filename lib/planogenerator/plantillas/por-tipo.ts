@@ -119,6 +119,19 @@ export function conFormaDePantalla(p: PlantillaDeEquipo, formaPantalla?: FormaPa
 }
 
 /**
+ * La caja (la raíz) con la forma de pantalla de hoy. Un plano de la caché se armó con otra forma (antes de que
+ * el pack trajera `formaPantalla`, o con la común): un reloj redondo seguía con la caja cuadrada. Si la caja no
+ * salió de una página del manual, toma la forma y las medidas del esqueleto; lo demás lo acomoda `seguirPlantilla`.
+ */
+export function conRaizDeLaForma(plano: PlanoDePiezas, p: PlantillaDeEquipo | undefined): PlanoDePiezas {
+  const raizT = p?.formas && p.plano.piezas.find((x) => !x.padre);
+  const raiz = plano.piezas.find((x) => !x.padre);
+  if (!raizT || !raiz || raiz.origen === "manual" || raiz.formaBiblioteca === raizT.formaBiblioteca) return plano;
+  const nueva = { ...raiz, dim: raizT.dim, origen: "plantilla" as const, ...(raizT.formaBiblioteca ? { formaBiblioteca: raizT.formaBiblioteca } : {}) };
+  return { ...plano, piezas: plano.piezas.map((x) => (x === raiz ? nueva : x)) };
+}
+
+/**
  * Si el pack no trajo la forma de la pantalla y el tipo tiene varias, el 3D usó la más común: sus piezas
  * (la raíz y las del mismo tipo que las de la forma, con el id que tengan en el plano) pasan a "estimada"
  * y se avisa. Si la trajo, o el tipo tiene una sola forma, el plano no cambia.

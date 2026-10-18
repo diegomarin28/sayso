@@ -21,6 +21,7 @@ import { ajustarPlanoAlTipo, conTapa, conTapaDePantalla, FACTOR_ALTO_DUDOSO } fr
 import {
   caraTipica,
   elegirPlantilla,
+  conRaizDeLaForma,
   marcarFormaEstimada,
   planoDesdePlantillaDeTipo,
   proporcionDeLaCara,
@@ -510,6 +511,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
 /**
  * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
  * 0. lo que un esqueleto anterior sumó y el tipo de hoy no tiene se saca (`sinEsqueletoAjeno`: planos de la caché);
+ * 0b. si el tipo tiene varias formas de pantalla, la caja toma la forma de hoy (`conRaizDeLaForma`: planos de la caché);
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
  * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
@@ -520,7 +522,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
-  const limpio = tipo ? sinEsqueletoAjeno(plano, ids, tipo) : { plano, avisos: [] };
+  const limpio = tipo ? sinEsqueletoAjeno(conRaizDeLaForma(plano, tipo), ids, tipo) : { plano, avisos: [] };
   const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
   const teclas = ubicarTeclas(acotado.plano, ids);
