@@ -116,12 +116,14 @@ export function sinEsqueletoAjeno(plano: PlanoDePiezas, ids: string[], plantilla
   if (!raiz || !raizT) return { plano, avisos: [] };
   const delPack = new Set(ids);
   const deHoy = new Set(plantilla.plano.piezas.filter((p) => !plantilla.opcionales.includes(p.pieza)).map((p) => p.pieza));
-  const sobra = (p: PiezaPlano) =>
-    p.padre && p.origen === "plantilla" && !delPack.has(p.pieza) && (ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || !deHoy.has(p.pieza));
-  const quitadas = new Set(plano.piezas.filter(sobra).map((p) => p.pieza));
   // La raíz de OTRA plantilla (no un nombre de la IA), si el plano no usa ya el id de la de hoy.
   const raicesAjenas = new Set(PLANTILLAS_POR_TIPO.map((t) => t.plano.piezas.find((p) => !p.padre)?.pieza).filter((id) => id && id !== raizT.pieza));
   const renombrar = raicesAjenas.has(raiz.pieza) && !delPack.has(raiz.pieza) && !plano.piezas.some((p) => p.pieza === raizT.pieza);
+  const sobra = (p: PiezaPlano) =>
+    (p.padre && p.origen === "plantilla" && !delPack.has(p.pieza) && (ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || !deHoy.has(p.pieza))) ||
+    // Armado como otro tipo: lo que estimó se ubicó en ese esqueleto (el centro del estuche); el de hoy lo vuelve a ubicar.
+    (renombrar && p.padre && p.origen === "estimada");
+  const quitadas = new Set(plano.piezas.filter(sobra).map((p) => p.pieza));
   if (!quitadas.size && !renombrar) return { plano, avisos: [] };
 
   const nuevaRaiz = renombrar ? raizT.pieza : raiz.pieza;

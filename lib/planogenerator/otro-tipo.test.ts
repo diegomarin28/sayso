@@ -100,6 +100,27 @@ describe("auriculares de vincha (Bose QC45, JBL Tune 510BT): copas y vincha, sin
     expect(elegirPlantilla({ clase: "otro", piezas: [], modelo: "Apple AirPods Pro" }, "auriculares")?.id).toBe("auriculares");
     expect(elegirPlantilla({ clase: "otro", piezas: [{ id: "almohadilla_oreja" }], modelo: "Sony WH-CH520" }, "auriculares")?.id).toBe("auriculares_vincha");
   });
+
+  // QA con IA real (#239): el pack de unos de vincha nombra la carcasa del auricular (la copa); la carcasa no los hace in-ear.
+  const piezas = (...ids: string[]) => ids.map((id) => ({ id }));
+  it.each([
+    ["Sony WH-1000XM4", piezas("almohadilla_oreja", "carcasa_auricular", "tornillo_tapa", "tapa_auricular", "cable_tactil", "bateria_auricular", "cable_sensor_termico")],
+    ["JBL Tune 510BT", piezas("carcasa_auricular", "almohadilla_oreja", "bateria_auricular")],
+  ])("vincha con «carcasa_auricular» en el pack sigue siendo de vincha: %s", (modelo, p) => {
+    expect(elegirPlantilla({ clase: "otro", piezas: p, modelo }, "auriculares")?.id).toBe("auriculares_vincha");
+  });
+  it.each([
+    ["Sony WH-1000XM4", piezas("carcasa_auricular", "bateria", "conector_bateria", "conector_tactil", "tornillo_copa")],
+    ["Bose QuietComfort 45", piezas("tornillo_copa", "bateria")],
+  ])("sin piezas que decidan, una palabra de vincha en el pack («tornillo_copa») decide: %s", (modelo, p) => {
+    expect(elegirPlantilla({ clase: "otro", piezas: p, modelo }, "auriculares")?.id).toBe("auriculares_vincha");
+  });
+  it("y una palabra de in-ear («contacto_carga») decide in-ear", () => {
+    expect(elegirPlantilla({ clase: "otro", piezas: piezas("bateria", "contacto_carga"), modelo: "JBL Wave Buds" }, "auriculares")?.id).toBe("auriculares");
+  });
+  it("in-ear con carcasa y estuche sigue siendo in-ear", () => {
+    expect(elegirPlantilla({ clase: "otro", piezas: piezas("carcasa_auricular", "estuche_auriculares", "bateria_auricular"), modelo: "Samsung Galaxy Buds2" }, "auriculares")?.id).toBe("auriculares");
+  });
 });
 
 /** Un plano guardado ya terminado con el esqueleto de OTRO tipo: la raíz de esa plantilla y lo que le sumó. */
@@ -159,6 +180,18 @@ describe("planos de la caché armados con el esqueleto de otro tipo (#239): se l
     expect(raiz.pieza).toBe("diadema");
     expect(raiz.dim[2]).toBeLessThan(17 * 0.3);
     expect(ids(plano)).toEqual(expect.arrayContaining(["copa_izquierda", "copa_derecha", "bateria"]));
+  });
+
+  // QA con IA real (#239): lo que la IA estimó para el estuche quedaba en el centro, como un disco grande.
+  it.each([["Sony WH-1000XM4"], ["Bose QuietComfort 45"]])("lo estimado en el esqueleto in-ear se vuelve a ubicar: %s", async (modelo) => {
+    const viejo = guardadoComo("estuche_auriculares", [8, 3.5, 6], [
+      ["almohadilla_oreja", [8.1, 1.5, 6.2], [0.45, 1.35, 0.95], "estimada"],
+      ["placa_estuche", [7, 0.3, 5], [0, 0.4, 0], "plantilla"],
+    ]);
+    const plano = await leer(viejo, pack(modelo, ["almohadilla_oreja", "bateria"]), "auriculares");
+    expect(plano.piezas.find((p) => !p.padre)!.pieza).toBe("diadema");
+    const almohadilla = plano.piezas.find((p) => p.pieza === "almohadilla_oreja")!;
+    expect(Math.max(...almohadilla.dim)).toBeLessThan(5);
   });
 
   it("un plano guardado del mismo tipo no cambia (lo que sumó su esqueleto sigue)", async () => {

@@ -262,7 +262,7 @@ function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEqui
     // (tóner o fusora → láser; cabezal o cartucho de tinta → tinta). Sin piezas que decidan, la primera de la lista.
     // Antes que las piezas, el modelo del pack ("Epson EcoTank L3250" → tinta), con las mismas palabras y pistas.
     const empatadas = candidatas.filter((c) => c.n === porNombre!.n && c.primera === porNombre!.primera).map((c) => c.p);
-    return empatadas.length > 1 ? (porModelo(empatadas, kp.modelo) ?? porPiezasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
+    return empatadas.length > 1 ? (porModelo(empatadas, kp.modelo) ?? porPiezasPropias(empatadas, kp) ?? porPalabrasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
   }
   const porClase = PLANTILLAS_POR_TIPO.find((p) => p.clase && p.clase === kp.clase);
   if (porClase) return porClase;
@@ -285,6 +285,8 @@ function porModelo(empatadas: PlantillaDeEquipo[], modelo?: string): PlantillaDe
   return max > 0 && puntos.filter((n) => n === max).length === 1 ? empatadas[puntos.indexOf(max)] : undefined;
 }
 
+const CARCASA = /^carcasa(_|$)/;
+
 /**
  * Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras.
  * Una pieza sin forma en la biblioteca cuenta por su primera palabra ("copa_izquierda" → copa).
@@ -296,10 +298,26 @@ function porPiezasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): P
   let mejor: { p: PlantillaDeEquipo; n: number } | undefined;
   for (const p of empatadas) {
     const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...tipos(q)]));
-    const n = [...tipos(p)].filter((x) => !otras.has(x) && delPack.has(x)).length;
+    // La carcasa la tiene cualquier variante (en unos de vincha es la copa): no desempata.
+    const n = [...tipos(p)].filter((x) => !otras.has(x) && !CARCASA.test(x) && delPack.has(x)).length;
     if (n > 0 && (!mejor || n > mejor.n)) mejor = { p, n };
   }
   return mejor?.p;
+}
+
+/**
+ * Si las piezas no deciden: la única que tiene en el pack más palabras que son la primera de alguna de sus
+ * piezas y de ninguna de las otras ("tornillo_copa" → copa → vincha; "contacto_carga" → contacto → in-ear).
+ */
+function porPalabrasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): PlantillaDeEquipo | undefined {
+  const primeras = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => x.pieza.split("_")[0]).filter((w) => !CARCASA.test(w)));
+  const delPack = new Set(kp.piezas.flatMap((p) => p.id.split("_")));
+  const puntos = empatadas.map((p) => {
+    const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...primeras(q)]));
+    return [...primeras(p)].filter((w) => !otras.has(w) && delPack.has(w)).length;
+  });
+  const max = Math.max(...puntos);
+  return max > 0 && puntos.filter((n) => n === max).length === 1 ? empatadas[puntos.indexOf(max)] : undefined;
 }
 
 /**
