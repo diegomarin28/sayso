@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
-import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto } from "../../shared";
+import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
 import { evaluarRiesgo } from "../safety/riesgos";
 import { normalizar } from "../intake/chapa";
 
@@ -13,6 +13,7 @@ import { normalizar } from "../intake/chapa";
  *   ADVERTENCIA|Desconectá la batería antes de tocar la placa.
  *   VISTA|explosionada|Vista explosionada general con la lista de piezas
  *   VISTA|interior|Equipo dado vuelta sin la tapa inferior
+ *   FORMA|redonda
  *
  * Las citas NO las escribe el modelo: las pone la API (`citations`) con el texto
  * literal del PDF y su página. Por eso un paso con cita de página es VERIFICADO.
@@ -90,7 +91,17 @@ export type Contenido = {
   vistas: Vistas;
   descartadas: string[];
   faltantes: Faltante[];
+  /** Forma de la pantalla del modelo (línea FORMA), para los tipos que tienen más de una (#246). */
+  formaPantalla?: NonNullable<KnowledgePack["formaPantalla"]>;
 };
+
+/** "FORMA|redonda" o "FORMA|cuadrada" (tolera mayúsculas, "circular" y "rectangular"). */
+function formaDe(campo: string | undefined): Contenido["formaPantalla"] {
+  const c = normalizar(campo ?? "");
+  if (/^(REDOND|CIRCUL)/.test(c)) return "redonda";
+  if (/^(CUADRAD|RECTANG)/.test(c)) return "cuadrada";
+  return undefined;
+}
 
 /** "VISTA|explosionada|…" o "VISTA|interior|…" (tolera mayúsculas y tildes). */
 function claseVista(campo: string | undefined): ClaseVista | null {
@@ -200,6 +211,11 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       const clase = claseVista(campos[1]);
       const pagina = l.citas.find((c) => c.type === "page_location");
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
+      else r.descartadas.push(l.texto);
+    } else if (tipo === "FORMA") {
+      // La primera que se entiende; una forma que no es ninguna de las dos se descarta.
+      const forma = formaDe(campos[1]);
+      if (forma && !r.formaPantalla) r.formaPantalla = forma;
       else r.descartadas.push(l.texto);
     } else if (tipo === "FALTA" && campos[1]) {
       const procedimiento = enCastellano(campos.slice(1).join(" ")) || campos.slice(1).join(" ");

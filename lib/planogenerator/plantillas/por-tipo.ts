@@ -201,6 +201,15 @@ export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): Planti
 }
 
 /**
+ * Las formas de pantalla posibles del tipo de equipo (texto libre, ej. "reloj inteligente"): así el
+ * bibliotecario pide `formaPantalla` solo para los tipos que tienen más de una. Vacío si tiene una sola.
+ */
+export function formasDePantallaDe(tipoEquipo: string): FormaPantalla[] {
+  const formas = elegirPorTipo({ clase: "otro", piezas: [] }, tipoEquipo)?.formas;
+  return formas ? (Object.keys(formas.planos) as FormaPantalla[]) : [];
+}
+
+/**
  * Dentro de la misma clase, la plantilla que mejor nombra el modelo del pack (sus palabras valen 1 y sus
  * pistas medio). La recepción dice "notebook"; el pack, "MacBook Air M1": la notebook sin ventilador. Solo
  * si nombra MÁS que la elegida: "MacBook Pro" empata y queda la genérica; "IdeaPad 3" no nombra a ninguna.
