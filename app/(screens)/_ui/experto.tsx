@@ -2,17 +2,13 @@
 
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { Simbolo, type EstadoMarca } from "./marca";
 
-export type EstadoOrbe = "quieto" | "pensando";
+export type EstadoOrbe = EstadoMarca;
 
+/** El "experto": el símbolo de Sayso (tuerca con barras de voz que se mueven cuando piensa). */
 export function Orbe({ estado = "quieto", tam = 44 }: { estado?: EstadoOrbe; tam?: number }) {
-  return (
-    <div className="relative shrink-0" style={{ width: tam, height: tam }} aria-hidden>
-      <div className="orbe-halo absolute -inset-3 rounded-full" />
-      <div className="orbe absolute inset-0 rounded-full" data-estado={estado} />
-      <div className="absolute inset-[18%] rounded-full bg-fondo/70 backdrop-blur-sm" />
-    </div>
-  );
+  return <Simbolo estado={estado} tam={tam} />;
 }
 
 /** Lo que dice el experto: grande, aparece palabra por palabra. Cambiar `texto` re-anima. */
@@ -56,7 +52,7 @@ export function Encabezado({
 }) {
   return (
     <header className="flex items-center gap-4">
-      <Link href="/" aria-label="Volver al inicio">
+      <Link href="/" aria-label="Sayso: volver al inicio">
         <Orbe estado={orbe} />
       </Link>
       <div className="flex-1">

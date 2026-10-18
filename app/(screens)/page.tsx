@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos } from "./_datos/mis-casos";
 import { LineaPensando, LINEAS } from "./_ui/linea-pensando";
+import { LEMA, Marca } from "./_ui/marca";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
@@ -138,9 +139,17 @@ export default function QueSeRompio() {
     <Pantalla>
       <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} />
 
+      {/* La marca, solo al empezar (en el resto del recorrido queda el símbolo del encabezado). */}
+      {!entendido && !pensando && !error && (
+        <div className="aparece flex flex-col gap-2">
+          <Marca tam={44} conSimbolo={false} />
+          <p className="text-sm text-texto-suave">{LEMA}</p>
+        </div>
+      )}
+
       <DiceExperto texto={dice} />
 
-      {/* Carga de "entender": orbe grande y una línea de lo que está haciendo. */}
+      {/* Carga de "entender": el símbolo grande (sus barras de voz se mueven) y una línea de lo que hace. */}
       {pensando && (
         <div className="aparece flex flex-col items-center gap-4 py-2">
           <Orbe estado="pensando" tam={96} />

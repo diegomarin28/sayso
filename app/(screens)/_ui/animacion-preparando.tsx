@@ -175,7 +175,7 @@ function Notebook() {
         <path
           key={i}
           d={p.d}
-          stroke="var(--acento)"
+          stroke="var(--dato)"
           strokeWidth="2.4"
           className="prep-pieza"
           style={{ animationDelay: `${p.retraso}s` }}
@@ -204,7 +204,7 @@ function Pieza({ d, retraso }: { d: string; retraso: number }) {
   return (
     <path
       d={d}
-      stroke="var(--acento)"
+      stroke="var(--dato)"
       strokeWidth="2.4"
       className="prep-pieza"
       style={{ animationDelay: `${retraso}s` }}

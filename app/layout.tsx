@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Experto al lado",
-  description: "Guía de reparación con IA, voz y 3D",
+  title: "Sayso",
+  description: "Contale qué se rompió. Te guío con el manual de tu equipo, en 3D.",
   // En iPhone, "Agregar a inicio" la abre como app, sin la barra de Safari.
-  appleWebApp: { capable: true, title: "Experto", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Sayso", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1c1f24",
+  themeColor: "#0e1a24",
   viewportFit: "cover", // usa toda la pantalla; los márgenes respetan el notch (safe-area)
 };
 
