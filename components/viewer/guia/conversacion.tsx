@@ -200,7 +200,7 @@ export function conArticulo(nombre: string): { texto: string; plural: boolean } 
   const primera = n.split(/\s+/)[0];
   const plural = primera.length > 3 && /[aeiouáéíóú]s$|[^aeiouáéíóús]es$/.test(primera);
   const singular = plural ? primera.replace(/(?<=[^aeiouáéíóús])es$/, "").replace(/s$/, "") : primera;
-  const femenina = /a$|i[oó]n$|dad$/.test(singular) && !/^(sistema|tema|problema)$/.test(singular);
+  const femenina = (/a$|i[oó]n$|dad$/.test(singular) && !/^(sistema|tema|problema)$/.test(singular)) || /^(fuente|llave|base|parte|corriente|red|clave)(s|es)?$/.test(primera);
   const articulo = plural ? (femenina ? "las" : "los") : femenina ? "la" : "el";
   return { texto: `${articulo} ${n}`, plural };
 }
