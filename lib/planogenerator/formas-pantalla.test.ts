@@ -23,7 +23,6 @@ const pack = (formaPantalla?: "cuadrada" | "redonda"): KnowledgePack => ({
   ...(formaPantalla ? { formaPantalla } : {}),
 });
 const iaQueFalla: LlamarIA = async () => "no es json";
-const INDICE = IndicePiezas.parse(JSON.parse(readFileSync("public/models/piezas/indice.json", "utf8")));
 /** La IA sin manual: ubica todo estimado (sin página). */
 const iaEstimada: LlamarIA = async () =>
   JSON.stringify({
@@ -44,13 +43,14 @@ describe("forma de la pantalla del reloj (dato del pack, por tipo)", () => {
       const redondo = (await generarPlano({ casoId: "c", knowledgePack: pack("redonda"), tipoEquipo: "reloj inteligente" }, ia)).plano;
       const cuadrado = (await generarPlano({ casoId: "c", knowledgePack: pack("cuadrada"), tipoEquipo: "reloj inteligente" }, ia)).plano;
       expect(() => PlanoDePiezas.parse(redondo)).not.toThrow();
-      // Redondo: pantalla y caja con formas redondas, planta circular.
-      expect(pieza(redondo, "pantalla").formaBiblioteca).toBe("esfera_reloj");
-      expect(raiz(redondo).formaBiblioteca).toBe("tapa_reloj");
-      // Se dibujan círculos aunque la planta estimada no sea cuadrada: esas formas escalan igual en x y z.
-      for (const forma of ["esfera_reloj", "tapa_reloj"]) expect(INDICE.tipos[forma].ajuste, forma).toBe("redondo:xz");
-      // Cuadrado: la pantalla de reloj de la biblioteca (por el id), más alta que ancha.
-      expect(pieza(cuadrado, "pantalla").formaBiblioteca).toBeUndefined();
+      // Redondo: las formas de reloj de la biblioteca (que son redondas), con planta circular.
+      expect(pieza(redondo, "pantalla").formaBiblioteca).toBeUndefined();
+      expect(raiz(redondo).formaBiblioteca).toBeUndefined();
+      const [rx, , rz] = pieza(redondo, "pantalla").dim;
+      expect(rz / rx).toBeLessThan(1.15);
+      // Cuadrado: formas de rectángulo redondeado (el marco y la pantalla de celular), no las de reloj.
+      expect(pieza(cuadrado, "pantalla").formaBiblioteca).toBe("pantalla");
+      expect(raiz(cuadrado).formaBiblioteca).toBe("marco");
       const [cx, , cz] = pieza(cuadrado, "pantalla").dim;
       expect(cz / cx).toBeGreaterThan(1.1);
       // Con el dato, la forma no queda estimada.
@@ -60,7 +60,7 @@ describe("forma de la pantalla del reloj (dato del pack, por tipo)", () => {
 
   it("sin el dato: la forma más común del tipo (cuadrada), con la caja y la pantalla estimadas y un aviso", async () => {
     const r = await generarPlano({ casoId: "c", knowledgePack: pack(), tipoEquipo: "reloj inteligente" }, iaQueFalla);
-    expect(pieza(r.plano, "pantalla").formaBiblioteca).toBeUndefined();
+    expect(pieza(r.plano, "pantalla").formaBiblioteca).toBe("pantalla"); // la cuadrada
     expect(pieza(r.plano, "pantalla").origen).toBe("estimada");
     expect(raiz(r.plano).origen).toBe("estimada");
     expect(pieza(r.plano, "bateria").origen).toBe("plantilla"); // lo demás no cambia
@@ -89,8 +89,27 @@ describe("modeloPara respeta la forma que eligió el generador", () => {
   });
 
   it("con formaBiblioteca, esa forma; sin ella (o si no existe), la del id", () => {
-    expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4], "reloj", "esfera_reloj")).toBe(biblioteca.get("esfera_reloj"));
+    expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj", "esfera_reloj")).toBe(biblioteca.get("esfera_reloj"));
     expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj")).toBe(biblioteca.get("pantalla@reloj"));
     expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj", "no_existe")).toBe(biblioteca.get("pantalla@reloj"));
+  });
+});
+
+describe("la tapa va del lado donde la pone el esqueleto", () => {
+  it.each([["redonda"], ["cuadrada"]] as const)("reloj (%s): la tapa (el dorso) abajo de todo; arriba, la pantalla", async (forma) => {
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack(forma), tipoEquipo: "reloj inteligente" }, iaQueFalla);
+    const tapa = pieza(r.plano, "tapa_reloj");
+    const abajo = (x: (typeof r.plano.piezas)[number]) => x.pos[1] - x.dim[1] / 2;
+    const arriba = (x: (typeof r.plano.piezas)[number]) => x.pos[1] + x.dim[1] / 2;
+    for (const x of r.plano.piezas.filter((y) => y !== tapa)) expect(abajo(tapa), x.pieza).toBeLessThanOrEqual(abajo(x) + 1e-6);
+    const pantalla = pieza(r.plano, "pantalla");
+    for (const x of r.plano.piezas.filter((y) => y.pieza !== "correa_reloj")) expect(arriba(pantalla) + 1e-6, x.pieza).toBeGreaterThanOrEqual(arriba(x));
+  });
+
+  it("celular: la tapa trasera sigue arriba de todo (se lo mira por atrás)", async () => {
+    const kp = { ...pack(), piezas: ["bateria", "placa_madre"].map((id) => ({ id, nombre: id, descripcion: "", ubicacion: "" })) };
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo: "celular" }, iaQueFalla);
+    const tapa = pieza(r.plano, "tapa_trasera");
+    for (const x of r.plano.piezas.filter((y) => y !== tapa)) expect(tapa.pos[1], x.pieza).toBeGreaterThan(x.pos[1]);
   });
 });
