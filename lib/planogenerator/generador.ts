@@ -28,6 +28,7 @@ import {
 } from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
 import { palabras } from "./biblioteca";
+import { ES_TAPA } from "./cubiertas";
 import { acotarMedidas, seguirPlantilla } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
 
@@ -517,9 +518,9 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   const seguido = tipo ? seguirPlantilla(plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
-  const sinTapa = tipo?.plano.piezas.some((p) => p.pieza.startsWith("tapa") && !tipo.parado) ? ids.filter((id) => !id.startsWith("tapa")) : ids;
+  const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(acotado.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  return { plano: tipo ? conTapa(sueltas.plano, tipo, ids) : sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
+  return { plano: tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */

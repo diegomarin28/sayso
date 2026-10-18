@@ -10,6 +10,7 @@ import {
   type Evento,
 } from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
+import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
 import { EJEMPLOS } from "./ejemplos";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
@@ -29,6 +30,12 @@ const paso = (dice: string, acciones: Coreografia["acciones"]): Coreografia => (
   riesgo: "bajo",
   acciones,
 });
+
+/** "Abrir tapa" con la tapa del plano que se muestra (la del celular, la de la consola…), no siempre la de notebook. */
+const conLaTapaDe = (c: Coreografia, plano: PlanoDePiezas): Coreografia => {
+  const tapa = plano.piezas.find((p) => p.padre && ES_TAPA.test(p.pieza))?.pieza;
+  return tapa ? { ...c, acciones: c.acciones.map((a) => (a.t === "rotar" ? { ...a, pieza: tapa } : a)) } : c;
+};
 
 const EXTRAS: Array<[string, Coreografia]> = [
   ["Abrir tapa", paso("Sacá la tapa inferior.", [
@@ -143,7 +150,7 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
 
         <Seccion titulo="Acciones sueltas">
           {EXTRAS.map(([nombre, c]) => (
-            <Boton key={nombre} onClick={() => reproducir(c)}>{nombre}</Boton>
+            <Boton key={nombre} onClick={() => reproducir(nombre === "Abrir tapa" ? conLaTapaDe(c, plano) : c)}>{nombre}</Boton>
           ))}
         </Seccion>
 

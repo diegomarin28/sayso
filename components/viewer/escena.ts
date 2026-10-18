@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ES_CUBIERTA } from "../../lib/planogenerator/cubiertas";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
 import { desplazamientoDespiece, type Cubiertas, type EstadoEscena } from "./reproductor";
@@ -85,8 +86,6 @@ export type EscenaPreparada = {
   apertura: Tween;
 };
 
-/** Tapas, puertas y carcasas: lo que tapa el interior. */
-const ES_CUBIERTA = /^(tapa|carcasa|puerta)/;
 
 export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
   const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca, tipoEquipo });
