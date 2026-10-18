@@ -9,11 +9,13 @@ const COSTOS = { entender: 0.001, knowledge: 0.2, plano: 0.02, chat: 0.05 };
 /** La app de mentira: responde como las rutas reales, sin IA. */
 function appFalsa({ bloquea = true, pausa = false } = {}) {
   const llamadas: string[] = [];
+  const cuerpos: Record<string, unknown>[] = [];
   const f: typeof fetch = async (url, init) => {
     const ruta = new URL(String(url)).pathname;
     llamadas.push(ruta);
     if (pausa) return Response.json({ error: "IA en pausa", codigo: "ia_en_pausa" }, { status: 503 });
     const cuerpo = JSON.parse(String(init?.body ?? "{}"));
+    cuerpos.push(cuerpo);
     switch (ruta) {
       case "/api/intake/entender":
         return Response.json({ caso: { ...casoEjemplo, id: `caso-${llamadas.length}`, sintoma: cuerpo.texto }, tipoEquipo: "notebook", eventos: [costo(COSTOS.entender)] });
@@ -34,7 +36,7 @@ function appFalsa({ bloquea = true, pausa = false } = {}) {
     }
     return new Response("no", { status: 404 });
   };
-  return { f, llamadas };
+  return { f, llamadas, cuerpos };
 }
 
 const porCaso = COSTOS.entender + COSTOS.knowledge + COSTOS.plano + 2 * COSTOS.chat;
@@ -54,6 +56,13 @@ describe("batería de pruebas (sin IA)", () => {
     const t = tabla(r.filas, r.totalUsd);
     expect(t).toContain("| Equipo | Identificado | Manual | Verificado | Pasos | Origen del 3D | Bloqueos | Costo | Tiempo | Nota |");
     expect(t).toContain("Notebook (HP 250 G9)");
+  });
+
+  it("como la app, pasa el tipo de equipo de la recepción a knowledge, plano y chat", async () => {
+    const { f, cuerpos } = appFalsa();
+    await correrBateria(CASOS.slice(0, 1), { base: "http://app", topeUsd: 1, fetch: f });
+    // entender, ficha, knowledge, plano, chat, chat
+    expect(cuerpos.slice(2).map((c) => c.tipoEquipo)).toEqual(["notebook", "notebook", "notebook", "notebook"]);
   });
 
   it("corta antes del paso siguiente cuando el acumulado pasa el tope, y marca lo que no corrió", async () => {
@@ -109,7 +118,7 @@ describe("comparación del plano Sonnet vs Haiku (sin IA)", () => {
       fetch: f,
       compararPlano: async (e) => (entradas.push(e), comparacion(entradas.length === 2 ? "manual" : "recorte")),
     });
-    expect(entradas[0]).toMatchObject({ manualFileId: "file_1", paginaVistaInterior: 68, paginasVistaExplosionada: [51] });
+    expect(entradas[0]).toMatchObject({ manualFileId: "file_1", paginaVistaInterior: 68, paginasVistaExplosionada: [51], tipoEquipo: "notebook" });
     expect(r.filas[0].usd).toBeCloseTo(porCaso + 0.015 + 0.003);
     expect(r.filas[1].usd).toBeCloseTo(porCaso + 0.015);
     const t = tablaPlano(r.filas);

@@ -19,6 +19,7 @@ export type EntradaPlano = {
   manualUrl: string | null;
   paginasVistaExplosionada: number[];
   paginaVistaInterior: number | null;
+  tipoEquipo?: string;
 };
 
 export type CorridaPlano = { modelo: string; usd: number; segundos: number; origen3D: string };
@@ -165,6 +166,8 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
   const e = await post("/api/intake/entender", { texto: caso.relato }, RespEntender);
   fila.identificado = `${e.caso.clase}${e.tipoEquipo ? ` · ${e.tipoEquipo}` : ""}`;
   const bloqueos: string[] = e.bloqueo ? ["relato bloqueado"] : [];
+  // Como la app: el tipo de equipo de la recepción va a knowledge, plano y chat (plantilla y avisos por tipo).
+  const tipoEquipo = e.tipoEquipo?.trim() || undefined;
 
   // La chapa no se lee en la batería: la persona escribe marca y modelo (sin IA).
   const nada = { valor: null, estado: "desconocido" as const };
@@ -178,7 +181,7 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
   );
 
   antes("knowledge");
-  const k = await post("/api/knowledge", { ficha: fi.ficha, sintoma: e.caso.sintoma }, RespKnowledge);
+  const k = await post("/api/knowledge", { ficha: fi.ficha, sintoma: e.caso.sintoma, tipoEquipo }, RespKnowledge);
   fila.manual = k.manualFileId ? (k.pack.fuentes[0]?.doc ?? "manual") : k.pack.fuentes.length ? "guía pública" : "—";
   fila.verificado = k.pack.verificado;
   fila.pasos = k.pack.pasos.length;
@@ -192,6 +195,7 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
     manualUrl: k.manualUrl,
     paginasVistaExplosionada: k.paginasVistaExplosionada,
     paginaVistaInterior: k.paginaVistaInterior,
+    tipoEquipo,
   };
   const p = await post("/api/plano", entradaPlano, RespPlano);
   fila.origen3D = textoOrigen(p.origen, p.plano);
@@ -214,7 +218,7 @@ async function correrCaso(caso: CasoPrueba, fila: Fila, o: Opciones, gastado: ()
     const r = await f(o.base + "/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ casoId: e.caso.id, pack: k.pack, plano: p.plano, manualFileId: k.manualFileId, historial, pregunta }),
+      body: JSON.stringify({ casoId: e.caso.id, pack: k.pack, plano: p.plano, manualFileId: k.manualFileId, historial, pregunta, tipoEquipo }),
       signal: AbortSignal.timeout(espera),
     });
     if (r.status === 503) throw new Corte("IA en pausa en /api/chat");

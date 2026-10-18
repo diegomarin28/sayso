@@ -16,6 +16,7 @@ export async function compararPlano(e: EntradaPlano): Promise<ComparacionPlano> 
     casoId: e.casoId,
     knowledgePack: e.knowledgePack,
     ficha: e.ficha,
+    tipoEquipo: e.tipoEquipo,
     manualUrl: e.manualUrl,
     manual: e.manualFileId
       ? { fileId: e.manualFileId, paginasVistaExplosionada: e.paginasVistaExplosionada, paginaVistaInterior: e.paginaVistaInterior }
