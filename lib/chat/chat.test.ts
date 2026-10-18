@@ -255,3 +255,14 @@ describe("pregunta de seguimiento (A7)", () => {
     expect(sistema).toMatch(/solo para esa pieza/);
   });
 });
+
+describe("tipo de equipo en la seguridad del chat (#112)", () => {
+  it("en un celular el bloqueo habla de la batería, no de 220 V", async () => {
+    const base4 = { casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null };
+    const ev = await todos(conversar({ ...base4, tipoEquipo: "celular", pregunta: "¿Cómo abro la batería para cambiarle las celdas?" }, streamFalso(["x. "])));
+    const b = ev[0];
+    if (b.tipo !== "bloqueo") throw new Error("no bloqueó");
+    expect(b.coreografia.dice).toMatch(/bater/i);
+    expect(b.coreografia.dice).not.toMatch(/220/);
+  });
+});

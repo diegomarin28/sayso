@@ -32,6 +32,8 @@ export const EntradaChat = z.object({
     .max(LIMITES.chat.maxHistorial)
     .default([]),
   pregunta: z.string().trim().min(1).max(2000),
+  /** Tipo de equipo de la recepción (ej. "celular"): cambia las reglas y el mensaje de seguridad. Si no viene, la clase del pack. */
+  tipoEquipo: z.string().trim().max(60).optional(),
   /** "auto" (por defecto): primero el pack; si no alcanza, el manual. "manual": directo al PDF. */
   modo: z.enum(["auto", "manual"]).default("auto"),
 });
@@ -103,6 +105,8 @@ type Contexto = {
   usos: Uso[];
   /** Tope de frases (pregunta de seguimiento: respuesta corta, sin rehacer la guía). Infinity = sin tope. */
   maxFrases: number;
+  /** Tipo de equipo para la seguridad. */
+  tipoEquipo: string;
   /** Páginas del manual completo que tiene el extracto (null = sin traducir). */
   paginas: number[] | null;
 };
@@ -122,7 +126,7 @@ function emitir(s: Segmento, ctx: Contexto): EventoChat {
     riesgo: "bajo",
     ...(cita ? { cita } : {}),
     ...(s.cambiar ? { cambiar: s.cambiar } : {}),
-  });
+  }, { tipoEquipo: ctx.tipoEquipo });
   return evaluacion.bloqueado ? { tipo: "bloqueo", coreografia, clases: evaluacion.clases } : { tipo: "paso", coreografia };
 }
 
@@ -193,7 +197,7 @@ export async function* conversar(
   const { pack, pregunta, manualFileId } = entrada;
 
   // 1. La tabla de seguridad mira la pregunta ANTES de llamar a la IA.
-  const previa = evaluarPedido(pregunta);
+  const previa = evaluarPedido(pregunta, { tipoEquipo: entrada.tipoEquipo ?? pack.clase });
   if (previa.bloqueado) {
     yield {
       tipo: "bloqueo",
@@ -210,6 +214,7 @@ export async function* conversar(
     : [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
   const doc = pack.fuentes[0]?.doc ?? "Manual";
   const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [], paginas: null,
+    tipoEquipo: entrada.tipoEquipo ?? pack.clase,
     maxFrases: entrada.historial.length > 0 ? LIMITES.chat.maxFrasesSeguimiento : Infinity,
   };
   const historial = entrada.historial.map((h) => `<${h.rol}>${h.texto}</${h.rol}>`).join("\n");

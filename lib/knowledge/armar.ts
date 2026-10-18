@@ -262,11 +262,11 @@ export async function armarKnowledgePack(
     try {
       if (manual) {
         lectura = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
-        contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
+        contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo, undefined, tipoEquipo ?? ficha.clase), manual.paginas);
       } else if (manualWeb) {
         // Manual web: sin páginas (no hay vistas para el 3D); cada cita lleva la URL de su sección.
         lectura = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web");
-        contenido = parsearContenido(lineasConCitas(lectura.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url));
+        contenido = parsearContenido(lineasConCitas(lectura.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase);
       }
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
@@ -286,7 +286,7 @@ export async function armarKnowledgePack(
   if (!conManual) {
     try {
       lectura = await guiaPublica(equipoDescrito, sintoma, enviar);
-      contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública");
+      contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública", undefined, tipoEquipo ?? ficha.clase);
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
       huboFalla = true;
