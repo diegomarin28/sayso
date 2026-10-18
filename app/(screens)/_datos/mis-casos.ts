@@ -33,6 +33,7 @@ const Guia = z.object({
     paginaVistaInterior: z.number().nullable().default(null),
     /** Página del manual → URL del PNG (vista interior y páginas citadas; nunca fotos de la persona). */
     imagenesPaginas: z.record(z.string(), z.string()).default({}),
+    fotosPasos: z.record(z.string(), z.string()).default({}),
     vistaInterior: z
       .object({ url: z.string(), pagina: z.number(), estado: z.enum(["VERIFICADO", "NO_VERIFICADO"]) })
       .nullable()
