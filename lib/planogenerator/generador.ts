@@ -14,6 +14,8 @@ import {
   type PlantillaDeEquipo,
 } from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
+import { palabras } from "./biblioteca";
+import { sumarSueltas } from "./sueltas";
 
 /**
  * B4 — Generador del plano 3D desde el manual.
@@ -186,15 +188,18 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
-    const plano = tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano;
-    const avisos = [...avisosCara, ...armado.avisos];
-    return { plano, avisos, origen: "ia", camino, modelo, propuesta };
+    const sueltas = conSueltas(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
+    const avisos = [...avisosCara, ...armado.avisos, ...sueltas.avisos];
+    return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo, propuesta };
   } catch (e) {
     if (!(e instanceof ErrorIA)) throw e;
     // La plantilla del tipo de equipo (heladera, aire, TV…); la de notebook o, sin tipo, la caja genérica de siempre.
     const plantilla = elegirPlantilla(kp, entrada.tipoEquipo);
     const deTipo = plantilla && plantilla.id !== "notebook" ? plantilla : undefined;
-    const { plano, avisos } = deTipo ? planoDesdePlantillaDeTipo(kp, deTipo) : planoDesdePlantilla(kp);
+    const armado = deTipo ? planoDesdePlantillaDeTipo(kp, deTipo) : planoDesdePlantilla(kp);
+    const sueltas = conSueltas(armado.plano, kp, plantilla);
+    const { plano } = sueltas;
+    const avisos = [...armado.avisos, ...sueltas.avisos];
     const cual = deTipo ? `la plantilla genérica de ${deTipo.nombre} (esquema genérico, no es tu modelo exacto)` : "la plantilla genérica";
     return {
       plano,
@@ -338,7 +343,7 @@ export function planoDesdePropuesta(
       origenes.set(id, "plantilla");
       avisos.push(`"${id}" no se ubicó en el manual: se usa la posición genérica de la plantilla.`);
     } else {
-      avisos.push(`"${id}" no se ubicó en el manual ni está en la plantilla: no aparece en el 3D.`);
+      avisos.push(`"${id}" no se ubicó en el manual ni está en la plantilla.`);
     }
   }
 
@@ -460,6 +465,16 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
     medidas: { ancho: "plantilla", prof: "plantilla" },
   };
   return { ...r, plano };
+}
+
+/**
+ * Lo último antes de devolver un plano (también uno de la caché): las piezas del pack que quedaron sin
+ * lugar se suman sueltas (ver `sumarSueltas`), así la guía nunca nombra algo que el 3D no tiene. La
+ * estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
+ */
+export function conSueltas(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
+  const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
+  return sumarSueltas(plano, ids, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */

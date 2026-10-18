@@ -63,7 +63,7 @@ describe("planoDesdePlantillaDeTipo", () => {
     // El ventilador del pack toma el lugar del ventilador de la plantilla (mismo tipo), con el id del pack.
     const vent = plantilla("heladera").plano.piezas.find((p) => p.pieza === "ventilador_evaporador")!;
     expect(plano.piezas.find((p) => p.pieza === "ventilador_freezer")!.pos).toEqual(vent.pos);
-    expect(avisos.join(" ")).toMatch(/filtro_agua.*no aparece/);
+    expect(avisos.join(" ")).toMatch(/filtro_agua.*no está en el esquema/); // la suma suelta `conSueltas` (sueltas.test.ts)
   });
 
   it("cada plantilla, con las mismas piezas que tiene, se arma entera y valida", () => {

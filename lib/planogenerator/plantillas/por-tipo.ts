@@ -154,7 +154,7 @@ export function planoDesdePlantillaDeTipo(kp: KnowledgePack, plantilla: Plantill
   const raiz = piezas.find((p) => !p.padre) ?? piezas[0];
   const delPack = kp.piezas.filter((p) => !["base", "tapa_inferior"].includes(p.id) || plantilla.id === "notebook");
   const { usadas, sinLugar } = emparejar(delPack.map((p) => p.id), plantilla);
-  const avisos = sinLugar.map((id) => `"${id}" no está en el esquema genérico de ${plantilla.nombre}: no aparece en el 3D.`);
+  const avisos = sinLugar.map((id) => `"${id}" no está en el esquema genérico de ${plantilla.nombre}.`);
   if (!usadas.has(raiz.pieza)) usadas.set(raiz.pieza, raiz.pieza);
 
   const etiqueta = new Map(kp.piezas.map((p) => [p.id, p.etiquetaManual]));

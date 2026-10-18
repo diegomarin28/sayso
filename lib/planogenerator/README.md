@@ -62,7 +62,11 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
     medio: "Galaxy Tab" es tablet, "control de la tele" es control remoto); si empatan, la nombrada primero
     ("cargador de celular" es un cargador). Sin el nombre del aparato (una planchita, un pendrive) no adivina.
   - **Completar lo que la IA no ubicó**: con la plantilla del tipo (`propuestaDePlantillaDeTipo`: por id o por tipo de
-    pieza; en un equipo parado, la cara), no con la de notebook. Así un TV con una sola pieza ubicada no queda vacío. Se
+    pieza; en un equipo parado, la cara), no con la de notebook. Así un TV con una sola pieza ubicada no queda vacío.
+  - **Lo que nadie ubicó igual va al 3D** (`sueltas.ts`, `conSueltas`): una pieza del pack que ni la IA ni la plantilla
+    ubican se suma con las medidas de su forma en la biblioteca (la variante del equipo, achicada parejo para que entre;
+    sin forma, una caja chica) en el hueco más libre del equipo, colgando de la raíz y con origen "plantilla". Al generar
+    y al leer de la caché: la guía nunca resalta algo que el 3D no tiene. Se
     elige por el `tipoEquipo` de la recepción (opcional en `/api/plano`), si no por la clase del pack, si no por sus
     piezas (solo las que distinguen un equipo, ej. compresor + puerta de freezer → heladera). Del plano de la
     plantilla quedan la raíz y, para cada pieza del pack, la de igual id o del mismo tipo (con el id del pack);
