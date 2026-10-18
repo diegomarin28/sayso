@@ -91,7 +91,16 @@ export function TarjetaPaso({
           </div>
         )}
       </div>
-      <p ref={medir} className={`mt-1 text-[15px] leading-snug font-medium ${entero ? "" : "line-clamp-3 [@media(max-height:600px)]:line-clamp-2"}`}>
+      {/* 3 líneas (2 en pantallas bajas) que se desvanecen abajo, sin "…": cortado justo después de un punto se
+          leía "...." (#231). El resto, con "ver más". */}
+      <p
+        ref={medir}
+        className={`mt-1 text-[15px] leading-snug font-medium ${
+          entero
+            ? ""
+            : `max-h-[4.125em] overflow-hidden [@media(max-height:600px)]:max-h-[2.75em] ${largo ? "[mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" : ""}`
+        }`}
+      >
         {c.dice.split(/\s+/).map((palabra, i) => (
           <Fragment key={i}>
             <span className="palabra" style={{ animationDelay: `${i * 40}ms` }}>
