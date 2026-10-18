@@ -337,14 +337,16 @@ export async function medir3D(page: Page, lienzo: Locator) {
 
 /**
  * Ningún botón queda tapado por la barra de abajo, otro elemento o el borde de la pantalla.
- * A cada botón visible lo lleva a la vista (como haría la persona al scrollear) y mira qué hay
- * arriba en 5 puntos del botón: si es otra cosa, está tapado. Al terminar deja el scroll como estaba.
- * Devuelve la lista de tapados: cada uno es un problema.
+ * 1) Rápido, en el navegador: a cada botón visible lo lleva a la vista y mira qué hay arriba en
+ *    5 puntos. Si se sale por el borde, es un problema; si algo lo tapa, queda "sospechoso".
+ * 2) Cada sospechoso se confirma con un click de prueba de Playwright (scrollea como la persona,
+ *    no toca nada): si otro elemento se queda con el toque, está tapado de verdad.
+ * Al terminar deja el scroll como estaba. Devuelve la lista de tapados: cada uno es un problema.
  */
 export async function botonesTapados(page: Page): Promise<string[]> {
   const ancho = page.viewportSize()?.width ?? 0;
   const alto = page.viewportSize()?.height ?? 0;
-  return page.evaluate(
+  const resultado = await page.evaluate(
     ({ ancho, alto }) => {
       const vw = ancho || window.innerWidth;
       const vh = alto || window.innerHeight;
@@ -380,9 +382,16 @@ export async function botonesTapados(page: Page): Promise<string[]> {
       });
 
       const tapados: string[] = [];
+      const sospechosos: string[] = [];
       for (const el of candidatos) {
-        guardar(el);
-        el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+        // Solo se scrollea si el botón no está entero a la vista, y lo justo ("nearest"): centrarlo
+        // movía contenedores que la persona no puede scrollear y daba tapados que no existen.
+        const antes = el.getBoundingClientRect();
+        const aLaVista = antes.top >= 0 && antes.left >= 0 && antes.bottom <= vh && antes.right <= vw;
+        if (!aLaVista) {
+          guardar(el);
+          el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+        }
         const b = el.getBoundingClientRect();
         if (b.top < -1 || b.left < -1 || b.bottom > vh + 1 || b.right > vw + 1) {
           tapados.push(
@@ -402,7 +411,9 @@ export async function botonesTapados(page: Page): Promise<string[]> {
           const y = b.top + b.height * fy;
           const arriba = document.elementFromPoint(x, y);
           if (arriba && arriba !== el && !el.contains(arriba) && !arriba.contains(el)) {
-            tapados.push(`${nombreDe(el)}: lo tapa ${describir(arriba)}`);
+            // Sospechoso: lo confirma Playwright afuera (puede ser algo que se va al scrollear).
+            el.setAttribute("data-e2e-sospechoso", String(sospechosos.length));
+            sospechosos.push(`${nombreDe(el)}: lo tapa ${describir(arriba)}`);
             break;
           }
         }
@@ -413,10 +424,29 @@ export async function botonesTapados(page: Page): Promise<string[]> {
         el.scrollTop = t;
       }
       window.scrollTo({ left: ventana[0], top: ventana[1], behavior: "instant" });
-      return tapados;
+      return { tapados, sospechosos };
     },
     { ancho, alto },
   );
+
+  // Confirmación con Playwright: un "click de prueba" (no toca nada) scrollea como haría la persona
+  // y falla solo si otro elemento se queda con el toque. Eso es un botón tapado de verdad.
+  const confirmados = [...resultado.tapados];
+  const scroll = await page.evaluate(() => [window.scrollX, window.scrollY] as const);
+  for (let i = 0; i < resultado.sospechosos.length; i++) {
+    const boton = page.locator(`[data-e2e-sospechoso="${i}"]`);
+    try {
+      await boton.click({ trial: true, timeout: 2_000 });
+    } catch (e) {
+      const motivo = /<([^>]{1,80})>[^\n]*intercepts pointer events/.exec(String(e))?.[1];
+      confirmados.push(motivo ? `${resultado.sospechosos[i].split(":")[0]}: lo tapa <${motivo}>` : resultado.sospechosos[i]);
+    }
+  }
+  await page.evaluate(([x, y]) => {
+    for (const el of document.querySelectorAll("[data-e2e-sospechoso]")) el.removeAttribute("data-e2e-sospechoso");
+    window.scrollTo({ left: x, top: y, behavior: "instant" });
+  }, scroll);
+  return confirmados;
 }
 
 // ---------- Alto del 3D ----------
@@ -550,4 +580,103 @@ export async function girar3D(page: Page, lienzo: Locator, ms = 2800) {
 /** El lienzo del visor 3D: el `<canvas>` que está dentro del visor (fondo negro, `touch-action: none`), no otros de la página. */
 export function lienzo3D(page: Page): Locator {
   return page.locator('div[style*="touch-action: none"] canvas').first();
+}
+
+// ---------- Detalle del 3D (piezas de adentro visibles) ----------
+
+/**
+ * Cuánto detalle tiene el centro del 3D y cuánto está pintado del color de resaltado (cian
+ * `--dato`). Si una pieza grande se resalta con relleno opaco, tapa todo: el detalle (bordes,
+ * piezas de adentro) cae y el cian (o un solo color) llena la imagen.
+ * - `bordes`: fracción de píxeles con un cambio fuerte de luz respecto del vecino (detalle).
+ * - `cian`: fracción de píxeles parecidos al color de resaltado.
+ * - `dominante`: fracción del color más repetido (un relleno parejo de cualquier color).
+ */
+export async function detalle3D(page: Page, lienzo: Locator) {
+  const caja = await lienzo.boundingBox();
+  if (!caja) return null;
+  const clip = {
+    x: caja.x + caja.width * 0.1,
+    y: caja.y + caja.height * 0.42,
+    width: caja.width * 0.8,
+    height: caja.height * 0.4,
+  };
+  const foto = await page.screenshot({ clip, animations: "disabled" });
+  return page.evaluate(async (b64) => {
+    const hex = getComputedStyle(document.documentElement).getPropertyValue("--dato").trim() || "#4fd1e0";
+    const [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    const { data: d, width: w, height: h } = ctx.getImageData(0, 0, c.width, c.height);
+    const luz = (i: number) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    let bordes = 0;
+    let cian = 0;
+    let total = 0;
+    const cuenta = new Map<number, number>();
+    for (let y = 0; y < h - 1; y += 2)
+      for (let x = 0; x < w - 1; x += 2) {
+        const i = (y * w + x) * 4;
+        total++;
+        const l = luz(i);
+        if (Math.abs(l - luz(i + 4)) + Math.abs(l - luz(i + w * 4)) > 24) bordes++;
+        if (Math.abs(d[i] - cr) + Math.abs(d[i + 1] - cg) + Math.abs(d[i + 2] - cb) < 90) cian++;
+        const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+        cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
+      }
+    const dominante = Math.max(...cuenta.values()) / total;
+    return { bordes: bordes / total, cian: cian / total, dominante, colores: cuenta.size };
+  }, foto.toString("base64"));
+}
+
+// ---------- La pantalla no quedó congelada ----------
+
+/**
+ * Después de cerrar un modal: el navegador sigue dibujando, no quedó ningún modal ni bloqueo de
+ * toques o scroll, y la caja de pregunta recibe el toque y deja escribir.
+ * Devuelve la lista de lo que falló (vacía = la pantalla responde).
+ */
+export async function pantallaCongelada(page: Page): Promise<string[]> {
+  const fallas: string[] = [];
+  const dibuja = await page
+    .evaluate(
+      () =>
+        new Promise<boolean>((listo) => {
+          const t = setTimeout(() => listo(false), 1500);
+          requestAnimationFrame(() => requestAnimationFrame(() => (clearTimeout(t), listo(true))));
+        }),
+    )
+    .catch(() => false);
+  if (!dibuja) fallas.push("el navegador no dibuja (requestAnimationFrame no responde)");
+
+  const estado = await page.evaluate(() => {
+    const visible = (el: Element) => {
+      const s = getComputedStyle(el);
+      const b = el.getBoundingClientRect();
+      return s.display !== "none" && s.visibility !== "hidden" && b.width > 0 && b.height > 0;
+    };
+    return {
+      modales: [...document.querySelectorAll("[aria-modal=true], [role=dialog]")].filter(visible).length,
+      bodyBloqueado:
+        getComputedStyle(document.body).pointerEvents === "none" || document.body.style.overflow === "hidden",
+    };
+  });
+  if (estado.modales > 0) fallas.push(`quedó ${estado.modales} modal abierto`);
+  if (estado.bodyBloqueado) fallas.push("la página quedó con toques o scroll bloqueados");
+
+  const campo = page.getByRole("textbox", { name: "Pregunta para el experto" });
+  try {
+    await campo.tap({ timeout: 3000 });
+    await campo.fill("hola", { timeout: 3000 });
+    if ((await campo.inputValue()) !== "hola") fallas.push("la caja de pregunta no deja escribir");
+    await campo.fill("");
+  } catch (e) {
+    fallas.push(`la caja de pregunta no recibe el toque (${String(e).split("\n")[0].slice(0, 120)})`);
+  }
+  return fallas;
 }
