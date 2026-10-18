@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import { getDocumentProxy } from "unpdf";
+import { getDocumentProxy, getResolvedPDFJS } from "unpdf";
 import { z } from "zod";
 import { LIMITES, MODELOS, nombreDeArchivo, pedirJsonConEscalada, type LlamarIA } from "../ia/claude";
 
@@ -19,11 +19,16 @@ export type MapaPdf = { totalPaginas: number; marcadores: Marcador[]; inicios: {
 type DocumentoPdf = Awaited<ReturnType<typeof getDocumentProxy>>;
 type ItemMarcador = { title: string; dest: string | unknown[] | null; items?: ItemMarcador[] };
 
+/**
+ * Marcadores del PDF, en orden. Si son más que el tope, se quedan primero los de arriba (capítulos y
+ * secciones) y después los más finos: así un capítulo largo lleno de "Step 1, Step 2…" no tapa los
+ * capítulos siguientes (ej. "Parts and diagrams" al final del manual).
+ */
 async function leerMarcadores(pdf: DocumentoPdf): Promise<Marcador[]> {
   const salida: Marcador[] = [];
   const recorrer = async (items: ItemMarcador[], nivel: number) => {
     for (const it of items) {
-      if (salida.length >= LIMITES.extracto.maxMarcadores) return;
+      if (salida.length >= LIMITES.extracto.maxMarcadoresLeidos) return;
       try {
         const dest = typeof it.dest === "string" ? await pdf.getDestination(it.dest) : it.dest;
         const ref = Array.isArray(dest) ? dest[0] : null;
@@ -38,7 +43,20 @@ async function leerMarcadores(pdf: DocumentoPdf): Promise<Marcador[]> {
     }
   };
   await recorrer(((await pdf.getOutline()) ?? []) as ItemMarcador[], 0);
-  return salida;
+  return priorizarMarcadores(salida, LIMITES.extracto.maxMarcadores);
+}
+
+/** Recorta a `max` marcadores priorizando los niveles de arriba, sin cambiar el orden del manual. */
+export function priorizarMarcadores(marcadores: Marcador[], max: number): Marcador[] {
+  if (marcadores.length <= max) return marcadores;
+  const quedan = new Set(
+    marcadores
+      .map((m, i) => ({ nivel: m.nivel, i }))
+      .sort((a, b) => a.nivel - b.nivel || a.i - b.i)
+      .slice(0, max)
+      .map((x) => x.i),
+  );
+  return marcadores.filter((_, i) => quedan.has(i));
 }
 
 async function inicioDeTexto(pdf: DocumentoPdf, n: number): Promise<string> {
@@ -60,6 +78,46 @@ export async function mapearPdf(datos: Uint8Array): Promise<MapaPdf> {
   } finally {
     await pdf.loadingTask.destroy();
   }
+}
+
+/**
+ * Páginas que tienen un dibujo de verdad: alguna imagen o muchos trazos vectoriales (una vista explosionada
+ * o del interior). Una página de solo texto o de tablas no pasa. Lo decide el código, sin IA, para no guardar
+ * como "vista" una página que el bibliotecario adivinó mirando solo los títulos.
+ */
+export async function paginasConDibujo(datos: Uint8Array, paginas: number[]): Promise<Set<number>> {
+  const pedidas = [...new Set(paginas)];
+  const salida = new Set<number>();
+  if (!pedidas.length) return salida;
+  const { OPS } = await getResolvedPDFJS();
+  const imagenes = new Set<number>([OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject]);
+  const pdf = await getDocumentProxy(datos.slice());
+  try {
+    for (const n of pedidas) {
+      if (!Number.isInteger(n) || n < 1 || n > pdf.numPages) continue;
+      try {
+        const { fnArray, argsArray } = await (await pdf.getPage(n)).getOperatorList();
+        let trazos = 0;
+        let conImagen = false;
+        fnArray.forEach((op, i) => {
+          if (imagenes.has(op)) conImagen = true;
+          if (op === OPS.constructPath) trazos += largoDeTrazo(argsArray[i]);
+        });
+        if (conImagen || trazos >= LIMITES.extracto.minDatosDibujo) salida.add(n);
+      } catch {
+        // Una página que no se puede leer no cuenta como dibujo.
+      }
+    }
+  } finally {
+    await pdf.loadingTask.destroy();
+  }
+  return salida;
+}
+
+/** Cantidad de datos (comandos y coordenadas) de un trazo de pdf.js. */
+function largoDeTrazo(args: unknown): number {
+  if (ArrayBuffer.isView(args)) return (args as Float32Array).length;
+  return Array.isArray(args) ? args.reduce<number>((s, x) => s + largoDeTrazo(x), 0) : 0;
 }
 
 export function mapaComoTexto(m: MapaPdf): string {

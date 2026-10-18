@@ -8,7 +8,7 @@ import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
-import { nombreExtracto, paginaEnExtracto, paginaOriginal, prepararExtracto, type Extracto } from "./extracto";
+import { nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, prepararExtracto, type Extracto } from "./extracto";
 import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
 import { leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
 import { armarManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
@@ -123,6 +123,14 @@ function diagnostico(l: Lectura, c: Contenido) {
   };
 }
 
+/** Deja en cada juego de vistas solo las páginas que tienen un dibujo en el PDF (las demás quedan en null). */
+async function soloConDibujo(datos: Uint8Array, ...candidatas: Vistas[]): Promise<Vistas[]> {
+  const paginas = candidatas.flatMap((v) => [v.explosionada, v.interior]).filter((n): n is number => n !== null);
+  const validas = await paginasConDibujo(datos, paginas);
+  const filtrar = (n: number | null) => (n !== null && validas.has(n) ? n : null);
+  return candidatas.map((v) => ({ explosionada: filtrar(v.explosionada), interior: filtrar(v.interior) }));
+}
+
 function mensajeVistas(v: Vistas): string {
   const exp = v.explosionada ? `la vista explosionada (p. ${v.explosionada})` : null;
   const int = v.interior ? `una vista del interior (p. ${v.interior})` : null;
@@ -203,7 +211,8 @@ export async function armarKnowledgePack(
       encontrado = pdf
         ? { formato: "pdf", url: registro.url, titulo: registro.titulo, fuente: registro.fuente, pdf }
         : { formato: "web", url: registro.url, titulo: registro.titulo, fuente: registro.fuente, indice: indice! };
-      vistas = vistasDe(registro);
+      // Una vista guardada sin dibujo en su página (ej. adivinada por un título) se descarta y se vuelve a pedir.
+      vistas = pdf ? (await soloConDibujo(new Uint8Array(pdf.datos), vistasDe(registro)))[0] : vistasDe(registro);
       eventos.push(evento(casoId, "bibliotecario", "manual_en_cache", `Ya conocía el manual: ${registro.titulo}.`, { url: registro.url }));
     }
   }
@@ -369,7 +378,13 @@ export async function armarKnowledgePack(
     explosionada: extracto?.seleccion?.explosionada.find((n) => manual?.paginas.includes(n)) ?? null,
     interior: extracto?.seleccion?.interior.find((n) => manual?.paginas.includes(n)) ?? null,
   };
-  vistas = conManual && manual ? combinar(combinar(vistas, contenido.vistas), elegidas) : SIN_VISTAS;
+  // El código confirma que cada vista tenga un dibujo en su página antes de usarla o guardarla.
+  if (conManual && manual && encontrado?.formato === "pdf") {
+    const [leidas, adivinadas] = await soloConDibujo(new Uint8Array(encontrado.pdf.datos), contenido.vistas, elegidas);
+    vistas = combinar(combinar(vistas, leidas), adivinadas);
+  } else {
+    vistas = SIN_VISTAS;
+  }
 
   const pack = KnowledgePack.parse({
     modelo: nombreEquipo,
