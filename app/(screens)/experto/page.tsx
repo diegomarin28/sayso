@@ -176,7 +176,11 @@ export default function Experto() {
             </button>
           )
         }
-        onEvento={(e) => agregarEventos([e])}
+        onEvento={(e) => {
+          agregarEventos([e]);
+          // Después de un paso bloqueado no se ofrece comprar: «llevalo a un técnico» y «comprá esta pieza» se contradicen (#207).
+          if (e.tipo === "paso_bloqueado") setPiezaACambiar(null);
+        }}
       />
       {/* Lo que se va diciendo, en vivo: se pregunta recién al tocar ■ (o se descarta). */}
       {dictado.escuchando && (
