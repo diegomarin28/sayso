@@ -8,7 +8,7 @@ import { IAEnPausa } from "../ia/freno";
 import { armarKnowledgePack, type Armado, type CachePacks } from "./armar";
 import { buscarManual } from "./buscar";
 import { descargarPdf, tituloDelPdf } from "./descargar";
-import { mapearPdf, nombreExtracto, paginaEnExtracto, paginaOriginal, paginasDeNombre, paginasDelExtracto, prepararExtracto } from "./extracto";
+import { mapearPdf, nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, paginasDeNombre, paginasDelExtracto, prepararExtracto, priorizarMarcadores } from "./extracto";
 import { lineasConCitas, parsearContenido } from "./lineas";
 import { repoEnMemoria, repoSupabase, vistasDe } from "./manuales";
 
@@ -33,8 +33,8 @@ const PACK: Bloque[] = [
   { text: "\nREPUESTO|ssd|SSD-INVENTADO-1", citations: [pagina("SSD module", 91)] },
   { text: "\nADVERTENCIA|Desconectá la batería antes de tocar la placa.\nTexto suelto que no es una línea" },
 ];
-const VISTA_EXPLOSIONADA: Bloque = { text: "\nVISTA|explosionada|Vista general con la lista de piezas", citations: [pagina("Major FRUs and CRUs", 51)] };
-const VISTA_INTERIOR: Bloque = { text: "\nVISTA|Interior|Base sin la tapa inferior", citations: [pagina("Removing the thermal fan assembly", 73)] };
+const VISTA_EXPLOSIONADA: Bloque = { text: "\nVISTA|explosionada|Vista general con la lista de piezas", citations: [pagina("Major FRUs and CRUs", 3)] };
+const VISTA_INTERIOR: Bloque = { text: "\nVISTA|Interior|Base sin la tapa inferior", citations: [pagina("Removing the thermal fan assembly", 5)] };
 
 describe("lineasConCitas + parsearContenido", () => {
   const contenido = parsearContenido(lineasConCitas([...PACK, VISTA_EXPLOSIONADA, VISTA_INTERIOR]), "HMM");
@@ -58,7 +58,7 @@ describe("lineasConCitas + parsearContenido", () => {
   });
 
   it("toma la página de cada vista de la cita de la API", () => {
-    expect(contenido.vistas).toEqual({ explosionada: 51, interior: 73 });
+    expect(contenido.vistas).toEqual({ explosionada: 3, interior: 5 });
   });
 
   it("descarta vistas sin cita, de tipo desconocido o repetidas", () => {
@@ -97,15 +97,29 @@ describe("buscar y descargar", () => {
 
 const mensaje = (content: unknown[], stop_reason = "end_turn"): Anthropic.Message =>
   ({ content, stop_reason }) as unknown as Anthropic.Message;
-/** PDF real de `n` páginas (pdf.js lo tiene que poder abrir); cada página dice "Página N". */
-async function crearPdf(n: number): Promise<Uint8Array> {
+/** PNG de 1×1 (una foto, para el PDF de prueba). */
+const PNG_1X1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+/** Un despiece vectorial: muchísimos trazos en un solo camino. */
+const DESPIECE = `M0 0 ${"L10 10 L20 0 ".repeat(5000)}`;
+
+/**
+ * PDF real de `n` páginas (pdf.js lo tiene que poder abrir); cada página dice "Página N".
+ * `fotos` y `despieces`: páginas con un dibujo (las vistas solo se aceptan si su página tiene uno).
+ */
+async function crearPdf(n: number, { fotos = [], despieces = [] }: { fotos?: number[]; despieces?: number[] } = {}): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const fuente = await doc.embedFont(StandardFonts.Helvetica);
-  for (let i = 1; i <= n; i++) doc.addPage([300, 300]).drawText(`Pagina ${i} del manual`, { x: 20, y: 250, size: 12, font: fuente });
+  const foto = await doc.embedPng(PNG_1X1);
+  for (let i = 1; i <= n; i++) {
+    const hoja = doc.addPage([300, 300]);
+    hoja.drawText(`Pagina ${i} del manual`, { x: 20, y: 250, size: 12, font: fuente });
+    if (fotos.includes(i)) hoja.drawImage(foto, { x: 20, y: 20, width: 200, height: 200 });
+    if (despieces.includes(i)) hoja.drawSvgPath(DESPIECE, { x: 20, y: 200, borderWidth: 0.2 });
+  }
   return doc.save();
 }
-const PDF_CHICO = await crearPdf(5);
-const PDF_GRANDE = await crearPdf(40);
+const PDF_CHICO = await crearPdf(5, { despieces: [3], fotos: [5] });
+const PDF_GRANDE = await crearPdf(40, { despieces: [30], fotos: [12] });
 const pdfOk = (async () => new Response(PDF_CHICO.slice())) as typeof fetch;
 const nada = (async () => new Response("no", { status: 404 })) as typeof fetch;
 
@@ -164,14 +178,14 @@ describe("armarKnowledgePack", () => {
     const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache: sinCache, subir, manuales });
     KnowledgePack.parse(r.pack);
     expect(r.pack.verificado).toBe(true);
-    expect(r.vistas).toEqual({ explosionada: 51, interior: 73 });
+    expect(r.vistas).toEqual({ explosionada: 3, interior: 5 });
     expect(f.de("vistas")).toHaveLength(0); // no hizo falta la búsqueda dedicada
-    expect(r.eventos.find((e) => e.tipo === "vistas_ubicadas")?.mensaje).toMatch(/p\. 51.*p\. 73/);
+    expect(r.eventos.find((e) => e.tipo === "vistas_ubicadas")?.mensaje).toMatch(/p\. 3.*p\. 5/);
     expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({
       url: "https://ej.com/hmm.pdf",
       verificado: true,
-      paginas_vista_explosionada: [51],
-      pagina_vista_interior: 73,
+      paginas_vista_explosionada: [3],
+      pagina_vista_interior: 5,
     });
   });
 
@@ -191,6 +205,20 @@ describe("armarKnowledgePack", () => {
     // Interior: de la cita (hoja 2 → página 12). Explosionada: no la marcó la lectura → la que eligió Haiku.
     expect(r.vistas).toEqual({ explosionada: 30, interior: 12 });
     expect(r.eventos.map((e) => e.tipo)).toContain("extracto_armado");
+  });
+
+  it("no guarda como vista una página sin dibujo que adivinó el bibliotecario (#141)", async () => {
+    const manuales = repoEnMemoria();
+    // Haiku eligió para la explosionada la página 20 (solo texto); la lectura no marcó la explosionada.
+    const interiorEnExtracto: Bloque = { text: "\nVISTA|interior|Base sin tapa", citations: [pagina("Removing the fan", 2)] };
+    const f = enviarFalso({ enPack: [interiorEnExtracto] });
+    const llamar = async () => JSON.stringify({ indice: [], explosionada: [20], interior: [12], sintoma: [] });
+    const r = await armarKnowledgePack(
+      { ficha: fichaEjemplo, sintoma: "se apaga" },
+      { enviar: f.enviar, llamar, fetch: (async () => new Response(PDF_GRANDE.slice())) as typeof fetch, cache: sinCache, manuales, subir },
+    );
+    expect(r.vistas).toEqual({ explosionada: null, interior: 12 });
+    expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({ paginas_vista_explosionada: [], pagina_vista_interior: 12 });
   });
 
   it("arma la imagen PNG de la vista interior: VERIFICADO si la cita confirma la página", async () => {
@@ -224,19 +252,28 @@ describe("armarKnowledgePack", () => {
       modelo,
       url: "https://ej.com/hmm.pdf",
       titulo: "HMM NB-15",
-      paginas_vista_explosionada: [51],
-      pagina_vista_interior: 73,
+      paginas_vista_explosionada: [3],
+      pagina_vista_interior: 5,
       verificado: true,
       fuente: "fabricante",
     });
     const f = enviarFalso({ enPack: [] });
     const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "no carga" }, { enviar: f.enviar, fetch: pdfOk, cache: sinCache, subir, manuales });
-    expect(r.vistas).toEqual({ explosionada: 51, interior: 73 });
+    expect(r.vistas).toEqual({ explosionada: 3, interior: 5 });
     expect(f.de("bibliotecario")).toHaveLength(0);
     expect(f.de("vistas")).toHaveLength(0);
     // Las vistas se vuelven a pedir en la misma lectura (sin costo extra) para poder verificarlas.
     expect(tarea(f.de("pack")[0])).toMatch(/VISTA\|interior/);
     expect(r.eventos.map((e) => e.tipo)).toContain("manual_en_cache");
+  });
+
+  it("una vista guardada en una página sin dibujo se descarta y se reemplaza por la que marca la lectura (#141)", async () => {
+    const manuales = repoEnMemoria();
+    const guardado = { marca: fichaEjemplo.marca.valor!, modelo, url: "https://ej.com/hmm.pdf", titulo: "HMM NB-15", verificado: true, fuente: "fabricante" as const };
+    await manuales.guardar({ ...guardado, paginas_vista_explosionada: [3], pagina_vista_interior: 2 }); // la 2 es solo texto
+    const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "no carga" }, { enviar: enviarFalso().enviar, fetch: pdfOk, cache: sinCache, subir, manuales });
+    expect(r.vistas).toEqual({ explosionada: 3, interior: 5 });
+    expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({ paginas_vista_explosionada: [3], pagina_vista_interior: 5 });
   });
 
   it("un manual ya verificado no pierde la marca si una lectura sale sin citas", async () => {
@@ -258,7 +295,7 @@ describe("armarKnowledgePack", () => {
     await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, deps);
     const otra = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, deps);
     expect(otra.desdeCache).toBe(true);
-    expect(otra.vistas).toEqual({ explosionada: 51, interior: 73 });
+    expect(otra.vistas).toEqual({ explosionada: 3, interior: 5 });
     expect(f.llamadas).toHaveLength(3); // 2 del bibliotecario + 1 lectura, una sola vez
   });
 
@@ -402,6 +439,26 @@ describe("extracto", () => {
     expect(p).toHaveLength(8);
     expect(p).toEqual([5, 12, 20, 21, 22, 23, 30, 31]);
     expect(paginasDelExtracto({ indice: [0, -3], explosionada: [999], interior: [], sintoma: [] }, 40, 8)).toEqual([]);
+  });
+
+  it("si el índice es muy largo, prioriza capítulos y secciones sobre los pasos (y mantiene el orden)", () => {
+    // Un capítulo con muchos "Step N" no tiene que tapar el capítulo de despieces del final (#141).
+    const marcadores = [
+      { titulo: "Removal and replacement", pagina: 17, nivel: 0 },
+      ...Array.from({ length: 6 }, (_, i) => ({ titulo: `Step ${i + 1}`, pagina: 20 + i, nivel: 2 })),
+      { titulo: "Cartridge door", pagina: 71, nivel: 1 },
+      { titulo: "Parts and diagrams", pagina: 659, nivel: 0 },
+      { titulo: "Internal components", pagina: 675, nivel: 1 },
+    ];
+    const r = priorizarMarcadores(marcadores, 6);
+    expect(r.map((m) => m.titulo)).toEqual(["Removal and replacement", "Step 1", "Step 2", "Cartridge door", "Parts and diagrams", "Internal components"]);
+    expect(priorizarMarcadores(marcadores, 50)).toBe(marcadores);
+  });
+
+  it("reconoce las páginas con un dibujo (foto o despiece) y no las de solo texto", async () => {
+    const r = await paginasConDibujo(PDF_GRANDE, [12, 30, 20, 1, 999]);
+    expect([...r].sort((a, b) => a - b)).toEqual([12, 30]);
+    expect(await paginasConDibujo(PDF_GRANDE, [])).toEqual(new Set());
   });
 
   it("un PDF chico va entero, sin llamar a la IA", async () => {
