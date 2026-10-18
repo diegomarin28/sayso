@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fichaEjemplo, PlanoDePiezas, type KnowledgePack, type PiezaPlano } from "../../shared";
 import { cachePlanosEnMemoria } from "./cache";
-import { ajustarPlanoAlTipo } from "./carcasa";
+import { ajustarPlanoAlTipo, conTapa } from "./carcasa";
 import { obtenerPlano } from "./obtener";
 import { PLANTILLAS_POR_TIPO } from "./plantillas/por-tipo";
 import { claveManual } from "../knowledge/manuales";
@@ -32,7 +32,7 @@ const espesor = (p: PlanoDePiezas) => Math.max(...p.piezas.map((x) => x.pos[1] +
 
 describe("ajustarPlanoAlTipo", () => {
   it("celular: la carcasa es el marco (no el chasis de notebook), con su espesor real y la tapa trasera (arranca cerrado)", () => {
-    const r = ajustarPlanoAlTipo(celularDelGenerador, plantilla("celular"));
+    const r = conTapa(ajustarPlanoAlTipo(celularDelGenerador, plantilla("celular")), plantilla("celular"));
     expect(() => PlanoDePiezas.parse(r)).not.toThrow();
     expect(raiz(r).pieza).toBe("marco");
     expect(raiz(r).dim[0]).toBeCloseTo(7.15, 5);
@@ -47,10 +47,11 @@ describe("ajustarPlanoAlTipo", () => {
 
   it("notebook: la base queda como está y se agrega la tapa inferior si falta (una sola vez)", () => {
     const nb: PlanoDePiezas = { ...celularDelGenerador, piezas: [pieza("base", [34, 1.2, 24], [0, 0, 0]), pieza("bateria", [26, 0.8, 7.5], [0, 1, 7], "base")] };
-    const r = ajustarPlanoAlTipo(nb, plantilla("notebook"));
+    const terminar = (p: PlanoDePiezas) => conTapa(ajustarPlanoAlTipo(p, plantilla("notebook")), plantilla("notebook"));
+    const r = terminar(nb);
     expect(raiz(r)).toEqual(nb.piezas[0]);
     expect(r.piezas.filter((x) => x.pieza === "tapa_inferior")).toHaveLength(1);
-    expect(ajustarPlanoAlTipo(r, plantilla("notebook"))).toEqual(r);
+    expect(terminar(r)).toEqual(r);
   });
 
   it("TV viejo de la caché (123 × 7,5 acostado): parado, con la carcasa del TV y el alto típico estimado", () => {

@@ -531,18 +531,43 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
           />
         ) : null;
       })}
-      <ContactShadows
+      <SombraDeContacto
         key={escena.raiz.uuid} // con las piezas nuevas, la sombra se vuelve a calcular
         position={[0, escena.piso - 0.05, 0]}
         scale={escena.radio * 3}
-        opacity={0.6}
-        blur={2.4}
         far={escena.radio}
         frames={sombrasEnVivo ? Infinity : 1}
       />
       <CameraControls ref={controles} makeDefault smoothTime={0.55} minDistance={4} maxDistance={escena.radio * 8} />
     </>
   );
+}
+
+/**
+ * La sombra de contacto de drei dibuja en su propia textura sin limpiarla: confía en `autoClear`. El
+ * posprocesado (EffectComposer) lo apaga, y entonces la textura queda opaca y el piso se ve como un
+ * trapecio oscuro sobre el fondo de la app (con el lienzo transparente, #135). Se prende solo mientras
+ * se dibuja la sombra y después vuelve a como estaba. Las tres partes se montan juntas, en este orden.
+ */
+function SombraDeContacto(props: { position: [number, number, number]; scale: number; far: number; frames: number }) {
+  const previoRef = useRef(true);
+  return (
+    <>
+      <Limpieza fase="antes" previoRef={previoRef} />
+      <ContactShadows {...props} opacity={0.6} blur={2.4} />
+      <Limpieza fase="despues" previoRef={previoRef} />
+    </>
+  );
+}
+
+function Limpieza({ fase, previoRef }: { fase: "antes" | "despues"; previoRef: { current: boolean } }) {
+  useFrame(({ gl }) => {
+    if (fase === "antes") {
+      previoRef.current = gl.autoClear;
+      gl.autoClear = true;
+    } else gl.autoClear = previoRef.current;
+  });
+  return null;
 }
 
 // ---------- Etiquetas con línea guía ----------

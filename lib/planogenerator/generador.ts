@@ -4,7 +4,7 @@ import { bloqueImagen, enviarMensaje, ErrorIA, MODELO_DE, pedirJson, type Enviar
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
-import { ajustarPlanoAlTipo, FACTOR_ALTO_DUDOSO } from "./carcasa";
+import { ajustarPlanoAlTipo, conTapa, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import {
   caraTipica,
   elegirPlantilla,
@@ -472,15 +472,18 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
- * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene.
+ * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
+ * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado.
  * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
   const seguido = tipo ? seguirPlantilla(plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
-  const sueltas = sumarSueltas(acotado.plano, ids, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  return { plano: sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
+  // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
+  const sinTapa = tipo?.plano.piezas.some((p) => p.pieza.startsWith("tapa") && !tipo.parado) ? ids.filter((id) => !id.startsWith("tapa")) : ids;
+  const sueltas = sumarSueltas(acotado.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
+  return { plano: tipo ? conTapa(sueltas.plano, tipo, ids) : sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */

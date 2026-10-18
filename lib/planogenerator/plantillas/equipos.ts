@@ -59,6 +59,18 @@ export const planoAire: PlanoDePiezas = {
 const hijos = (padre: string, lista: Array<[string, Vec3, Vec3, PiezaPlano["forma"]?]>) =>
   lista.map(([id, dim, pos, forma]) => pieza(id, dim, pos, forma ?? "caja", padre));
 
+/**
+ * Una tapa que envuelve estas piezas (con margen), para los equipos sin carcasa propia: así el 3D arranca
+ * cerrado y se abre cuando la guía la saca. Sin forma en la biblioteca: caja redondeada.
+ */
+const tapaQueEnvuelve = (id: string, padre: string, piezas: PiezaPlano[], margen = 0.5): PiezaPlano => {
+  const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - margen);
+  const max = [0, 1, 2].map((i) => Math.max(...piezas.map((p) => p.pos[i] + p.dim[i] / 2)) + margen);
+  min[1] = Math.max(min[1], 0); // apoyada en el piso
+  const r = (v: number) => +v.toFixed(2);
+  return pieza(id, max.map((v, i) => r(v - min[i])) as Vec3, max.map((v, i) => r((v + min[i]) / 2)) as Vec3, "extrusion", padre);
+};
+
 /** Celular visto desde atrás (la tapa trasera arriba): marco con la placa media, batería, placa y cámaras. */
 export const planoCelular: PlanoDePiezas = {
   modelo: "Celular genérico (ejemplo del lab)",
@@ -201,6 +213,7 @@ export const planoImpresora: PlanoDePiezas = {
     ]),
   ],
 };
+planoImpresora.piezas.push(tapaQueEnvuelve("tapa_impresora", "bandeja_papel", planoImpresora.piezas));
 
 /**
  * Impresora láser (la de la demo es una): gabinete con el cassette de papel abajo, rodillo de recogida,
@@ -232,45 +245,57 @@ export const planoImpresoraLaser: PlanoDePiezas = {
 };
 
 /** Consola de videojuegos sin carcasa (y un mando al lado): placa, blindaje, lectora, fuente y ventilador. */
+const placaConsola = pieza("placa_consola", [20, 1.2, 16.4], [-4, 0.6, 0]);
+const cuerpoConsola = hijos("placa_consola", [
+  ["disipador", [8, 1, 8], [-6, 1.7, -1]],
+  ["blindaje_metalico", [22, 1.2, 20], [-4, 4, 0]],
+  ["unidad_optica", [14, 2.3, 14.7], [-4, 6.4, 0]],
+  ["fuente", [10, 3, 14], [13, 1.5, 0]],
+  ["ventilador", [8, 3, 8], [-17, 1.5, -5]],
+  ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -8.4]],
+  ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 8.4]],
+]);
 export const planoConsola: PlanoDePiezas = {
   modelo: "Consola genérica (ejemplo del lab)",
   unidades: "cm",
   piezas: [
-    pieza("placa_consola", [20, 1.2, 16.4], [-4, 0.6, 0]),
+    placaConsola,
+    ...cuerpoConsola,
+    // Las piezas del mando van al costado, afuera de la tapa.
     ...hijos("placa_consola", [
-      ["disipador", [8, 1, 8], [-6, 1.7, -1]],
-      ["blindaje_metalico", [22, 1.2, 20], [-4, 4, 0]],
-      ["unidad_optica", [14, 2.3, 14.7], [-4, 6.4, 0]],
-      ["fuente", [10, 3, 14], [13, 1.5, 0]],
-      ["ventilador", [8, 3, 8], [-17, 1.5, -5]],
-      ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -8.4]],
-      ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 8.4]],
       ["joystick_analogico_izquierdo", [2.5, 2.7, 2], [26, 1.4, 4]],
       ["joystick_analogico_derecho", [2.5, 2.7, 2], [33, 1.4, 6]],
       ["boton_gatillo_izquierdo", [4, 1.2, 2.5], [25, 0.6, -2]],
       ["boton_gatillo_derecho", [4, 1.2, 2.5], [34, 0.6, -2]],
     ]),
+    tapaQueEnvuelve("tapa_consola", "placa_consola", [placaConsola, ...cuerpoConsola]),
   ],
 };
 
 /** Router / módem: placa con antenas, puertos RJ45, coaxial, jaula SFP y botón de reset. */
+const placaRouter = pieza("placa_router", [12, 1.7, 9], [0, 0.9, 0]);
+const cuerpoRouter = hijos("placa_router", [
+  ["puerto_rj45_1", [1.8, 1.6, 2.1], [-3.6, 2.5, -3.6]],
+  ["puerto_rj45_2", [1.8, 1.6, 2.1], [-1.6, 2.5, -3.6]],
+  ["puerto_rj45_3", [1.8, 1.6, 2.1], [0.4, 2.5, -3.6]],
+  ["puerto_rj45_4", [1.8, 1.6, 2.1], [2.4, 2.5, -3.6]],
+  ["conector_coaxial", [1.4, 1.6, 1.6], [4.6, 2.5, -3.6]],
+  ["jaula_sfp", [1.7, 1.3, 6], [4.8, 2.4, 1]],
+  ["boton_reset", [0.94, 0.68, 0.65], [-5.2, 2.1, -3.8]],
+  ["blindaje_metalico", [5, 1.2, 4], [-1, 2.4, 1.5]],
+]);
 export const planoRouter: PlanoDePiezas = {
   modelo: "Router genérico (ejemplo del lab)",
   unidades: "cm",
   piezas: [
-    pieza("placa_router", [12, 1.7, 9], [0, 0.9, 0]),
+    placaRouter,
+    ...cuerpoRouter,
+    // Las antenas quedan afuera de la tapa.
     ...hijos("placa_router", [
       ["antena_wifi_izquierda", [1.8, 18.6, 1.8], [-5, 11, -5.2]],
       ["antena_wifi_derecha", [1.8, 18.6, 1.8], [5, 11, -5.2]],
-      ["puerto_rj45_1", [1.8, 1.6, 2.1], [-3.6, 2.5, -3.6]],
-      ["puerto_rj45_2", [1.8, 1.6, 2.1], [-1.6, 2.5, -3.6]],
-      ["puerto_rj45_3", [1.8, 1.6, 2.1], [0.4, 2.5, -3.6]],
-      ["puerto_rj45_4", [1.8, 1.6, 2.1], [2.4, 2.5, -3.6]],
-      ["conector_coaxial", [1.4, 1.6, 1.6], [4.6, 2.5, -3.6]],
-      ["jaula_sfp", [1.7, 1.3, 6], [4.8, 2.4, 1]],
-      ["boton_reset", [0.94, 0.68, 0.65], [-5.2, 2.1, -3.8]],
-      ["blindaje_metalico", [5, 1.2, 4], [-1, 2.4, 1.5]],
     ]),
+    tapaQueEnvuelve("tapa_router", "placa_router", [placaRouter, ...cuerpoRouter]),
   ],
 };
 
