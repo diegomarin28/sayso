@@ -20,25 +20,27 @@ import {
 /**
  * Plantilla genérica POR TIPO de equipo: la red de seguridad cuando la IA no puede ubicar las piezas.
  * `equipos`: palabras con que la recepción nombra ese equipo; `clase`: la clase del knowledge pack que le corresponde.
+ * `parado`: el equipo se usa parado (TV, heladera…): su cara grande va de frente a la cámara, no acostada.
  */
-export type PlantillaDeEquipo = { id: string; nombre: string; plano: PlanoDePiezas; equipos: string[]; clase?: ClaseEquipo };
+export type PlantillaDeEquipo = { id: string; nombre: string; plano: PlanoDePiezas; equipos: string[]; clase?: ClaseEquipo; parado?: boolean };
 
-const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo): PlantillaDeEquipo => ({
+const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false): PlantillaDeEquipo => ({
   id,
   nombre,
   plano,
   equipos: palabras(equipos),
   ...(clase ? { clase } : {}),
+  ...(parado ? { parado } : {}),
 });
 
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
   t("celular", "celular", planoCelular, "celular telefono smartphone movil iphone"),
-  t("heladera", "heladera", planoHeladera, "heladera refrigerador freezer congelador nevera"),
-  t("aire", "aire split", planoAire, "aire split acondicionado climatizador", "split"),
-  t("televisor", "televisor", planoTelevisor, "televisor tele tv smart monitor"),
-  t("lavarropas", "lavarropas", planoLavarropas, "lavarropas lavarropa lavadora lavasecarropas", "lavarropas"),
-  t("microondas", "microondas", planoMicroondas, "microondas"),
+  t("heladera", "heladera", planoHeladera, "heladera refrigerador freezer congelador nevera", undefined, true),
+  t("aire", "aire split", planoAire, "aire split acondicionado climatizador", "split", true),
+  t("televisor", "televisor", planoTelevisor, "televisor tele tv smart monitor", undefined, true),
+  t("lavarropas", "lavarropas", planoLavarropas, "lavarropas lavarropa lavadora lavasecarropas", "lavarropas", true),
+  t("microondas", "microondas", planoMicroondas, "microondas", undefined, true),
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador pelo"),
   t("impresora", "impresora", planoImpresora, "impresora"),
@@ -135,4 +137,16 @@ export function planoDesdePlantillaDeTipo(kp: KnowledgePack, plantilla: Plantill
     plano: { modelo: kp.modelo, unidades: "cm", piezas: resultado, medidas: { ancho: "plantilla", prof: "plantilla" } },
     avisos,
   };
+}
+
+/** Alto / ancho de la cara grande de un equipo parado, según su plantilla (TV 0,66; heladera 2,9…). */
+export function proporcionDeLaCara(plantilla: PlantillaDeEquipo): number {
+  const raiz = plantilla.plano.piezas.find((p) => !p.padre) ?? plantilla.plano.piezas[0];
+  return raiz.dim[1] / raiz.dim[0];
+}
+
+/** Medidas típicas (ancho × alto, cm) de la cara de un equipo parado, de su plantilla. */
+export function caraTipica(plantilla: PlantillaDeEquipo): { ancho: number; alto: number } {
+  const raiz = plantilla.plano.piezas.find((p) => !p.padre) ?? plantilla.plano.piezas[0];
+  return { ancho: raiz.dim[0], alto: raiz.dim[1] };
 }

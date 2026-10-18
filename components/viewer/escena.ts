@@ -63,6 +63,8 @@ export type EscenaPreparada = {
   radio: number;
   piso: number;
   despiece: { ultimo: number; subiendo: boolean };
+  /** Desde dónde mira la cámara (perspectiva): la cara grande del equipo hacia la cámara (ver `direccionDeCamara`). */
+  direccion: THREE.Vector3;
 };
 
 export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
@@ -95,7 +97,8 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
   }
   const caja = new THREE.Box3().setFromObject(raiz);
   const radio = Math.max(caja.getBoundingSphere(new THREE.Sphere()).radius, 1);
-  return { raiz, nodos: animables, avisos, radio, piso: caja.min.y, despiece: { ultimo: 0, subiendo: true } };
+  const direccion = direccionDeCamara(caja.getSize(new THREE.Vector3()));
+  return { raiz, nodos: animables, avisos, radio, piso: caja.min.y, despiece: { ultimo: 0, subiendo: true }, direccion };
 }
 
 /**
@@ -278,7 +281,17 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
 
 export type ModoVista = "perspectiva" | "isometrica";
 
+/** Equipo acostado (notebook, celular): se mira desde arriba y adelante. */
 const DIRECCION_PERSPECTIVA = new THREE.Vector3(0, 1.1, 1).normalize();
+/** Equipo parado (TV, heladera, lavarropas…): casi de frente, apenas desde arriba (~19°). */
+const DIRECCION_DE_FRENTE = new THREE.Vector3(0, 0.35, 1).normalize();
+/** Si el alto es al menos esto de la profundidad, el equipo está parado: su cara grande mira a la cámara (+z). */
+const PARADO_DESDE = 0.7;
+
+/** La cara grande del equipo hacia la cámara: de frente si está parado, desde arriba si está acostado. */
+export function direccionDeCamara(tam: THREE.Vector3): THREE.Vector3 {
+  return (tam.y >= PARADO_DESDE * tam.z ? DIRECCION_DE_FRENTE : DIRECCION_PERSPECTIVA).clone();
+}
 const DIRECCION_ISOMETRICA = new THREE.Vector3(1, 1, 1).normalize();
 
 /** Lo que tapa la frase nunca deja menos que esto del lienzo para el 3D. */
@@ -327,7 +340,7 @@ export function encuadre(
   const mitadH = Math.atan(tanV * (width / height));
   const distancia = Math.max(radio / Math.sin(mitadV), radio / Math.sin(mitadH)) / zoom;
   const d = Math.max(distancia, 8);
-  const posicion = objetivoPos.clone().addScaledVector(DIRECCION_PERSPECTIVA, d);
+  const posicion = objetivoPos.clone().addScaledVector(escena.direccion ?? DIRECCION_PERSPECTIVA, d);
   const unidadesPorPx = (2 * d * tanV) / height;
   return { posicion, objetivo: objetivoPos, zoomOrto: null, focal: -(reservado / 2) * unidadesPorPx };
 }
