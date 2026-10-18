@@ -44,7 +44,24 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
 - Son formas **típicas por tipo**, no de un modelo: la posición y las medidas siguen saliendo del plano.
 - Un nodo por tipo; adentro, una malla por material. El nombre del material es la receta de la app
   (`cuerpo.<tipo>` o una de `RECETAS_DETALLE` en `lib/planogenerator/materiales.ts`).
-- Límite: cada GLB menos de 2 MB (lo controla un test; hoy entre 171 y 924 KB, 3 MB en total). Una variante
+- Límite: cada GLB comprimido pesa menos de 1 MB (lo controla un test; hoy 2,4 MB en total, eran 6,6 MB sin comprimir).
+  Una variante idéntica a otro tipo comparte mallas (`ALIAS`).
+
+## Compresión (meshopt)
+
+Cada `npm run modelos:*` termina con `npm run modelos:comprimir` (`assets/models/comprimir.mjs`):
+cuantiza las posiciones (16 bits) y comprime con EXT_meshopt_compression. Three lo decodifica solo
+(`lib/planogenerator/cargador.ts`), sin archivos aparte. Saltea los GLB ya comprimidos.
+
+- Antes de comprimir guarda en `indice.json` la caja real de cada tipo (`caja`, en cm). Un test compara la
+  caja del GLB comprimido con esa (≤ 0,5 %): así no cambian el tamaño, la variante elegida ni los AJUSTES.
+- `bibliotecaDesdeEscena` pasa las geometrías a Float32 antes de aplicarles la escala del nodo (si no, three
+  las recorta a [-1, 1] y la pieza se deforma).
+- Empates: diferencias de costo menores al 1 % no cambian la orientación ni la variante (`EMPATE` en
+  `biblioteca.ts`): una pieza simétrica no se da vuelta por el 0,2 % que deja la compresión.
+- Para comparar dos versiones (ej. antes y después de comprimir o de rehacer piezas):
+  `npx tsx assets/models/comparar.ts <carpeta-antes> public/models/piezas` (caja, centro, recetas, equipos,
+  AJUSTES, el ajuste a 11 medidas con los tramos de cables y lentes, y 13.552 elecciones de variante).
   idéntica a otro tipo comparte mallas (`ALIAS`). Sin texturas ni compresión Draco (no hace falta bajar decodificadores).
 - **Forma y lugar, separados:** la forma (y cómo se puede ajustar) es de Blender; dónde va la pieza y cuánto
   lugar ocupa lo dice el plano. Cada tipo declara su regla en `AJUSTES` (`piezas.py`), que va al GLB
@@ -68,3 +85,9 @@ con generador, GLB y renders propios. Se regenera con `npm run modelos:dispositi
 Familia independiente `cotidianos.glb`: 52 formas nuevas para 13 equipos, con reglas de ajuste,
 52 renders individuales y 13 hojas. Reutiliza los tipos existentes por nombre.
 [Generación, cobertura y galería](blender/COTIDIANOS.md).
+
+## Equipos de facultad
+
+Familia independiente `facultad.glb`: 42 formas faltantes, reutilizando 49 tipos existentes.
+Incluye reglas de ajuste, 42 renders individuales y 15 hojas para los equipos y periféricos.
+[Generación, criterios de cobertura y galería](blender/FACULTAD.md).

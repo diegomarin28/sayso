@@ -14,8 +14,18 @@ const NOMBRE_AGENTE: Record<Evento["agente"], string> = {
   compras: "Compras",
 };
 
+/**
+ * Tokens y costos son para el equipo, no para la persona: en producción no se muestran (siguen en
+ * el registro interno y en Supabase). En desarrollo sí, para medir.
+ */
+export const MOSTRAR_COSTOS = process.env.NODE_ENV !== "production";
+
+export function eventosVisibles(eventos: Evento[], mostrarCostos = MOSTRAR_COSTOS): Evento[] {
+  return mostrarCostos ? eventos : eventos.filter((e) => e.tipo !== "costo");
+}
+
 export function FeedActividad({ eventos, max = 6 }: { eventos: Evento[]; max?: number }) {
-  const ultimos = eventos.slice(-max);
+  const ultimos = eventosVisibles(eventos).slice(-max);
   if (ultimos.length === 0) return null;
   return (
     <ol aria-label="Actividad" className="flex flex-col gap-2.5">

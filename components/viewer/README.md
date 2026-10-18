@@ -23,6 +23,7 @@ import { Visor } from "@/components/viewer";
 
 - **Seguridad:** toda coreografía pasa por `filtrarCoreografia` (lib/safety) antes de animarse (`paso.ts`). Si es de riesgo alto no se anima (solo `restaurar`) y `onPaso` trae la derivación en vez del texto de la IA. Mostrá siempre `onPaso(...).coreografia.dice`, no el original.
 - **Piezas de Blender:** el visor lee `/models/piezas/indice.json` y baja solo las familias (GLB) que usan las piezas del plano, una vez cada una (`biblioteca.ts`); arma cada pieza con su forma típica (ventilador, RAM, compresor, carcasa…). Si no carga en 4 s, usa las primitivas. `tipoEquipo` ayuda a elegir la variante.
+- **Origen visible:** las piezas con origen "estimada" o "plantilla" se dibujan con contorno punteado y más transparentes (resaltadas, un poco menos); las del manual, sólidas. Sin origen (planos viejos, fixtures), como siempre.
 - **Piezas que llegan tarde:** si los GLB tardan más de 4 s, el visor arranca con primitivas y, cuando termina la descarga, las cambia por las piezas reales sin perder la cámara, el estado ni el paso en curso (`continuarAnimacion` en `escena.ts`, `siguienteBiblioteca` en `biblioteca.ts`).
 - **Estilo ilustración técnica** (`escena.ts`): bordes en todas las piezas, luz de estudio sin descargas, sombras de contacto, materiales por tipo y detalles (aspas, chips, etiquetas).
 - **Rayos X:** si el paso resalta piezas, esas quedan sólidas en `#E8590C` con brillo; el resto, gris translúcido. Las hijas de una pieza activa se ven normales.
@@ -34,6 +35,8 @@ import { Visor } from "@/components/viewer";
 - **Probar en el celular con `npm run dev`:** abrí la app por la IP de la Mac (ej. `http://10.x.x.x:3000`). `next.config.ts` permite las IPs de red de la máquina (`allowedDevOrigins`); sin eso, Next bloquea sus recursos de desarrollo y la página no arranca (3D negro). Si cambiás de red, reiniciá `npm run dev`.
 - Semántica de acciones: ver `reproductor.ts`. Son **idempotentes** (repetir un paso no acumula). `camara` acepta `"general"` para ver todo.
 - Página de prueba: `/lab/visor` (`npm run dev`).
+- **Galería para el pitch:** `/lab/galeria` (`galeria/`): los 13 tipos de equipo que cubre la biblioteca con un plano de ejemplo cada uno (`ejemplos.ts`), en tarjetas que se abren en grande con "Despiezar". Fondo negro y títulos grandes (celular y proyector). Las tarjetas usan `controles={false}` (solo el 3D) y montan el visor solo cerca de la pantalla (pocos lienzos WebGL en el celular).
+- **Vigía de pantalla negra** (`salud.ts`): mira una grilla de 5×5 puntos, no solo el centro (un televisor de frente tiene en el centro su pantalla apagada, que es negra de verdad). Al desmontar el visor, la pérdida de contexto no se toma como falla.
 
 ## `<GuiaExperto>` — pantallas 5 y 6 (B6)
 

@@ -235,12 +235,23 @@ const RespKnowledge = conEventos({
   manualFileId: z.string().nullable(),
   paginasVistaExplosionada: z.array(z.number()).default([]),
   paginaVistaInterior: z.number().nullable().default(null),
+  /** Página del manual → URL del PNG (vista interior y páginas citadas; nunca fotos de la persona). */
+  imagenesPaginas: z.record(z.string(), z.string()).default({}),
+  vistaInterior: z
+    .object({ url: z.string(), pagina: z.number(), estado: z.enum(["VERIFICADO", "NO_VERIFICADO"]) })
+    .nullable()
+    .default(null),
   desdeCache: z.boolean(),
 });
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
-export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<typeof RespKnowledge>> {
+export function prepararExperto(
+  ficha: Ficha,
+  sintoma: string,
+  /** Lo que dijo la recepción (ej. "heladera no frost"): orienta la búsqueda del manual (#79). */
+  tipoEquipo?: string | null,
+): Promise<z.infer<typeof RespKnowledge>> {
   if (USAR_FIXTURE)
     return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(2500);
@@ -252,8 +263,9 @@ export function prepararExperto(ficha: Ficha, sintoma: string): Promise<z.infer<
         desdeCache: true,
       });
     });
+  const tipo = tipoEquipo?.trim().slice(0, 60) || undefined;
   return unaVez(`knowledge|${claveEquipo(ficha)}`, () =>
-    llamar("/api/knowledge", { ficha, sintoma }, RespKnowledge),
+    llamar("/api/knowledge", { ficha, sintoma, tipoEquipo: tipo }, RespKnowledge),
   );
 }
 
@@ -269,7 +281,12 @@ export type Plano = Omit<z.infer<typeof RespPlano>, "eventos">;
  * El cartógrafo ubica las piezas en el 3D leyendo la vista explosionada del manual (carril B).
  * Una vez por caso; puede tardar ~1 minuto. Sin manual, ubica con el texto de la guía.
  */
-export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infer<typeof RespPlano>> {
+export function generarPlano(
+  ficha: Ficha,
+  preparado: Preparado,
+  /** Lo que dijo la recepción (ej. "heladera no frost"): elige la plantilla de respaldo por tipo. */
+  tipoEquipo?: string | null,
+): Promise<z.infer<typeof RespPlano>> {
   if (USAR_FIXTURE)
     return unaVez(`plano-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(1200);
@@ -282,6 +299,7 @@ export function generarPlano(ficha: Ficha, preparado: Preparado): Promise<z.infe
         casoId: ficha.casoId,
         ficha,
         knowledgePack: preparado.pack,
+        tipoEquipo: tipoEquipo?.trim() || undefined,
         manualFileId: preparado.manualFileId,
         manualUrl: preparado.manualUrl,
         paginasVistaExplosionada: preparado.paginasVistaExplosionada,

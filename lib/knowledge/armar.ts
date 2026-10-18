@@ -8,11 +8,13 @@ import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
-import { nombreExtracto, paginaOriginal, prepararExtracto, type Extracto } from "./extracto";
-import { leerManual, SYSTEM_LECTOR, type Lectura } from "./lector";
+import { nombreExtracto, paginaEnExtracto, paginaOriginal, prepararExtracto, type Extracto } from "./extracto";
+import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
+import { leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
+import { armarManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
-import { combinar, faltantes, instruccionesVistas, SIN_VISTAS } from "./vistas";
+import { combinar, instruccionesVistas, SIN_VISTAS } from "./vistas";
 
 /**
  * Armado del knowledge pack: buscar manual → extracto con las páginas que importan → leerlo con citas → validar.
@@ -28,7 +30,15 @@ import { combinar, faltantes, instruccionesVistas, SIN_VISTAS } from "./vistas";
 export type Manual = { url: string; fileId: string; bytes: number; titulo: string; fuente: ManualEncontrado["fuente"]; paginas: number[] };
 
 /** `vistas`: páginas físicas del PDF con la vista explosionada y una vista interior (para /api/plano). */
-export type Armado = { pack: KnowledgePack; manual: Manual | null; vistas: Vistas };
+/** `vistaInterior`: PNG de la página interior del manual (referencia real al lado del 3D), o null. */
+/** `imagenesPaginas`: { página del manual: URL del PNG } (vista interior y páginas citadas). */
+export type Armado = {
+  pack: KnowledgePack;
+  manual: Manual | null;
+  vistas: Vistas;
+  vistaInterior?: VistaInteriorImagen | null;
+  imagenesPaginas?: Record<number, string>;
+};
 
 /** Caché de packs. En la ruta se usa la de Supabase (`cachePacksSupabase`); acá, memoria por defecto. */
 export interface CachePacks {
@@ -64,6 +74,8 @@ ${tiposParaPrompt()}
 - Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
+- Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: si hay que abrirlo, el PASO 1 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
+- Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
 
 <equipo>${equipo}</equipo>
@@ -119,6 +131,8 @@ export type Deps = {
   /** Llamadas cortas (elegir páginas del extracto). */
   llamar?: LlamarIA;
   subir?: SubirArchivo;
+  /** Sube el PNG de la vista interior (Supabase Storage). */
+  subirPng?: SubirPng;
   fetch?: Fetch;
   cache?: CachePacks;
   manuales?: RepoManuales;
@@ -137,10 +151,11 @@ function aPaginasDelManual(c: Contenido, paginas: number[]): Contenido {
 }
 
 export async function armarKnowledgePack(
-  entrada: { ficha: Ficha; sintoma: string },
+  /** `tipoEquipo`: el de /api/intake/entender (ej. "celular", "heladera no frost"); ayuda con equipos fuera de las clases fijas. */
+  entrada: { ficha: Ficha; sintoma: string; tipoEquipo?: string },
   deps: Deps = {},
 ): Promise<Armado & { eventos: Evento[]; desdeCache: boolean }> {
-  const { ficha, sintoma } = entrada;
+  const { ficha, sintoma, tipoEquipo } = entrada;
   const enviar = deps.enviar ?? enviarMensaje;
   const cache = deps.cache ?? cacheEnMemoria;
   const casoId = ficha.casoId;
@@ -153,6 +168,8 @@ export async function armarKnowledgePack(
     return {
       ...guardado,
       vistas: guardado.vistas ?? SIN_VISTAS,
+      vistaInterior: guardado.vistaInterior ?? null,
+      imagenesPaginas: guardado.imagenesPaginas ?? {},
       desdeCache: true,
       eventos: [evento(casoId, "bibliotecario", "pack_en_cache", "Ya tenía la guía de este modelo.")],
     };
@@ -161,7 +178,11 @@ export async function armarKnowledgePack(
   const eventos: Evento[] = [];
   /** Si algo falló (API, red, PDF), el resultado NO se guarda en la caché: se vuelve a intentar la próxima vez. */
   let huboFalla = false;
+  let vistaInterior: VistaInteriorImagen | null = null;
+  let imagenesPaginas: Record<number, string> = {};
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
+  /** Para la IA: marca y modelo más el tipo de equipo, si se sabe. */
+  const equipoDescrito = tipoEquipo ? `${nombreEquipo} (${tipoEquipo})` : nombreEquipo;
   eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
 
   // 1. Caché de manuales (Supabase): si ya lo encontramos y verificamos antes, se reusa con sus vistas.
@@ -171,23 +192,46 @@ export async function armarKnowledgePack(
   const registro = await repo.buscar(ficha.marca.valor, modelo);
   if (registro?.verificado) {
     const pdf = await descargarPdf(registro.url, deps.fetch);
-    if (pdf) {
-      encontrado = { url: registro.url, titulo: registro.titulo, fuente: registro.fuente, pdf };
+    const indice = pdf ? null : await leerPaginaWeb(registro.url, deps.fetch);
+    if (pdf || pareceIndice(indice)) {
+      encontrado = pdf
+        ? { formato: "pdf", url: registro.url, titulo: registro.titulo, fuente: registro.fuente, pdf }
+        : { formato: "web", url: registro.url, titulo: registro.titulo, fuente: registro.fuente, indice: indice! };
       vistas = vistasDe(registro);
       eventos.push(evento(casoId, "bibliotecario", "manual_en_cache", `Ya conocía el manual: ${registro.titulo}.`, { url: registro.url }));
     }
   }
   const manualDeCache = encontrado !== null;
   // 2. Si no, el bibliotecario lo busca (agente con búsqueda web + probar_pdf).
-  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: ficha.clase }, { enviar, fetch: deps.fetch });
+  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: tipoEquipo ?? ficha.clase }, { enviar, fetch: deps.fetch });
 
   // 3. Extracto: solo las páginas que importan. Si no se puede armar, no se manda el PDF entero: guía pública.
   let manual: Manual | null = null;
   let extracto: Extracto | null = null;
-  if (encontrado) {
+  /** Manual publicado como páginas web (ej. Self Service Repair): secciones elegidas, leídas como texto. */
+  let manualWeb: ManualWeb | null = null;
+  if (encontrado?.formato === "web") {
+    try {
+      const secciones = await elegirSecciones(encontrado.indice, equipoDescrito, sintoma, deps.llamar);
+      const armadoWeb = await armarManualWeb(encontrado.indice, secciones, deps.fetch);
+      if (armadoWeb.secciones.length) {
+        manualWeb = { ...armadoWeb, titulo: encontrado.titulo };
+        eventos.push(
+          evento(casoId, "bibliotecario", "secciones_elegidas", `Elegí ${armadoWeb.secciones.length} secciones del manual oficial para leer.`, {
+            secciones: armadoWeb.secciones.map((x) => x.titulo),
+          }),
+        );
+      }
+    } catch (e) {
+      if (e instanceof IAEnPausa) throw e;
+      huboFalla = true;
+      console.error("[knowledge] no pude armar el manual web:", (e as Error).message);
+    }
+  }
+  if (encontrado?.formato === "pdf") {
     try {
       const fijas = [vistas.explosionada, vistas.interior].filter((n): n is number => n !== null);
-      extracto = await prepararExtracto(new Uint8Array(encontrado.pdf.datos), nombreEquipo, sintoma, fijas, deps.llamar);
+      extracto = await prepararExtracto(new Uint8Array(encontrado.pdf.datos), equipoDescrito, sintoma, fijas, deps.llamar);
       const datos = Buffer.from(extracto.datos);
       const fileId = await (deps.subir ?? subirArchivo)(datos, nombreExtracto(extracto.paginas));
       manual = { url: encontrado.url, fileId, bytes: datos.length, titulo: encontrado.titulo, fuente: encontrado.fuente, paginas: extracto.paginas };
@@ -202,9 +246,10 @@ export async function armarKnowledgePack(
       console.error("[knowledge] no pude armar el extracto del manual:", (e as Error).message);
     }
   }
+  const fuenteManual = manual ?? manualWeb;
   eventos.push(
-    manual
-      ? evento(casoId, "bibliotecario", "manual_encontrado", `Tengo el manual: ${manual.titulo}.`, { url: manual.url })
+    fuenteManual
+      ? evento(casoId, "bibliotecario", "manual_encontrado", `Tengo el manual: ${fuenteManual.titulo}.`, { url: fuenteManual.url })
       : evento(casoId, "bibliotecario", "manual_no_encontrado", "No encontré el manual oficial; uso guías públicas (NO VERIFICADO)."),
   );
 
@@ -212,10 +257,16 @@ export async function armarKnowledgePack(
   //    Nunca se reintenta la misma lectura: si el manual no da pasos, se cae en la guía pública.
   let lectura: Lectura | null = null;
   let contenido: Contenido | null = null;
-  if (manual) {
+  if (fuenteManual) {
     try {
-      lectura = await leerManual(manual, tareaPack(nombreEquipo, sintoma, true, faltantes(vistas)), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
-      contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
+      if (manual) {
+        lectura = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
+        contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo), manual.paginas);
+      } else if (manualWeb) {
+        // Manual web: sin páginas (no hay vistas para el 3D); cada cita lleva la URL de su sección.
+        lectura = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web");
+        contenido = parsearContenido(lineasConCitas(lectura.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url));
+      }
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
       huboFalla = true;
@@ -230,10 +281,10 @@ export async function armarKnowledgePack(
       console.warn("[knowledge] lectura sin pasos:", JSON.stringify(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }));
     }
   }
-  const conManual = manual !== null && contenido !== null && contenido.pasos.length > 0;
+  const conManual = fuenteManual !== null && contenido !== null && contenido.pasos.length > 0;
   if (!conManual) {
     try {
-      lectura = await guiaPublica(nombreEquipo, sintoma, enviar);
+      lectura = await guiaPublica(equipoDescrito, sintoma, enviar);
       contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública");
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
@@ -250,13 +301,13 @@ export async function armarKnowledgePack(
     explosionada: extracto?.seleccion?.explosionada.find((n) => manual?.paginas.includes(n)) ?? null,
     interior: extracto?.seleccion?.interior.find((n) => manual?.paginas.includes(n)) ?? null,
   };
-  vistas = conManual ? combinar(combinar(vistas, contenido.vistas), elegidas) : SIN_VISTAS;
+  vistas = conManual && manual ? combinar(combinar(vistas, contenido.vistas), elegidas) : SIN_VISTAS;
 
   const pack = KnowledgePack.parse({
     modelo: nombreEquipo,
     clase: ficha.clase,
     verificado: conManual && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO"),
-    fuentes: conManual && manual ? [{ doc: manual.titulo, url: manual.url }] : fuentesWeb(lectura.bloques),
+    fuentes: conManual && fuenteManual ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }] : fuentesWeb(lectura.bloques),
     piezas: contenido.piezas,
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
@@ -273,8 +324,35 @@ export async function armarKnowledgePack(
       : evento(casoId, "bibliotecario", "guia_vacia", "No conseguí pasos para este equipo: te muestro el esquema genérico (NO VERIFICADO).", diagnostico(lectura, contenido)),
   );
 
+  if (manualWeb && conManual) {
+    await repo.guardar({
+      marca: ficha.marca.valor ?? "",
+      modelo,
+      url: manualWeb.url,
+      titulo: manualWeb.titulo,
+      ...columnasVistas(SIN_VISTAS),
+      verificado: (manualDeCache && registro?.verificado === true) || pack.verificado,
+      fuente: encontrado?.fuente ?? "fabricante",
+    });
+  }
+
   if (manual && conManual) {
     eventos.push(evento(casoId, "bibliotecario", "vistas_ubicadas", mensajeVistas(vistas), { vistas }));
+
+    // Imágenes reales de páginas del manual (sin IA): la vista interior y las páginas citadas en los pasos.
+    // Se dibujan desde el extracto (todas están ahí). VERIFICADO si la cita de la lectura confirmó la vista interior.
+    if (extracto) {
+      const citadas = pack.pasos.map((p) => (p.cita?.estado === "VERIFICADO" ? p.cita.pagina : undefined));
+      const paginas = [...new Set([vistas.interior, ...citadas].filter((n): n is number => typeof n === "number"))];
+      const hojas = paginas
+        .map((pagina) => ({ pagina, hoja: paginaEnExtracto(manual.paginas, pagina) }))
+        .filter((h): h is { pagina: number; hoja: number } => h.hoja !== null);
+      imagenesPaginas = await imagenesDePaginas(extracto.datos, { marca: ficha.marca.valor, modelo }, hojas, deps.subirPng);
+      const url = vistas.interior !== null ? imagenesPaginas[vistas.interior] : undefined;
+      if (url && vistas.interior !== null) {
+        vistaInterior = { url, pagina: vistas.interior, estado: contenido.vistas.interior === vistas.interior ? "VERIFICADO" : "NO_VERIFICADO" };
+      }
+    }
 
     // 5. Se guarda el manual para la próxima vez. Un manual ya verificado no pierde esa marca.
     await repo.guardar({
@@ -288,7 +366,7 @@ export async function armarKnowledgePack(
     });
   }
 
-  const armado: Armado = { pack, manual: conManual ? manual : null, vistas };
+  const armado: Armado = { pack, manual: conManual ? manual : null, vistas, vistaInterior, imagenesPaginas };
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };

@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import {
+  BarraAccion,
+  BotonPrincipal,
+  Check,
+  DiceExperto,
+  Encabezado,
+  Flecha,
+  Pantalla,
+} from "../_ui/experto";
 import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
 import { ResumenGuia } from "../_ui/resumen-guia";
@@ -28,7 +36,7 @@ const ETAPAS: { desde: number; texto: (equipo: string) => string }[] = [
 export default function Preparando() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos } = useFlujo();
+  const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos, tipoEquipo } = useFlujo();
   const [segundos, setSegundos] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
@@ -47,13 +55,13 @@ export default function Preparando() {
     (async () => {
       let guia = preparado;
       if (!guia) {
-        const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma);
+        const { eventos: nuevos, ...listo } = await prepararExperto(ficha, caso.sintoma, tipoEquipo);
         if (!vigente) return;
         agregarEventos(nuevos);
         setPreparado(listo);
         guia = listo;
       }
-      const { eventos: nuevos, ...p } = await generarPlano(ficha, guia);
+      const { eventos: nuevos, ...p } = await generarPlano(ficha, guia, tipoEquipo);
       if (!vigente) return;
       agregarEventos(nuevos);
       setPlano(p);
@@ -109,39 +117,43 @@ export default function Preparando() {
 
       {!pack && !error && (
         <div className="flex flex-col items-center gap-3 py-6">
-          <AnimacionPreparando acto={!pack ? "manual" : "plano"} />
+          <AnimacionPreparando acto={!pack ? "manual" : "plano"} equipo={tipoEquipo ?? caso.clase} />
           <p className="font-mono text-xs text-texto-suave tabular-nums" aria-label="Tiempo">
             {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
           </p>
         </div>
       )}
 
-      {pack && <ResumenGuia pack={pack} plano={plano} />}
+      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} />}
 
-      <div className="mt-auto flex flex-col gap-6">
+      <div className="mt-auto">
         <FeedActividad eventos={eventos} />
-        {error && (
-          <BotonPrincipal
-            onClick={() => {
-              setError(null);
-              setSegundos(0);
-              setVuelta((v) => v + 1);
-            }}
-          >
-            Probar de nuevo
-          </BotonPrincipal>
-        )}
-        {listo && (
-          <BotonPrincipal
-            onClick={() => {
-              desbloquearAudio(); // el experto habla solo al entrar: en iPhone hace falta este toque
-              router.push("/experto");
-            }}
-          >
-            Ver al experto <Flecha />
-          </BotonPrincipal>
-        )}
       </div>
+      {(error || listo) && (
+        <BarraAccion>
+          {error && (
+            <BotonPrincipal
+              onClick={() => {
+                setError(null);
+                setSegundos(0);
+                setVuelta((v) => v + 1);
+              }}
+            >
+              Probar de nuevo
+            </BotonPrincipal>
+          )}
+          {listo && (
+            <BotonPrincipal
+              onClick={() => {
+                desbloquearAudio(); // el experto habla solo al entrar: en iPhone hace falta este toque
+                router.push("/experto");
+              }}
+            >
+              Ver al experto <Flecha />
+            </BotonPrincipal>
+          )}
+        </BarraAccion>
+      )}
     </Pantalla>
   );
 }

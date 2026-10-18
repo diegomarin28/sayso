@@ -70,3 +70,45 @@ export function FlechaEnviar(p: PropsIcono) {
     </Icono>
   );
 }
+
+/** Libro abierto (para "Ver en el manual"). */
+export function Libro(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M12 6.5C10.5 5.2 8.3 4.5 5 4.5H3v14h2c3.3 0 5.5.7 7 2 1.5-1.3 3.7-2 7-2h2v-14h-2c-3.3 0-5.5.7-7 2z" />
+      <path d="M12 6.5v14" />
+    </Icono>
+  );
+}
+
+export function Pausa(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M9 5v14M15 5v14" />
+    </Icono>
+  );
+}
+
+export function Reproducir(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M7 4.5v15l12-7.5z" />
+    </Icono>
+  );
+}
+
+export function Anterior(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M15 5l-7 7 7 7" />
+    </Icono>
+  );
+}
+
+export function Siguiente(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M9 5l7 7-7 7" />
+    </Icono>
+  );
+}

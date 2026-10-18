@@ -13,7 +13,16 @@ import { AnimacionPreparando } from "./animacion-preparando";
 const PASOS_A_MOSTRAR = 3;
 const PIEZAS_A_MOSTRAR = 10;
 
-export function ResumenGuia({ pack, plano }: { pack: KnowledgePack; plano: Plano | null }) {
+export function ResumenGuia({
+  pack,
+  plano,
+  equipo,
+}: {
+  pack: KnowledgePack;
+  plano: Plano | null;
+  /** Para dibujar el equipo correcto (tipoEquipo de la IA o la clase). */
+  equipo?: string | null;
+}) {
   const enPasos = new Set(pack.pasos.flatMap((p) => p.piezas));
   // Primero las piezas que se usan en los pasos (las que el experto va a mostrar).
   const piezas = [...pack.piezas].sort((a, b) => Number(enPasos.has(b.id)) - Number(enPasos.has(a.id)));
@@ -23,7 +32,7 @@ export function ResumenGuia({ pack, plano }: { pack: KnowledgePack; plano: Plano
   return (
     <div className="aparece grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
       <div className="flex flex-col items-center gap-2">
-        <AnimacionPreparando acto={plano ? "listo" : "plano"} />
+        <AnimacionPreparando acto={plano ? "listo" : "plano"} equipo={equipo} />
         {plano && (
           <p className="text-center text-xs text-texto-suave">
             {plano.origen === "ia"

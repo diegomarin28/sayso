@@ -12,6 +12,8 @@ const knowledge = {
   manualFileId: null,
   paginasVistaExplosionada: [],
   paginaVistaInterior: null,
+  imagenesPaginas: {},
+  vistaInterior: null,
   desdeCache: false,
   eventos: [],
 };
@@ -102,5 +104,41 @@ describe("pantallas: tipo de equipo y foto del frente (#63)", () => {
     const r = await leerChapa({ ...casoEjemplo, id: "caso-sin-fotos" }, [], {});
     expect(fetch).not.toHaveBeenCalled();
     expect(r.ficha.modelo.estado).toBe("desconocido");
+  });
+});
+
+describe("plano: tipoEquipo para la plantilla por tipo (#78)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("generarPlano manda el tipoEquipo de la recepción", async () => {
+    const fetch = vi.fn(() =>
+      respuesta({ plano: { modelo: "m", unidades: "cm", piezas: [] }, origen: "plantilla", eventos: [] }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    await generarPlano({ ...ficha, casoId: "caso-plano-tipo" }, knowledge, "heladera no frost");
+    const cuerpo = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(cuerpo.tipoEquipo).toBe("heladera no frost");
+  });
+});
+
+describe("knowledge: tipoEquipo (#79)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("prepararExperto manda el tipoEquipo de la recepción", async () => {
+    const fetch = vi.fn(() => respuesta(knowledge));
+    vi.stubGlobal("fetch", fetch);
+    await prepararExperto({ ...ficha, casoId: "caso-knowledge-tipo" }, "no enfría", "heladera no frost");
+    const cuerpo = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(cuerpo.tipoEquipo).toBe("heladera no frost");
+  });
+});
+
+describe("Ver en el manual (#84)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("las imágenes de páginas llegan con claves de texto y se buscan con el número", async () => {
+    const fetch = vi.fn(() => respuesta({ ...knowledge, imagenesPaginas: { "54": "https://ej.com/p54.png" } }));
+    vi.stubGlobal("fetch", fetch);
+    const r = await prepararExperto({ ...ficha, casoId: "caso-imagenes" }, "ruido");
+    const pagina = 54;
+    expect(r.imagenesPaginas[pagina]).toBe("https://ej.com/p54.png");
+    expect(r.vistaInterior).toBeNull();
   });
 });

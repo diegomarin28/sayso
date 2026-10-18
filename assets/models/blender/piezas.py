@@ -98,6 +98,9 @@ COLORES = {
     "plastico": ("#1b1d20", 0.1, 0.6),
     "conector": ("#e6e2d6", 0.0, 0.6),
     "vidrio": ("#07090d", 0.4, 0.06),
+    "tinta": ("#1d1f23", 0.0, 0.7),
+    "lente": ("#3a4f9a", 0.6, 0.1),
+    "plastico_claro": ("#c9cdd2", 0.05, 0.55),
 }
 
 
@@ -400,6 +403,47 @@ def tornillo():
     return armar("tornillo")
 
 
+def etiqueta_impresa(x, y, z, ancho, alto, plano="xy"):
+    """Etiqueta impresa (batería, panel): papel con renglones de texto, código de barras y el triángulo
+    de advertencia, todo con cajas finas (el texto en 3D pesaría mucho). Apoyada en `z` (o en `y` si
+    `plano="xz"`, mirando hacia +Y)."""
+    # En "xz" se mira desde +Y: la u va hacia -X para que no se lea espejada.
+    def pegar(u, v, w, d, h, mat):
+        if plano == "xy":
+            caja((w, d, h), (x + u, y + v, z + h / 2), mat)
+        else:
+            caja((w, h, d), (x - u, y + h / 2, z + v), mat)
+
+    pegar(0, 0, ancho, alto, 0.006, "etiqueta")
+    m = min(ancho, alto)
+    # Título y renglones (largos distintos, como texto).
+    pegar(-ancho * 0.12, alto * 0.36, ancho * 0.6, m * 0.07, 0.009, "tinta")
+    for i, largo in enumerate((0.55, 0.42, 0.5, 0.33)):
+        pegar(-ancho * 0.5 + ancho * 0.06 + ancho * largo / 2, alto * (0.18 - i * 0.13), ancho * largo, m * 0.035, 0.009, "tinta")
+    # Código de barras abajo a la derecha.
+    x0, ancho_cb = ancho * 0.08, ancho * 0.36
+    for i, grueso in enumerate((2, 1, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 1)):
+        pegar(x0 + i * ancho_cb / 14, -alto * 0.3, ancho_cb / 14 * grueso * 0.4, alto * 0.22, 0.009, "tinta")
+    # Triángulo de advertencia.
+    t = m * 0.22
+    tri = [(0, t * 0.55), (-t * 0.5, -t * 0.32), (t * 0.5, -t * 0.32)]
+    tx, ty = -ancho * 0.32, -alto * 0.28
+    if plano == "xy":
+        prisma([(tx + a, ty + b) for a, b in tri], 0.009, (x, y, z + 0.0045), "tinta")
+    else:
+        girar(prisma([(-(tx + a), ty + b) for a, b in tri], 0.009, (x, y + 0.0075, z), "tinta"), (math.pi / 2, 0, 0))
+
+
+def lente(x, y, z, r):
+    """Óptica vista desde afuera, apoyada en `z`: aro metálico claro, anillo negro, el elemento con el
+    reflejo azulado del antirreflejo y la pupila. Sin esferas ni restas (pesa poco)."""
+    cilindro(r, 0.05, (x, y, z + 0.025), "metal", seg=32)
+    cilindro(r * 0.84, 0.06, (x, y, z + 0.03), "goma", seg=32)
+    cilindro(r * 0.62, 0.07, (x, y, z + 0.035), "lente", seg=32)
+    cilindro(r * 0.24, 0.075, (x, y, z + 0.0375), "goma", seg=20)
+    cilindro(r * 0.08, 0.08, (r * 0.28 + x, r * 0.28 + y, z + 0.04), "etiqueta", seg=10)  # reflejo
+
+
 def peine(xs, y, largo, z, ancho=0.12):
     """Contactos dorados del borde de una placa (arriba y abajo)."""
     for x in xs:
@@ -479,7 +523,7 @@ def bateria():
     """Batería de tres celdas planas, placa de protección con cinta, conector y orejas de fijación."""
     for x in (-8.6, 0, 8.6):
         caja((8.2, 6.2, 0.7), (x, -0.45, 0.4), bisel=0.25, seg=3)
-    caja((4.0, 2.4, 0.01), (0, -0.45, 0.755), "etiqueta")
+    etiqueta_impresa(0, -0.45, 0.75, 6.4, 4.0)
     caja((22.0, 0.9, 0.16), (0, 3.1, 0.13), "pcb")
     caja((21.6, 0.85, 0.02), (0, 3.1, 0.22), "plastico")
     caja((1.6, 0.55, 0.32), (9.6, 3.35, 0.39), "conector", bisel=0.03)
@@ -509,23 +553,48 @@ def parlante():
 
 
 def placa_madre():
-    """Placa madre esquemática: agujeros de montaje, chips, componentes chicos y conectores. Todo bajo 0.18 cm."""
+    """Placa madre de notebook: procesador con su chapita, reguladores de tensión, zócalo de RAM, ranura M.2,
+    chips, conectores FPC y agujeros de montaje. Todo bajo 0.18 cm."""
     placa = caja((32.0, 13.0, 0.1), (0, 0, 0.05))
     agujeros = [(-15.3, -5.8), (-15.3, 5.8), (-5, 6), (5, -6), (15.3, -5.8), (15.3, 5.8), (0, 0), (-8, -3)]
     restar(placa, varios([("cil", (0.18, 0.5), (x, y, 0.05)) for x, y in agujeros]))
     for x, y in agujeros:
         aro = cilindro(0.36, 0.014, (x, y, 0.107), "contactos", seg=20)
         restar(aro, cilindro(0.18, 0.5, (x, y, 0.1), mat=None, seg=16))
-    azar = random.Random(7)  # fijo: la placa sale igual cada vez
-    for _ in range(14):
-        w, d = azar.uniform(0.6, 1.6), azar.uniform(0.6, 1.4)
-        caja((w, d, 0.06), (azar.uniform(-14.5, 14.5), azar.uniform(-5.5, 5.5), 0.13), "chip", bisel=0.01)
-    for _ in range(90):
-        mat = azar.choice(["metal", "metal", "chip", "conector"])
-        w = azar.uniform(0.12, 0.35)
-        caja((w, w * 0.55, 0.04), (azar.uniform(-15.5, 15.5), azar.uniform(-6.2, 6.2), 0.12), mat)
-    for x, y, w in [(-12, -6.0, 2.0), (3, 6.0, 1.4), (10, -6.0, 1.0), (-3, -6.1, 1.6)]:
-        caja((w, 0.5, 0.08), (x, y, 0.14), "conector", bisel=0.01)
+    # Procesador: sustrato, chapita plateada (die) y capacitores alrededor.
+    cx, cy = 2.0, -1.2
+    caja((3.8, 3.2, 0.03), (cx, cy, 0.115), "chip")
+    caja((1.7, 1.1, 0.03), (cx - 0.4, cy, 0.145), "metal")
+    caja((0.9, 0.9, 0.03), (cx + 1.0, cy + 0.6, 0.145), "metal")
+    for i in range(8):
+        caja((0.18, 0.1, 0.03), (cx - 1.6 + i * 0.45, cy - 1.45, 0.145), "metal")
+    # Reguladores de tensión: bobinas grises en fila con sus transistores.
+    for i in range(6):
+        caja((0.7, 0.7, 0.07), (cx - 2.4 + i * 0.85, cy + 2.6, 0.135), "metal", bisel=0.02)
+        caja((0.45, 0.35, 0.03), (cx - 2.4 + i * 0.85, cy + 3.35, 0.115), "chip")
+    # Chips: controlador (PCH), BIOS, audio, embebido.
+    for (w, d), (x, y) in [((1.6, 1.6), (-3.2, 1.0)), ((0.6, 0.5), (7.5, 3.5)), ((0.7, 0.7), (11.0, -3.5)), ((0.9, 0.9), (6.5, -4.0))]:
+        caja((w, d, 0.04), (x, y, 0.12), "chip", bisel=0.005)
+    # Zócalo SO-DIMM con trabas y ranura M.2 con su separador.
+    caja((6.9, 0.9, 0.07), (-9.5, 1.5, 0.135), "plastico")
+    caja((6.5, 0.25, 0.02), (-9.5, 1.5, 0.175), "contactos")
+    for x in (-13.15, -5.85):
+        caja((0.3, 0.8, 0.07), (x, 1.5, 0.135), "metal")
+    caja((2.3, 0.5, 0.06), (-9.5, -3.6, 0.13), "plastico")
+    cilindro(0.25, 0.07, (-1.3, -3.6, 0.135), "metal", seg=12)
+    # Conectores FPC (pantalla, teclado, touchpad, batería, ventilador).
+    for (w, d), (x, y) in [((2.6, 0.5), (-1.0, 6.0)), ((2.0, 0.45), (5.5, 6.0)), ((1.4, 0.45), (-6.5, -6.0)), ((1.8, 0.6), (9.0, -6.0)), ((0.7, 0.4), (12.5, 3.0))]:
+        caja((w, d, 0.07), (x, y, 0.135), "conector", bisel=0.01)
+    # Capacitores y resistencias en filas (como en una placa real, no al azar).
+    for fila in range(3):
+        for i in range(10):
+            caja((0.16, 0.09, 0.03), (-6.0 + i * 0.35, -1.0 - fila * 0.3, 0.115), "metal" if (i + fila) % 2 else "conector")
+    for i in range(12):
+        caja((0.16, 0.09, 0.03), (8.0 + (i % 6) * 0.35, 0.8 + (i // 6) * 0.3, 0.115), "metal")
+    caja((0.6, 0.25, 0.04), (4.6, 2.2, 0.12), "metal")  # cristal
+    caja((1.6, 0.9, 0.006), (12.0, 4.8, 0.103), "etiqueta")
+    for i, grueso in enumerate((2, 1, 1, 3, 1, 2, 1, 2)):
+        caja((0.05 * grueso, 0.5, 0.004), (11.5 + i * 0.13, 4.8, 0.108), "tinta")
     return armar("placa_madre", EQUIPOS_NOTEBOOK)
 
 
@@ -683,7 +752,7 @@ def bateria_celular():
     conector y las tiras para despegarla."""
     W, D = 5.8, 8.6
     prisma(redondeado(W, D, 0.3, 6), 0.45, (0, 0, 0.225), bisel=0.08)
-    caja((4.4, 5.2, 0.006), (0, -0.4, 0.452), "etiqueta")
+    etiqueta_impresa(0, -0.4, 0.45, 4.4, 5.2)
     caja((4.6, 0.55, 0.12), (0, D / 2 + 0.3, 0.2), "pcb")
     caja((4.4, 0.5, 0.02), (0, D / 2 + 0.3, 0.27), "plastico")
     caja((1.8, 0.4, 0.02), (1.4, D / 2 + 0.3, 0.29), "plastico")
@@ -698,7 +767,7 @@ def camara():
     """Cámara (frontal o de una notebook): bloque con lente, aro metálico y un tramo de flex."""
     caja((0.9, 0.9, 0.42), (0, 0, 0.21), bisel=0.04)
     cilindro(0.34, 0.2, (0, 0, 0.52), "metal", seg=32, bisel=0.02)
-    cilindro(0.25, 0.02, (0, 0, 0.625), "vidrio", seg=32)
+    lente(0, 0, 0.62, 0.3)
     caja((0.5, 0.45, 0.02), (0, -0.67, 0.03), "plastico")
     return armar("camara")
 
@@ -708,8 +777,7 @@ def camara_modulo():
     caja((2.7, 2.7, 0.1), (0, 0, 0.05), "metal", bisel=0.03)
     for (x, y), r in [((-0.65, 0.65), 0.5), ((-0.65, -0.65), 0.5), ((0.65, 0.65), 0.38)]:
         cilindro(r + 0.1, 0.5, (x, y, 0.35), seg=32, bisel=0.03)
-        cilindro(r, 0.08, (x, y, 0.64), "metal", seg=32)
-        cilindro(r - 0.08, 0.02, (x, y, 0.685), "vidrio", seg=32)
+        lente(x, y, 0.6, r)
     cilindro(0.18, 0.06, (0.65, -0.65, 0.13), "etiqueta", seg=24)
     return armar("camara@modulo", EQUIPOS_CELULAR)
 
@@ -892,23 +960,38 @@ def conector_terminal():
 
 
 def pantalla_panel():
-    """Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios, placa T-con, flex de los drivers arriba y el cable."""
+    """Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios y tornillos,
+    placa T-con con sus cables planos, las placas de los drivers arriba con sus flex y la etiqueta."""
     W, H, P = 100.0, 58.0, 1.0
+    yb = P / 2 + 0.2  # cara de la chapa trasera
     caja((W - 0.6, P, H - 0.6), (0, 0, H / 2))
     caja((W - 1.2, 0.05, H - 1.2), (0, -P / 2 - 0.03, H / 2), "vidrio")
     marco_m = caja((W, P + 0.3, H), (0, 0.1, H / 2), "metal", bisel=0.1)
     restar(marco_m, caja((W - 1.0, P + 1.0, H - 1.0), (0, 0.1, H / 2), mat=None))
     caja((W - 4.0, 0.2, H - 4.0), (0, P / 2 + 0.1, H / 2), "metal")
     for z in (H * 0.3, H * 0.5, H * 0.7):
-        caja((W - 8.0, 0.2, 1.2), (0, P / 2 + 0.3, z), "metal", bisel=0.05)
-    caja((22.0, 0.3, 7.0), (0, P / 2 + 0.55, 6.0), "pcb")
+        caja((W - 8.0, 0.2, 1.2), (0, yb + 0.1, z), "metal", bisel=0.05)
+    for x in (-W / 2 + 4.0, -W / 4, W / 4, W / 2 - 4.0):
+        for z in (4.0, H - 6.5):
+            cilindro(0.35, 0.15, (x, yb + 0.075, z), "ranura", seg=10, eje="y")
+    # Placa T-con abajo, con chips y los dos cables planos que suben a los drivers.
+    caja((22.0, 0.3, 7.0), (0, yb + 0.15, 6.0), "pcb")
     for x, w in [(-6.0, 2.5), (-1.5, 1.5), (3.0, 3.0)]:
-        caja((w, 0.25, w * 0.7), (x, P / 2 + 0.82, 6.5), "chip")
+        caja((w, 0.25, w * 0.7), (x, yb + 0.42, 6.5), "chip")
+    for x in (-8.0, 8.0):
+        caja((1.4, 0.35, 0.6), (x, yb + 0.47, 8.9), "conector")
+        caja((1.2, 0.04, H - 15.0), (x * 1.4, yb + 0.33, (9.5 + H - 5.5) / 2), "plastico")
+    # Placas de los drivers (fuente de cada columna) a lo largo del borde de arriba, con sus flex.
+    for x in (-W / 4, W / 4):
+        caja((W / 2 - 8.0, 0.15, 2.2), (x, yb + 0.1, H - 4.2), "pcb")
+        for i in range(6):
+            caja((1.0, 0.12, 0.6), (x - W / 4 + 6.0 + i * (W / 2 - 12.0) / 5, yb + 0.22, H - 4.2), "chip")
     for i in range(10):
         x = -W / 2 + 7.0 + i * (W - 14.0) / 9
-        caja((3.6, 0.06, 3.0), (x, P / 2 + 0.25, H - 1.2), "plastico")
-        caja((1.2, 0.1, 0.6), (x, P / 2 + 0.3, H - 1.4), "chip")
-    tubo([(10.5, P / 2 + 0.7, 6.0), (16.0, P / 2 + 0.9, 8.0), (22.0, P / 2 + 0.9, 12.0)], 0.35, "plastico", seg=10)
+        caja((3.6, 0.06, 2.4), (x, yb + 0.05, H - 1.9), "plastico")
+        caja((1.2, 0.1, 0.5), (x, yb + 0.1, H - 1.9), "chip")
+    tubo([(10.5, yb + 0.5, 6.0), (16.0, yb + 0.7, 8.0), (22.0, yb + 0.7, 12.0)], 0.35, "plastico", seg=10)
+    etiqueta_impresa(30.0, yb + 0.2, 14.0, 12.0, 6.0, plano="xz")
     return armar("pantalla@panel", EQUIPOS_TV)
 
 
@@ -953,14 +1036,24 @@ def ventilador_axial():
 def ventilador_tangencial():
     """Turbina tangencial (unidad interior de aire split): jaula larga de álabes con discos de refuerzo y eje."""
     L, R = 60.0, 4.5
+    # Plástico gris claro, como las reales. Discos de refuerzo calados: entre ellos se ven los álabes.
     for i in range(7):
-        cilindro(R, 0.25, (-L / 2 + i * L / 6, 0, R), seg=32, eje="x")
-    for k in range(28):
-        a = 2 * math.pi * k / 28
-        alabe = caja((L, 0.08, 0.9), (0, math.cos(a) * (R - 0.5), R + math.sin(a) * (R - 0.5)), "aspas")
-        girar(alabe, (a + 0.5, 0, 0))
-    cilindro(0.4, L + 4.0, (0, 0, R), "metal", seg=12, eje="x")
-    cilindro(1.2, 1.5, (L / 2 + 1.0, 0, R), "metal", seg=24, eje="x")
+        x = -L / 2 + i * L / 6
+        disco = cilindro(R, 0.3, (x, 0, R), "plastico_claro", seg=32, eje="x")
+        if 0 < i < 6:
+            restar(disco, cilindro(R - 0.9, 1.0, (x, 0, R), mat=None, seg=32, eje="x"))
+    # Álabes curvados hacia adelante, por tramo, inclinados respecto del radio.
+    for t in range(6):
+        x0 = -L / 2 + t * L / 6
+        for k in range(24):
+            a = 2 * math.pi * k / 24 + t * 0.06
+            alabe = caja((L / 6 - 0.3, 0.07, 1.1), (x0 + L / 12, math.cos(a) * (R - 0.55), R + math.sin(a) * (R - 0.55)), "plastico_claro")
+            girar(alabe, (a + 1.15, 0, 0))
+    # Cubos de los extremos (el del motor con el eje) y el buje de goma del otro lado.
+    cilindro(1.6, 0.8, (L / 2 + 0.55, 0, R), seg=24, eje="x")
+    cilindro(0.4, 3.0, (L / 2 + 2.3, 0, R), "metal", seg=12, eje="x")
+    cilindro(1.2, 0.8, (-L / 2 - 0.55, 0, R), seg=24, eje="x")
+    cilindro(0.9, 1.0, (-L / 2 - 1.4, 0, R), "goma", seg=20, eje="x")
     return armar("ventilador@tangencial", EQUIPOS_SPLIT)
 
 
@@ -1432,6 +1525,51 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    # Familia facultad: formas nuevas, ejes del GLB.
+    "bateria@celdas_pegadas": "proporcional",
+    "placa_logica_integrada": "libre",
+    "trackpad": "libre",
+    "teclado": "libre",
+    "teclado@notebook": "libre",
+    "soporte_monitor": "proporcional",
+    "modulo_biometrico": "proporcional",
+    "lector_huella": "proporcional",
+    "sensor_proximidad": "proporcional",
+    "motor_vibracion": "proporcional",
+    "motor_vibracion@excentrico": "proporcional",
+    "bandeja_sim": "proporcional",
+    "conector@lightning": "proporcional",
+    "placa_tcon": "libre",
+    "placa_principal_av": "libre",
+    "lampara_proyector": "proporcional",
+    "modulo_led_proyector": "proporcional",
+    "lente_proyector": "redondo:xz",
+    "rueda_color": "redondo:xz",
+    "modulador_imagen": "proporcional",
+    "unidad_fusora": "proporcional",
+    "cilindro_fotoconductor": "tramo:x:redondo",
+    "sensor_papel": "proporcional",
+    "carcasa_mouse": "proporcional",
+    "rueda_scroll": "redondo:yz",
+    "sensor_mouse": "proporcional",
+    "microswitch": "proporcional",
+    "tecla": "proporcional",
+    "switch_teclado": "proporcional",
+    "mecanismo_tijera": "proporcional",
+    "membrana_teclado": "libre",
+    "carcasa_mando": "proporcional",
+    "cruceta_mando": "proporcional",
+    "boton_mando": "redondo:xz",
+    "potenciometro": "proporcional",
+    "adaptador_notebook": "proporcional",
+    "conector@jack_dc": "proporcional",
+    "conector@magsafe": "proporcional",
+    "carcasa_zapatilla": "proporcional",
+    "toma_corriente": "proporcional",
+    "contactos_zapatilla": "proporcional",
+    "protector_termico": "proporcional",
+
+
     # Familia cotidianos: reglas explícitas, ejes del GLB.
     "canasta_freidora": "libre",
     "rejilla_crujiente": "libre",

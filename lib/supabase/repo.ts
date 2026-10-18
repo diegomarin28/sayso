@@ -15,17 +15,60 @@ function revisar(error: { message: string } | null, que: string) {
   if (error) throw new ErrorSupabase(`${que}: ${error.message}`);
 }
 
-export async function guardarCaso(db: SupabaseClient | null, caso: Caso): Promise<void> {
+/** Datos de "Mis casos" que viajan con el caso (columnas de la migración 007). */
+export const ExtraCaso = z.object({
+  /** Id anónimo del dispositivo: agrupa los casos sin login ni datos personales. */
+  dispositivo: z.string().uuid().optional(),
+  tipoEquipo: z.string().max(60).nullable().optional(),
+  cierre: z
+    .object({
+      estado: z.enum(["resuelto", "esperando_repuesto", "derivado"]),
+      pieza: z.string().max(80).optional(),
+      compraUrl: z.string().url().max(500).optional(),
+      ts: z.string(),
+    })
+    .optional(),
+});
+export type ExtraCaso = z.infer<typeof ExtraCaso>;
+
+/** Postgres 42703 / PostgREST PGRST204: la columna no existe (falta correr una migración). */
+function esColumnaFaltante(error: { message: string; code?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /column .* (does not exist|not find)/i.test(error.message)
+  );
+}
+
+export async function guardarCaso(
+  db: SupabaseClient | null,
+  caso: Caso,
+  extra: ExtraCaso = {},
+): Promise<void> {
   if (!db) return;
   const c = Caso.parse(caso);
-  const { error } = await db.from("casos").upsert({
+  const e = ExtraCaso.parse(extra);
+  const base = {
     id: c.id,
     clase: c.clase,
     sintoma: c.sintoma,
     estado: c.estado,
     creado_en: c.creadoEn,
     datos: c,
-  });
+  };
+  // Solo se escriben las columnas que vinieron (un upsert sin ellas no las borra).
+  const extras = {
+    actualizado_en: new Date().toISOString(),
+    ...(e.dispositivo ? { dispositivo: e.dispositivo } : {}),
+    ...(e.tipoEquipo !== undefined ? { tipo_equipo: e.tipoEquipo } : {}),
+    ...(e.cierre ? { cierre: e.cierre } : {}),
+  };
+  let { error } = await db.from("casos").upsert({ ...base, ...extras });
+  if (error && esColumnaFaltante(error)) {
+    // Sin la migración 007 todavía: se guarda el caso igual, sin los datos de "Mis casos".
+    console.warn("[supabase] falta la migración 007_mis_casos: guardo el caso sin dispositivo ni cierre");
+    ({ error } = await db.from("casos").upsert(base));
+  }
   revisar(error, "guardar caso");
 }
 

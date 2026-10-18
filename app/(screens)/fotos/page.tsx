@@ -6,8 +6,18 @@ import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
+import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, Camara, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import {
+  BarraAccion,
+  BotonPrincipal,
+  Camara,
+  Check,
+  DiceExperto,
+  Encabezado,
+  Flecha,
+  Pantalla,
+} from "../_ui/experto";
 
 /** Pantalla 2 — Captura guiada: una foto por vez, con control de calidad. */
 
@@ -111,7 +121,7 @@ export default function CapturaGuiada() {
           : toma.error
             ? `${toma.error} Sacala otra vez.`
             : rechazada
-              ? (toma.resultado?.motivoRechazo ?? "No se ve bien.") + " Sacala de nuevo."
+              ? "Esa foto no me sirve. Te explico abajo qué sacar."
               : aceptada
                 ? "Perfecta."
                 : pedido!.instruccion;
@@ -128,7 +138,7 @@ export default function CapturaGuiada() {
       <DiceExperto texto={dice} />
 
       {errorPedidos && (
-        <div className="mt-auto">
+        <BarraAccion>
           <BotonPrincipal
             onClick={() => {
               setErrorPedidos(null);
@@ -137,7 +147,7 @@ export default function CapturaGuiada() {
           >
             Probar de nuevo
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
 
       {pedidos && (
@@ -223,20 +233,40 @@ export default function CapturaGuiada() {
             )}
           </label>
 
+          {/* Carga de "revisar la foto": la línea que escanea y una línea de lo que mira. */}
+          {toma.revisando && <LineaPensando lineas={LINEAS.foto} className="-mt-4" />}
+
+          {/* Foto rechazada (o que no se pudo revisar): qué está mal, qué sacar y cómo reintentar. */}
+          {(rechazada || toma.error) && !toma.revisando && (
+            <div
+              role="alert"
+              className="-mt-4 flex flex-col gap-3 rounded-2xl border border-peligro/50 bg-peligro/10 p-4"
+            >
+              <div>
+                <p className="font-semibold text-peligro">Esta foto no sirve</p>
+                <p className="mt-1 text-sm">
+                  {toma.error ?? toma.resultado?.motivoRechazo ?? "No se ve bien."}
+                </p>
+              </div>
+              <p className="text-sm text-texto-suave">
+                <span className="font-medium text-texto">Qué sacar:</span> {pedido.instruccion}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <InputFoto camara alElegir={alSacar} className="bg-acento font-semibold text-black sm:flex-1">
+                  <Camara size={18} /> Reintentar esta foto
+                </InputFoto>
+                <InputFoto alElegir={alSacar} className="border border-borde">
+                  <Galeria /> Elegir otra
+                </InputFoto>
+              </div>
+            </div>
+          )}
+
           {/* La foto grande abre la cámara; esto deja elegir una que ya esté en el celular. */}
-          {!toma.revisando && !aceptada && (
-            <label className="-mt-4 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-borde text-sm font-medium text-texto transition hover:border-texto-suave active:scale-[0.98]">
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => {
-                  alSacar(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
+          {!toma.revisando && !aceptada && !rechazada && !toma.error && (
+            <InputFoto alElegir={alSacar} className="-mt-4 border border-borde">
               <Galeria /> Elegir de la galería
-            </label>
+            </InputFoto>
           )}
 
           <div className="mt-auto flex items-center justify-between gap-4 text-sm text-texto-suave">
@@ -253,11 +283,11 @@ export default function CapturaGuiada() {
       )}
 
       {terminado && (
-        <div className="mt-auto">
+        <BarraAccion>
           <BotonPrincipal onClick={() => router.push("/ficha")}>
             Leer la chapa <Flecha />
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
     </Pantalla>
   );
@@ -311,5 +341,36 @@ function Galeria() {
       <circle cx="9" cy="10" r="1.8" />
       <path d="M21 16l-5-5-8 9" />
     </svg>
+  );
+}
+
+/** Botón que abre la cámara (`camara`) o la galería y manda la foto elegida. */
+function InputFoto({
+  camara = false,
+  alElegir,
+  className = "",
+  children,
+}: {
+  camara?: boolean;
+  alElegir: (archivo: File | undefined) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      className={`flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium transition hover:opacity-90 active:scale-[0.98] ${className}`}
+    >
+      <input
+        type="file"
+        accept="image/*"
+        {...(camara ? { capture: "environment" as const } : {})}
+        className="sr-only"
+        onChange={(e) => {
+          alElegir(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      {children}
+    </label>
   );
 }

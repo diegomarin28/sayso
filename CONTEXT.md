@@ -129,6 +129,24 @@ Reglas de fusión:
 - Los cambios en `shared/` los hace solo el Claude de Diego, con aviso al grupo antes de fusionar.
 - Si GitHub tiene la verificación automática (CI) en rojo, no fusiones.
 
+## Coordinación entre carriles
+
+Flujo de trabajo desde ahora (tu carril es el de la persona con la que hablás: Juanma = `carril-a`, Diego = `carril-b`, Iaio = `carril-c`). Etiquetas en GitHub: `carril-a`, `carril-b`, `carril-c`, `pregunta`, `decision`.
+
+**Al empezar cualquier tarea:** `git pull` y `gh issue list --state open --label <tu carril>`. Primero va lo que te pidieron los otros, después lo pendiente en `docs/hallazgos-prueba-real-1.md`.
+
+**Al terminar una tarea:**
+1. Probá lo máximo: tests, typecheck, build y recorrido en tamaño iPhone con el fixture (capturas).
+2. PR a `main`. Si "verificar" está en verde: `git pull --rebase origin main`, y si hubo cambios volvé a probar y empujar. Después fusioná con squash. Si el conflicto es en un archivo de otro carril, no lo toques: abrí un issue para ese carril.
+3. Marcá [x] en los hallazgos con el número de PR y cerrá los issues que resolviste con un comentario que diga el PR.
+4. Si tu cambio afecta o necesita algo de otro carril, abrí un issue con la etiqueta de ese carril: qué cambió, qué tiene que hacer y qué PR o archivos mirar. No le pidas a la persona que lo mande a mano.
+
+**Preguntas:** si necesitás algo de otro carril, abrí un issue con la etiqueta de ese carril + `pregunta` y seguí con otra cosa mientras tanto, sin bloquearte. Si es una decisión de producto, de contratos (`shared/`) o de gasto de IA, va con las etiquetas `carril-b` + `decision`, porque la decide Diego.
+
+**Después:** proponé las 3 tareas siguientes más importantes de tu carril que nadie esté haciendo (mirá issues y PR abiertos), con qué archivos tocan, cuánto tardan y si gastan IA. Esperá la elección de la persona.
+
+**Reglas de siempre:** nada de IA real sin OK con monto en USD, nada hardcodeado, no tocar archivos de otro PR abierto.
+
 ## Cómo trabajamos con Orca y git
 - **Orca** (gratis, código abierto): cada persona tiene un worktree con su agente. Todos sobre **el mismo repositorio**.
 - Rama por tarea: `a/<tarea>`, `b/<tarea>`, `c/<tarea>`.
@@ -138,6 +156,7 @@ Reglas de fusión:
 
 ## Qué hacer al arrancar la sesión
 1. Preguntar quién es la persona (y su sistema si no lo sabés).
+   Después, `gh issue list --state open --label <su carril>` (ver "Coordinación entre carriles").
 2. Leer `docs/plan-v4.md`, la sección de su carril, y `git log --oneline -15` de `origin/main` para ver qué ya está hecho.
 3. Decirle en dos líneas dónde está el carril y proponer **la próxima tarea** (la más cercana a la próxima puerta del cronograma).
 4. Seguir el ciclo de arriba.

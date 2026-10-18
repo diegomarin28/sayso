@@ -112,10 +112,16 @@ body {
 
 .aparece { animation: aparece 0.4s ease-out both; }
 
-/* ---------- Pantalla 4: manual que se lee y notebook que se arma (animacion-preparando.tsx) ---------- */
+/* ---------- Línea de "pensando": una a la vez, entra y se desvanece (linea-pensando.tsx) ---------- */
 
-.prep-acto { transition: opacity 0.7s ease; }
-.prep-oculto { opacity: 0; }
+@keyframes linea-pensando {
+  0% { opacity: 0; transform: translateY(6px); }
+  15%, 80% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+.linea-pensando { animation: linea-pensando 2.2s ease-in-out both; }
+
+/* ---------- Pantalla 4: manual que se lee y notebook que se arma (animacion-preparando.tsx) ---------- */
 
 /* Líneas de texto que se escriben y se borran, en loop. */
 @keyframes prep-escribe {
@@ -187,6 +193,24 @@ body {
   animation: escaneo 1.6s ease-in-out infinite;
 }
 
+/* Lupa que recorre la etiqueta mientras se lee (ficha). */
+@keyframes lupa {
+  0% { left: 6%; top: 10%; }
+  25% { left: 56%; top: 14%; }
+  50% { left: 50%; top: 56%; }
+  75% { left: 8%; top: 52%; }
+  100% { left: 6%; top: 10%; }
+}
+.lupa-etiqueta {
+  position: absolute;
+  width: 38%;
+  height: 32%;
+  border: 2px solid var(--acento);
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.35), 0 0 18px 2px rgb(255 106 43 / 0.5);
+  animation: lupa 4.4s ease-in-out infinite;
+}
+
 /* ---------- Chapa metálica (ficha) ---------- */
 
 .chapa {
@@ -207,6 +231,8 @@ body {
   .orbe, .orbe-halo, .linea-escaneo { animation: none; }
   .palabra { animation: none; opacity: 1; }
   .aparece { animation: none; }
+  .linea-pensando { animation: none; opacity: 1; }
+  .lupa-etiqueta { animation: none; }
   .prep-linea, .prep-trazo { animation: none; stroke-dashoffset: 0; }
   .prep-cita, .prep-pieza { animation: none; opacity: 1; }
   .prep-lectura, .prep-hoja { animation: none; opacity: 0; }

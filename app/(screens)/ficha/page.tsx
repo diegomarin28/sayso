@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
 import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
 import { vistaPrevia } from "../_datos/imagen";
+import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la chapa, cada dato con su estado. */
 
@@ -50,6 +51,8 @@ export default function FichaDelEquipo() {
   const aceptadas = fotos.filter((f) => f.aceptada && imagenes[f.id]);
   const etiquetas = aceptadas.filter((f) => f.tipoPedido === "etiqueta");
   const fotoEtiqueta = etiquetas.at(-1);
+  /** La que se muestra mientras lee: la etiqueta o, si no hay, el frente. */
+  const fotoLectura = fotoEtiqueta ?? aceptadas.find((f) => f.tipoPedido === "frente") ?? aceptadas.at(-1);
 
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
 
@@ -132,7 +135,7 @@ export default function FichaDelEquipo() {
       <DiceExperto texto={dice} />
 
       {error && !ficha && (
-        <div className="mt-auto">
+        <BarraAccion>
           <BotonPrincipal
             onClick={() => {
               setError(null);
@@ -141,20 +144,24 @@ export default function FichaDelEquipo() {
           >
             Probar de nuevo
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
 
       {!ficha ? (
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl bg-superficie">
-          {fotoEtiqueta && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={vistaPrevia(imagenes[fotoEtiqueta.id])}
-              alt="Etiqueta del equipo"
-              className="h-full w-full object-cover opacity-70"
-            />
-          )}
-          <div className="linea-escaneo" />
+        // Carga de "leer la etiqueta": la foto con una lupa que la recorre y una línea de lo que lee.
+        <div className="flex flex-col gap-3">
+          <div className="relative aspect-[4/3] max-h-[50dvh] w-full overflow-hidden rounded-3xl bg-superficie">
+            {fotoLectura && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={vistaPrevia(imagenes[fotoLectura.id])}
+                alt={fotoEtiqueta ? "Etiqueta del equipo" : "Frente del equipo"}
+                className="h-full w-full object-cover opacity-60"
+              />
+            )}
+            <div className="lupa-etiqueta" aria-hidden />
+          </div>
+          <LineaPensando lineas={fotoEtiqueta ? LINEAS.etiqueta : LINEAS.frente} />
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -258,12 +265,12 @@ export default function FichaDelEquipo() {
       )}
 
       {ficha && (
-        <div className="mt-auto flex flex-col gap-3">
+        <BarraAccion>
           <p className="text-center text-xs text-texto-suave">Lo que escribís vos queda como confirmado.</p>
           <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
             {enviando ? "Guardando…" : "Sí, es este"} <Flecha />
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
     </Pantalla>
   );

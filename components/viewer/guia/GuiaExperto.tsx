@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
-import { FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
-import { FlechaEnviar, GirarCelular } from "./iconos";
+import { ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
+import { FlechaEnviar, GirarCelular, Libro } from "./iconos";
+import { paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
-import { esperar, reproducir, tiempoDeLectura, type EstadoGuia } from "./reproducir";
+import { conPiezaNombrada } from "./pieza-nombrada";
+import { datosTransparencia, DeDondeSale } from "./transparencia";
+import { esperar, Reproductor, tiempoDeLectura, type EstadoControles, type EstadoGuia, type ModoAvance } from "./reproducir";
 
 /**
  * Pantallas 5 y 6: el experto explica sobre el 3D y la persona pregunta.
@@ -24,6 +27,11 @@ export type GuiaExpertoProps = {
   /** Tipo de equipo en texto libre (de /api/intake/entender): el 3D elige la versión de cada pieza (notebook, celular…). */
   tipoEquipo?: string;
   manualFileId?: string | null;
+  /**
+   * Imagen (PNG) de una página del manual, si la hay: el paso que la cita muestra "Ver en el manual".
+   * La da /api/knowledge (campo de Juanma); la pantalla solo traduce ese campo a esta función.
+   */
+  imagenPagina?: (pagina: number) => string | null | undefined;
   /** Si viene, el experto arranca solo (ej. con el síntoma del caso). */
   preguntaInicial?: string;
   /** Voz (C3): decir la frase en voz alta y resolver cuando termina. Sin voz, se usa un tiempo de lectura. */
@@ -62,6 +70,7 @@ export function GuiaExperto({
   origenPlano,
   tipoEquipo,
   manualFileId,
+  imagenPagina,
   preguntaInicial,
   decir = decirConTiempoDeLectura,
   onEvento,
@@ -81,17 +90,28 @@ export function GuiaExperto({
    */
   const [pasos, setPasos] = useState<Coreografia[]>([]);
   const [indice, setIndice] = useState(0);
-  /** Ya llegaron todos los pasos de la respuesta: se puede volver a ver cualquiera. */
-  const [completa, setCompleta] = useState(false);
+  /**
+   * B5: el reproductor de la respuesta en curso (pausa, anterior, siguiente) y lo que muestran
+   * sus botones. Por defecto no avanza solo: espera "Siguiente" (modo "auto" opcional).
+   */
+  const reproductor = useRef<Reproductor | null>(null);
+  const [controles, setControles] = useState<EstadoControles | null>(null);
+  const [modo, setModo] = useState<ModoAvance>("manual");
+  const modoRef = useRef<ModoAvance>("manual");
+  /** Número del paso que se mandó al visor: el visor lo devuelve filtrado en `alPaso`. */
+  const pasoEnVisor = useRef(0);
+  /** Pasos que ya se mostraron alguna vez (van una sola vez a la conversación). */
+  const yaMostrados = useRef(new Set<number>());
+  const completa = controles?.completa ?? false;
   /** Lo que se ve en "Conversación": preguntas de la persona y pasos del experto. */
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [texto, setTexto] = useState("");
   const historial = useRef<MensajeHistorial[]>([]);
   const actual = useRef<AbortController | null>(null);
   const idMensaje = useRef(0);
-  /** Texto del paso que se está repitiendo: el visor lo devuelve otra vez y no hay que sumarlo. */
-  const repitiendo = useRef<string | null>(null);
   const sugerencias = useMemo(() => preguntasSugeridas(pack), [pack]);
+  // B6: si el experto nombra una pieza del plano, el 3D va a ella y la resalta solo.
+  const idsPlano = useMemo(() => new Set(plano.piezas.map((p) => p.pieza)), [plano]);
 
   const preguntar = useCallback(
     async (pregunta: string) => {
@@ -105,14 +125,16 @@ export function GuiaExperto({
       setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
       setPasos([]);
       setIndice(0);
-      setCompleta(false);
-      repitiendo.current = null;
-      const dicho = await reproducir(
+      yaMostrados.current = new Set();
+      const r = new Reproductor({ modo: modoRef.current, alCambiar: setControles });
+      reproductor.current = r;
+      const dicho = await r.reproducir(
         fuente(pedido, ctl.signal),
         {
           estado: (e, d) => (setEstado(e), setDetalle(d)),
-          paso: (c) => {
-            setCoreografia({ ...c });
+          paso: (c, _bloqueo, i) => {
+            pasoEnVisor.current = i;
+            setCoreografia(conPiezaNombrada(c, pack.piezas, idsPlano));
             const pieza = piezaACambiar(c, plano);
             if (pieza) onCambiarPieza?.(pieza);
           },
@@ -132,9 +154,8 @@ export function GuiaExperto({
         return null;
       });
       if (dicho) historial.current = [...historial.current, dicho];
-      if (!ctl.signal.aborted) setCompleta(true);
     },
-    [casoId, pack, plano, manualFileId, fuente, decir, onCambiarPieza],
+    [casoId, pack, plano, idsPlano, manualFileId, fuente, decir, onCambiarPieza],
   );
 
   // Arranque automático y cancelación al salir de la pantalla.
@@ -165,35 +186,38 @@ export function GuiaExperto({
 
   const ocupado = estado === "pensando" || estado === "buscando";
 
-  /** Volver a ver un paso ya explicado: lo anima y lo dice de nuevo. */
-  const verPaso = (i: number) => {
-    const c = pasos[i];
-    if (!c || ocupado) return;
-    actual.current?.abort();
-    const ctl = new AbortController();
-    actual.current = ctl;
-    repitiendo.current = c.dice;
-    setIndice(i);
-    setCoreografia({ ...c });
-    setEstado(c.riesgo === "alto" ? "bloqueado" : "hablando");
-    void decir(c.dice, ctl.signal).then(() => {
-      if (!ctl.signal.aborted) setEstado(c.riesgo === "alto" ? "bloqueado" : "esperando");
-    });
+  /** Volver a ver un paso ya recibido (puntos de la tarjeta): lo anima y lo dice de nuevo. */
+  const verPaso = (i: number) => reproductor.current?.irA(i);
+
+  const cambiarModo = (auto: boolean) => {
+    const m: ModoAvance = auto ? "auto" : "manual";
+    modoRef.current = m;
+    setModo(m);
+    reproductor.current?.cambiarModo(m);
   };
 
   /** El visor devuelve cada paso después del filtro de seguridad: eso es lo que se muestra. */
   const alPaso = (c: Coreografia) => {
-    if (repitiendo.current !== null && repitiendo.current === c.dice) {
-      repitiendo.current = null;
-      return;
-    }
+    const i = pasoEnVisor.current;
     setPasos((p) => {
-      setIndice(p.length);
-      return [...p, c];
+      const n = [...p];
+      n[i] = c; // por número de paso: se puede saltar a uno que todavía no se vio
+      return n;
     });
-    setMensajes((m) => [...m, { rol: "experto", c, id: ++idMensaje.current }]);
+    setIndice(i);
+    if (!yaMostrados.current.has(i)) {
+      yaMostrados.current.add(i);
+      setMensajes((m) => [...m, { rol: "experto", c, id: ++idMensaje.current }]);
+    }
   };
   const pasoActual = pasos[indice];
+  // Página del manual del paso actual, si tiene imagen (nunca en un paso bloqueado).
+  const [paginaAbierta, setPaginaAbierta] = useState<PaginaManual | null>(null);
+  const cerrarPagina = useCallback(() => setPaginaAbierta(null), []);
+  // "¿De dónde sale esto?": manual, origen del 3D y citas de esta respuesta (plan §10).
+  const [transparenciaAbierta, setTransparenciaAbierta] = useState(false);
+  const transparencia = useMemo(() => datosTransparencia(pack, plano, origenPlano, pasos), [pack, plano, origenPlano, pasos]);
+  const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
@@ -229,9 +253,22 @@ export function GuiaExperto({
                 key={`${indice}-${pasoActual.dice}`}
                 c={pasoActual}
                 indice={indice}
-                total={pasos.length}
+                total={Math.max(controles?.total ?? 0, pasos.length)}
                 completa={completa}
                 onElegir={verPaso}
+                onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
+                controles={
+                  controles && (controles.total > 1 || !controles.completa) ? (
+                    <ControlesGuia
+                      c={{ ...controles, modo }}
+                      onAnterior={() => reproductor.current?.anterior()}
+                      onPausar={() => reproductor.current?.pausar()}
+                      onSeguir={() => reproductor.current?.seguir()}
+                      onSiguiente={() => reproductor.current?.siguiente()}
+                      onModo={cambiarModo}
+                    />
+                  ) : undefined
+                }
               />
             )}
             <EstadoExperto estado={estado} detalle={detalle} />
@@ -245,7 +282,20 @@ export function GuiaExperto({
         </div>
       </div>
 
-      <FilaSugerencias sugerencias={ocupado ? [] : sugerencias} mensajes={mensajes} onPreguntar={(t) => void preguntar(t)} />
+      <FilaSugerencias
+        sugerencias={ocupado ? [] : sugerencias}
+        mensajes={mensajes}
+        onPreguntar={(t) => void preguntar(t)}
+        extra={
+          <button
+            type="button"
+            onClick={() => setTransparenciaAbierta(true)}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-borde px-3 text-sm font-medium whitespace-nowrap text-texto"
+          >
+            <Libro size={16} /> ¿De dónde sale esto?
+          </button>
+        }
+      />
 
       <form
         className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
@@ -273,6 +323,8 @@ export function GuiaExperto({
           <FlechaEnviar className="hidden max-[480px]:block" />
         </button>
       </form>
+      {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
+      {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>
   );
 }

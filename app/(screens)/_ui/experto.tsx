@@ -102,6 +102,18 @@ export function Pantalla({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Franja de acciones pegada abajo: el botón principal se ve siempre, sin hacer scroll y sin
+ * quedar tapado por la barra de Safari ni el borde del iPhone (safe-area). Va al final de <Pantalla>.
+ */
+export function BarraAccion({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-3 bg-gradient-to-t from-fondo from-75% to-fondo/0 px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
+      {children}
+    </div>
+  );
+}
+
 /** Botón principal, pensado para el pulgar: ancho completo y abajo. */
 export function BotonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
@@ -176,6 +188,34 @@ export function Microfono({ size = 22 }: { size?: number }) {
     >
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  );
+}
+
+/** ■ Terminar de grabar (conserva lo dicho). */
+export function Detener({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+/** Descartar lo grabado. */
+export function Papelera({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
     </svg>
   );
 }

@@ -14,8 +14,9 @@ Cliente, esquema y migraciones de Supabase.
   | `004_planos.sql` | B | tabla `planos`: caché del plano 3D por marca + modelo (solo servidor) | sí |
   | `005_manuales_vista_interior.sql` | A | columna `pagina_vista_interior` en `manuales` (para /api/plano) | sí |
   | `006_gasto_ia.sql` | B | tabla `gasto_ia` y función `sumar_gasto_ia`: gasto diario de IA para el freno (solo servidor) | sí |
+  | `007_mis_casos.sql` | C | columnas `dispositivo`, `tipo_equipo`, `cierre`, `actualizado_en` en `casos` ("Mis casos") | no |
 
-  Para una migración nueva: siguiente número (`007_…`), sumarla a esta tabla y avisar para que alguien la corra.
+  Para una migración nueva: siguiente número (`008_…`), sumarla a esta tabla y avisar para que alguien la corra.
 - `cliente.ts`: `supabaseServidor()` (clave secreta, solo en rutas de API) y `supabaseNavegador()` (clave pública, solo lee `eventos`). Si faltan variables devuelven `null` y nada se guarda: Supabase nunca frena la demo.
 - `repo.ts`: `guardarCaso`, `guardarFoto`, `subirImagen`, `guardarFicha`, `guardarEventos`, `listarEventos`. Todo pasa por los esquemas de `shared/`.
 - Escritura desde las pantallas: `POST /api/casos { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? }`, que llaman en segundo plano desde `app/(screens)/_estado/flujo.tsx`.

@@ -34,6 +34,11 @@ export const MODELO_DE = {
   reconocer: MODELOS.corto as string,
   /** Guía pública con búsqueda web (cuando no hay manual). */
   guiaPublica: MODELOS.corto as string,
+  /**
+   * Cartógrafo (/api/plano) con el recorte del manual, imágenes o solo texto. Con el manual entero
+   * usa `lectura` (comparte la caché del manual). La batería de pruebas compara Sonnet y Haiku.
+   */
+  plano: MODELOS.vision as string,
 };
 
 /** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */
@@ -55,6 +60,8 @@ export const LIMITES = {
     /** Tope de texto por página abierta con web_fetch (los PDF no se cortan: se prueban con probar_pdf). */
     maxTokensPagina: 10_000,
   },
+  /** Manuales publicados como páginas web (índice + una página por sección), leídos como texto. */
+  manualWeb: { timeoutMs: 30_000, maxBytesHtml: 2_000_000, minSecciones: 8, maxSecciones: 8, maxCaracteresSeccion: 20_000 },
   /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
   extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400 },
   pack: { maxPasos: 12 },

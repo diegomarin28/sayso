@@ -2,14 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { GuiaExperto } from "@/components/viewer";
+import { fuenteApi, GuiaExperto } from "@/components/viewer";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { Encabezado, Microfono } from "../_ui/experto";
+import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
+import { fuenteConRetomar, PanelCierre, pasosAlRetomar, preguntaAlRetomar } from "./cierre";
 import { Repuestos } from "./repuestos";
 
 /**
@@ -29,11 +30,33 @@ async function decir(texto: string, senal: AbortSignal) {
 export default function Experto() {
   const router = useRouter();
   const caso = useRequiereCaso();
-  const { ficha, preparado, plano, agregarEventos, guiaIniciada, marcarGuiaIniciada, tipoEquipo } =
-    useFlujo();
-  // La pregunta inicial se hace una sola vez por caso: al volver a esta pantalla no se repite
-  // (ni la llamada a /api/chat ni la voz).
-  const [preguntaInicial] = useState(() => (guiaIniciada ? undefined : caso?.sintoma));
+  const {
+    ficha,
+    preparado,
+    plano,
+    agregarEventos,
+    guiaIniciada,
+    marcarGuiaIniciada,
+    tipoEquipo,
+    cierre,
+    cerrarCaso,
+    ultimaCompra,
+    setUltimaCompra,
+  } = useFlujo();
+  const [cerrando, setCerrando] = useState(false);
+  // Al retomar desde "Mis casos" un caso que esperaba el repuesto, el experto sigue desde el paso
+  // de cambiar esa pieza con la guía guardada (sin IA). Si no, la pregunta inicial es el síntoma,
+  // una sola vez por caso: al volver a esta pantalla no se repite (ni /api/chat ni la voz).
+  const [arranque] = useState(() => {
+    const base = USAR_FIXTURE ? fuenteSimulada : fuenteApi;
+    if (cierre?.estado === "esperando_repuesto" && cierre.pieza && preparado && plano) {
+      const pregunta = preguntaAlRetomar(preparado.pack, cierre.pieza);
+      const pasos = pasosAlRetomar(preparado.pack, plano.plano, cierre.pieza);
+      return { pregunta, fuente: fuenteConRetomar(base, pregunta, pasos) };
+    }
+    return { pregunta: guiaIniciada ? undefined : caso?.sintoma, fuente: base };
+  });
+  const preguntaInicial = arranque.pregunta;
   useEffect(() => {
     if (preparado && plano) marcarGuiaIniciada();
   }, [preparado, plano, marcarGuiaIniciada]);
@@ -59,16 +82,26 @@ export default function Experto() {
           <div className="min-w-0 flex-1">
             <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
           </div>
-          {ficha && (
+          <button
+            type="button"
+            onClick={() => setCerrando(true)}
+            className="flex h-11 shrink-0 items-center rounded-full bg-acento px-4 text-sm font-semibold text-black active:scale-95"
+          >
+            Terminar
+          </button>
+        </div>
+        {ficha && (
+          <div className="mt-2">
             <Repuestos
               pack={preparado.pack}
               ficha={ficha}
               casoId={caso.id}
               onEvento={(e) => agregarEventos([e])}
               piezaACambiar={piezaACambiar}
+              onCompra={setUltimaCompra}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <GuiaExperto
         className="min-h-0 flex-1"
@@ -79,34 +112,79 @@ export default function Experto() {
         // El 3D elige la versión de cada pieza según el equipo (notebook, celular, heladera…).
         tipoEquipo={tipoEquipo ?? undefined}
         manualFileId={preparado.manualFileId}
+        // "Ver en el manual": la página citada en grande (las claves llegan como texto en el JSON).
+        imagenPagina={(p) => preparado.imagenesPaginas?.[p] ?? null}
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
         preguntaInicial={preguntaInicial}
         decir={decir}
         preguntaDictada={dictada}
         onCambiarPieza={setPiezaACambiar}
         // Con NEXT_PUBLIC_DATOS=fixture el experto responde con el chat simulado de Diego: no gasta IA.
-        fuente={USAR_FIXTURE ? fuenteSimulada : undefined}
+        fuente={arranque.fuente}
         accesorioEntrada={
-          <button
-            type="button"
-            onClick={() => {
-              callar(); // si el experto está hablando, se calla para escuchar
-              desbloquearAudio();
-              dictado.alternar();
-            }}
-            disabled={dictado.conectando}
-            aria-pressed={dictado.escuchando}
-            aria-label={dictado.escuchando ? "Dejar de escuchar" : "Preguntar con la voz"}
-            title={dictado.error ?? (dictado.parcial || undefined)}
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition active:scale-95 disabled:opacity-40 ${
-              dictado.escuchando ? "animate-pulse bg-peligro text-white" : "border border-borde text-texto"
-            }`}
-          >
-            <Microfono />
-          </button>
+          dictado.escuchando ? (
+            <>
+              <button
+                type="button"
+                onClick={dictado.descartar}
+                aria-label="Descartar lo grabado"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-borde text-texto-suave transition active:scale-95"
+              >
+                <Papelera />
+              </button>
+              <button
+                type="button"
+                onClick={dictado.terminar}
+                aria-label="Terminar de grabar y preguntar"
+                className="flex h-12 w-12 shrink-0 animate-pulse items-center justify-center rounded-2xl bg-peligro text-white transition active:scale-95"
+              >
+                <Detener />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                callar(); // si el experto está hablando, se calla para escuchar
+                desbloquearAudio();
+                void dictado.empezar();
+              }}
+              disabled={dictado.conectando}
+              aria-label="Preguntar con la voz"
+              title={dictado.error ?? undefined}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-borde text-texto transition active:scale-95 disabled:opacity-40"
+            >
+              <Microfono />
+            </button>
+          )
         }
         onEvento={(e) => agregarEventos([e])}
       />
+      {/* Lo que se va diciendo, en vivo: se pregunta recién al tocar ■ (o se descarta). */}
+      {dictado.escuchando && (
+        <div className="aparece pointer-events-none fixed inset-x-0 bottom-28 z-30 mx-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-peligro/50 bg-fondo/95 px-4 py-3 text-sm shadow-2xl">
+          <p className="text-xs font-semibold tracking-widest text-peligro uppercase">Te escucho</p>
+          <p className="mt-1">{dictado.texto || "Hablá tranquilo. Tocá ■ cuando termines."}</p>
+        </div>
+      )}
+      {dictado.error && !dictado.escuchando && (
+        <p className="fixed inset-x-0 bottom-28 z-30 mx-auto w-fit rounded-full bg-fondo/95 px-4 py-2 text-sm text-probable">
+          {dictado.error}
+        </p>
+      )}
+      {cerrando && (
+        <PanelCierre
+          pack={preparado.pack}
+          piezaSugerida={piezaACambiar ?? cierre?.pieza ?? null}
+          compra={ultimaCompra}
+          onCancelar={() => setCerrando(false)}
+          onCerrar={(c) => {
+            callar();
+            cerrarCaso(c);
+            router.push("/casos");
+          }}
+        />
+      )}
     </main>
   );
 }

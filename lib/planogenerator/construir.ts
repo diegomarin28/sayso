@@ -33,6 +33,8 @@ export type DatosPieza = {
   centro: Vec3;
   etiquetaManual?: string;
   cita?: PiezaPlano["cita"];
+  /** De dónde sale la ubicación (manual, estimada o plantilla): el visor dibuja distinto lo incierto. */
+  origen?: PiezaPlano["origen"];
 };
 
 export type EscenaConstruida = {
@@ -125,6 +127,7 @@ function crearNodo(p: PiezaPlano, { biblioteca, tipoEquipo }: OpcionesEscena): T
     centro: p.pos,
     etiquetaManual: p.etiquetaManual,
     cita: p.cita,
+    origen: p.origen,
   };
   nodo.userData = datos;
 

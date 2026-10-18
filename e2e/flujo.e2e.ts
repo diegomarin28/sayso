@@ -27,11 +27,11 @@ const PREGUNTA = "¿Dónde está la batería?";
 /** Lo que dice el experto en las pantallas 1–4 (frase grande, palabra por palabra). */
 const dice = (page: Page) => page.locator("main p[aria-live=polite]").first();
 
-async function subirFoto(page: Page, tipo: TipoFoto, intento = 1) {
-  // Como la persona: toca "Elegir de la galería" y elige una foto.
+async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton = "Elegir de la galería") {
+  // Como la persona: toca el botón de la galería y elige una foto.
   const [selector] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByText("Elegir de la galería").click(),
+    page.getByText(boton, { exact: true }).click(),
   ]);
   await selector.setFiles(fotoDeEjemplo(tipo, intento));
 }
@@ -96,11 +96,15 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await captura(page, info, "04-fotos-etiqueta");
 
       await subirFoto(page, "etiqueta", 1);
-      await expect(dice(page)).toContainText("La foto salió movida");
-      await expect(dice(page)).toContainText("Sacala de nuevo.");
+      await expect(dice(page)).toContainText("Esa foto no me sirve. Te explico abajo qué sacar.");
+      await expect(page.getByText("Esta foto no sirve")).toBeVisible();
+      await expect(page.getByText("La foto salió movida; no se lee el número de serie.")).toBeVisible();
+      const reintentar = page.getByText("Reintentar esta foto");
+      await expect(reintentar).toBeVisible();
+      await alAlcance(page, reintentar, libreta, "Reintentar esta foto");
       await revisarPantalla(page, libreta);
       await captura(page, info, "05-fotos-etiqueta-rechazada");
-      await subirFoto(page, "etiqueta", 2);
+      await subirFoto(page, "etiqueta", 2, "Elegir otra");
       await expect(dice(page)).toContainText("Perfecta.");
 
       await expect(dice(page)).toContainText("Ahora los costados, donde están los puertos.");
@@ -175,6 +179,15 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
 
       // Arranca solo con el síntoma de la pantalla 1 (fixture: dos pasos del manual).
       await expect(page.getByText("Este es el ventilador. Es el que suena fuerte.")).toBeVisible();
+      await expect(page.getByText("Paso 1 de 2")).toBeVisible();
+      await expect(page.getByText("Manual p. 54 ✓")).toBeVisible();
+      await revisarPantalla(page, libreta);
+      await captura(page, info, "11a-experto-paso-1");
+
+      // La guía no avanza sola: la persona toca "Siguiente".
+      const siguiente = page.getByRole("button", { name: "Paso siguiente" });
+      await expect(siguiente).toBeEnabled();
+      await siguiente.click();
       await expect(page.getByText("Aflojá los dos tornillos y levantalo despacio.")).toBeVisible();
       await expect(page.getByText("Paso 2 de 2")).toBeVisible();
       await expect(page.getByText("Manual p. 54 ✓")).toBeVisible();

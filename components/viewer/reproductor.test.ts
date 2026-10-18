@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Coreografia, Evento, coreografiaEjemplo, planoEjemplo } from "../../shared";
 import {
+  OBJETIVO_GENERAL,
   aplicarAccion,
   aplicarCoreografia,
   desplazamientoDespiece,
@@ -90,5 +91,46 @@ describe("desplazamientoDespiece", () => {
     expect(y).toBeGreaterThan(0);
     expect(x).toBeGreaterThan(0);
     expect(z).toBeLessThan(0);
+  });
+});
+
+describe("cerrado / abierto (arranca cerrado, se abre cuando la guía lo indica)", () => {
+  const ctx = { casoId: "c" };
+  const ids = ["carcasa_heladera", "puerta_freezer", "compresor"];
+  const cubiertas = { carcasa_heladera: "raiz", puerta_freezer: "tapa" } as const;
+  const paso = (acciones: Coreografia["acciones"]): Coreografia => ({ paso: 1, dice: "x", acciones, riesgo: "bajo" });
+  const con = (acciones: Coreografia["acciones"], desde = estadoInicial(ids, cubiertas)) => aplicarCoreografia(desde, paso(acciones), ctx).estado;
+
+  it("arranca cerrado", () => {
+    expect(estadoInicial(ids, cubiertas).abierto).toBe(false);
+  });
+
+  it("se abre al sacar, correr o girar una tapa, o al despiezar", () => {
+    expect(con([{ t: "ocultar", pieza: "puerta_freezer" }]).abierto).toBe(true);
+    expect(con([{ t: "desplazar", pieza: "puerta_freezer", vec: [0, 0, 10] }]).abierto).toBe(true);
+    expect(con([{ t: "rotar", pieza: "puerta_freezer", eje: "y", grados: 90 }]).abierto).toBe(true);
+    expect(con([{ t: "despiezar", cantidad: 1 }]).abierto).toBe(true);
+  });
+
+  it("no se abre por girar la carcasa raíz (girar el equipo no es abrirlo) ni por resaltar una pieza", () => {
+    expect(con([{ t: "rotar", pieza: "carcasa_heladera", eje: "y", grados: 180 }]).abierto).toBe(false);
+    expect(con([{ t: "resaltar", pieza: "compresor" }, { t: "camara", objetivo: "compresor" }]).abierto).toBe(false);
+  });
+
+  it("se cierra al armar, al restaurar y con un paso que solo vuelve a la vista general (las tapas vuelven a su lugar)", () => {
+    const abierto = con([{ t: "ocultar", pieza: "puerta_freezer" }, { t: "rotar", pieza: "carcasa_heladera", eje: "y", grados: 180 }, { t: "despiezar", cantidad: 1 }]);
+    expect(con([{ t: "despiezar", cantidad: 0 }], abierto).abierto).toBe(false);
+    const restaurado = con([{ t: "restaurar" }], abierto);
+    expect(restaurado.abierto).toBe(false);
+    expect(restaurado.cubiertas).toEqual(cubiertas);
+    const general = con([{ t: "camara", objetivo: OBJETIVO_GENERAL }], abierto);
+    expect(general.abierto).toBe(false);
+    expect(general.despiece).toBe(0);
+    expect(general.piezas.puerta_freezer.visible).toBe(true);
+    expect(general.piezas.carcasa_heladera.rot[1]).toBeCloseTo(Math.PI); // el equipo sigue girado: solo se cierra
+  });
+
+  it("un paso que abre y después encuadra lo general no se cierra", () => {
+    expect(con([{ t: "ocultar", pieza: "puerta_freezer" }, { t: "camara", objetivo: OBJETIVO_GENERAL }]).abierto).toBe(true);
   });
 });

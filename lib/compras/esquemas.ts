@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { EstadoDato } from "../../shared";
-import { COMPRAS } from "./config";
+import { LIMITES_COMPRAS as COMPRAS } from "./limites";
 
-/** Contratos de /api/compras — dueño: Diego. Viven acá (no en shared/) porque solo los usa este módulo y la pantalla 6. */
+/**
+ * Contratos de /api/compras — dueño: Diego. Viven acá (no en shared/) porque solo los usa este módulo y la pantalla 6.
+ * Sin código de servidor: el navegador los usa para validar la respuesta.
+ */
 
 export const PedidoCompra = z.object({
   /** Id de la pieza del knowledge pack, ej. "ventilador". */

@@ -117,6 +117,7 @@ function hablarConNavegador(texto: string, detenido: () => boolean): Promise<voi
   return new Promise((resolver) => {
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = "es-AR";
+    u.rate = 1.15; // igual que ElevenLabs (hallazgo C2: sonaba lento)
     const voz = speechSynthesis.getVoices().find((v) => v.lang.startsWith("es"));
     if (voz) u.voice = voz;
     u.onend = () => resolver();
