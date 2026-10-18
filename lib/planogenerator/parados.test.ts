@@ -112,3 +112,34 @@ describe("pararPlano", () => {
     expect(dist(parado, "base", "arriba")).toBeCloseTo(dist(plano, "base", "arriba"), 6);
   });
 });
+
+describe("los dos caminos arrancan igual: generado o solo con el esqueleto (la IA falló)", () => {
+  const iaQueFalla: LlamarIA = async () => "no es json";
+  /** Qué ve la cámara (+z): la espalda abierta, lo de adentro primero y la cara (pantalla, puertas) detrás. */
+  const deEspaldas = (plano: PlanoDePiezas, cara: string[], adentro: string) => {
+    const z = (id: string) => plano.piezas.find((x) => x.pieza === id)!.pos[2];
+    for (const id of cara) expect(z(id), `${id} detrás de ${adentro}`).toBeLessThan(z(adentro));
+    expect(direccion(plano).z).toBeGreaterThan(2 * direccion(plano).y); // mirado de frente a esa espalda
+  };
+
+  // Dos variantes por tipo, por tipo de equipo y no por modelo.
+  it.each([
+    ["televisor LG 43\"", ["placa_control", "fuente", "parlante_izquierdo"], ["pantalla_panel"], "placa_control"],
+    ["Smart TV Samsung 65\"", ["placa_control", "retroiluminacion", "fuente"], ["pantalla_panel"], "placa_control"],
+    ["heladera Whirlpool", ["compresor", "termostato", "puerta_heladera", "puerta_freezer"], ["puerta_heladera", "puerta_freezer"], "compresor"],
+    ["heladera no frost Gafa", ["compresor", "evaporador", "puerta_heladera"], ["puerta_heladera"], "compresor"],
+  ])("%s", async (tipoEquipo, ids, cara, adentro) => {
+    const kp = pack("otro", ids);
+    const soloEsqueleto = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo }, iaQueFalla);
+    expect(soloEsqueleto.origen).toBe("plantilla");
+    deEspaldas(soloEsqueleto.plano, cara, adentro);
+    // Generado: la IA ubicó lo de adentro (visto en el manual); la cara la pone el esqueleto.
+    const vistas = ids.filter((id) => !cara.includes(id));
+    const generado = await generarPlano(
+      { casoId: "c", knowledgePack: kp, tipoEquipo },
+      ia({ base_ancho_cm: null, base_prof_cm: null, medidas_fuente: "estimada", piezas: vistas.map((id, i) => p(id, -0.5 + i * 0.4, 0, 0.15, 0.15)) }),
+    );
+    expect(generado.origen).toBe("ia");
+    deEspaldas(generado.plano, cara, adentro);
+  });
+});
