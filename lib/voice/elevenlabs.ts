@@ -8,8 +8,19 @@ const BASE = "https://api.elevenlabs.io/v1";
 
 /** Flash v2.5: el de menor latencia, habla español. */
 export const MODELO_TTS = "eleven_flash_v2_5";
+/**
+ * Velocidad del experto (hallazgo C2: sonaba lento). ElevenLabs acepta de 0,7 a 1,2.
+ * Se cambia con ELEVENLABS_VELOCIDAD sin tocar código.
+ */
+export const VELOCIDAD_POR_DEFECTO = 1.15;
+
+export function velocidad(): number {
+  const v = Number(process.env.ELEVENLABS_VELOCIDAD);
+  return Number.isFinite(v) && v >= 0.7 && v <= 1.2 ? v : VELOCIDAD_POR_DEFECTO;
+}
+
 /** Voz por defecto (multilingüe). Se cambia con ELEVENLABS_VOICE_ID sin tocar código. */
-const VOZ_POR_DEFECTO = "JBFqnCBsd6RMkjVDRZzb";
+const VOZ_POR_DEFECTO = "KqSsYz0buWgkvSbaGn1n"; // elegida por el grupo (hallazgo C2): más natural en español
 
 export const SIN_CLAVE =
   "Falta ELEVENLABS_API_KEY: la voz de ElevenLabs está apagada y se usa la del navegador.";
@@ -52,7 +63,12 @@ export async function hablarStream(texto: string): Promise<ReadableStream<Uint8A
   const res = await fetch(`${BASE}/text-to-speech/${voz}/stream?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": k, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: texto, model_id: MODELO_TTS, language_code: "es" }),
+    body: JSON.stringify({
+      text: texto,
+      model_id: MODELO_TTS,
+      language_code: "es",
+      voice_settings: { speed: velocidad() },
+    }),
   });
   if (!res.ok || !res.body) {
     const detalle = await res.text().catch(() => "");

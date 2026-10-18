@@ -82,16 +82,6 @@ export default function Experto() {
           <div className="min-w-0 flex-1">
             <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
           </div>
-          {ficha && (
-            <Repuestos
-              pack={preparado.pack}
-              ficha={ficha}
-              casoId={caso.id}
-              onEvento={(e) => agregarEventos([e])}
-              piezaACambiar={piezaACambiar}
-              onCompra={setUltimaCompra}
-            />
-          )}
           <button
             type="button"
             onClick={() => setCerrando(true)}
@@ -100,6 +90,18 @@ export default function Experto() {
             Terminar
           </button>
         </div>
+        {ficha && (
+          <div className="mt-2">
+            <Repuestos
+              pack={preparado.pack}
+              ficha={ficha}
+              casoId={caso.id}
+              onEvento={(e) => agregarEventos([e])}
+              piezaACambiar={piezaACambiar}
+              onCompra={setUltimaCompra}
+            />
+          </div>
+        )}
       </div>
       <GuiaExperto
         className="min-h-0 flex-1"

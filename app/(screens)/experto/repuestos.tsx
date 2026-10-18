@@ -60,12 +60,13 @@ export function Repuestos({
 
   return (
     <>
+      {/* Franja visible (antes era un botón chico que en celular mostraba solo un número). */}
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-borde bg-superficie px-4 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-acento/50 bg-acento/10 px-4 text-sm font-medium text-texto transition hover:border-acento active:scale-[0.99]"
       >
-        <span className="max-[400px]:sr-only">Repuestos</span>
+        <Carrito /> Ver dónde comprar repuestos
         <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
       </button>
 
@@ -80,7 +81,7 @@ export function Repuestos({
             onClick={() => setAbierto(true)}
             className="h-10 shrink-0 rounded-xl bg-acento px-3 text-sm font-semibold text-black active:scale-95"
           >
-            Dónde comprarlo
+            Ver dónde comprar esta pieza
           </button>
           <button
             type="button"
@@ -143,6 +144,10 @@ export function Repuestos({
                     ? `N.º de parte ${r.numeroParte}${r.pagina ? ` · pág. ${r.pagina} del manual` : ""}`
                     : "Sin número de parte en el manual: se busca por modelo"}
                 </p>
+                <p className="mt-1 text-sm text-texto-suave">
+                  Tocá «Buscar repuesto» y te muestro dónde comprar esta pieza con envío a Uruguay. Nunca
+                  compramos ni pagamos por vos: el link abre la publicación.
+                </p>
               </div>
               <OpcionesCompra
                 key={r.pieza}
@@ -159,5 +164,25 @@ export function Repuestos({
         </div>
       </div>
     </>
+  );
+}
+
+function Carrito() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 4h2l2.4 11h10.2L20 8H6.2" />
+      <circle cx="9" cy="19.5" r="1.5" />
+      <circle cx="17" cy="19.5" r="1.5" />
+    </svg>
   );
 }

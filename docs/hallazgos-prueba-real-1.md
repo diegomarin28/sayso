@@ -5,13 +5,13 @@ Cada ítem tiene dueño. Al arreglarlo, marcá [x] y poné el PR.
 
 ## Iaio (carril C: pantallas, voz, flujo)
 - [x] C1. Micrófono: no se puede cortar una grabación. Botón ■ para cortar que conserve lo transcripto, y botón para descartar. — PR #94
-- [ ] C2. Voz: cambiar por una más natural (rioplatense o neutra) y más rápida (~1.15–1.2).
+- [x] C2. Voz: cambiar por una más natural (rioplatense o neutra) y más rápida (~1.15–1.2). — PR #101
 - [x] C3. Foto rechazada: explicar claro qué está mal y qué sacar, y un botón "Reintentar esta foto" visible (hoy no se entiende que hay que tocar la imagen). — PR #92
 - [x] C4. Botón principal ("Sí, es este", "Seguir"): queda tapado por la barra de Safari; tiene que verse siempre sin hacer scroll (fijo abajo respetando safe-area). — PR #92
 - [x] C5. Carga antes de la ficha: pantallas de carga distintas en cada paso (entender, revisar fotos, leer etiqueta). Una sola línea de "pensando" a la vez, que aparece y se desvanece cuando llega la siguiente. — PR #94
-- [ ] C6. En producción no se muestran tokens ni costos (solo en el registro interno).
+- [x] C6. En producción no se muestran tokens ni costos (solo en el registro interno). — PR #101
 - [x] C7. "Terminar" y empezar otro problema: tiene que arrancar un caso nuevo y limpio desde el inicio, sin arrastrar el anterior (el anterior queda en "Mis casos"). — PR #92
-- [ ] C8. Repuestos: no se entiende cómo llegar a comprar. Que el botón sea visible y se explique ("Ver dónde comprar esta pieza").
+- [x] C8. Repuestos: no se entiende cómo llegar a comprar. Que el botón sea visible y se explique ("Ver dónde comprar esta pieza"). — PR #101
 
 ## Juanma (carril A: IA, manual, seguridad, chat)
 - [ ] A1. Ficha incompleta: leyó "iPhone 13" pero no completó marca (Apple) ni año. Inferir marca/año del modelo (búsqueda), siempre "probable" con confirmación.
