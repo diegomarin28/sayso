@@ -27,6 +27,8 @@ export function LabGuia() {
   const [dictada, setDictada] = useState<{ texto: string; id: number }>();
   // En el celular el panel va escondido: así la guía se ve del tamaño que tiene en la app.
   const [panel, setPanel] = useState(false);
+  /** Respuestas que llegaron al final (onUltimoPaso): ahí la app pregunta «¿Se resolvió?». */
+  const [finales, setFinales] = useState<number[]>([]);
   // Cambiar de modo remonta la guía (arranca de nuevo con la pregunta inicial).
   const clave = `${origen}-${real}`;
 
@@ -45,6 +47,7 @@ export function LabGuia() {
         fuente={real ? fuenteApi : fuenteSimulada}
         onEvento={(e) => setEventos((p) => [e, ...p].slice(0, 12))}
         preguntaDictada={dictada}
+        onUltimoPaso={(n) => setFinales((f) => [...f, n])}
         accesorioEntrada={
           // Simula el micrófono: "dicta" la primera pregunta sugerida.
           <button
@@ -85,6 +88,12 @@ export function LabGuia() {
               <li key={s}>“{s}”</li>
             ))}
           </ul>
+        </div>
+        <div>
+          <h2 className="mb-1 text-xs tracking-wide text-texto-suave uppercase">Llegó al último paso</h2>
+          <p data-ultimo-paso={finales.length} className="text-xs text-texto-suave">
+            {finales.length ? finales.map((n) => `respuesta de ${n} paso${n === 1 ? "" : "s"}`).join(" · ") : "Todavía no."}
+          </p>
         </div>
         <div>
           <h2 className="mb-1 text-xs tracking-wide text-texto-suave uppercase">Eventos</h2>

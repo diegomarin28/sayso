@@ -34,13 +34,14 @@ function stream(eventos: EventoChat[], { deAUno = false } = {}) {
 
 /** Voz de mentira: cada frase queda "diciéndose" hasta `terminar()` o hasta que la cortan. */
 function armar(modo: ModoAvance, inicio?: number) {
+  const ultimos: number[] = [];
   const dichos: string[] = [];
   const cortados: string[] = [];
   const mostrados: number[] = [];
   const estados: EstadoGuia[] = [];
   let terminar: (() => void) | null = null;
   let controles: EstadoControles | null = null;
-  const r = new Reproductor({ modo, alCambiar: (c) => (controles = c), inicio });
+  const r = new Reproductor({ modo, alCambiar: (c) => (controles = c), inicio, alUltimoPaso: (n) => void ultimos.push(n) });
   const m = {
     estado: (e: EstadoGuia) => void estados.push(e),
     paso: (_c: Coreografia, _b: boolean, i: number) => void mostrados.push(i),
@@ -58,6 +59,7 @@ function armar(modo: ModoAvance, inicio?: number) {
     cortados,
     mostrados,
     estados,
+    ultimos,
     terminar: async () => {
       await hasta(() => terminar !== null);
       terminar!();
@@ -247,3 +249,76 @@ describe("Reproductor: retomar una guía después de una pregunta suelta", () =>
   });
 });
 
+describe("Reproductor: aviso de último paso (#150, para preguntar «¿Se resolvió?»)", () => {
+  it("avisa una vez cuando terminó de decir el último paso, no antes", async () => {
+    const g = armar("manual");
+    const fin = g.r.reproducir(stream(tres).iterable, g.m, new AbortController().signal);
+    await g.terminar();
+    g.r.siguiente();
+    await g.terminar();
+    expect(g.ultimos).toEqual([]);
+    g.r.siguiente();
+    await hasta(() => g.mostrados.length === 3);
+    expect(g.ultimos).toEqual([]); // se está diciendo
+    await g.terminar();
+    await fin;
+    expect(g.ultimos).toEqual([3]);
+    // Volver atrás y otra vez al último no vuelve a avisar.
+    g.r.anterior();
+    await g.terminar();
+    g.r.siguiente();
+    await g.terminar();
+    expect(g.ultimos).toEqual([3]);
+  });
+
+  it("si el fin de la respuesta llega después de decir el último paso, avisa y termina igual", async () => {
+    const g = armar("manual");
+    const dos: EventoChat[] = [{ tipo: "paso", coreografia: paso(1) }, { tipo: "paso", coreografia: paso(2) }, { tipo: "fin", pasos: 2 }];
+    const s = stream(dos, { deAUno: true });
+    const fin = g.r.reproducir(s.iterable, g.m, new AbortController().signal);
+    s.entregar();
+    await g.terminar();
+    g.r.siguiente();
+    s.entregar();
+    await hasta(() => g.mostrados.length === 2);
+    await g.terminar(); // dicho el 2; todavía no se sabe si viene otro
+    expect(g.ultimos).toEqual([]);
+    s.entregar(); // llega el fin
+    await fin;
+    expect(g.ultimos).toEqual([2]);
+    expect(g.estados.at(-1)).toBe("esperando");
+  });
+
+  it("no avisa en un bloqueo, si la persona pregunta otra cosa a mitad, ni con un error", async () => {
+    const bloqueada = armar("manual");
+    const bloqueo = paso(2, { dice: "Acá frenamos.", riesgo: "alto", acciones: [{ t: "restaurar" }] });
+    const f1 = bloqueada.r.reproducir(
+      stream([{ tipo: "paso", coreografia: paso(1) }, { tipo: "bloqueo", coreografia: bloqueo, clases: ["bateria"] }]).iterable,
+      bloqueada.m,
+      new AbortController().signal,
+    );
+    await bloqueada.terminar();
+    bloqueada.r.siguiente();
+    await bloqueada.terminar();
+    await f1;
+    expect(bloqueada.ultimos).toEqual([]);
+
+    const cortada = armar("manual");
+    const ctl = new AbortController();
+    const f2 = cortada.r.reproducir(stream(tres).iterable, cortada.m, ctl.signal);
+    await hasta(() => cortada.dichos.length === 1);
+    ctl.abort();
+    await f2;
+    expect(cortada.ultimos).toEqual([]);
+
+    const conError = armar("manual");
+    const f3 = conError.r.reproducir(
+      stream([{ tipo: "paso", coreografia: paso(1) }, { tipo: "error", mensaje: "se cortó" }]).iterable,
+      conError.m,
+      new AbortController().signal,
+    );
+    await conError.terminar();
+    await f3;
+    expect(conError.ultimos).toEqual([]);
+  });
+});

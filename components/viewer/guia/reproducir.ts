@@ -76,12 +76,20 @@ export class Reproductor {
   private senal: AbortSignal | null = null;
   private modo: ModoAvance;
   private readonly alCambiar?: (e: EstadoControles) => void;
+  private readonly alUltimoPaso?: (pasos: number) => void;
   private readonly inicio: number;
 
-  /** `inicio`: paso por el que arranca (para retomar una guía; por defecto el primero). */
-  constructor(o: { modo?: ModoAvance; alCambiar?: (e: EstadoControles) => void; inicio?: number } = {}) {
+  /**
+   * `inicio`: paso por el que arranca (para retomar una guía; por defecto el primero).
+   * `alUltimoPaso`: se llama una vez cuando terminó de decirse el último paso de la respuesta (con
+   * cuántos pasos tuvo). No se llama si la respuesta terminó en un bloqueo, con un error o se cortó.
+   */
+  constructor(
+    o: { modo?: ModoAvance; alCambiar?: (e: EstadoControles) => void; alUltimoPaso?: (pasos: number) => void; inicio?: number } = {},
+  ) {
     this.modo = o.modo ?? "manual";
     this.alCambiar = o.alCambiar;
+    this.alUltimoPaso = o.alUltimoPaso;
     this.inicio = Math.max(0, o.inicio ?? 0);
   }
 
@@ -193,10 +201,12 @@ export class Reproductor {
       }
       if (this.fin && objetivo + 1 >= this.pasos.length) break; // era el último: no espera nada
 
-      // Entre pasos: manual espera "Siguiente"; auto sigue solo (salvo pausado).
+      // Entre pasos: manual espera "Siguiente"; auto sigue solo (salvo pausado). Si mientras tanto
+      // llega el fin y no hay otro paso, este era el último: no hay Siguiente que esperar.
       this.esperando = true;
       this.avisar();
-      while (!senal.aborted && this.salto === null && !this.quiereSiguiente && !(this.modo === "auto" && !this.pausado)) {
+      const ultimo = () => this.fin && objetivo + 1 >= this.pasos.length;
+      while (!senal.aborted && this.salto === null && !this.quiereSiguiente && !(this.modo === "auto" && !this.pausado) && !ultimo()) {
         await this.cambio(senal);
       }
       this.esperando = false;
@@ -206,6 +216,10 @@ export class Reproductor {
     }
     this.activo = false;
     this.avisar();
+    // Se dijo el último paso (el bucle solo termina así sin abort, bloqueo ni error).
+    if (!senal.aborted && final !== "bloqueado" && !this.error && this.pasos.length && this.indice === this.pasos.length - 1) {
+      this.alUltimoPaso?.(this.pasos.length);
+    }
     if (this.error?.excepcion !== undefined && !senal.aborted) throw this.error.excepcion;
     if (this.error?.mensaje !== undefined && !senal.aborted && final !== "bloqueado") {
       m.estado("error", this.error.mensaje);

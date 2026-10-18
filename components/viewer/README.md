@@ -67,3 +67,4 @@ import { GuiaExperto } from "@/components/viewer";
 - Ejemplo: `/lab/guia` (con `npm run dev`), con respuestas simuladas (sin gastar IA) o la API real.
 
 - **Cambiar una pieza:** si un paso de `/api/chat` trae `cambiar: "<id de pieza>"`, `<GuiaExperto>` llama a `onCambiarPieza(id)`. Solo con ids del plano y nunca en un paso bloqueado. La pantalla 6 abre `<OpcionesCompra>` con esa pieza.
+- **Llegó al último paso:** `onUltimoPaso(pasos)` se llama una vez por respuesta cuando terminó de decirse su último paso (no en un bloqueo, con un error ni si la persona preguntó otra cosa a mitad). Sirve para preguntar «¿Se resolvió?» en el momento justo. En `/lab/guia` se ve en el panel.
