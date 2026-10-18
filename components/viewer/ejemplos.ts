@@ -201,11 +201,24 @@ export const coreografiaTablet: Coreografia[] = [
   ]),
 ];
 
+/**
+ * El mismo celular abierto por adelante (como los que se abren despegando la pantalla): el paso no resalta
+ * nada, así que lo de adentro se ve porque la carcasa se vuelve translúcida (no por los rayos X).
+ */
+export const coreografiaCelularPorPantalla: Coreografia[] = [
+  paso(1, "Despegá la pantalla con calor y una púa, de a poco.", [{ t: "camara", objetivo: "general" }]),
+  paso(2, "Adentro, la batería ocupa el medio: está pegada, no la dobles.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.2 },
+    { t: "resaltar", pieza: "bateria" },
+  ]),
+];
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
   aire: { plano: planoAire, tipoEquipo: "aire acondicionado split" },
   celular: { plano: planoCelular, tipoEquipo: "celular", coreografia: coreografiaCelular },
+  celular_por_pantalla: { plano: planoCelular, tipoEquipo: "celular", coreografia: coreografiaCelularPorPantalla },
   televisor: { plano: planoTelevisor, tipoEquipo: "televisor", coreografia: coreografiaTelevisor },
   notebook: { plano: planoNotebookBase, tipoEquipo: "notebook", coreografia: coreografiaNotebook },
   lavarropas: { plano: planoLavarropas, tipoEquipo: "lavarropas" },
