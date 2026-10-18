@@ -6,6 +6,7 @@
   "frio_calor": "frio_calor.glb",
   "estructura": "estructura.glb",
   "carcasas": "carcasas.glb",
+  "contornos_demo": "contornos_demo.glb",
   "dispositivos": "dispositivos.glb",
   "cotidianos": "cotidianos.glb",
   "facultad": "facultad.glb",
@@ -858,6 +859,50 @@
     30,
     8,
     3.245
+   ]
+  },
+  "carcasa_contorno@tablet": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    17.544,
+    0.7885,
+    25.044
+   ]
+  },
+  "panel_contorno@tablet": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    17.38,
+    0.23,
+    24.88
+   ]
+  },
+  "carcasa_contorno@tv": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    100.24,
+    60.24,
+    8.21
+   ]
+  },
+  "panel_contorno@tv": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    99.2,
+    59.2,
+    0.875
    ]
   },
   "parlante": {

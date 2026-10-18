@@ -20,6 +20,19 @@ Las hojas por equipo muestran las piezas nuevas; los IDs reutilizados se enumera
 Incluye 52 renders individuales y 13 hojas. Las piezas de cada hoja se normalizan para poder
 compararlas: esa vista no representa su tamaño relativo, un montaje ni un despiece real.
 
+## Revisar los GLB finales comprimidos
+
+Los renders de las familias nuevas se revisaron después de comprimir, usando
+`decodificar.mts` para reconstruir las recetas reales del visor. No son capturas
+del producto: la auditoría de cámara, etiquetas y coreografía en iPhone sigue aparte.
+
+```sh
+node --import tsx assets/models/blender/decodificar.mts public/models/piezas /tmp/sayso-revision
+blender -b --factory-startup --python-exit-code 1 --python assets/models/blender/revisar_publicados.py -- --script notebook_demo.py --glb /tmp/sayso-revision/notebook_demo.glb --renders assets/models/blender/renders/notebook_demo
+```
+
+Cambiar script y GLB por la familia a revisar. Sin APIs, credenciales ni costo de IA.
+
 ## Reglas de forma y materiales
 
 Cada pieza nueva tiene regla explícita en `AJUSTES` de `piezas.py`, exportada al índice y a
@@ -240,6 +253,29 @@ Nuevas:
 
 Reutilizadas: `fuente`, `transformador`, `capacitor`, `conector@usb_c`, `conector_usb_a`, `cable@redondo`.
 
+
+## Piezas grandes con borde claro — #231
+
+`contornos_demo.py` publica **contornos_demo.glb** (menos de 10 KB), con
+`carcasa_contorno@tablet`, `panel_contorno@tablet`, `carcasa_contorno@tv` y
+`panel_contorno@tv`. Son mallas con abertura central, pared y labio continuo;
+no hay un rectángulo sólido invisible detrás que vuelva a tapar las piezas.
+Los renders muestran una placa a través del centro, en dos tamaños por tipo.
+
+Son **formas auxiliares para el resaltado**. No se deben elegir como reemplazo de
+la pantalla o carcasa completa en estado cerrado: el equipo perdería su cara.
+El chat del visor controla cuándo usar el borde y cuánto transparentar la superficie
+original (#261). Este PR no resuelve el texto del paso ni cambia shaders del visor.
+Las reglas son por tipo/orientación y dimensiones; no hay marcas ni modelos.
+
+![Interior visible de tablet](renders/contornos_demo/interior_visible_tablet_1.jpg)
+![Interior visible de TV](renders/contornos_demo/interior_visible_tv_1.jpg)
+
+Cobertura: `contornos-cobertura.json`. Los tests tiran rayos por varios puntos del
+centro (deben atravesar) y por el borde (deben chocar), a escalas 0,85 y 1,2.
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/contornos_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/contornos_demo.py -- --salida /tmp/contornos --renders assets/models/blender/renders/contornos_demo`.
+Test: `npx vitest run assets/models/blender/contornos-demo.test.ts`.
 
 ## Tablet completa — #233
 

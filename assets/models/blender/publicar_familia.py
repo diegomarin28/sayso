@@ -26,7 +26,8 @@ with tempfile.TemporaryDirectory(prefix="sayso-familia-") as tmp:
     for archivo in indice["familias"].values():
         shutil.copy2(optimizados / archivo, destino / archivo)
     propias = set(indice["familias"])
-    anterior["tipos"] = {k:v for k,v in anterior["tipos"].items() if v["familia"] not in propias}
+    anterior["tipos"] = {k:indice["tipos"].get(k, v) for k,v in anterior["tipos"].items()
+                          if v["familia"] not in propias or k in indice["tipos"]}
     for k in ("familias", "tipos"):
         anterior[k].update(indice[k])
     (destino / "indice.json").write_text(json.dumps(anterior, ensure_ascii=False, indent=1) + "\n")
