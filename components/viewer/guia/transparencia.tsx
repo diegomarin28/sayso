@@ -68,7 +68,7 @@ export function DeDondeSale({ datos, onCerrar }: { datos: DatosTransparencia; on
       role="dialog"
       aria-modal="true"
       aria-label="De dónde sale esto"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
       onClick={onCerrar}
     >
       <div className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl" onClick={(e) => e.stopPropagation()}>

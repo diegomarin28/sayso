@@ -59,10 +59,10 @@ export function TarjetaPaso({
                 onClick={() => onElegir(i)}
                 aria-label={`Ver el paso ${i + 1}`}
                 aria-current={i === indice}
-                className={`h-2.5 cursor-pointer rounded-full transition-all hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/40"}`}
+                className={`h-2.5 cursor-pointer rounded-full transition-all hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/60"}`}
               />
             ))}
-            {!completa && <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/40" aria-hidden />}
+            {!completa && <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
           </div>
         )}
       </div>
@@ -132,7 +132,7 @@ export function ControlesGuia({
         onClick={onSiguiente}
         disabled={!c.haySiguiente}
         aria-label="Paso siguiente"
-        className={`${boton} flex-1 ${c.esperando && !c.pausado ? "border-acento bg-acento text-black" : "border-borde bg-superficie text-texto"}`}
+        className={`${boton} flex-1 ${c.esperando && !c.pausado ? "border-acento bg-acento text-fondo" : "border-borde bg-superficie text-texto"}`}
       >
         Siguiente <Siguiente size={18} />
       </button>
@@ -140,9 +140,9 @@ export function ControlesGuia({
         <input type="checkbox" checked={auto} onChange={(e) => onModo(e.target.checked)} className="peer sr-only" />
         <span
           aria-hidden
-          className={`relative h-5 w-9 rounded-full transition ${auto ? "bg-acento" : "bg-texto-suave/40"} peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-acento`}
+          className={`relative h-5 w-9 rounded-full transition ${auto ? "bg-acento" : "bg-texto-suave/60"} peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-acento`}
         >
-          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${auto ? "left-[18px]" : "left-0.5"}`} />
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-texto transition-all ${auto ? "left-[18px]" : "left-0.5"}`} />
         </span>
         Automático
       </label>
@@ -239,7 +239,7 @@ export function FilaSugerencias({
           role="dialog"
           aria-modal="true"
           aria-label="Conversación con el experto"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center md:p-6"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
           onClick={() => setAbierta(false)}
         >
           <div
