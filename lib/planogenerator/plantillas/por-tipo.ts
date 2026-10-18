@@ -12,6 +12,8 @@ import {
   planoPlanchita,
   planoPowerBank,
   planoAuriculares,
+  planoAuricularesVincha,
+  raizVisibleVincha,
   planoCargador,
   planoControlRemoto,
   planoMando,
@@ -42,6 +44,9 @@ import {
  * `clase`: la clase del knowledge pack que le corresponde. `cara`: las piezas que hacen reconocible al equipo
  * (la pantalla de un TV, las puertas de una heladera): están siempre, aunque el pack no las nombre.
  * `parado`: el equipo se usa parado (TV, heladera…): su cara grande va de frente a la cámara, no acostada.
+ * `opcionales`: piezas del esqueleto que el equipo puede no tener (los joysticks junto a una consola): van solo
+ * si el pack las nombra, nunca como genéricas. `raizVisible`: si la raíz mide todo el equipo para escalar pero
+ * es una pieza más chica (la vincha de unos auriculares), su lugar y medidas en el esqueleto.
  */
 export type PlantillaDeEquipo = {
   id: string;
@@ -52,6 +57,8 @@ export type PlantillaDeEquipo = {
   cara: string[];
   clase?: ClaseEquipo;
   parado?: boolean;
+  opcionales: string[];
+  raizVisible?: Pick<PiezaPlano, "pos" | "dim">;
   /** Si el tipo tiene más de una forma de pantalla (reloj cuadrado o redondo): un plano por forma y la más común. */
   formas?: FormasDePantalla;
 };
@@ -76,6 +83,16 @@ const CARA: Record<string, string[]> = {
   tablet: ["pantalla"],
 };
 
+/** Ver `opcionales`: una PS4 no trae joysticks; si el pack los nombra (un mando con drift), van al costado. */
+const OPCIONALES: Record<string, string[]> = {
+  consola: ["joystick_analogico_izquierdo", "joystick_analogico_derecho", "boton_gatillo_izquierdo", "boton_gatillo_derecho"],
+};
+
+/** Ver `raizVisible`: de la vincha se ve el arco de atrás, no una placa del tamaño de los auriculares. */
+const RAIZ_VISIBLE: Record<string, Pick<PiezaPlano, "pos" | "dim">> = {
+  auriculares_vincha: raizVisibleVincha,
+};
+
 const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false, pistas = ""): PlantillaDeEquipo => ({
   id,
   nombre,
@@ -83,6 +100,8 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
   equipos: palabras(equipos),
   pistas: palabras(pistas),
   cara: CARA[id] ?? [],
+  opcionales: OPCIONALES[id] ?? [],
+  ...(RAIZ_VISIBLE[id] ? { raizVisible: RAIZ_VISIBLE[id] } : {}),
   ...(FORMAS[id] ? { formas: FORMAS[id] } : {}),
   ...(clase ? { clase } : {}),
   ...(parado ? { parado } : {}),
@@ -127,7 +146,7 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("microondas", "microondas", planoMicroondas, "microondas", undefined, true),
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador"),
-  t("impresora", "impresora", planoImpresora, "impresora"),
+  t("impresora", "impresora", planoImpresora, "impresora", undefined, false, "tinta inkjet deskjet ecotank pixma chorro"),
   // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: empatan y
   // desempatan las piezas del pack (tóner → láser); sin piezas que decidan, la de arriba.
   t("impresora_laser", "impresora láser", planoImpresoraLaser, "impresora laser toner", undefined, false, "laserjet"),
@@ -136,7 +155,9 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("cafetera", "cafetera", planoCafetera, "cafetera espresso"),
   // Lo que más probablemente traiga alguien en la mano.
   t("tablet", "tablet", planoTablet, "tablet tableta ipad tab kindle"),
-  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifono headphones headset cascos vincha"),
+  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifono", undefined, false, "tws inalambricos estuche"),
+  // "Auriculares" nombra a los dos: desempatan el modelo y las piezas del pack (copa, almohadilla de oreja → vincha).
+  t("auriculares_vincha", "auriculares de vincha", planoAuricularesVincha, "auriculares auricular vincha headphones headset cascos diadema", undefined, false, "over"),
   t("reloj", "reloj inteligente", planoReloj, "reloj smartwatch watch pulsera band", undefined, false, "garmin fitbit amazfit"),
   t("mouse", "mouse", planoMouse, "mouse raton"),
   t("teclado", "teclado", planoTeclado, "teclado keyboard"),
@@ -217,8 +238,9 @@ function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEqui
     // Empate de verdad (misma palabra, mismo peso: "impresora" nombra a la de tinta y a la láser): desempatan
     // las piezas del pack. Gana la que tiene en el pack más tipos de pieza que las otras empatadas no tienen
     // (tóner o fusora → láser; cabezal o cartucho de tinta → tinta). Sin piezas que decidan, la primera de la lista.
+    // Antes que las piezas, el modelo del pack ("Epson EcoTank L3250" → tinta), con las mismas palabras y pistas.
     const empatadas = candidatas.filter((c) => c.n === porNombre!.n && c.primera === porNombre!.primera).map((c) => c.p);
-    return empatadas.length > 1 ? (porPiezasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
+    return empatadas.length > 1 ? (porModelo(empatadas, kp.modelo) ?? porPiezasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
   }
   const porClase = PLANTILLAS_POR_TIPO.find((p) => p.clase && p.clase === kp.clase);
   if (porClase) return porClase;
@@ -232,10 +254,23 @@ function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEqui
   return mejor?.p;
 }
 
-/** Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras. */
+/** Entre plantillas empatadas por nombre, la única que el modelo del pack nombra más que las otras. */
+function porModelo(empatadas: PlantillaDeEquipo[], modelo?: string): PlantillaDeEquipo | undefined {
+  if (!modelo) return undefined;
+  const delModelo = palabras(modelo);
+  const puntos = empatadas.map((p) => delModelo.reduce((n, d) => n + (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0), 0));
+  const max = Math.max(...puntos);
+  return max > 0 && puntos.filter((n) => n === max).length === 1 ? empatadas[puntos.indexOf(max)] : undefined;
+}
+
+/**
+ * Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras.
+ * Una pieza sin forma en la biblioteca cuenta por su primera palabra ("copa_izquierda" → copa).
+ */
 function porPiezasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): PlantillaDeEquipo | undefined {
-  const tipos = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => tipoDe(x.pieza)).filter((x): x is string => !!x));
-  const delPack = new Set(kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x));
+  const tipoORaiz = (id: string) => tipoDe(id) ?? id.split("_")[0];
+  const tipos = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => tipoORaiz(x.pieza)));
+  const delPack = new Set(kp.piezas.map((p) => tipoORaiz(p.id)));
   let mejor: { p: PlantillaDeEquipo; n: number } | undefined;
   for (const p of empatadas) {
     const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...tipos(q)]));

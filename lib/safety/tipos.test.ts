@@ -26,6 +26,7 @@ const TIPOS: Record<string, { variantes: [string, string]; alimentacion: Aliment
   cafetera: { variantes: ["cafetera", "cafetera espresso"], alimentacion: "red" },
   tablet: { variantes: ["tablet", "ipad"], alimentacion: "bateria" },
   auriculares: { variantes: ["auriculares bluetooth", "auricular"], alimentacion: "bateria" },
+  auriculares_vincha: { variantes: ["auriculares de vincha", "auriculares headphones"], alimentacion: "bateria" },
   reloj: { variantes: ["reloj inteligente", "smartwatch"], alimentacion: "bateria" },
   // De cable (USB) o a pilas: aviso general.
   mouse: { variantes: ["mouse", "mouse inalámbrico"], alimentacion: "desconocida" },

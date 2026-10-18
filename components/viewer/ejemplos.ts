@@ -6,7 +6,10 @@ import type { Coreografia, PlanoDePiezas } from "../../shared";
  * están las coreografías de ejemplo.
  */
 import {
+  conRaizVisible,
   planoAuriculares,
+  planoAuricularesVincha,
+  raizVisibleVincha,
   planoCargador,
   planoControlRemoto,
   planoPowerBank,
@@ -35,6 +38,7 @@ import {
   planoTelevisor,
 } from "../../lib/planogenerator/plantillas/equipos";
 import { planoNotebookBase } from "../../lib/planogenerator/plantillas/notebook";
+import { PLANTILLAS_POR_TIPO } from "../../lib/planogenerator/plantillas/por-tipo";
 
 export {
   planoAuriculares,
@@ -172,6 +176,11 @@ export const coreografiaNotebook: Coreografia[] = [
   ]),
 ];
 
+const sinOpcionales = (plano: PlanoDePiezas, tipo: string): PlanoDePiezas => {
+  const opcionales = PLANTILLAS_POR_TIPO.find((p) => p.id === tipo)?.opcionales ?? [];
+  return { ...plano, piezas: plano.piezas.filter((p) => !opcionales.includes(p.pieza)) };
+};
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
@@ -185,11 +194,13 @@ export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string
   secador: { plano: planoSecador, tipoEquipo: "secador de pelo" },
   impresora: { plano: planoImpresora, tipoEquipo: "impresora" },
   impresora_laser: { plano: planoImpresoraLaser, tipoEquipo: "impresora láser", coreografia: coreografiaImpresoraLaser },
-  consola: { plano: planoConsola, tipoEquipo: "consola de videojuegos" },
+  // Como la arma la app con un pack que no nombra el mando: sin las piezas opcionales (los joysticks al costado).
+  consola: { plano: sinOpcionales(planoConsola, "consola"), tipoEquipo: "consola de videojuegos" },
   router: { plano: planoRouter, tipoEquipo: "router" },
   cafetera: { plano: planoCafetera, tipoEquipo: "cafetera" },
   tablet: { plano: planoTablet, tipoEquipo: "tablet" },
   auriculares: { plano: planoAuriculares, tipoEquipo: "auriculares" },
+  auriculares_vincha: { plano: conRaizVisible(planoAuricularesVincha, raizVisibleVincha), tipoEquipo: "auriculares de vincha" },
   reloj: { plano: planoReloj, tipoEquipo: "reloj inteligente" },
   mouse: { plano: planoMouse, tipoEquipo: "mouse" },
   teclado: { plano: planoTeclado, tipoEquipo: "teclado" },
