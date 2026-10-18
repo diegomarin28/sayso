@@ -375,3 +375,11 @@ de caché que no incluyan el interior y animar el retiro de la carcasa por paso.
 dato del pack sigue la pantalla actual. Contrato propuesto y dos variantes en
 `tablet-variantes-cobertura.json`; carga por `formaBiblioteca` conectada al finalizar planos nuevos y de caché (#302).
 Renders de las dos formas comprimidas en `renders/tablet_variantes/`.
+
+## Televisor: apoyo por dato explícito
+
+`tv_variantes.glb` publica `carcasa_tv_dato@pie_central` y
+`carcasa_tv_dato@pie_laterales`, reutilizando el cuerpo actual. Sin dato del pack
+no cambia la forma de hoy. Contrato propuesto en `tv-variantes-cobertura.json`;
+conexión al pack y caché integrada (#302). Renders frontales de 46 y 32 pulgadas en
+`renders/tv_variantes/`; el giro del estudio es solo para las imágenes.

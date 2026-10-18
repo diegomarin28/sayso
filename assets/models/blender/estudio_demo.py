@@ -91,7 +91,7 @@ def renderizar(carpeta, vacios, montajes, solo_montajes=False):
             mn, mx = CORE['caja_mundo'](original)
             centro = Vector(tuple((a + b) / 2 for a, b in zip(mn, mx)))
             escala = item.get('escala', 1)
-            rot = CORE['Matrix'].Rotation(math.radians(item.get('giro_x', 0)), 4, 'X')
+            rot = CORE['Matrix'].Rotation(math.radians(item.get('giro_z', 0)), 4, 'Z') @ CORE['Matrix'].Rotation(math.radians(item.get('giro_x', 0)), 4, 'X')
             pos = Vector(item['pos'])
             for obj in original.children:
                 copia = obj.copy()

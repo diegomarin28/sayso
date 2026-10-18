@@ -122,6 +122,7 @@ export const Repuesto = z.object({
 
 /** Rasgos observados en las fuentes; ausente significa conservar la forma actual. */
 export const Rasgos3D = z.object({
+  televisor: z.object({ apoyo: z.enum(["central", "laterales"]).optional() }).optional(),
   tablet: z.object({ botonFrontal: z.boolean().optional() }).optional(),
 });
 export type Rasgos3D = z.infer<typeof Rasgos3D>;

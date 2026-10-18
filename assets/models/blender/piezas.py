@@ -1707,6 +1707,8 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    "carcasa_tv_dato@pie_central": "libre",
+    "carcasa_tv_dato@pie_laterales": "libre",
     "pantalla_tablet_dato@con_boton": "libre",
     "pantalla_tablet_dato@sin_boton": "libre",
     "bandeja_papel@laser": "libre",

@@ -16,7 +16,8 @@
   "notebook_demo": "notebook_demo.glb",
   "alineacion_demo": "alineacion_demo.glb",
   "impresoras_demo": "impresoras_demo.glb",
-  "tablet_variantes": "tablet_variantes.glb"
+  "tablet_variantes": "tablet_variantes.glb",
+  "tv_variantes": "tv_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3570,6 +3571,28 @@
     17.3,
     0.215,
     24.8
+   ]
+  },
+  "carcasa_tv_dato@pie_central": {
+   "familia": "tv_variantes",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Televisor genérico frontal; el cuerpo conserva sus materiales y el apoyo es el dato explícito.",
+   "caja": [
+    100,
+    66,
+    6.12
+   ]
+  },
+  "carcasa_tv_dato@pie_laterales": {
+   "familia": "tv_variantes",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Televisor genérico frontal; el cuerpo conserva sus materiales y el apoyo es el dato explícito.",
+   "caja": [
+    100,
+    66.2685,
+    6.12
    ]
   }
  }
