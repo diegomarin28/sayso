@@ -426,7 +426,7 @@ export const planoReloj: PlanoDePiezas = {
       ["motor_vibracion", [2.2, 0.3, 0.9], [0, 0.6, -1.7]],
       ["sensor_optico", [2.4, 0.4, 3], [0, 0.35, 0]],
       ["bobina_carga", [3.2, 0.2, 3.2], [0, 0.45, 0]],
-      ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
+      ["tapa_reloj", [4.2, 0.15, 5], [0, 0.075, 0]],
       ["corona_reloj", [1.2, 0.7, 0.7], [2.7, 1.1, -0.6]],
       ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
     ]).map((p) => (p.pieza === "tapa_reloj" ? { ...p, formaBiblioteca: "tapa_reloj@cuadrada" } : p)),
