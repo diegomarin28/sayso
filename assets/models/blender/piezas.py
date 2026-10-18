@@ -1707,6 +1707,11 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    "bandeja_papel@laser": "libre",
+    "bandeja_papel@tinta": "libre",
+    "placa@impresora": "libre",
+    "fuente@impresora": "libre",
+    "ventilador_fuente@impresora": "redondo:xz",
     "carcasa_televisor": "libre",
     "pantalla_panel": "libre",
     "placa@televisor": "libre",

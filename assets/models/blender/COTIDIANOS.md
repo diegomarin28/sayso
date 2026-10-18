@@ -355,3 +355,15 @@ La placa principal de TV necesita `formaBiblioteca: "placa@televisor"` en el pla
 no se cambia el selector compartido. T-con, soporte y tornillos existen en biblioteca,
 pero falta asegurar su inclusión en los planos. Seguimiento de integración en #188.
 Los renders son inspecciones de assets comprimidos; no sustituyen capturas del visor.
+
+## Interior de impresoras por tecnología
+
+`impresoras_demo.glb` incorpora bandejas de papel de láser y tinta, placa digital,
+fuente y ventilador axial. La plantilla selecciona las bandejas nuevas por sus medidas
+y el tipo, evitando el cajón/estante de heladera. Fusora, unidad láser y tóner se
+reutilizan exclusivamente en láser; carro, cabezal, cartuchos y encoder en tinta.
+Las dos variantes se verifican contra las plantillas reales y los GLB comprimidos.
+`impresoras-cobertura.json` enumera nombres exactos, reutilización y lo pendiente.
+Los renders individuales y de despiece están en `renders/impresoras_demo`.
+No hay decisiones por marca ni modelo. El visor/generador debe completar los planos
+de caché que no incluyan el interior y animar el retiro de la carcasa por paso.
