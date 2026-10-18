@@ -181,6 +181,19 @@ export function cerrar(estado: EstadoEscena): EstadoEscena {
   return conBisagra({ ...estado, piezas, despiece: 0, abierto: false, ...(estado.lados ? { lado: estado.lados.inicial } : {}) });
 }
 
+/**
+ * Cómo arranca un paso, antes de sus acciones: sin los resaltados del anterior; cerrado si solo vuelve a la
+ * vista general; y si no mira ni resalta nada (ni `camara` ni `resaltar`), con la cámara en la vista general:
+ * no se queda encuadrando la pieza del paso anterior. El visor la lleva con la transición de siempre.
+ */
+export function inicioDePaso(estado: EstadoEscena, coreografia: Coreografia): EstadoEscena {
+  const inicio = comenzarPaso(estado);
+  if (soloVuelveAGeneral(coreografia)) return cerrar(inicio);
+  const sinFoco = !coreografia.acciones.some((a) => a.t === "camara" || a.t === "resaltar");
+  const enGeneral = inicio.camara.objetivo === OBJETIVO_GENERAL && inicio.camara.zoom === 1;
+  return sinFoco && !enGeneral ? { ...inicio, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 } } : inicio;
+}
+
 /** Empieza un paso nuevo: apaga los resaltados del paso anterior. */
 export function comenzarPaso(estado: EstadoEscena): EstadoEscena {
   const piezas: Record<string, EstadoPieza> = {};
@@ -195,7 +208,7 @@ export function aplicarCoreografia(
   ctx: ContextoEventos,
 ): { estado: EstadoEscena; eventos: Evento[] } {
   const eventos: Evento[] = [];
-  let actual = soloVuelveAGeneral(coreografia) ? cerrar(comenzarPaso(estado)) : comenzarPaso(estado);
+  let actual = inicioDePaso(estado, coreografia);
   for (const accion of coreografia.acciones) {
     const r = aplicarAccion(actual, accion, ctx);
     actual = r.estado;

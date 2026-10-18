@@ -54,7 +54,7 @@ import {
   type Calidad,
 } from "./salud";
 import { CSS_ACTIVO, colorActivoDelDocumento } from "./tema";
-import { OBJETIVO_GENERAL, aplicarAccion, cerrar, comenzarPaso, estadoInicial, soloVuelveAGeneral, type EstadoEscena } from "./reproductor";
+import { OBJETIVO_GENERAL, aplicarAccion, estadoInicial, inicioDePaso, type EstadoEscena } from "./reproductor";
 
 /**
  * "auto": bloom encendido, se apaga solo si el equipo no sostiene ~30 fps.
@@ -545,9 +545,12 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     paso.eventos.forEach((e) => onEventoRef.current?.(e));
     onPasoRef.current?.(paso);
     const { actualizar } = acciones.current;
-    // Un paso que solo vuelve a la vista general cierra el equipo (las tapas vuelven a su lugar).
-    const inicio = comenzarPaso(estado.current);
-    actualizar(soloVuelveAGeneral(paso.coreografia) ? cerrar(inicio) : inicio);
+    // Un paso que solo vuelve a la vista general cierra el equipo (las tapas vuelven a su lugar); uno que no mira
+    // ni resalta nada vuelve a la vista general, con la transición de siempre (`inicioDePaso`).
+    const antes = estado.current;
+    const inicio = inicioDePaso(antes, paso.coreografia);
+    actualizar(inicio);
+    if (inicio.camara !== antes.camara) acciones.current.mirar(inicio.camara.objetivo, inicio.camara.zoom, true);
     const timers = paso.coreografia.acciones.map((accion, i) =>
       setTimeout(() => {
         const antes = estado.current;
