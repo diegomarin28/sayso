@@ -28,6 +28,8 @@ import {
   piezasResaltadas,
   prepararEscenaSegura,
   separarEtiquetas,
+  suavizar,
+  type CambioLado,
   type LadoEtiqueta,
   type UbicacionEtiqueta,
   type EscenaPreparada,
@@ -633,6 +635,9 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
   const caja = useRef<HTMLDivElement>(null);
   const linea = useRef<SVGLineElement>(null);
   const lado = useRef<LadoEtiqueta | undefined>(undefined);
+  const cambio = useRef<CambioLado>({ h: -Infinity, v: -Infinity });
+  /** Dónde está dibujado el recuadro (relativo a la pieza) y cuándo, para suavizar el movimiento. */
+  const dibujada = useRef<{ x: number; y: number; t: number } | null>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
@@ -652,13 +657,19 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
         animable.nodo.localToWorld(punto).project(camara);
         const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
         const etiqueta = { ancho: el.offsetWidth, alto: el.offsetHeight };
-        const u = colocarEtiqueta(ancla, etiqueta, tam, reservado.current, lado.current);
+        const u = colocarEtiqueta(ancla, etiqueta, tam, reservado.current, lado.current, { ahora: performance.now(), cambio: cambio.current });
         lado.current = u.lado;
+        cambio.current = u.cambio;
         return { ancla, u, ...etiqueta };
       },
-      aplicar: (c) => {
+      aplicar: (objetivo) => {
         const el = caja.current;
         if (!el) return;
+        // Sigue a la pieza al girar (es relativo a ella); lo que se suaviza es el cambio de lugar del recuadro.
+        const t = performance.now();
+        const previa = dibujada.current;
+        const c = suavizar(previa, objetivo, previa ? t - previa.t : 0);
+        dibujada.current = { ...c, t };
         el.style.left = `${c.x}px`;
         el.style.top = `${c.y}px`;
         // La línea guía va al punto del recuadro más cercano a la pieza (el recuadro pudo correrse).

@@ -371,6 +371,11 @@ export function direccionDeCamara(tam: THREE.Vector3): THREE.Vector3 {
 }
 const DIRECCION_ISOMETRICA = new THREE.Vector3(1, 1, 1).normalize();
 
+/** Radio mínimo con que se encuadra una pieza (su entorno), en cm: en un equipo grande. */
+const ENTORNO_PIEZA_CM = 12;
+/** En un equipo chico, el entorno mínimo es esta parte de su radio (un celular: ~4 cm alrededor de la pieza). */
+const FRACCION_ENTORNO_PIEZA = 0.45;
+
 /** Lo que tapa la frase nunca deja menos que esto del lienzo para el 3D. */
 const FRACCION_LIBRE_MIN = 0.4;
 
@@ -398,7 +403,9 @@ export function encuadre(
   // Con el despiece las piezas suben y se abren: se deja más margen.
   // Un equipo alto (heladera) tiene que entrar entero a lo alto; uno chato (notebook) no cambia.
   // En una pantalla vertical (celular) la vista general va con el radio entero: con 0,8 un celular se salía por los costados.
-  // Una pieza nunca se encuadra más lejos que el equipo entero (en un celular, 12 cm de mínimo es más que el celular).
+  // Una pieza nunca se encuadra más lejos que el equipo entero. El mínimo (para que se vea su entorno) es
+  // 12 cm en un equipo grande, pero en uno chico es una parte del equipo (`FRACCION_ENTORNO_PIEZA`): con
+  // 12 cm, un conector de celular quedaba como un puntito al borde del celular entero (prueba real).
   const { width, height } = tamPantalla;
   const ajusteGeneral = width < height ? 1 : 0.8;
   const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * (ajusteGeneral + 0.45 * despiece), (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
@@ -406,7 +413,9 @@ export function encuadre(
   if (nodo === escena.raiz) radio = radioGeneral(caja, esfera);
   else {
     const cajaEquipo = new THREE.Box3().setFromObject(escena.raiz);
-    radio = Math.min(Math.max(esfera.radius * 2.6, 12), radioGeneral(cajaEquipo, cajaEquipo.getBoundingSphere(new THREE.Sphere())));
+    const radioEquipo = cajaEquipo.getBoundingSphere(new THREE.Sphere()).radius;
+    const entorno = Math.min(ENTORNO_PIEZA_CM, radioEquipo * FRACCION_ENTORNO_PIEZA);
+    radio = Math.min(Math.max(esfera.radius * 2.6, entorno), radioGeneral(cajaEquipo, cajaEquipo.getBoundingSphere(new THREE.Sphere())));
   }
   const objetivoPos = esfera.center;
   const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));
@@ -435,11 +444,23 @@ export type LadoEtiqueta = { h: "derecha" | "izquierda"; v: "arriba" | "abajo" }
 export const LINEA_ETIQUETA = { dx: 28, dy: 44 };
 const MARGEN_ETIQUETA = 8;
 
-/** Cuánto puede pasarse el lado actual antes de cambiar (px): evita que salte de lado en lado al girar. */
-const HISTERESIS_ETIQUETA = 16;
+/**
+ * Para cambiar de lado al girar, el lado actual tiene que pasarse del lienzo por más que esto Y el otro
+ * tiene que entrar al menos esto mejor (px): un cambio claro, no por unos píxeles.
+ */
+export const MARGEN_CAMBIO_ETIQUETA = 40;
+/** Y nunca dos cambios de lado (en el mismo eje) en menos que esto (ms): la etiqueta no "baila". */
+export const TIEMPO_MIN_LADO_MS = 1000;
+/** Suavizado del movimiento de la etiqueta (ms): llega al 63 % del camino en este tiempo. */
+const SUAVIZADO_ETIQUETA_MS = 90;
+
+/** Cuándo cambió de lado por última vez cada eje (ms), para `TIEMPO_MIN_LADO_MS`. */
+export type CambioLado = { h: number; v: number };
 
 export type UbicacionEtiqueta = {
   lado: LadoEtiqueta;
+  /** Cuándo cambió de lado cada eje (lo que hay que pasar en el próximo cuadro). */
+  cambio: CambioLado;
   /** Esquina superior izquierda del recuadro, en px relativos a la pieza (`ancla`). */
   caja: { x: number; y: number };
   /** Punta de la línea guía (la esquina del recuadro más cercana a la pieza), relativa a la pieza. */
@@ -447,9 +468,11 @@ export type UbicacionEtiqueta = {
 };
 
 /**
- * Dónde dibujar la etiqueta: el lado de `ladoEtiqueta`, pero sin cambiar de lado mientras el actual
- * todavía entre (histéresis: al girar el modelo no salta de lado en lado) y siempre ADENTRO del lienzo
- * y debajo de la franja reservada (si no entra, se corre hasta que entre: nunca se corta en el borde).
+ * Dónde dibujar la etiqueta: el lado de `ladoEtiqueta` la primera vez y después el mismo, salvo un cambio
+ * claro (el actual se pasa por más de `MARGEN_CAMBIO_ETIQUETA` y el otro entra por lo menos eso mejor) y
+ * nunca dos cambios en menos de `TIEMPO_MIN_LADO_MS` (con `tiempo`). Al girar el modelo no salta de lado
+ * en lado. Siempre ADENTRO del lienzo y debajo de la franja reservada (si no entra, se corre hasta que
+ * entre: nunca se corta en el borde).
  */
 export function colocarEtiqueta(
   ancla: { x: number; y: number },
@@ -457,6 +480,7 @@ export function colocarEtiqueta(
   lienzo: { width: number; height: number },
   reservadoArriba = 0,
   anterior?: LadoEtiqueta,
+  tiempo?: { ahora: number; cambio: CambioLado },
 ): UbicacionEtiqueta {
   const { dx, dy } = LINEA_ETIQUETA;
   const M = MARGEN_ETIQUETA;
@@ -467,10 +491,19 @@ export function colocarEtiqueta(
     izquierda: ancla.x - dx - etiqueta.ancho - M,
   };
   const nuevo = ladoEtiqueta(ancla, etiqueta, lienzo, reservadoArriba);
-  const lado: LadoEtiqueta = {
-    v: anterior && sobra[anterior.v] >= -HISTERESIS_ETIQUETA ? anterior.v : nuevo.v,
-    h: anterior && sobra[anterior.h] >= -HISTERESIS_ETIQUETA ? anterior.h : nuevo.h,
+  const ahora = tiempo?.ahora ?? 0;
+  const cambio: CambioLado = { ...(tiempo?.cambio ?? { h: -Infinity, v: -Infinity }) };
+  const eje = <K extends "h" | "v">(k: K): LadoEtiqueta[K] => {
+    const actual = anterior?.[k];
+    const candidato = nuevo[k];
+    if (!actual) return candidato;
+    const claro = sobra[actual] < -MARGEN_CAMBIO_ETIQUETA && sobra[candidato] - sobra[actual] > MARGEN_CAMBIO_ETIQUETA;
+    const pasoElTiempo = !tiempo || ahora - cambio[k] >= TIEMPO_MIN_LADO_MS;
+    if (candidato === actual || !claro || !pasoElTiempo) return actual;
+    cambio[k] = ahora;
+    return candidato;
   };
+  const lado: LadoEtiqueta = { v: eje("v"), h: eje("h") };
   const sx = lado.h === "derecha" ? 1 : -1;
   const sy = lado.v === "arriba" ? -1 : 1;
   // Recuadro en el lado elegido y, si igual se sale, corrido hasta que entre (en px del lienzo).
@@ -482,9 +515,17 @@ export function colocarEtiqueta(
   const caja = { x: x - ancla.x, y: y - ancla.y };
   return {
     lado,
+    cambio,
     caja,
     punta: { x: sx > 0 ? caja.x : caja.x + etiqueta.ancho, y: sy < 0 ? caja.y + etiqueta.alto : caja.y },
   };
+}
+
+/** Un paso del suavizado de la etiqueta: de `actual` hacia `objetivo` según el tiempo del cuadro (sin `actual`, salta). */
+export function suavizar(actual: { x: number; y: number } | null, objetivo: { x: number; y: number }, dtMs: number) {
+  if (!actual) return objetivo;
+  const k = 1 - Math.exp(-Math.max(dtMs, 0) / SUAVIZADO_ETIQUETA_MS);
+  return { x: actual.x + (objetivo.x - actual.x) * k, y: actual.y + (objetivo.y - actual.y) * k };
 }
 
 /**
