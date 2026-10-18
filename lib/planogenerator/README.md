@@ -60,7 +60,8 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
     que alguien trae en la mano: tablet, auriculares, reloj inteligente, mouse, teclado, joystick, parlante bluetooth,
     cargador, control remoto, batería externa, cámara de acción, afeitadora, planchita y cepillo eléctrico. Por nombre gana la que más palabras comparte (las `pistas`, marcas o contexto, valen
     medio: "Galaxy Tab" es tablet, "control de la tele" es control remoto); si empatan, la nombrada primero
-    ("cargador de celular" es un cargador). Sin el nombre del aparato ni un esqueleto parecido (un pendrive, una linterna) no adivina.
+    ("cargador de celular" es un cargador). Si empatan con la misma palabra ("impresora" nombra a la de tinta y a la
+    láser), desempatan las piezas del pack: gana la que tiene más tipos de pieza propios en el pack (tóner o fusora → láser). Sin el nombre del aparato ni un esqueleto parecido (un pendrive, una linterna) no adivina.
   - **Completar lo que la IA no ubicó**: con la plantilla del tipo (`propuestaDePlantillaDeTipo`: por id o por tipo de
     pieza; en un equipo parado, la cara), no con la de notebook. Así un TV con una sola pieza ubicada no queda vacío.
   - **Lo que nadie ubicó igual va al 3D** (`sueltas.ts`, `terminarPlano`): una pieza del pack que ni la IA ni la plantilla

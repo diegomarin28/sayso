@@ -38,6 +38,24 @@ describe("elegirPlantilla", () => {
     expect(elegirPlantilla(pack("otro", []), "impresora multifunción de tinta")?.id).toBe("impresora");
   });
 
+  it("«impresora» sola: desempatan las piezas del pack (otras impresoras, no la de la demo)", () => {
+    // Una Brother láser con tóner y fusora; una Epson de tinta con cabezal y cartucho de tinta.
+    expect(elegirPlantilla(pack("otro", ["cartucho_toner", "unidad_fusora"], "Brother HL-L2350DW"), "impresora")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", ["cartucho_toner"], "Samsung Xpress M2020"), "Impresora")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", ["cabezal_impresion", "cartucho_tinta_negro"], "Epson L3250"), "impresora")?.id).toBe("impresora");
+    // Sin piezas que decidan (placa y fuente las tienen las dos): la de la lista, como antes.
+    expect(elegirPlantilla(pack("otro", ["placa_control", "fuente"]), "impresora")?.id).toBe("impresora");
+    // Solo desempata: con un nombre que ya decide, las piezas no lo cambian.
+    expect(elegirPlantilla(pack("otro", ["cabezal_impresion"]), "impresora láser")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", ["bateria", "pantalla"]), "cargador de celular")?.id).toBe("cargador");
+  });
+
+  it("«impresora» con tóner en el pack: si la IA falla, el plano sale de la láser (con su tapa de adelante)", async () => {
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack("otro", ["cartucho_toner", "rodillo_mp"], "Brother HL-L2350DW"), tipoEquipo: "impresora" }, iaQueFalla);
+    expect(r.origen).toBe("plantilla");
+    expect(r.plano.piezas.map((p) => p.pieza)).toEqual(expect.arrayContaining(["cartucho_toner", "puerta_frontal"]));
+  });
+
   it("si no, por la clase del knowledge pack", () => {
     expect(elegirPlantilla(pack("split", []))?.id).toBe("aire");
     expect(elegirPlantilla(pack("lavarropas", []))?.id).toBe("lavarropas");
