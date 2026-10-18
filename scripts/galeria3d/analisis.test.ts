@@ -86,3 +86,16 @@ describe("galería 3D: análisis de cada captura", () => {
     expect([...leida.rgba]).toEqual([...original.rgba]);
   });
 });
+
+describe("galería 3D: equipos de los casos de la caché", () => {
+  it("toma el plano terminado y el tipo de equipo de cada caso; un caso sin plano no va", async () => {
+    const { equiposDeCasos } = await import("./equipos");
+    const plano = { modelo: "TV", unidades: "cm" as const, piezas: [] };
+    expect(
+      equiposDeCasos([
+        { caso: { id: "prueba-tv" }, tipoEquipo: "televisor", guia: { plano: { plano } } },
+        { caso: { id: "prueba-sin-plano" }, tipoEquipo: "celular", guia: { plano: null } },
+      ]),
+    ).toEqual([{ id: "prueba-tv", plano, tipoEquipo: "televisor" }]);
+  });
+});
