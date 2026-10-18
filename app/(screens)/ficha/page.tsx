@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
 import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
+import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { vistaPrevia } from "../_datos/imagen";
 import { usePrecargaPiezas } from "@/components/viewer";
 import { FichaDescifrando } from "../_ui/ficha-descifrando";
@@ -122,15 +123,20 @@ export default function FichaDelEquipo() {
   }
 
   const dudosos = ficha ? CAMPOS.filter((c) => ficha[c.clave].estado !== "confirmado").length : 0;
+  const sinModelo = !!ficha && !ficha.modelo.valor;
+  /** De dónde salió lo leído: la etiqueta (o lo que se usó en su lugar) o la foto del equipo. */
+  const deDonde = fotoEtiqueta ? "Esto leí en la etiqueta." : "No había etiqueta: esto saqué de la foto del equipo.";
   const dice = error
     ? error
-    : faltaModelo
-      ? "Me falta el modelo para buscar el manual. Tocá “Modelo” y escribilo como figura en la etiqueta."
+    : faltaModelo || (sinModelo && !fotoEtiqueta)
+      ? `${fotoEtiqueta ? "Me falta el modelo" : "No pude saber el modelo con la foto"}. Tocá “Modelo” y escribilo: abajo te digo dónde encontrarlo.`
       : !ficha
-        ? "Leyendo la etiqueta…"
+        ? fotoEtiqueta
+          ? "Leyendo la etiqueta…"
+          : "Mirando la foto del equipo…"
         : dudosos > 0
-          ? "Esto leí en la etiqueta. Revisalo: podés corregir o completar cualquier dato."
-          : "Esto leí en la etiqueta. ¿Es tu equipo?";
+          ? `${deDonde} Revisalo: podés corregir o completar cualquier dato.`
+          : `${deDonde} ¿Es tu equipo?`;
 
   return (
     <Pantalla>
@@ -175,6 +181,22 @@ export default function FichaDelEquipo() {
             <p className="flex items-center gap-2 text-sm text-texto-suave">
               <Lapiz /> Podés corregir o completar cualquier dato.
             </p>
+          )}
+          {/* Sin modelo (ej. un aire sin etiqueta): dónde más suele estar, para escribirlo. */}
+          {sinModelo && (
+            <div className="aparece rounded-2xl border border-dato/40 bg-dato/10 p-4 text-sm">
+              <p className="font-semibold">¿Dónde encuentro el modelo?</p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {dondeBuscarModelo(tipoEquipo).lugares.map((l) => (
+                  <li key={l} className="flex gap-2">
+                    <span className="text-dato" aria-hidden>
+                      •
+                    </span>
+                    {l}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           <div className="chapa relative rounded-3xl border border-white/10 p-5 pt-7 sm:p-6 sm:pt-8">
             {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (

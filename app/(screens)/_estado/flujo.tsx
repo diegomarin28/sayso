@@ -23,6 +23,8 @@ export type Toma = {
   resultado?: Foto;
   salteada?: boolean;
   error?: string;
+  /** Sin etiqueta: la foto es de otro lugar con el modelo (ej. "El control remoto"). */
+  alternativa?: string;
 };
 
 export type Captura = { pedidos: PedidoDeFoto[] | null; actual: number; tomas: Record<number, Toma> };

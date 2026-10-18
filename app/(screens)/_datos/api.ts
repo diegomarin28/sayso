@@ -179,8 +179,18 @@ export async function leerChapa(
   }
   if (USAR_FIXTURE) {
     await esperar(1800);
+    // Sin etiqueta, como la IA con la foto del frente: la marca (por el logo) queda probable y el
+    // modelo casi nunca se reconoce, así que lo escribe la persona.
+    const sinEtiqueta =
+      imagenes.length === 0
+        ? {
+            marca: { ...fichaEjemplo.marca, estado: "probable" as const, fuente: "foto" },
+            modelo: { valor: null, estado: "desconocido" as const },
+            serie: { valor: null, estado: "desconocido" as const },
+          }
+        : {};
     return RespChapa.parse({
-      ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
+      ficha: { ...fichaEjemplo, ...sinEtiqueta, casoId: caso.id, clase: caso.clase, confirmadaPorUsuario: false },
     });
   }
   const etiqueta = imagenes.slice(0, 3);
