@@ -27,7 +27,9 @@ import {
   liberar,
   piezasResaltadas,
   prepararEscenaSegura,
+  separarEtiquetas,
   type LadoEtiqueta,
+  type UbicacionEtiqueta,
   type EscenaPreparada,
   type ModoVista,
   type NodoAnimable,
@@ -513,6 +515,21 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
 
   useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000));
 
+  // Etiquetas de las piezas resaltadas: cada una dice dónde quiere ir y acá se acomodan juntas, en el
+  // orden en que se resaltaron, para que no se pisen (#179). Se escribe directo en el DOM (no tiembla).
+  const etiquetas = useRef(new Map<string, RegistroEtiqueta>());
+  useFrame(() => {
+    const medidas = activos.flatMap((id) => {
+      const r = etiquetas.current.get(id);
+      const m = r?.medir();
+      return r && m ? [{ r, m }] : [];
+    });
+    if (!medidas.length) return;
+    const rects = medidas.map(({ m }) => ({ x: m.ancla.x + m.u.caja.x, y: m.ancla.y + m.u.caja.y, ancho: m.ancho, alto: m.alto }));
+    const separados = separarEtiquetas(rects, tam, reservado.current);
+    medidas.forEach(({ r, m }, i) => r.aplicar({ x: separados[i].x - m.ancla.x, y: separados[i].y - m.ancla.y }));
+  });
+
   const delKp = useMemo(() => new Map(piezas?.map((p) => [p.id, p]) ?? []), [piezas]);
   const delPlano = useMemo(() => new Map(plano.piezas.map((p) => [p.pieza, p])), [plano]);
 
@@ -530,6 +547,8 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
             numeroKp={kp?.etiquetaManual}
             origen={textoOrigenPieza(delPlano.get(id) ?? {})}
             reservado={reservado}
+            id={id}
+            registro={etiquetas}
           />
         ) : null;
       })}
@@ -582,6 +601,16 @@ type EtiquetaProps = {
   origen: string;
   /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
   reservado: { current: number };
+  id: string;
+  /** Donde la etiqueta se anota para que la escena la acomode junto con las otras (ver `separarEtiquetas`). */
+  registro: { current: Map<string, RegistroEtiqueta> };
+};
+
+/** Lo que la escena necesita de cada etiqueta: dónde quiere ir y cómo moverla. */
+type RegistroEtiqueta = {
+  medir: () => { ancla: { x: number; y: number }; u: UbicacionEtiqueta; ancho: number; alto: number } | null;
+  /** Esquina del recuadro relativa a la pieza, ya acomodada. */
+  aplicar: (caja: { x: number; y: number }) => void;
 };
 
 /**
@@ -589,7 +618,7 @@ type EtiquetaProps = {
  * hacia el lado donde entran (`ladoEtiqueta`): arriba a la derecha si se puede; abajo si arriba
  * se encimaría con la frase; a la izquierda si a la derecha se sale del lienzo.
  */
-function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaProps) {
+function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro }: EtiquetaProps) {
   const datos = animable.nodo.userData as DatosPieza;
   const numero = datos.etiquetaManual ?? numeroKp;
   const base = animable.principal.position;
@@ -605,21 +634,35 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaPro
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // Cada cuadro: dónde cae la pieza en pantalla y dónde va el recuadro (adentro del lienzo, sin
-  // saltar de lado). Se escribe directo en el DOM: sin re-render ni transición de posición (no tiembla).
+  // Cada cuadro, la escena pregunta dónde cae la pieza en pantalla y dónde iría el recuadro (adentro del
+  // lienzo, sin saltar de lado), los acomoda con los de las otras etiquetas y escribe el resultado en el DOM.
   const punto = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
-    const el = caja.current;
-    if (!el) return;
-    punto.set(...desde);
-    animable.nodo.localToWorld(punto).project(camara);
-    const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
-    const u = colocarEtiqueta(ancla, { ancho: el.offsetWidth, alto: el.offsetHeight }, tam, reservado.current, lado.current);
-    lado.current = u.lado;
-    el.style.left = `${u.caja.x}px`;
-    el.style.top = `${u.caja.y}px`;
-    linea.current?.setAttribute("x2", String(u.punta.x));
-    linea.current?.setAttribute("y2", String(u.punta.y));
+  useEffect(() => {
+    const mapa = registro.current;
+    mapa.set(id, {
+      medir: () => {
+        const el = caja.current;
+        if (!el) return null;
+        punto.set(...desde);
+        animable.nodo.localToWorld(punto).project(camara);
+        const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
+        const etiqueta = { ancho: el.offsetWidth, alto: el.offsetHeight };
+        const u = colocarEtiqueta(ancla, etiqueta, tam, reservado.current, lado.current);
+        lado.current = u.lado;
+        return { ancla, u, ...etiqueta };
+      },
+      aplicar: (c) => {
+        const el = caja.current;
+        if (!el) return;
+        el.style.left = `${c.x}px`;
+        el.style.top = `${c.y}px`;
+        // La línea guía va al punto del recuadro más cercano a la pieza (el recuadro pudo correrse).
+        const cerca = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+        linea.current?.setAttribute("x2", String(cerca(0, c.x, c.x + el.offsetWidth)));
+        linea.current?.setAttribute("y2", String(cerca(0, c.y, c.y + el.offsetHeight)));
+      },
+    });
+    return () => void mapa.delete(id);
   });
 
   return createPortal(
