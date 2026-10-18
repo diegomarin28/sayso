@@ -12,7 +12,7 @@ export type EquipoGaleria = {
   id: string;
   titulo: string;
   detalle: string;
-  grupo: "equipos" | "dispositivos" | "en_la_mano";
+  grupo: "equipos" | "dispositivos" | "en_la_mano" | "campus";
   plano: PlanoDePiezas;
   tipoEquipo: string;
   /**

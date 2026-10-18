@@ -1,0 +1,103 @@
+{
+  "canilla": {
+    "nuevas": [
+      "canilla",
+      "manija_canilla",
+      "cartucho_canilla",
+      "aireador_canilla",
+      "valvula_cierre",
+      "flexible_agua"
+    ],
+    "reutilizadas": [
+      "tornillo"
+    ]
+  },
+  "lavatorio": {
+    "nuevas": [
+      "valvula_cierre",
+      "flexible_agua",
+      "desague_lavatorio",
+      "sifon_lavatorio"
+    ],
+    "reutilizadas": [
+      "tornillo"
+    ]
+  },
+  "cisterna": {
+    "nuevas": [
+      "valvula_cierre",
+      "flexible_agua",
+      "pulsador_descarga",
+      "flotante_cisterna",
+      "valvula_descarga"
+    ],
+    "reutilizadas": [
+      "tornillo"
+    ]
+  },
+  "reloj_pared": {
+    "nuevas": [
+      "carcasa_reloj_pared",
+      "mecanismo_reloj_pared",
+      "agujas_reloj@pared"
+    ],
+    "reutilizadas": [
+      "esfera_reloj",
+      "pila_aa",
+      "tornillo"
+    ]
+  },
+  "pared": {
+    "nuevas": [
+      "placa_pared"
+    ],
+    "reutilizadas": [
+      "toma_corriente",
+      "interruptor_basculante",
+      "puerto_rj45",
+      "conector_usb_a",
+      "tornillo"
+    ]
+  },
+  "luminaria": {
+    "nuevas": [
+      "bombilla_led",
+      "difusor_luminaria"
+    ],
+    "reutilizadas": [
+      "fuente",
+      "tira_led",
+      "cable@redondo",
+      "tornillo"
+    ]
+  },
+  "calculadora": {
+    "nuevas": [
+      "carcasa_calculadora",
+      "teclado_calculadora",
+      "pantalla@segmentos"
+    ],
+    "reutilizadas": [
+      "placa",
+      "pila",
+      "pila_aa",
+      "tornillo"
+    ]
+  },
+  "proyector": {
+    "nuevas": [
+      "carcasa_proyector"
+    ],
+    "reutilizadas": [
+      "lente_proyector",
+      "lampara_proyector",
+      "modulo_led_proyector",
+      "modulador_imagen",
+      "rueda_color",
+      "ventilador",
+      "fuente",
+      "placa_principal_av",
+      "tornillo"
+    ]
+  }
+}

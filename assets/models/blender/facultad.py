@@ -78,6 +78,11 @@ def bateria_celdas_pegadas():
     caja((24, 0.8, 0.15), (0, 0, 0.3), "pcb")
     flex(1.3, 2, (11, 1.3, 0.35))
 
+    for x in (-8.5, 0, 8.5):
+        for y in (-3.5, 3.5):
+            for i in range(4):
+                caja((3.4, 0.08, 0.008), (x, y - 0.8 + i * 0.4, 0.493), "chip")
+
 
 @pieza("placa_logica_integrada", "macbook_air macbook_pro imac", "#275e53", 0.15)
 def placa_logica_integrada():

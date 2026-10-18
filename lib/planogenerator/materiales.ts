@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RECETAS_CAMPUS } from "./materiales-campus";
 import { RECETAS_FACULTAD } from "./materiales-facultad";
 import { RECETAS_COTIDIANOS } from "./materiales-cotidianos";
 import { RECETAS_DISPOSITIVOS } from "./materiales-dispositivos";
@@ -77,6 +78,7 @@ const RECETAS: Array<[prefijo: string, receta: Receta]> = [
   ...RECETAS_DISPOSITIVOS,
   ...RECETAS_COTIDIANOS,
   ...RECETAS_FACULTAD,
+  ...RECETAS_CAMPUS,
 ];
 
 const RECETA_GENERICA: Receta = { color: "#8a949e", metalness: 0.5, roughness: 0.45 };
@@ -96,6 +98,7 @@ export const RECETAS_DETALLE = {
   goma: { color: "#141517", metalness: 0, roughness: 0.9 },
   plastico: { color: "#1b1d20", metalness: 0.1, roughness: 0.6 },
   conector: { color: "#e6e2d6", metalness: 0, roughness: 0.6 },
+  optica: { color: "#294f68", metalness: 0.25, roughness: 0.18 },
   vidrio: { color: "#07090d", metalness: 0.4, roughness: 0.06 },
   /** Lo impreso de las etiquetas (renglones, código de barras, advertencia). */
   tinta: { color: "#1d1f23", metalness: 0, roughness: 0.7 },

@@ -11,12 +11,13 @@ import { FORMAS_EN_LA_BIBLIOTECA, GALERIA, pasoDespiece, pasoInicial, type Equip
  * su 3D (solo mientras está a la vista: los celulares tienen pocos lienzos WebGL) y al tocarla se abre
  * en grande con "Despiezar". Fondo negro y títulos grandes: se lee igual en un celular y en un proyector.
  */
-export function LabGaleria() {
+export function LabGaleria({ equipos = GALERIA, campus = false }: { equipos?: EquipoGaleria[]; campus?: boolean }) {
   const [abierto, setAbierto] = useState<EquipoGaleria | null>(null);
   const grupos = [
-    { titulo: "Equipos", equipos: GALERIA.filter((e) => e.grupo === "equipos") },
-    { titulo: "Dispositivos", equipos: GALERIA.filter((e) => e.grupo === "dispositivos") },
-    { titulo: "En la mano", equipos: GALERIA.filter((e) => e.grupo === "en_la_mano") },
+    { titulo: "A mano en la facultad", equipos: equipos.filter((e) => e.grupo === "campus") },
+    { titulo: "Equipos", equipos: equipos.filter((e) => e.grupo === "equipos") },
+    { titulo: "Dispositivos", equipos: equipos.filter((e) => e.grupo === "dispositivos") },
+    { titulo: "En la mano", equipos: equipos.filter((e) => e.grupo === "en_la_mano") },
   ];
 
   return (
@@ -25,11 +26,12 @@ export function LabGaleria() {
         <p className="text-sm font-semibold tracking-[0.2em] text-acento uppercase sm:text-base">Experto al lado</p>
         <h1 className="mt-2 text-4xl leading-tight font-bold sm:text-6xl lg:text-7xl">Lo arma en 3D, pieza por pieza</h1>
         <p className="mt-3 max-w-3xl text-lg text-white/70 sm:text-2xl">
-          {GALERIA.length} tipos de equipo · {FORMAS_EN_LA_BIBLIOTECA} formas de piezas. Tocá uno para verlo en grande.
+          {equipos.length} tipos de equipo · {FORMAS_EN_LA_BIBLIOTECA} formas de piezas. Tocá uno para verlo en grande.
         </p>
+        {campus && <p className="mt-3 max-w-3xl text-sm text-white/60">Esquemas genéricos de prueba. Las medidas y piezas de un equipo real deben confirmarse con su modelo y documentación.</p>}
       </header>
 
-      {grupos.map((g) => (
+      {grupos.filter((g) => g.equipos.length > 0).map((g) => (
         <section key={g.titulo} className="mx-auto mt-10 max-w-[1600px]">
           <h2 className="mb-4 text-2xl font-semibold text-white/80 sm:text-3xl">{g.titulo}</h2>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 2xl:grid-cols-4">

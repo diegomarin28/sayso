@@ -13,7 +13,10 @@
     "modelos:piezas": "blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas && npm run modelos:comprimir",
     "modelos:dispositivos": "blender -b --factory-startup --python assets/models/blender/dispositivos.py -- --salida public/models/piezas && npm run modelos:comprimir",
     "modelos:cotidianos": "blender -b --factory-startup --python assets/models/blender/cotidianos.py -- --salida public/models/piezas && npm run modelos:comprimir",
-    "modelos:facultad": "blender -b --factory-startup --python assets/models/blender/facultad.py -- --salida public/models/piezas && npm run modelos:comprimir"
+    "modelos:facultad": "blender -b --factory-startup --python assets/models/blender/facultad.py -- --salida public/models/piezas && npm run modelos:comprimir",
+    "modelos:campus": "blender -b --factory-startup --python assets/models/blender/campus.py -- --salida public/models/piezas",
+    "modelos:demo": "python3 assets/models/blender/publicar_demo.py",
+    "modelos:decodificar": "node --import tsx assets/models/blender/decodificar.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

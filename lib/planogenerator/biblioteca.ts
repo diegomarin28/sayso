@@ -80,9 +80,50 @@ export function bibliotecaDesdeEscena(escena: THREE.Object3D): BibliotecaPiezas 
     tipo.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
       const geometria = enFloat((o.geometry as THREE.BufferGeometry).clone());
+      if (!geometria.getAttribute("normal")) geometria.computeVertexNormals();
       geometria.applyMatrix4(new THREE.Matrix4().multiplyMatrices(aLocal, o.matrixWorld));
-      const material = Array.isArray(o.material) ? o.material[0] : o.material;
-      partes.push({ geometria, receta: material?.name?.split(".")[0] || RECETA_CUERPO });
+      const catalogo = escena.userData.paletaRecetas;
+      const recetas = Array.isArray(tipo.userData.recetas) ? tipo.userData.recetas.map((r: unknown) =>
+        typeof r === "number" && Array.isArray(catalogo) ? catalogo[r] : r) : undefined;
+      // RGB permite previsualización estándar; A codifica la receta (material OPAQUE).
+      const colores = geometria.getAttribute("color");
+      const etiquetas = colores?.itemSize === 4 && Array.isArray(recetas) ? colores : undefined;
+      const etiqueta = (i: number) => Math.round(etiquetas!.getW(i) * 255);
+      if (etiquetas && Array.isArray(recetas)) {
+        // Una primitiva compacta en el GLB; partes por receta en el visor, como antes.
+        const indices = geometria.getIndex();
+        const grupos = new Map<number, number[]>();
+        const total = indices?.count ?? etiquetas.count;
+        for (let i = 0; i < total; i += 3) {
+          const triangulo = [0, 1, 2].map((j) => indices ? indices.getX(i + j) : i + j);
+          const receta = etiqueta(triangulo[0]);
+          if (triangulo.some((v) => etiqueta(v) !== receta) || typeof recetas[receta] !== "string")
+            throw new Error(`Receta de triángulo inválida: ${tipo.name}`);
+          const grupo = grupos.get(receta) ?? [];
+          grupo.push(...triangulo);
+          grupos.set(receta, grupo);
+        }
+        for (const [receta, grupo] of grupos) {
+          const parte = new THREE.BufferGeometry();
+          // Compactar también los vértices: las cajas de cada parte no incluyen otras recetas.
+          const usados = [...new Set(grupo)];
+          const remap = new Map(usados.map((v, i) => [v, i]));
+          for (const nombre of ["position", "normal"]) {
+            const src = geometria.getAttribute(nombre);
+            const datos = new Float32Array(usados.length * src.itemSize);
+            usados.forEach((v, i) => {
+              datos[i * 3] = src.getX(v); datos[i * 3 + 1] = src.getY(v); datos[i * 3 + 2] = src.getZ(v);
+            });
+            parte.setAttribute(nombre, new THREE.BufferAttribute(datos, src.itemSize));
+          }
+          parte.setIndex(grupo.map((v) => remap.get(v)!));
+          partes.push({ geometria: parte, receta: recetas[receta] });
+        }
+        geometria.dispose();
+      } else {
+        const material = Array.isArray(o.material) ? o.material[0] : o.material;
+        partes.push({ geometria, receta: material?.name?.split(".")[0] || RECETA_CUERPO });
+      }
     });
     if (partes.length === 0) continue;
     const caja = new THREE.Box3();

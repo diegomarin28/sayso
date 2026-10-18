@@ -39,30 +39,10 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
   palabra en cualquier parte: en español el sustantivo va primero (`cable_bateria` es un cable, no una batería).
 - Cada tipo nuevo necesita su receta en `materiales.ts` (lo controla un test).
 
-- Regenerar (Blender 4.2+ instalado): `npm run modelos:piezas`. Con renders de revisión (uno por pieza y una
-  hoja por familia): `blender -b --factory-startup --python assets/models/blender/piezas.py -- --salida public/models/piezas --renders <carpeta>`.
+- Publicar todas las familias (Blender y Node instalados): `npm run modelos:demo`. Exporta a temporales, centra, optimiza y valida antes de copiar a `public/models/piezas`. Los comandos individuales `modelos:*` exportan GLB crudos para edición; no sustituyen este paso final. Para revisión de los GLB publicados, ver [calidad de la demo](blender/CALIDAD_DEMO.md).
 - Son formas **típicas por tipo**, no de un modelo: la posición y las medidas siguen saliendo del plano.
-- Un nodo por tipo; adentro, una malla por material. El nombre del material es la receta de la app
-  (`cuerpo.<tipo>` o una de `RECETAS_DETALLE` en `lib/planogenerator/materiales.ts`).
-- Límite: cada GLB comprimido pesa menos de 1 MB (lo controla un test; hoy 2,4 MB en total, eran 6,6 MB sin comprimir).
-  Una variante idéntica a otro tipo comparte mallas (`ALIAS`).
-
-## Compresión (meshopt)
-
-Cada `npm run modelos:*` termina con `npm run modelos:comprimir` (`assets/models/comprimir.mjs`):
-cuantiza las posiciones (16 bits) y comprime con EXT_meshopt_compression. Three lo decodifica solo
-(`lib/planogenerator/cargador.ts`), sin archivos aparte. Saltea los GLB ya comprimidos.
-
-- Antes de comprimir guarda en `indice.json` la caja real de cada tipo (`caja`, en cm). Un test compara la
-  caja del GLB comprimido con esa (≤ 0,5 %): así no cambian el tamaño, la variante elegida ni los AJUSTES.
-- `bibliotecaDesdeEscena` pasa las geometrías a Float32 antes de aplicarles la escala del nodo (si no, three
-  las recorta a [-1, 1] y la pieza se deforma).
-- Empates: diferencias de costo menores al 1 % no cambian la orientación ni la variante (`EMPATE` en
-  `biblioteca.ts`): una pieza simétrica no se da vuelta por el 0,2 % que deja la compresión.
-- Para comparar dos versiones (ej. antes y después de comprimir o de rehacer piezas):
-  `npx tsx assets/models/comparar.ts <carpeta-antes> public/models/piezas` (caja, centro, recetas, equipos,
-  AJUSTES, el ajuste a 11 medidas con los tramos de cables y lentes, y 13.552 elecciones de variante).
-  idéntica a otro tipo comparte mallas (`ALIAS`). Sin texturas ni compresión Draco (no hace falta bajar decodificadores).
+- Un nodo raíz estable por tipo, pivote centrado y malla compacta. El GLB crudo usa materiales `cuerpo.<tipo>` y `RECETAS_DETALLE`. El publicado guarda sus recetas en extras y etiquetas por vértice; el cargador reconstruye las mismas partes/materiales para el visor.
+- Límite final: **200 KiB por familia**, sin texturas. Meshopt se decodifica con el módulo incluido en Three.js, sin CDN. La simplificación conserva los tipos redondos y tramos; las normales se reconstruyen conservando las separaciones de aristas. Ver formato y regeneración en [CALIDAD_DEMO.md](blender/CALIDAD_DEMO.md).
 - **Forma y lugar, separados:** la forma (y cómo se puede ajustar) es de Blender; dónde va la pieza y cuánto
   lugar ocupa lo dice el plano. Cada tipo declara su regla en `AJUSTES` (`piezas.py`), que va al GLB
   (`extras.ajuste`) y a `indice.json`; la aplica `partesAjustadas` (`lib/planogenerator/biblioteca.ts`):
@@ -78,7 +58,7 @@ cuantiza las posiciones (16 bits) y comprime con EXT_meshopt_compression. Three 
 ## Familia independiente de dispositivos
 
 [42 componentes de aspiradora, secador, impresora, consola, router/módem y cafetera](blender/DISPOSITIVOS.md),
-con generador, GLB y renders propios. Se regenera con `npm run modelos:dispositivos`.
+con generador, GLB y renders propios. Se publica junto con el resto con `npm run modelos:demo`.
 
 ## Pequeños electrodomésticos y wearables
 
@@ -91,3 +71,9 @@ Familia independiente `cotidianos.glb`: 52 formas nuevas para 13 equipos, con re
 Familia independiente `facultad.glb`: 42 formas faltantes, reutilizando 49 tipos existentes.
 Incluye reglas de ajuste, 42 renders individuales y 15 hojas para los equipos y periféricos.
 [Generación, criterios de cobertura y galería](blender/FACULTAD.md).
+
+## Objetos del campus y revisión de calidad
+
+[21 formas nuevas de canilla, lavatorio, cisterna, reloj de pared, iluminación, calculadora y proyector](blender/CAMPUS.md), reutilizando la biblioteca existente. La galería `/lab/campus` reúne 22 ejemplos genéricos, incluidos celulares, notebooks, MacBook y relojes. Solo funciona en desarrollo o con fixtures; las posiciones de equipos reales siguen viniendo del plano validado.
+
+[Antes/después de las piezas esenciales, presupuesto y reproducción](blender/CALIDAD_DEMO.md).
