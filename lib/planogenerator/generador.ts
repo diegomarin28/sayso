@@ -15,6 +15,7 @@ import {
 } from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
 import { palabras } from "./biblioteca";
+import { acotarMedidas, seguirPlantilla } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
 
 /**
@@ -188,7 +189,7 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
-    const sueltas = conSueltas(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
+    const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
     const avisos = [...avisosCara, ...armado.avisos, ...sueltas.avisos];
     return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo, propuesta };
   } catch (e) {
@@ -197,7 +198,7 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     const plantilla = elegirPlantilla(kp, entrada.tipoEquipo);
     const deTipo = plantilla && plantilla.id !== "notebook" ? plantilla : undefined;
     const armado = deTipo ? planoDesdePlantillaDeTipo(kp, deTipo) : planoDesdePlantilla(kp);
-    const sueltas = conSueltas(armado.plano, kp, plantilla);
+    const sueltas = terminarPlano(armado.plano, kp, plantilla);
     const { plano } = sueltas;
     const avisos = [...armado.avisos, ...sueltas.avisos];
     const cual = deTipo ? `la plantilla genérica de ${deTipo.nombre} (esquema genérico, no es tu modelo exacto)` : "la plantilla genérica";
@@ -468,13 +469,18 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
 }
 
 /**
- * Lo último antes de devolver un plano (también uno de la caché): las piezas del pack que quedaron sin
- * lugar se suman sueltas (ver `sumarSueltas`), así la guía nunca nombra algo que el 3D no tiene. La
- * estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
+ * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
+ * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
+ * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
+ * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene.
+ * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
-export function conSueltas(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
+export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
-  return sumarSueltas(plano, ids, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
+  const seguido = tipo ? seguirPlantilla(plano, ids, tipo) : { plano, avisos: [] };
+  const acotado = acotarMedidas(seguido.plano);
+  const sueltas = sumarSueltas(acotado.plano, ids, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
+  return { plano: sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */
