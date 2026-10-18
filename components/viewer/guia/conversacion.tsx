@@ -190,10 +190,13 @@ export function FilaSugerencias({
   sugerencias,
   mensajes,
   onPreguntar,
+  extra,
 }: {
   sugerencias: string[];
   mensajes: MensajeChat[];
   onPreguntar: (texto: string) => void;
+  /** Otro botón de la fila, después de "Conversación" (ej. "¿De dónde sale esto?"). */
+  extra?: ReactNode;
 }) {
   const [abierta, setAbierta] = useState(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
@@ -209,6 +212,7 @@ export function FilaSugerencias({
             <Globo /> Conversación{preguntas > 0 ? ` (${preguntas})` : ""}
           </button>
         )}
+        {extra}
         {sugerencias.map((s) => (
           <button
             key={s}
