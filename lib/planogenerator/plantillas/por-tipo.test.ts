@@ -56,6 +56,24 @@ describe("elegirPlantilla", () => {
     expect(r.plano.piezas.map((p) => p.pieza)).toEqual(expect.arrayContaining(["cartucho_toner", "puerta_frontal"]));
   });
 
+  it("notebook sin ventilador: por el tipo o por el modelo del pack; nunca una notebook común ni un aire", () => {
+    const conModelo = (modelo: string, ids: string[] = []) => ({ ...pack("notebook", ids), modelo });
+    // La recepción dice "notebook" y el pack, el modelo: dos variantes de la línea sin ventilador.
+    expect(elegirPlantilla(conModelo("MacBook Air M1 2020"), "notebook")?.id).toBe("notebook_sin_ventilador");
+    expect(elegirPlantilla(conModelo("MacBook Air 13 M2 (2022)"), "notebook")?.id).toBe("notebook_sin_ventilador");
+    expect(elegirPlantilla(pack("notebook", []), "MacBook Air de 15 pulgadas")?.id).toBe("notebook_sin_ventilador");
+    // Con ventilador o sin señal: la genérica.
+    expect(elegirPlantilla(conModelo("MacBook Pro 14 M3", ["ventilador"]), "notebook")?.id).toBe("notebook");
+    expect(elegirPlantilla(conModelo("MacBook Pro 16"), "notebook")?.id).toBe("notebook");
+    expect(elegirPlantilla(conModelo("IdeaPad 3 15ITL6", ["conector_usb_c", "bateria"]), "notebook")?.id).toBe("notebook");
+    expect(elegirPlantilla(conModelo("Pavilion 15"), "laptop HP")?.id).toBe("notebook");
+    // "air" no es "aire".
+    expect(elegirPlantilla(conModelo("Midea Xtreme Save 12000"), "aire acondicionado")?.id).toBe("aire");
+    // La de la Air no trae ventilador, RAM ni SSD.
+    const sinVent = PLANTILLAS_POR_TIPO.find((p) => p.id === "notebook_sin_ventilador")!;
+    for (const id of ["ventilador", "ram", "ssd", "heatpipe"]) expect(sinVent.plano.piezas.some((p) => p.pieza === id), id).toBe(false);
+  });
+
   it("si no, por la clase del knowledge pack", () => {
     expect(elegirPlantilla(pack("split", []))?.id).toBe("aire");
     expect(elegirPlantilla(pack("lavarropas", []))?.id).toBe("lavarropas");
@@ -94,7 +112,8 @@ describe("planoDesdePlantillaDeTipo", () => {
   });
 
   it("cada plantilla, con las mismas piezas que tiene, se arma entera y valida", () => {
-    for (const t of PLANTILLAS_POR_TIPO.filter((x) => x.id !== "notebook")) {
+    // Las notebooks no: su tapa inferior la maneja aparte la tapa del equipo.
+    for (const t of PLANTILLAS_POR_TIPO.filter((x) => !x.id.startsWith("notebook"))) {
       const { plano, avisos } = planoDesdePlantillaDeTipo(pack("otro", t.plano.piezas.map((p) => p.pieza)), t);
       expect(() => PlanoDePiezas.parse(plano), t.id).not.toThrow();
       expect(plano.piezas.length, t.id).toBe(t.plano.piezas.length);

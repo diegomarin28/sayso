@@ -2,7 +2,7 @@ import indice from "../../public/models/piezas/indice.json";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
 import { ES_TAPA } from "./cubiertas";
-import { emparejar, type PlantillaDeEquipo } from "./plantillas/por-tipo";
+import { emparejar, equivalentes, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
 const NOMBRES = Object.keys(INDICE.tipos);
@@ -21,10 +21,14 @@ const NOMBRES = Object.keys(INDICE.tipos);
  * `piezasGenericas`). Origen "plantilla".
  * Se aplica en la forma final del plano (después de `ajustarPlanoAlTipo`): al generar y al leer de la caché.
  */
-export function seguirPlantilla(plano: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
+export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
+  // Un plano guardado con otro nombre para la misma pieza (`placa_logica`, de un pack anterior) y el pack de
+  // ahora que la llama `placa_madre`: se renombra, en vez de sumar una segunda placa.
+  const renombradas = renombrarEquivalentes(original, ids);
+  const plano = renombradas.plano;
   const raiz = plano.piezas.find((p) => !p.padre);
   const raizT = plantilla.plano.piezas.find((p) => !p.padre);
-  if (!raiz || !raizT) return { plano, avisos: [] };
+  if (!raiz || !raizT) return { plano, avisos: renombradas.avisos };
 
   const esta = new Set(plano.piezas.map((p) => p.pieza));
   // Las tapas no: las pone `conTapa`, sobre el plano terminado.
@@ -42,7 +46,7 @@ export function seguirPlantilla(plano: PlanoDePiezas, ids: string[], plantilla: 
   const genericas = sinRaiz.plano.piezas
     .map((t) => t.pieza)
     .filter((idT) => !usadas.has(idT) && !cara.includes(idT) && !esta.has(idT) && !ids.includes(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)));
-  if (!usadas.size && !cara.length && !genericas.length) return { plano, avisos: [] };
+  if (!usadas.size && !cara.length && !genericas.length) return { plano, avisos: renombradas.avisos };
 
   // Un equipo parado se ve desde atrás, abierto (+z, hacia la cámara, es la espalda: ver `pararPlano`); el
   // esqueleto lo dibuja de frente (+z es la pantalla). Por eso en un parado la profundidad va espejada.
@@ -80,11 +84,30 @@ export function seguirPlantilla(plano: PlanoDePiezas, ids: string[], plantilla: 
   return {
     plano: { ...plano, piezas: [...piezas, ...nuevas, ...deLaCara, ...delEsqueleto] },
     avisos: [
+      ...renombradas.avisos,
       ...deLaCara.map((p) => `"${p.pieza}" es parte de la cara de ${plantilla.nombre}: se suma del esqueleto.`),
       ...(delEsqueleto.length ? [`${delEsqueleto.length} pieza(s) genéricas de ${plantilla.nombre} que el pack no nombra: ${delEsqueleto.map((p) => p.pieza).join(", ")}.`] : []),
       ...(movidas ? [`${movidas} pieza(s) sin página del manual se ubicaron según el esqueleto de ${plantilla.nombre}.`] : []),
       ...nuevas.map((p) => `"${p.pieza}" no estaba en el plano: va donde la pone el esqueleto de ${plantilla.nombre}.`),
     ],
+  };
+}
+
+/** Cada id del pack que falta en el plano toma el lugar de una pieza equivalente que el pack no nombra. */
+function renombrarEquivalentes(plano: PlanoDePiezas, ids: string[]): { plano: PlanoDePiezas; avisos: string[] } {
+  const esta = new Set(plano.piezas.map((p) => p.pieza));
+  const delPack = new Set(ids);
+  const nombres = new Map<string, string>();
+  for (const id of ids) {
+    if (esta.has(id)) continue;
+    const vieja = plano.piezas.find((p) => p.padre && !delPack.has(p.pieza) && !nombres.has(p.pieza) && equivalentes(p.pieza, id));
+    if (vieja) nombres.set(vieja.pieza, id);
+  }
+  if (!nombres.size) return { plano, avisos: [] };
+  const nuevo = (id?: string) => (id && nombres.get(id)) ?? id;
+  return {
+    plano: { ...plano, piezas: plano.piezas.map((p) => ({ ...p, pieza: nuevo(p.pieza)!, ...(p.padre ? { padre: nuevo(p.padre) } : {}) })) },
+    avisos: [...nombres].map(([v, n]) => `"${v}" del plano guardado es "${n}" en el pack: se usa ese nombre.`),
   };
 }
 

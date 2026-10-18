@@ -26,6 +26,7 @@ import {
   planoHeladera,
   planoImpresora,
   planoImpresoraLaser,
+  planoNotebookSinVentilador,
   planoLavarropas,
   planoMicroondas,
   planoRouter,
@@ -75,10 +76,13 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
 });
 
 /** Lo que hace falta del pack para elegir la plantilla: su clase y los ids de sus piezas. */
-export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }> };
+export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string };
 
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
+  // "MacBook Air": "macbook" nombra a las dos y la pista "air" desempata. "MacBook Pro" (con ventilador)
+  // empata y desempatan las piezas del pack; sin piezas que decidan, la genérica de arriba.
+  t("notebook_sin_ventilador", "notebook sin ventilador", planoNotebookSinVentilador, "macbook", "notebook", false, "air"),
   t("celular", "celular", planoCelular, "celular telefono smartphone movil iphone", undefined, false, "galaxy moto motorola redmi pixel"),
   t("heladera", "heladera", planoHeladera, "heladera refrigerador freezer congelador nevera", undefined, true),
   t("aire", "aire split", planoAire, "aire split acondicionado climatizador", "split", true),
@@ -133,6 +137,30 @@ const MIN_DISTINTIVAS = 2;
  * freezer es una heladera). Sin señal suficiente, `undefined`: el que llama usa la caja genérica.
  */
 export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
+  const elegida = elegirPorTipo(kp, tipoEquipo);
+  return elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
+}
+
+/**
+ * Dentro de la misma clase, la plantilla que mejor nombra el modelo del pack (sus palabras valen 1 y sus
+ * pistas medio). La recepción dice "notebook"; el pack, "MacBook Air M1": la notebook sin ventilador. Solo
+ * si nombra MÁS que la elegida: "MacBook Pro" empata y queda la genérica; "IdeaPad 3" no nombra a ninguna.
+ */
+function especializar(elegida: PlantillaDeEquipo, modelo: string): PlantillaDeEquipo {
+  if (!elegida.clase) return elegida;
+  const delModelo = palabras(modelo);
+  const puntos = (p: PlantillaDeEquipo) =>
+    delModelo.reduce((n, d) => n + (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0), 0);
+  let mejor = { p: elegida, n: puntos(elegida) };
+  for (const p of PLANTILLAS_POR_TIPO) {
+    if (p === elegida || p.clase !== elegida.clase) continue;
+    const n = puntos(p);
+    if (n > mejor.n) mejor = { p, n };
+  }
+  return mejor.p;
+}
+
+function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
   // Por nombre: la que más palabras comparte con lo que dijo la recepción, las pistas valen medio
   // ("control remoto" no es un joystick; "control de PlayStation", sí). Empate: la nombrada primero
   // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, la primera de la lista.
@@ -200,6 +228,12 @@ const EQUIVALENTES: string[][] = [
   ["conector_carga", "puerto_carga", "puerto_usb", "conector_usb", "conector_lightning"],
 ];
 const grupoDe = (id: string) => EQUIVALENTES.find((g) => g.some((n) => id === n || id.startsWith(`${n}_`)));
+
+/** ¿Dos ids nombran la misma pieza? (`placa_logica` y `placa_madre`: sí; `placa_madre` y `placa_carga`: no). */
+export function equivalentes(a: string, b: string): boolean {
+  const g = grupoDe(a);
+  return a === b || (!!g && g === grupoDe(b));
+}
 
 /**
  * Qué pieza de la plantilla le toca a cada id del pack: primero los ids iguales; después un nombre
