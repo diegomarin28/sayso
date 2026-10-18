@@ -145,7 +145,7 @@ describe("<VistaCompras>", () => {
   });
 
   it("antes de buscar, un botón; buscando, un aviso (cada búsqueda cuesta: no arranca sola)", () => {
-    expect(html({ t: "inicio" })).toContain("Buscar repuesto");
+    expect(html({ t: "inicio" })).toContain("Ver dónde comprar esta pieza");
     expect(html({ t: "buscando" })).toContain('aria-busy="true"');
   });
 });

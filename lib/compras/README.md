@@ -28,4 +28,4 @@ import { OpcionesCompra } from "@/components/compras";
   modelo={ficha.modelo.valor} marca={ficha.marca.valor} onEvento={agregarAlFeed} />
 ```
 
-Los repuestos con número de parte salen de `pack.repuestos`. Por defecto espera el toque en "Buscar repuesto"; `buscarAlMontar` busca solo. Para otra pieza, cambiar la `key`.
+Los repuestos con número de parte salen de `pack.repuestos`. Por defecto espera el toque en "Ver dónde comprar esta pieza"; `buscarAlMontar` busca solo. Para otra pieza, cambiar la `key`.
