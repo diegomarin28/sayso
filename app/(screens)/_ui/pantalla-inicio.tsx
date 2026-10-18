@@ -10,7 +10,7 @@ export function PantallaInicio() {
     <div className="inicio" aria-hidden>
       <div className="flex flex-col items-center gap-5">
         <Simbolo tam={132} />
-        <p className="inicio-nombre text-5xl font-extrabold tracking-tight">{NOMBRE_PRODUCTO}</p>
+        <p className="inicio-nombre font-titulo text-5xl font-bold tracking-tight">{NOMBRE_PRODUCTO}</p>
         <p className="inicio-lema max-w-xs px-6 text-center text-sm text-texto-suave">{LEMA}</p>
       </div>
     </div>

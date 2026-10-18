@@ -88,7 +88,7 @@ export function Marca({ tam = 40, conSimbolo = true }: { tam?: number; conSimbol
   return (
     <span className="inline-flex items-center gap-2.5">
       {conSimbolo && <Simbolo tam={tam} />}
-      <span className="leading-none font-extrabold tracking-tight" style={{ fontSize: tam * 0.8 }}>
+      <span className="font-titulo leading-none font-bold tracking-tight" style={{ fontSize: tam * 0.8 }}>
         {NOMBRE_PRODUCTO}
       </span>
     </span>

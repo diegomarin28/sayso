@@ -154,7 +154,7 @@ function SelloPaso({ paso, packVerificado }: { paso: KnowledgePack["pasos"][numb
   const { texto, verificado } = textoSelloPaso(paso, packVerificado);
   return (
     <span
-      className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] ${
+      className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
         verificado ? "bg-confirmado/15 text-confirmado" : "bg-texto/10 text-texto-suave"
       }`}
     >
