@@ -151,3 +151,19 @@ describe("pasosDelPack: «Seguir con la guía» al abrir desde Mis casos (#219, 
     expect(pasosDelPack({ ...knowledgePackEjemplo, pasos: [] }, planoEjemplo)).toEqual([]);
   });
 });
+
+describe("herramientas en la guía del pack (#230)", () => {
+  it("la primera vez que un paso nombra una herramienta, le suma qué es, para qué sirve y cómo se usa", () => {
+    const pack = {
+      ...knowledgePackEjemplo,
+      pasos: [
+        { id: "p1", orden: 1, texto: "Apagá y desenchufá el equipo.", piezas: [], riesgo: "bajo" as const },
+        { id: "p2", orden: 2, texto: "Calentá el borde con el iOpener.", piezas: [], riesgo: "bajo" as const },
+        { id: "p3", orden: 3, texto: "Volvé a calentar con el iOpener y pasá una púa.", piezas: [], riesgo: "bajo" as const },
+      ],
+    };
+    const dichos = pasosDelPack(pack, planoEjemplo).map((c) => c.dice);
+    expect(dichos.filter((d) => d.includes("iOpener (bolsa térmica): es una bolsa con gel"))).toHaveLength(1);
+    expect(dichos.at(-1)).toMatch(/Púa o espátula de plástico: es una pieza fina de plástico/);
+  });
+});

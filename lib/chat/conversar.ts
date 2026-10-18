@@ -1,3 +1,4 @@
+import { conExplicacion } from "../herramientas/herramientas";
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { KnowledgePack, PlanoDePiezas, type Accion, type Cita, type Coreografia, type Evento } from "../../shared";
@@ -150,6 +151,8 @@ type Contexto = {
   maxFrases: number;
   /** Tipo de equipo para la seguridad. */
   tipoEquipo: string;
+  /** Herramientas ya explicadas en esta respuesta: cada una se explica la primera vez que se nombra (#230). */
+  herramientas: Set<string>;
   /** Páginas del manual completo que tiene el extracto (null = sin traducir). */
   paginas: number[] | null;
   /** URL de cada documento de texto (secciones de un manual web o pasos de una guía). */
@@ -170,7 +173,7 @@ function emitir(s: Segmento, ctx: Contexto): EventoChat {
   const cita = citaDe(s, ctx);
   const { coreografia, evaluacion } = filtrarCoreografia({
     paso: ctx.paso,
-    dice: s.texto,
+    dice: conExplicacion(s.texto, ctx.herramientas),
     acciones,
     riesgo: "bajo",
     ...(cita ? { cita } : {}),
@@ -272,7 +275,7 @@ export async function* conversar(
     : [...new Set([...pack.piezas.map((p) => p.id), ...planoNotebookBase.piezas.map((p) => p.pieza)])];
   const doc = pack.fuentes[0]?.doc ?? "Manual";
   const procedimiento = pideProcedimiento(pregunta);
-  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [], paginas: null, verificable: true,
+  const ctx: Contexto = { pack, doc, piezas: new Set(piezas), paso: 0, resaltadosPrevios: [], usos: [], paginas: null, verificable: true, herramientas: new Set(),
     tipoEquipo: entrada.tipoEquipo ?? pack.clase,
     // Pregunta de seguimiento: respuesta corta. Salvo que pida un procedimiento (todos sus pasos).
     maxFrases: entrada.historial.length === 0 ? Infinity : procedimiento ? LIMITES.chat.maxFrasesProcedimiento : LIMITES.chat.maxFrasesSeguimiento,

@@ -49,8 +49,12 @@ export function nombrePieza(pieza: string, nombre?: string | null): string {
  */
 export function enlaceBusqueda(p: { pieza: string; nombre?: string | null; numeroParte?: string | null; modelo: string; marca?: string | null }): string {
   const terminos = p.numeroParte ? [p.numeroParte] : [nombrePieza(p.pieza, p.nombre), p.marca ?? "", p.modelo];
-  const consulta = terminos
-    .join(" ")
+  return enlaceMercadoLibre(terminos.join(" "));
+}
+
+/** Una búsqueda en Mercado Libre Uruguay (solo abre la página de resultados; no es un resultado verificado). */
+export function enlaceMercadoLibre(texto: string): string {
+  const consulta = texto
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()

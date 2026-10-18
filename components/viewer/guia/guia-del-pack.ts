@@ -1,4 +1,5 @@
 import type { Accion, Coreografia, KnowledgePack, PlanoDePiezas } from "../../../shared";
+import { conExplicacion } from "../../../lib/herramientas/herramientas";
 import { conArticulo } from "./conversacion";
 
 /**
@@ -101,7 +102,7 @@ export function guiaDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreogra
     }
   }
 
-  return salida.map((c, i) => ({ paso: i + 1, ...c }));
+  return numerar(salida);
 }
 
 /**
@@ -120,5 +121,14 @@ export function pasosDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreogr
     }
     salida.push({ dice: p.texto, ...(p.cita ? { cita: p.cita } : {}), acciones: irA(p.piezas.filter((id) => enPlano.has(id))), riesgo: p.riesgo });
   }
-  return salida.map((c, i) => ({ paso: i + 1, ...c }));
+  return numerar(salida);
+}
+
+/**
+ * Numera los pasos y, la primera vez que uno nombra una herramienta (iOpener, púa, cinta…), le suma una línea
+ * con qué es, para qué sirve y cómo se usa (#230). Un paso de riesgo alto (frenamos) no se toca.
+ */
+function numerar(salida: Omit<Coreografia, "paso">[]): Coreografia[] {
+  const explicadas = new Set<string>();
+  return salida.map((c, i) => ({ paso: i + 1, ...c, dice: c.riesgo === "alto" ? c.dice : conExplicacion(c.dice, explicadas) }));
 }
