@@ -122,6 +122,7 @@ export const Repuesto = z.object({
 
 /** Rasgos observados en las fuentes; ausente significa conservar la forma actual. */
 export const Rasgos3D = z.object({
+  celular: z.object({ camarasTraseras: z.union([z.literal(1),z.literal(2),z.literal(3)]).optional(), muesca: z.boolean().optional(), bordes: z.enum(["redondeados","rectos"]).optional() }).optional(),
   televisor: z.object({ apoyo: z.enum(["central", "laterales"]).optional() }).optional(),
   tablet: z.object({ botonFrontal: z.boolean().optional() }).optional(),
   auriculares: z.object({ formato: z.enum(["over_ear", "in_ear"]).optional() }).optional(),

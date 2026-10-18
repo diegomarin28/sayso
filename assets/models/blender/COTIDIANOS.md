@@ -387,3 +387,7 @@ conexión al pack y caché integrada (#302). Renders frontales de 46 y 32 pulgad
 ## Auriculares por formato explícito
 
 `rasgos3D.auriculares.formato` distingue `over_ear` e `in_ear`, solo si las fuentes lo traen. Sin dato conserva la elección anterior. `auriculares_variantes.glb` aporta arco, copa y almohadilla ovalada con nombres aislados; in-ear reutiliza la biblioteca actual. Los componentes nombrados por el pack se contienen en la copa correspondiente, después de recolocar el resto. El cambio de estuche a diadema no reinterpreta sus medidas como las del otro formato.
+
+## Celular: cámaras, muesca y perfil por dato explícito
+
+`celular_variantes.glb` aporta módulos de 1/2/3 cámaras, dos pantallas y dos marcos. `rasgos3D.celular.camarasTraseras`, `muesca` y `bordes` se validan y se aplican de manera independiente: sin uno de esos campos sigue la forma anterior de esa pieza. Los nombres aislados terminan en `_dato` y no se ofrecen como IDs al bibliotecario. Todas las combinaciones se prueban en dos tamaños y con datos de marca/modelo cambiados.

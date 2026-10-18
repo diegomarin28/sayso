@@ -83,6 +83,9 @@ PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué 
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
 RASGO|televisor|apoyo|central o laterales: solo si las fuentes muestran el apoyo del televisor; si no se sabe, OMITIR, nunca inferir por marca/modelo.
+RASGO|celular|camarasTraseras|1, 2 o 3: solo cantidad visible en fuentes.
+RASGO|celular|muesca|si o no: solo si se ve el frente.
+RASGO|celular|bordes|redondeados o rectos: solo si las fuentes muestran el perfil. Omití cualquier RASGO desconocido, nunca deduzcas por marca/modelo.
 RASGO|tablet|botonFrontal|si o no: solo si las fuentes muestran inequívocamente si la tablet tiene botón frontal. Si no se sabe, OMITIR la línea; nunca inferir por marca/modelo.
 RASGO|auriculares|formato|over_ear o in_ear: solo si las fuentes muestran diadema con copas o cápsulas in-ear; si no se sabe, OMITIR, nunca inferir por marca/modelo.
 FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
