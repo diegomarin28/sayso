@@ -316,8 +316,8 @@ export async function armarKnowledgePack(
     try {
       [lectura, contenido] = (await leer()) ?? [null, null];
       // Escalada (una sola vez): si el modelo barato no sacó ningún paso del manual, lo relee el más capaz.
-      if (contenido && contenido.pasos.length === 0 && puedeEscalar(MODELO_DE.lectura)) {
-        eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no dio pasos: la repito con un modelo más capaz."));
+      if (contenido && !pasosDelManual(contenido) && puedeEscalar(MODELO_DE.lectura)) {
+        eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no sacó pasos citados del manual: la repito con un modelo más capaz."));
         [lectura, contenido] = (await leer({ modelo: ESCALADA.hacia, motivo: "sin_pasos" })) ?? [lectura, contenido];
       }
     } catch (e) {
@@ -325,7 +325,7 @@ export async function armarKnowledgePack(
       huboFalla = true;
       console.error("[knowledge] falló la lectura del manual:", (e as Error).message);
     }
-    if (!contenido || contenido.pasos.length === 0) {
+    if (!contenido || !pasosDelManual(contenido)) {
       eventos.push(
         evento(casoId, "bibliotecario", "lectura_sin_pasos", "El manual no me dio pasos que pueda usar; armo una guía pública (NO VERIFICADO).", {
           ...(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }),
@@ -334,7 +334,7 @@ export async function armarKnowledgePack(
       console.warn("[knowledge] lectura sin pasos:", JSON.stringify(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }));
     }
   }
-  const conManual = fuenteManual !== null && contenido !== null && contenido.pasos.length > 0;
+  const conManual = fuenteManual !== null && contenido !== null && pasosDelManual(contenido);
   let fuentesPublicas: string[] = [];
   let fotosPasos: Record<string, string> = {};
   /** Fuentes del pack sin manual cuando el código las conoce (ej. la guía de iFixit, con su atribución). */
@@ -528,6 +528,15 @@ export async function armarKnowledgePack(
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
+}
+
+/**
+ * ¿La lectura sacó del manual al menos un paso citado? Los chequeos sin abrir de la parte 1 pueden ir sin cita
+ * (los habituales del tipo de equipo): solo con eso no hay guía del manual, y se sigue con iFixit o la guía
+ * pública (con el manual adjunto, así lo que sí está en el manual sale VERIFICADO).
+ */
+function pasosDelManual(c: Contenido): boolean {
+  return c.pasos.some((p) => p.cita?.estado === "VERIFICADO");
 }
 
 /** Id de una guía de iFixit por su URL (ej. https://www.ifixit.com/Guide/Algo/1234), o null. */

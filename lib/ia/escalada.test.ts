@@ -105,7 +105,9 @@ describe("(d) lectura del manual sin pasos", () => {
       }
       modelos.push(p.model);
       escaladas.push(escalada);
-      return p.model === MODELOS.vision ? mensaje([{ type: "text", text: "PASO|1|Sacá la tapa.|tapa_inferior|bajo" }]) : mensaje([{ type: "text", text: "nada útil" }]);
+      // Un paso sin cita no cuenta como guía del manual: el de Sonnet viene citado (como la API real).
+      const cita = { type: "page_location", cited_text: "Remove the base cover screws", document_index: 0, document_title: "HMM", start_page_number: 1, end_page_number: 2, file_id: null };
+      return p.model === MODELOS.vision ? mensaje([{ type: "text", text: "PASO|1|Sacá la tapa.|tapa_inferior|bajo", citations: [cita] }]) : mensaje([{ type: "text", text: "nada útil" }]);
     };
     const { PDFDocument } = await import("pdf-lib");
     const doc = await PDFDocument.create();
