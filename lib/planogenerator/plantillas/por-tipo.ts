@@ -88,7 +88,8 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador"),
   t("impresora", "impresora", planoImpresora, "impresora"),
-  // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: la de arriba.
+  // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: empatan y
+  // desempatan las piezas del pack (tóner → láser); sin piezas que decidan, la de arriba.
   t("impresora_laser", "impresora láser", planoImpresoraLaser, "impresora laser toner", undefined, false, "laserjet"),
   t("consola", "consola", planoConsola, "consola playstation play xbox nintendo switch videojuegos"),
   t("router", "router", planoRouter, "router modem"),
@@ -136,15 +137,23 @@ export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): Planti
   // ("control remoto" no es un joystick; "control de PlayStation", sí). Empate: la nombrada primero
   // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, la primera de la lista.
   const dichas = tipoEquipo ? palabras(tipoEquipo) : [];
+  const candidatas: { p: PlantillaDeEquipo; n: number; primera: number }[] = [];
   let porNombre: { p: PlantillaDeEquipo; n: number; primera: number } | undefined;
   for (const p of PLANTILLAS_POR_TIPO) {
     const peso = (d: string) => (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0);
     const posiciones = dichas.flatMap((d, i) => (peso(d) ? [i] : []));
     if (!posiciones.length) continue;
     const cand = { p, n: dichas.reduce((n, d) => n + peso(d), 0), primera: posiciones[0] };
+    candidatas.push(cand);
     if (!porNombre || cand.n > porNombre.n || (cand.n === porNombre.n && cand.primera < porNombre.primera)) porNombre = cand;
   }
-  if (porNombre) return porNombre.p;
+  if (porNombre) {
+    // Empate de verdad (misma palabra, mismo peso: "impresora" nombra a la de tinta y a la láser): desempatan
+    // las piezas del pack. Gana la que tiene en el pack más tipos de pieza que las otras empatadas no tienen
+    // (tóner o fusora → láser; cabezal o cartucho de tinta → tinta). Sin piezas que decidan, la primera de la lista.
+    const empatadas = candidatas.filter((c) => c.n === porNombre!.n && c.primera === porNombre!.primera).map((c) => c.p);
+    return empatadas.length > 1 ? (porPiezasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
+  }
   const porClase = PLANTILLAS_POR_TIPO.find((p) => p.clase && p.clase === kp.clase);
   if (porClase) return porClase;
   const tiposDelPack = kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x);
@@ -153,6 +162,19 @@ export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): Planti
     const distintivos = DISTINTIVOS.get(p.id)!;
     const n = tiposDelPack.filter((x) => distintivos.has(x)).length;
     if (n >= MIN_DISTINTIVAS && (!mejor || n > mejor.n)) mejor = { p, n };
+  }
+  return mejor?.p;
+}
+
+/** Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras. */
+function porPiezasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): PlantillaDeEquipo | undefined {
+  const tipos = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => tipoDe(x.pieza)).filter((x): x is string => !!x));
+  const delPack = new Set(kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x));
+  let mejor: { p: PlantillaDeEquipo; n: number } | undefined;
+  for (const p of empatadas) {
+    const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...tipos(q)]));
+    const n = [...tipos(p)].filter((x) => !otras.has(x) && delPack.has(x)).length;
+    if (n > 0 && (!mejor || n > mejor.n)) mejor = { p, n };
   }
   return mejor?.p;
 }
