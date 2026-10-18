@@ -169,19 +169,25 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
     expect(JSON.stringify(stream.pedidos[2].system)).toMatch(/guía pública adjunta \(de iFixit/);
   });
 
-  it("sin manual ni iFixit: da los pasos generales del tipo de equipo, NO VERIFICADO y sin mandar al manual", async () => {
-    const stream = guion([["[[manual]]"], ["Apagá el celular. ", "Calentá el borde de la pantalla. ", "Levantala con una ventosa. "]]);
-    const otro = { ...knowledgePackEjemplo, modelo: "Marca Desconocida Z9" };
-    const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
-    const pasos = dichos(ev);
-    expect(pasos[0].dice).toBe("No tengo el manual oficial de este equipo para esto. Te doy los pasos generales para un equipo de tipo celular: no son de este modelo, así que andá con cuidado.");
-    expect(pasos.slice(1).map((p) => p.dice)).toEqual(["Apagá el celular.", "Calentá el borde de la pantalla.", "Levantala con una ventosa."]);
-    expect(pasos[1].cita).toEqual({ doc: "Pasos generales para celular (sin fuente)", estado: "NO_ENCONTRADO" });
-    expect(pasos.map((p) => p.dice).join(" ")).not.toMatch(/consult/i);
-    // Sin búsqueda web (apagada hasta que la apruebe Diego): una sola llamada más, sin herramientas.
-    expect(stream.pedidos).toHaveLength(2);
-    expect(stream.pedidos[1].tools).toBeUndefined();
-    expect(JSON.stringify(stream.pedidos[1].system)).toMatch(/pasos GENERALES de cómo se hace eso en un equipo de tipo .{0,2}celular/);
+  it("sin manual ni iFixit, con la búsqueda web apagada: da los pasos generales del tipo de equipo, NO VERIFICADO y sin mandar al manual", async () => {
+    const antes = LIMITES_CHAT.busquedaWeb;
+    LIMITES_CHAT.busquedaWeb = false;
+    try {
+      const stream = guion([["[[manual]]"], ["Apagá el celular. ", "Calentá el borde de la pantalla. ", "Levantala con una ventosa. "]]);
+      const otro = { ...knowledgePackEjemplo, modelo: "Marca Desconocida Z9" };
+      const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
+      const pasos = dichos(ev);
+      expect(pasos[0].dice).toBe("No tengo el manual oficial de este equipo para esto. Te doy los pasos generales para un equipo de tipo celular: no son de este modelo, así que andá con cuidado.");
+      expect(pasos.slice(1).map((p) => p.dice)).toEqual(["Apagá el celular.", "Calentá el borde de la pantalla.", "Levantala con una ventosa."]);
+      expect(pasos[1].cita).toEqual({ doc: "Pasos generales para celular (sin fuente)", estado: "NO_ENCONTRADO" });
+      expect(pasos.map((p) => p.dice).join(" ")).not.toMatch(/consult/i);
+      // Sin búsqueda web: una sola llamada más, sin herramientas.
+      expect(stream.pedidos).toHaveLength(2);
+      expect(stream.pedidos[1].tools).toBeUndefined();
+      expect(JSON.stringify(stream.pedidos[1].system)).toMatch(/pasos GENERALES de cómo se hace eso en un equipo de tipo .{0,2}celular/);
+    } finally {
+      LIMITES_CHAT.busquedaWeb = antes;
+    }
   });
 
   it("los pasos generales pasan por la seguridad: un paso peligroso se bloquea", async () => {
@@ -191,7 +197,8 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
     expect(ev.some((e) => e.tipo === "bloqueo")).toBe(true);
   });
 
-  it("con la búsqueda web prendida, primero busca una guía pública (citas NO_VERIFICABLE) y no da pasos generales", async () => {
+  it("con la búsqueda web prendida (decisión #206), primero busca una guía pública (citas NO_VERIFICABLE) y no da pasos generales", async () => {
+    const antes = LIMITES_CHAT.busquedaWeb;
     LIMITES_CHAT.busquedaWeb = true;
     try {
       const cita: Anthropic.TextCitation = { type: "web_search_result_location", cited_text: "Remove the screws", url: "https://guias.ej/z9", title: "Guía Z9", encrypted_index: "x" };
@@ -204,7 +211,7 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
       expect(stream.pedidos[1].tools?.length).toBeGreaterThan(0);
       expect(stream.pedidos).toHaveLength(2);
     } finally {
-      LIMITES_CHAT.busquedaWeb = false;
+      LIMITES_CHAT.busquedaWeb = antes;
     }
   });
 

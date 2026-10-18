@@ -71,7 +71,7 @@ export const LIMITES = {
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
   guiaPublica: { busquedas: 4, continuaciones: 3, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
-  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,02–0,04 por pregunta). Apagada hasta que la apruebe Diego. */ busquedaWeb: false, busquedasPorPregunta: 2 },
+  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,02–0,04 por pregunta). Prendida por decisión de Diego (#206). */ busquedaWeb: true, busquedasPorPregunta: 2 },
 } as const;
 
 // ---------- Costo ----------
