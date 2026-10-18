@@ -240,3 +240,23 @@ Nuevas:
 
 Reutilizadas: `fuente`, `transformador`, `capacitor`, `conector@usb_c`, `conector_usb_a`, `cable@redondo`.
 
+
+## Tablet completa — #233
+
+`tablet_demo.py` publica **tablet_demo.glb** (12 KB): `marco@tablet` hueco,
+`tapa_trasera@tablet`, `pantalla@tablet` y `bateria@tablet`. Placa, cámara y tornillos
+se reutilizan por nombre. Son piezas distintas, sin fusionar todo en una sola malla;
+el plano puede desplazar el frente, levantar la trasera y quitar tornillos por separado.
+La cara activa mira a +Y en el GLB (+Z de Blender), sin girar la tablet sobre su espalda.
+El modelo cerrado tiene el frente completo y opaco; el render abierto usa esas mismas piezas.
+
+Cobertura: `tablet-cobertura.json`, dos tamaños de 17,5 × 25 y 21,35 × 30,5 cm.
+La cámara inicial, el cierre y los pasos de apertura del producto los conecta el otro
+chat por #233; agregar mallas no cambia por sí solo la coreografía existente.
+
+![Tablet completa](renders/tablet_demo/tablet_cerrada_1.jpg)
+![Las mismas piezas separadas](renders/tablet_demo/tablet_abierta_1.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/tablet_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/tablet_demo.py -- --salida /tmp/tablet --renders assets/models/blender/renders/tablet_demo`.
+Test: `npx vitest run assets/models/blender/tablet-demo.test.ts`.
