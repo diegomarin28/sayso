@@ -22,6 +22,8 @@ import {
   animar,
   continuarAnimacion,
   encuadre,
+  intensidadRelleno,
+  RELLENO,
   colocarEtiqueta,
   LINEA_ETIQUETA,
   liberar,
@@ -415,8 +417,25 @@ function LuzDeEstudio({ entorno }: { entorno: boolean }) {
       )}
       <ambientLight intensity={0.15} />
       <directionalLight position={[25, 40, 30]} intensity={1.4} />
+      <RellenoDeCamara />
     </>
   );
+}
+
+/** Luz suave desde la cámara (ver `intensidadRelleno`): lo que se mira desde abajo no queda negro. */
+function RellenoDeCamara() {
+  const luz = useRef<THREE.DirectionalLight>(null);
+  const adelante = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const l = luz.current;
+    if (!l) return;
+    camera.getWorldDirection(adelante);
+    l.position.copy(camera.position);
+    l.target.position.copy(camera.position).add(adelante);
+    l.target.updateMatrixWorld();
+    l.intensity = intensidadRelleno(-adelante.y);
+  });
+  return <directionalLight ref={luz} intensity={RELLENO.minimo} />;
 }
 
 type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
