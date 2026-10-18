@@ -10,8 +10,9 @@ import { buscarManual, type ManualEncontrado } from "./buscar";
 import { descargarPdf, type Fetch } from "./descargar";
 import { nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, prepararExtracto, type Extracto } from "./extracto";
 import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
-import { leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
-import { armarManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
+import { atribucion, buscarGuiaIfixit, fotosPorPaso, guiaIfixit, manualWebDeIfixit, type GuiaIfixit } from "./ifixit";
+import { bloqueManual, leerDocumentos, leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
+import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, esSoloGuia, repoManuales, vistasDe, type RepoManuales } from "./manuales";
 import { combinar, instruccionesVistas, SIN_VISTAS } from "./vistas";
@@ -38,6 +39,8 @@ export type Armado = {
   vistas: Vistas;
   vistaInterior?: VistaInteriorImagen | null;
   imagenesPaginas?: Record<number, string>;
+  /** Guía de iFixit: { URL del paso (la de su cita): foto del paso }. Vacío si no hubo iFixit. */
+  fotosPasos?: Record<string, string>;
 };
 
 /** Caché de packs. En la ruta se usa la de Supabase (`cachePacksSupabase`); acá, memoria por defecto. */
@@ -58,19 +61,20 @@ export function claveCache(ficha: Ficha, sintoma: string): string {
 const IDS_PLANTILLA = planoNotebookBase.piezas.map((p) => p.pieza);
 
 /** `publicasAdjuntas`: sin manual, pero con las páginas de una guía pública ya guardadas (van adjuntas, sin búsqueda web). */
-function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[], publicasAdjuntas = false): string {
+function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[], publicasAdjuntas = false, manualAdjunto = false): string {
   const fuente = conManual ? "el manual" : "las fuentes";
+  const publicas = publicasAdjuntas ? "las guías públicas adjuntas (no son del fabricante)" : "fuentes públicas de la web (buscá con la herramienta)";
   const origen = conManual
     ? "el manual de servicio adjunto"
-    : publicasAdjuntas
-      ? "las guías públicas adjuntas (no son del fabricante)"
-      : "fuentes públicas de la web (buscá con la herramienta)";
+    : manualAdjunto
+      ? `${publicas} y el manual oficial adjunto (que no trae el diagnóstico de este síntoma). Si un paso o una pieza está en el manual oficial, citá el manual`
+      : publicas;
   return `Prepará una guía de reparación casera a partir de ${origen}.
 Escribí SOLO líneas con este formato exacto, una por renglón, sin títulos ni markdown:
 PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la vista explosionada (o vacío)
-PASO|orden|instrucción corta para una persona sin experiencia|ids de piezas separados por coma|riesgo (bajo, medio o alto)
+PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
-ADVERTENCIA|texto
+ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
 ${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
 - Ids de pieza en minúsculas con guion bajo, que EMPIECEN con el tipo de pieza (así el 3D sabe dibujarla), por ejemplo ventilador_evaporador o carcasa_heladera. En una notebook, si la pieza coincide, usá estos ids tal cual: ${IDS_PLANTILLA.join(", ")}.
 - Tipos de pieza que el 3D sabe dibujar:
@@ -78,6 +82,7 @@ ${tiposParaPrompt()}
 - Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
 - Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
 - NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
+- Todo lo que se le dice a la persona (nombre y ubicación de la PIEZA, PASO, ADVERTENCIA) va en castellano rioplatense: traducí, nunca copies frases del manual en inglés ni las pegues al final (el original ya queda en la cita), y sin negritas ni markdown.
 - Sin manual oficial, igual armá pasos CONCRETOS para el síntoma (no consejos genéricos): primero lo que se revisa sin abrir (cables, control, fuente o fusible externo, pruebas de diagnóstico del fabricante) y después, si hace falta, cómo abrir y qué pieza revisar.
 - Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: si hay que abrirlo, el PASO 1 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
 - Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
@@ -88,8 +93,9 @@ ${tiposParaPrompt()}
 }
 
 /** Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`). */
-async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje): Promise<Lectura> {
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: tareaPack(equipo, sintoma, false, []) }];
+async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje, adjuntos: Anthropic.DocumentBlockParam[] = []): Promise<Lectura> {
+  const tarea = tareaPack(equipo, sintoma, false, [], false, adjuntos.length > 0);
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: [...adjuntos, { type: "text", text: tarea }] }];
   const bloques: Anthropic.TextBlock[] = [];
   let motivo: string | null = null;
   for (let i = 0; i <= LIMITES.guiaPublica.continuaciones; i++) {
@@ -323,7 +329,39 @@ export async function armarKnowledgePack(
   }
   const conManual = fuenteManual !== null && contenido !== null && contenido.pasos.length > 0;
   let fuentesPublicas: string[] = [];
-  if (!conManual && esSoloGuia(registro)) {
+  let fotosPasos: Record<string, string> = {};
+  /** Fuentes del pack sin manual cuando el código las conoce (ej. la guía de iFixit, con su atribución). */
+  let fuentesGuia: { doc: string; url: string }[] = [];
+  // Lo que se leyó del manual oficial (sin pasos para el síntoma) va adjunto a la guía pública: así cada
+  // paso que esté en el manual sale con su cita VERIFICADO y el resto queda como guía pública.
+  const adjuntos: Anthropic.DocumentBlockParam[] = conManual ? [] : manual ? [bloqueManual(manual)] : manualWeb ? bloquesManualWeb(manualWeb) : [];
+  const urlsAdjuntos = manualWeb && adjuntos.length ? manualWeb.secciones.map((x) => x.url) : adjuntos.map(() => "");
+  const esAdjunto = (documento: number) => documento < adjuntos.length;
+  const conPaginasDelManual = (c: Contenido) => (manual && adjuntos.length ? aPaginasDelManual(c, manual.paginas) : c);
+  /** Guía de iFixit (gratis, sin IA para buscarla) leída con citas: cada cita lleva la URL de su paso. */
+  const conIfixit = async (guia: GuiaIfixit): Promise<boolean> => {
+    const web = manualWebDeIfixit(guia);
+    const l = await leerDocumentos([...adjuntos, ...bloquesManualWeb(web)], tareaPack(equipoDescrito, sintoma, false, [], true, adjuntos.length > 0), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía de iFixit");
+    const c = conPaginasDelManual(parsearContenido(lineasConCitas(l.bloques), guia.titulo, [...urlsAdjuntos, ...web.secciones.map((x) => x.url)], tipoEquipo ?? ficha.clase, esAdjunto));
+    if (!c.pasos.length) return false;
+    [lectura, contenido] = [l, c];
+    fuentesPublicas = [guia.url];
+    fuentesGuia = [{ doc: atribucion(guia), url: guia.url }];
+    fotosPasos = fotosPorPaso(guia);
+    eventos.push(evento(casoId, "bibliotecario", "guia_ifixit", `Armé la guía con la de iFixit "${guia.titulo}" (guía pública, NO VERIFICADO).`, { url: guia.url }));
+    return true;
+  };
+  const idIfixit = registro && esSoloGuia(registro) ? idDeGuiaIfixit(registro.fuentes_publicas[0]) : null;
+  if (!conManual && idIfixit !== null) {
+    // Guía de iFixit ya conocida: se vuelve a pedir por su API (gratis), sin buscar en la web.
+    try {
+      const guia = await guiaIfixit(idIfixit, deps.fetch);
+      if (guia && (await conIfixit(guia))) eventos.push(evento(casoId, "bibliotecario", "guia_publica_en_cache", "Ya tenía la guía de iFixit de este equipo: la releo sin buscar en la web (NO VERIFICADO)."));
+    } catch (e) {
+      if (e instanceof IAEnPausa) throw e;
+      console.error("[knowledge] no pude releer la guía de iFixit:", (e as Error).message);
+    }
+  } else if (!conManual && esSoloGuia(registro)) {
     // Guía pública ya conocida: el código baja esas páginas (gratis) y se leen como texto, sin búsqueda web.
     try {
       const guardadas = registro!.fuentes_publicas;
@@ -345,10 +383,31 @@ export async function armarKnowledgePack(
       console.error("[knowledge] no pude releer la guía pública guardada:", (e as Error).message);
     }
   }
+  if (!conManual && fuentesPublicas.length === 0 && !esSoloGuia(registro)) {
+    // iFixit antes que la búsqueda web: gratis, con pasos y fotos. Se guarda para no volver a buscar el manual.
+    try {
+      const guia = await buscarGuiaIfixit(nombreEquipo, sintoma, deps.fetch);
+      if (guia && (await conIfixit(guia)) && !encontrado && !registro) {
+        await repo.guardar({
+          marca: ficha.marca.valor ?? "",
+          modelo,
+          url: guia.url,
+          titulo: "Guías públicas",
+          ...columnasVistas(SIN_VISTAS),
+          verificado: false,
+          fuente: "ifixit",
+          fuentes_publicas: [guia.url],
+        });
+      }
+    } catch (e) {
+      if (e instanceof IAEnPausa) throw e;
+      console.error("[knowledge] no pude usar la guía de iFixit:", (e as Error).message);
+    }
+  }
   if (!conManual && fuentesPublicas.length === 0) {
     try {
-      lectura = await guiaPublica(equipoDescrito, sintoma, enviar);
-      contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública", undefined, tipoEquipo ?? ficha.clase);
+      lectura = await guiaPublica(equipoDescrito, sintoma, enviar, adjuntos);
+      contenido = conPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública", urlsAdjuntos, tipoEquipo ?? ficha.clase, esAdjunto));
       fuentesPublicas = fuentesWeb(lectura.bloques).map((f) => f.url).slice(0, LIMITES.guiaPublica.maxFuentes);
       // Se guardan sus fuentes (si no hay un manual guardado), así la próxima no se paga la búsqueda web.
       if (contenido.pasos.length && fuentesPublicas.length && (!registro || esSoloGuia(registro)) && !encontrado) {
@@ -393,9 +452,11 @@ export async function armarKnowledgePack(
     fuentes:
       conManual && fuenteManual
         ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }]
-        : fuentesWeb(lectura.bloques).length
-          ? fuentesWeb(lectura.bloques)
-          : fuentesPublicas.map((url) => ({ doc: url, url })),
+        : [
+            ...(fuentesGuia.length ? fuentesGuia : fuentesWeb(lectura.bloques).length ? fuentesWeb(lectura.bloques) : fuentesPublicas.map((url) => ({ doc: url, url }))),
+            // Si algún paso salió del manual oficial adjunto, el manual también es fuente.
+            ...(fuenteManual && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO") ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }] : []),
+          ],
     piezas: contenido.piezas,
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
@@ -454,10 +515,16 @@ export async function armarKnowledgePack(
     });
   }
 
-  const armado: Armado = { pack, manual: conManual ? manual : null, vistas, vistaInterior, imagenesPaginas };
+  const armado: Armado = { pack, manual: conManual ? manual : null, vistas, vistaInterior, imagenesPaginas, fotosPasos };
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
+}
+
+/** Id de una guía de iFixit por su URL (ej. https://www.ifixit.com/Guide/Algo/1234), o null. */
+export function idDeGuiaIfixit(url: string | undefined): number | null {
+  const m = url ? /^https:\/\/(?:www\.)?ifixit\.com\/Guide\/[^/]+\/(\d+)/i.exec(url) : null;
+  return m ? Number(m[1]) : null;
 }
 
 /** Fuentes web citadas cuando no hubo manual (para mostrar de dónde salió la guía NO VERIFICADA). */
