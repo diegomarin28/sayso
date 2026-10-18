@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { OpcionCompra } from "../../lib/compras/esquemas";
 import { MENSAJE_PAUSA } from "../../lib/ia/pausa";
 import { ErrorCompras, MENSAJES, type FuenteCompras, type RespuestaCompras } from "./fuente";
+import { Herramientas } from "./Herramientas";
 import { OpcionesCompra } from "./OpcionesCompra";
 
 /**
@@ -71,6 +72,12 @@ export const CASOS: Record<string, FuenteCompras> = {
   rota: async () => (await demora(400), { opciones: TRES }) as unknown as RespuestaCompras,
 };
 
+/** Pasos de ejemplo que nombran herramientas (para ver "Herramientas que necesitás", #230). */
+const PASOS_CON_HERRAMIENTAS = [
+  { texto: "Colocá el iOpener en el centro del microondas y calentalo." },
+  { texto: "Levantá el vidrio con una ventosa y pasá una púa por el borde." },
+];
+
 /** Piezas de ejemplo: una sin número de parte (se busca por modelo) y una con. */
 export const PIEZAS = {
   celular: { pieza: "conector_lightning", nombre: "Conector Lightning de carga", numeroParte: null, modelo: "iPhone 13", marca: "Apple" },
@@ -105,6 +112,7 @@ export function LabCompras({ casoInicial, piezaInicial }: { casoInicial?: string
         ))}
       </div>
       <OpcionesCompra key={`${caso}-${pieza}`} {...PIEZAS[pieza]} fuente={CASOS[caso]} buscarAlMontar />
+      <Herramientas pasos={PASOS_CON_HERRAMIENTAS} className="border-t border-borde pt-5" />
     </main>
   );
 }

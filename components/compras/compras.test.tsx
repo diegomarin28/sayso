@@ -192,3 +192,18 @@ describe("<VistaCompras>", () => {
     expect(html({ t: "buscando" })).toContain('aria-busy="true"');
   });
 });
+
+describe("<Herramientas> (#230)", () => {
+  it("lista las herramientas de los pasos con qué es cada una y la búsqueda en Mercado Libre; sin herramientas, nada", async () => {
+    const { Herramientas } = await import("./Herramientas");
+    const h = renderToStaticMarkup(<Herramientas pasos={[{ texto: "Calentá el borde con el iOpener." }, { texto: "Pasá una púa por el borde." }]} />);
+    expect(h).toContain("Herramientas que necesitás");
+    expect(h).toContain("iOpener (bolsa térmica)");
+    expect(h).toContain("Es una bolsa con gel que se calienta en el microondas; sirve para ablandar el pegamento");
+    expect(h.match(/iOpener \(bolsa térmica\)/g)).toHaveLength(1); // el nombre una sola vez
+    expect(h).toContain('href="https://listado.mercadolibre.com.uy/iopener-bolsa-termica-reparacion-celular"');
+    expect(h).toContain("ferretería o en una casa de electrónica");
+    expect(h).not.toMatch(/<form|pagar ahora/i);
+    expect(renderToStaticMarkup(<Herramientas pasos={[{ texto: "Desenchufalo." }]} />)).toBe("");
+  });
+});

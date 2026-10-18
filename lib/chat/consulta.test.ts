@@ -178,7 +178,12 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
       const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
       const pasos = dichos(ev);
       expect(pasos[0].dice).toBe("No tengo el manual oficial de este equipo para esto. Te doy los pasos generales para un equipo de tipo celular: no son de este modelo, así que andá con cuidado.");
-      expect(pasos.slice(1).map((p) => p.dice)).toEqual(["Apagá el celular.", "Calentá el borde de la pantalla.", "Levantala con una ventosa."]);
+      // La ventosa se explica la primera vez que se nombra (#230).
+    expect(pasos.slice(1).map((p) => p.dice)).toEqual([
+      "Apagá el celular.",
+      "Calentá el borde de la pantalla.",
+      expect.stringMatching(/^Levantala con una ventosa\. Ventosa: es un disco de goma con manija que se pega por vacío; sirve para /),
+    ]);
       expect(pasos[1].cita).toEqual({ doc: "Pasos generales para celular (sin fuente)", estado: "NO_ENCONTRADO" });
       expect(pasos.map((p) => p.dice).join(" ")).not.toMatch(/consult/i);
       // Sin búsqueda web: una sola llamada más, sin herramientas.

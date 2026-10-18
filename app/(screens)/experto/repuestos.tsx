@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
+import { Herramientas, OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
 import { piezasParaComprar } from "./piezas-compra";
@@ -184,6 +184,8 @@ export function Repuestos({
               />
             </div>
           ))}
+          {/* Las herramientas que nombran los pasos, con qué es cada una y dónde conseguirla (#230). */}
+          <Herramientas pasos={pack.pasos} className="border-t border-borde pt-5" />
         </div>
       </div>
     </>
