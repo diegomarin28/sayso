@@ -121,8 +121,14 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         tipoEquipo,
         setCaso: (c, tipo) => {
           if (tipo !== undefined) setTipoEquipo(tipo);
+          // En el mismo caso, si la persona cambió de equipo (volvió a la pantalla 1 y eligió otro),
+          // las fotos, la ficha, la guía y el 3D eran del anterior: también arranca de cero (#229-4).
+          const otroEquipo =
+            !!c &&
+            c.id === caso?.id &&
+            ((tipo !== undefined && (tipo ?? "") !== (tipoEquipo ?? "")) || c.clase !== caso.clase);
           // Un caso nuevo arranca de cero.
-          if (c?.id !== caso?.id) {
+          if (c?.id !== caso?.id || otroEquipo) {
             if (tipo === undefined) setTipoEquipo(null);
             setFotos([]);
             setImagenes({});

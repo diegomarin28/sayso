@@ -45,8 +45,7 @@ import {
   bajarRendimiento,
   calidadInicial,
   dprPara,
-  esPlana,
-  puntosVigia,
+  imagenPlana,
   RENDIMIENTO_PLENO,
   soporteDe,
   Vigia,
@@ -300,10 +299,6 @@ type Falla = "sin_webgl" | "contexto" | "negro" | "error";
 
 /** Si iOS pierde el contexto y no lo devuelve en este plazo, se arma un lienzo nuevo. */
 const ESPERA_CONTEXTO_MS = 2500;
-/** Lado de cada cuadrado de la imagen que mira el vigía (px del lienzo; ver `puntosVigia`). */
-const LADO_VIGIA = 16;
-/** El vigía mira una grilla de 5×5: un equipo con huecos (una impresora sin carcasa) igual cae en algún punto. */
-const PUNTOS_VIGIA = 5;
 
 const TEXTO_FALLA: Record<Falla, string> = {
   sin_webgl: "Este navegador no puede mostrar el 3D. La guía sigue funcionando por voz y texto.",
@@ -362,12 +357,11 @@ class Resguardo extends Component<{ children: ReactNode; onError: (e: unknown) =
 }
 
 /**
- * Mira la imagen (una grilla de puntos, ver `puntosVigia`) los primeros segundos (ver `Vigia`). Corre después de los efectos
+ * Mira la imagen (filas y columnas enteras, ver `lineasVigia`) los primeros segundos (ver `Vigia`). Corre después de los efectos
  * (prioridad 2); con prioridad > 0 R3F deja de dibujar solo, así que sin efectos dibuja él.
  */
 function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolean; onNegro: () => void; onListo: () => void }) {
   const vigia = useRef(new Vigia());
-  const pixeles = useMemo(() => new Uint8Array(4 * LADO_VIGIA * LADO_VIGIA), []);
   const esquina = useMemo(() => new Uint8Array(4), []);
   const avisado = useRef(false);
   useFrame(({ gl, scene, camera }) => {
@@ -383,13 +377,19 @@ function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolea
     if (avisado.current) return;
     gl.setRenderTarget(null);
     const ctx = gl.getContext();
-    // Falla solo si TODA la grilla es del color de la esquina (el fondo, o negro si se rompió todo):
-    // un objeto oscuro en el centro no es una falla.
+    // Falla solo si TODAS las líneas son del color de la esquina (el fondo, o negro si se rompió todo):
+    // un objeto oscuro (la pantalla de una TV de frente) no es una falla: sus bordes no son del fondo.
     ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, esquina);
-    const negro = puntosVigia(ctx.drawingBufferWidth, ctx.drawingBufferHeight, LADO_VIGIA, PUNTOS_VIGIA).every(([x, y]) => {
-      ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
-      return esPlana(pixeles, esquina);
-    });
+    const negro = imagenPlana(
+      (t) => {
+        const px = new Uint8Array(4 * t.ancho * t.alto);
+        ctx.readPixels(t.x, t.y, t.ancho, t.alto, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
+        return px;
+      },
+      ctx.drawingBufferWidth,
+      ctx.drawingBufferHeight,
+      esquina,
+    );
     if (v.registrar(negro) === "negro") {
       avisado.current = true;
       onNegro();

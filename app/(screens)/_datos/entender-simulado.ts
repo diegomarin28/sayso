@@ -18,10 +18,30 @@ const EQUIPOS: { palabras: RegExp; clase: Caso["clase"]; tipo: string }[] = [
   { palabras: /\b(impresora)\b/i, clase: "otro", tipo: "impresora" },
 ];
 
-export function entenderSimulado(texto: string): { clase: Caso["clase"]; tipoEquipo: string } {
+/** Una palabra que puede decir algo (tiene vocal y al menos 2 letras): "dddd" no cuenta. */
+const PALABRA = /[a-záéíóúü]*[aeiouáéíóúü][a-záéíóúü]*/gi;
+
+/**
+ * Como la recepción real (#249): `claro` es false si no se sabe qué equipo es o qué le pasa
+ * ("notebook dddd"); `repregunta` pide lo que falta.
+ */
+export function entenderSimulado(texto: string): {
+  clase: Caso["clase"];
+  tipoEquipo: string;
+  claro: boolean;
+  repregunta?: string;
+} {
   const hallado = EQUIPOS.find((e) => e.palabras.test(texto));
-  return hallado ? { clase: hallado.clase, tipoEquipo: hallado.tipo } : { clase: "otro", tipoEquipo: "equipo" };
+  if (!hallado) return { clase: "otro", tipoEquipo: "equipo", claro: false, repregunta: "¿Qué equipo es y qué le pasa?" };
+  // Lo que queda sin el nombre del equipo y sin palabras de relleno: ¿dice algún problema?
+  const resto = texto.replace(hallado.palabras, " ").toLowerCase();
+  const palabras = (resto.match(PALABRA) ?? []).filter((p) => p.length >= 2 && !RELLENO.has(p));
+  return palabras.length
+    ? { clase: hallado.clase, tipoEquipo: hallado.tipo, claro: true }
+    : { clase: hallado.clase, tipoEquipo: hallado.tipo, claro: false, repregunta: `¿Qué le pasa a tu ${hallado.tipo}?` };
 }
+
+const RELLENO = new Set(["mi", "el", "la", "los", "las", "un", "una", "de", "del", "tengo", "es"]);
 
 /** La IA (o la simulada) no supo qué equipo es: hay que volver a preguntar. */
 export function sinEntender(clase: Caso["clase"], tipoEquipo: string | null | undefined): boolean {
