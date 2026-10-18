@@ -17,6 +17,38 @@ import { Alerta } from "./experto";
 const PASOS_A_MOSTRAR = 4;
 const PIEZAS_A_MOSTRAR = 10;
 
+/**
+ * #240: el nombre de la guía para mostrar. Si la fuente viene como URL (guías públicas), muestra el
+ * sitio y el título que trae la dirección, no la URL entera: una URL larga sin espacios estiraba la
+ * pantalla de costado.
+ */
+export function nombreFuente(doc: string | undefined): string {
+  const texto = doc?.trim();
+  if (!texto) return "Guía pública";
+  let url: URL;
+  try {
+    url = new URL(texto);
+  } catch {
+    return texto;
+  }
+  if (!/^https?:$/.test(url.protocol)) return texto;
+  const sitio = url.hostname.replace(/^www\./, "");
+  const titulo = url.pathname
+    .split("/")
+    .map((s) => {
+      try {
+        return decodeURIComponent(s.replace(/\+/g, " "));
+      } catch {
+        return s;
+      }
+    })
+    .filter((s) => /\p{L}{3,}/u.test(s))
+    .sort((a, b) => b.length - a.length)[0];
+  if (!titulo) return sitio;
+  const legible = titulo.includes(" ") ? titulo : titulo.replace(/[-_]+/g, " ");
+  return `${legible.replace(/\.(html?|php|pdf)$/i, "").trim()} · ${sitio}`;
+}
+
 export function ResumenGuia({
   pack,
   plano,
@@ -36,7 +68,7 @@ export function ResumenGuia({
   const visibles = todos ? pasos : pasos.slice(0, PASOS_A_MOSTRAR);
 
   return (
-    <div className="aparece grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
+    <div className="aparece grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
       <div className="flex flex-col items-center gap-2">
         <AnimacionPreparando acto={plano ? "listo" : "plano"} equipo={equipo} />
         {plano && (
@@ -52,8 +84,8 @@ export function ResumenGuia({
           <Documento verificado={pack.verificado} />
           <div className="min-w-0">
             <p className="text-xs tracking-widest text-texto-suave uppercase">Tu guía</p>
-            <p className="mt-0.5 font-semibold leading-snug break-words">
-              {pack.fuentes[0]?.doc ?? "Guía pública"}
+            <p className="mt-0.5 font-semibold leading-snug [overflow-wrap:anywhere]">
+              {nombreFuente(pack.fuentes[0]?.doc)}
             </p>
             <span
               className={`mt-2 inline-block rounded-full border px-2.5 py-0.5 text-xs ${

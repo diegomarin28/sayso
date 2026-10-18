@@ -130,7 +130,8 @@
       "placa",
       "conector",
       "tornillo"
-    ]
+    ],
+    "familia_complementaria": "relojes_demo"
   },
   "reloj": {
     "nuevas": [

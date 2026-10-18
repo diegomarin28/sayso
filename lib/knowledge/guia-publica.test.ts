@@ -63,7 +63,7 @@ const ficha = { ...fichaEjemplo, clase: "otro" as const, marca: { ...fichaEjempl
 const sinCache: CachePacks = { get: async () => undefined, set: async () => {} };
 
 /** Claude falso por etapa: el manual no da pasos para el síntoma; la guía de iFixit sí. */
-function claude(conManualAdjunto: boolean) {
+function claude(conManualAdjunto: boolean, lecturaManual = "nada útil para el síntoma") {
   const etapas: string[] = [];
   const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const enviar: EnviarMensaje = async (p, etapa) => {
@@ -82,7 +82,7 @@ function claude(conManualAdjunto: boolean) {
         { type: "text", text: "\nADVERTENCIA|Si la batería está hinchada, no la toques." },
       ]);
     }
-    return mensaje([{ type: "text", text: "nada útil para el síntoma" }]);
+    return mensaje([{ type: "text", text: lecturaManual }]);
   };
   return { enviar, etapas, pedidos };
 }
@@ -125,6 +125,16 @@ describe("guía pública del síntoma (sin pasos en el manual oficial)", () => {
     expect(c.etapas.filter((e) => e.startsWith("bibliotecario: buscar") || e === "bibliotecario").length).toBe(antes);
     expect(r2.pack.pasos[0].cita?.url).toBe(`${GUIA_URL}#s300`);
     expect(r2.eventos.map((e) => e.tipo)).toContain("guia_publica_en_cache");
+  });
+
+  it("si el manual solo dio chequeos sin cita (los habituales del tipo), no cuenta como guía del manual: sigue con iFixit", async () => {
+    const manuales = repoEnMemoria();
+    await manuales.guardar({ marca: "Fono", modelo: "X21", url: INDICE, titulo: "Fono X21 Repair Manual", verificado: true, fuente: "fabricante" });
+    const c = claude(true, "PASO|1|Apagalo del todo y volvé a prenderlo.|marco|bajo\nFALTA|cómo abrir el equipo");
+    const llamar = async () => JSON.stringify({ secciones: [urlSeccion(4), urlSeccion(3)] });
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales, subir: async () => "f" });
+    expect(c.etapas).toContain("bibliotecario: guía de iFixit");
+    expect(r.pack.pasos.some((p) => p.cita?.estado === "VERIFICADO")).toBe(true); // lo del manual adjunto, citado
   });
 
   it("reconoce la URL de una guía de iFixit", () => {

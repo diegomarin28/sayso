@@ -165,6 +165,23 @@ Reutilizadas: `motor`, `capacitor@motor`, `selector_deslizante`, `cable@redondo`
 
 ### Reloj inteligente
 
+Actualización #234/#247: `relojes_demo.py` publica **relojes_demo.glb**, seis formas
+complementarias (25 KB), sin reexportar cotidianos. `formaPantalla` del pack selecciona
+`caja_reloj@redonda` + `pantalla@reloj_redonda`, o `caja_reloj@cuadrada` +
+`pantalla@reloj_cuadrada`. El visor/generador se conecta en el otro chat.
+Dorso cuadrado y base magnética separados; corona, correa y sensor se reutilizan por nombre.
+Ver `relojes-cobertura.json`. Ejes: X ancho, Y alto, Z largo en GLB; pivote geométrico centrado.
+No usa nombres de marcas para elegir forma. Pruebas de geometría en tamaños 1 y 0,86.
+
+![Redondo](renders/relojes_demo/montaje_redonda_1.jpg)
+![Cuadrado](renders/relojes_demo/montaje_cuadrada_1.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/relojes_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/relojes_demo.py -- --salida /tmp/relojes --renders assets/models/blender/renders/relojes_demo`.
+Los montajes son genéricos de revisión, no nuevos casos ni planos comerciales. La base de carga se muestra al lado del reloj.
+
+
+
 ![Reloj inteligente](renders/cotidianos/hoja_smartwatch.jpg)
 
 Nuevas:
@@ -180,6 +197,34 @@ Nuevas:
 - [microfono_mems](renders/cotidianos/microfono_mems.jpg) — `proporcional`.
 
 Reutilizadas: `bateria@celular`, `placa`, `conector`, `tornillo`.
+
+### Notebook abierta — #232 / #259
+
+`notebook_demo.py` publica **notebook_demo.glb**, menos de 200 KiB. Incluye cuba
+hueca, palmrest con huecos reales, tapa con dos bisagras, panel separado y 60 teclas
+independientes (letras, números, funciones y modificadores). La pieza de la guía `tecla_p` usa la forma `tecla_individual@p`;
+no es un punto dibujado sobre una caja ni parte inseparable del teclado.
+`teclado@bandeja_notebook` es solo la bandeja: cada tecla se monta por su nombre.
+Trackpad, batería y placa existentes se reutilizan; no se inventa RAM/SSD removible.
+
+La tapa se llama `carcasa_pantalla@notebook` para reutilizar la receta de carcasa
+sin tocar materiales.ts. El generador puede mantener `tapa_pantalla` como ID del
+pack y usar esta forma en `formaBiblioteca`. GLB centrado; el plano pone el pivote
+en la bisagra del borde trasero (-Z) y gira sobre X a -110°. La cara activa del panel
+mira hacia -Y al cerrar; al abrir mira hacia la persona delante del teclado.
+No se traslada el pivote del GLB porque rompería el contrato actual de la biblioteca.
+Para la tapa publicada de 31 × 0,76 × 21,38 cm, el eje está en `[0, 0, -10.31]` cm
+respecto de su centro; escalar ese desplazamiento con el tamaño de la tapa.
+Las posiciones de teclas y la apertura del montaje se ven en `notebook_demo.py`;
+`notebook-cobertura.json` documenta nombres y dos tamaños (32 y 36,48 cm de ancho).
+La conexión a la plantilla y a la cámara sigue en #232/#259, en el otro chat.
+
+![Notebook 32 cm](renders/notebook_demo/notebook_abierta_1.jpg)
+![Notebook 36,48 cm](renders/notebook_demo/notebook_abierta_1.14.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/notebook_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/notebook_demo.py -- --salida /tmp/notebook --renders assets/models/blender/renders/notebook_demo`.
+Test: `npx vitest run assets/models/blender/notebook-demo.test.ts`.
 
 ### Reloj de pulsera
 
@@ -253,6 +298,29 @@ Nuevas:
 
 Reutilizadas: `fuente`, `transformador`, `capacitor`, `conector@usb_c`, `conector_usb_a`, `cable@redondo`.
 
+
+## Piezas grandes con borde claro — #231
+
+`contornos_demo.py` publica **contornos_demo.glb** (menos de 10 KB), con
+`carcasa_contorno@tablet`, `panel_contorno@tablet`, `carcasa_contorno@tv` y
+`panel_contorno@tv`. Son mallas con abertura central, pared y labio continuo;
+no hay un rectángulo sólido invisible detrás que vuelva a tapar las piezas.
+Los renders muestran una placa a través del centro, en dos tamaños por tipo.
+
+Son **formas auxiliares para el resaltado**. No se deben elegir como reemplazo de
+la pantalla o carcasa completa en estado cerrado: el equipo perdería su cara.
+El chat del visor controla cuándo usar el borde y cuánto transparentar la superficie
+original (#261). Este PR no resuelve el texto del paso ni cambia shaders del visor.
+Las reglas son por tipo/orientación y dimensiones; no hay marcas ni modelos.
+
+![Interior visible de tablet](renders/contornos_demo/interior_visible_tablet_1.jpg)
+![Interior visible de TV](renders/contornos_demo/interior_visible_tv_1.jpg)
+
+Cobertura: `contornos-cobertura.json`. Los tests tiran rayos por varios puntos del
+centro (deben atravesar) y por el borde (deben chocar), a escalas 0,85 y 1,2.
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/contornos_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/contornos_demo.py -- --salida /tmp/contornos --renders assets/models/blender/renders/contornos_demo`.
+Test: `npx vitest run assets/models/blender/contornos-demo.test.ts`.
 
 ## Tablet completa — #233
 

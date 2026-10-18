@@ -154,7 +154,7 @@ function systemElegir(max: number, foco: FocoExtracto): string {
 - explosionada: la vista explosionada GENERAL del equipo, con sus piezas numeradas y la lista de piezas (máximo 2).
 - interior: 1 o 2 páginas que probablemente muestren el interior completo con el equipo abierto (en una notebook: sacar la tapa inferior, la batería o el ventilador; en un celular: sacar la pantalla o la tapa trasera; en un electrodoméstico: sacar el panel trasero, el gabinete o la tapa).
 - sintoma: rangos {desde, hasta} con lo que sirve para diagnosticar o resolver el síntoma (por ejemplo el índice de síntomas o de errores, y las secciones de las piezas involucradas). Si el manual no tiene diagnóstico para el síntoma, el procedimiento de la pieza que más probablemente lo cause. Nunca páginas de introducción, garantía o avisos legales.`;
-  return `Sos el bibliotecario de un servicio de reparación casera. Te paso el mapa de un manual de servicio en PDF
+  return `Sos el bibliotecario de un servicio de reparación casera. Te paso el mapa de un manual oficial en PDF (de servicio o de usuario)
 (marcadores con su página y el inicio del texto de algunas páginas). No vas a ver el manual: elegí qué páginas leer.
 Devolvé, usando SIEMPRE los números de página del mapa (página física del PDF):
 ${pedido}
