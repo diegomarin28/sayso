@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ES_CUBIERTA } from "../../lib/planogenerator/cubiertas";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
-import { despiezado, type Cubiertas, type EstadoEscena } from "./reproductor";
+import { despiezado, type Cubiertas, type EstadoEscena, type Lado, type Lados } from "./reproductor";
 import { ACTIVO_RESPALDO } from "./tema";
 import { crearTween, seguir, type Tween } from "./tween";
 
@@ -63,7 +63,7 @@ export const OPACIDAD_GRANDE_ACTIVA = 0.3;
 /** Y brilla menos que una pieza chica: con tanta superficie, el brillo entero lava todo a celeste. */
 const BRILLO_GRANDE = 0.45;
 
-const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
+const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650, voltear: 900 };
 const ESCALON_DESPIECE_MS = 70;
 
 type MallaAnimable = {
@@ -116,7 +116,18 @@ export type EscenaPreparada = {
   cubiertas: Cubiertas;
   /** Fundido entre cerrado (0) y abierto (1). */
   apertura: Tween;
+  /** Equipo acostado con caras que se sacan (#233): cuáles son y de qué lado (para `estadoInicial`). */
+  lados?: Lados;
+  /** Cómo se da vuelta (si tiene `lados`): sobre su eje largo, alrededor de su centro, apoyado en el piso. */
+  volteo?: Volteo;
 };
+
+type Volteo = { eje: "x" | "z"; centro: THREE.Vector3; ancho: number; alto: number; tw: Tween };
+
+/** Una pieza es una cara (#233) si su centro está al menos a esta parte del grosor del equipo, arriba o abajo. */
+const FRACCION_CARA = 0.25;
+const ES_PANTALLA = /^pantalla/;
+const ES_TORNILLO = /^tornillo/;
 
 
 /** Gris de las piezas genéricas (`piezasGenericas`: el esqueleto del tipo las suma, el pack no las nombra). */
@@ -173,6 +184,17 @@ export function prepararEscena(
   const direccion = direccionDeCamara(caja.getSize(new THREE.Vector3()));
   const cubiertas: Cubiertas = {};
   for (const a of animables.values()) if (a.cubierta) cubiertas[a.id] = a.ancestros.length === 0 ? "raiz" : "tapa";
+  const lados = ladosDe(animables, caja);
+  const tam = caja.getSize(new THREE.Vector3());
+  const volteo: Volteo | undefined = lados && {
+    eje: tam.z >= tam.x ? "z" : "x",
+    centro: caja.getCenter(new THREE.Vector3()),
+    ancho: tam.z >= tam.x ? tam.x : tam.z,
+    alto: tam.y,
+    tw: crearTween([lados.frente === -1 ? Math.PI : 0]),
+  };
+  // Arranca en la mano: si la pantalla se modeló abajo, ya dado vuelta (sin animar).
+  if (volteo) voltear(raiz, volteo, volteo.tw.hasta[0]);
   return {
     raiz,
     nodos: animables,
@@ -183,7 +205,54 @@ export function prepararEscena(
     direccion,
     cubiertas,
     apertura: crearTween([0]),
+    ...(lados && volteo ? { lados, volteo } : {}),
   };
+}
+
+/**
+ * Las caras de un equipo acostado (#233), por su forma y su nombre, nunca por marca: la pantalla y las tapas que
+ * quedan arriba o abajo del todo (en un celular, la pantalla abajo y la tapa trasera arriba), y los tornillos de
+ * cada lado. `frente`: el lado de la pantalla, si es una cara grande (la de un celular o una tablet; la de un
+ * reloj, con la correa, no). Sin caras, o parado (un TV, una heladera: se mira de frente), nada.
+ */
+function ladosDe(animables: Map<string, NodoAnimable>, caja: THREE.Box3): Lados | undefined {
+  const tam = caja.getSize(new THREE.Vector3());
+  if (tam.y >= PARADO_DESDE * tam.z) return undefined;
+  const centro = caja.getCenter(new THREE.Vector3()).y;
+  const ladoDe = (a: NodoAnimable): Lado | null => {
+    const dy = new THREE.Box3().setFromObject(a.principal ?? a.nodo).getCenter(new THREE.Vector3()).y - centro;
+    return Math.abs(dy) >= FRACCION_CARA * tam.y ? (dy > 0 ? 1 : -1) : null;
+  };
+  const caras: Record<string, Lado> = {};
+  const tornillos: Record<string, Lado> = {};
+  let frente: Lado = 1;
+  const resto: NodoAnimable[] = [];
+  for (const a of animables.values()) {
+    if (a.ancestros.length === 0) continue; // la carcasa de la que cuelga todo no se saca
+    const lado = ladoDe(a);
+    if (lado && ES_TORNILLO.test(a.id)) tornillos[a.id] = lado;
+    else if (lado && (ES_PANTALLA.test(a.id) || a.cubierta)) {
+      caras[a.id] = lado;
+      if (ES_PANTALLA.test(a.id) && a.grande) frente = lado;
+    } else resto.push(a);
+  }
+  // Lo de adentro (todo lo que no es cara ni tornillo): de qué lado de la carcasa queda, en promedio.
+  const raiz = [...animables.values()].find((a) => a.ancestros.length === 0);
+  const centroDe = (a: NodoAnimable) => new THREE.Box3().setFromObject(a.principal ?? a.nodo).getCenter(new THREE.Vector3()).y;
+  const medio = raiz ? centroDe(raiz) : centro;
+  const desvio = resto.reduce((s, a) => s + centroDe(a) - medio, 0);
+  return Object.keys(caras).length ? { frente, caras, tornillos, adentro: desvio < 0 ? -1 : 1 } : undefined;
+}
+
+/**
+ * Deja el equipo girado `angulo` sobre su eje largo (como se da vuelta un celular en la mano), alrededor de su
+ * centro y subido lo justo para que, a mitad del giro, apoye en el canto y no atraviese el piso.
+ */
+function voltear(raiz: THREE.Group, v: Volteo, angulo: number) {
+  const subir = (Math.abs(Math.sin(angulo)) * v.ancho) / 2 + (Math.abs(Math.cos(angulo)) * v.alto) / 2 - v.alto / 2;
+  raiz.rotation.set(v.eje === "x" ? angulo : 0, 0, v.eje === "z" ? angulo : 0);
+  raiz.position.copy(v.centro).sub(v.centro.clone().applyEuler(raiz.rotation));
+  raiz.position.y += subir;
 }
 
 /**
@@ -286,6 +355,13 @@ export function continuarAnimacion(desde: EscenaPreparada, hacia: EscenaPreparad
     a.nodo.position.copy(b.nodo.position);
     a.nodo.rotation.copy(b.nodo.rotation);
   }
+  // Y el giro del equipo sigue donde iba (dado vuelta o a mitad del giro).
+  if (desde.volteo && hacia.volteo) {
+    const tw = desde.volteo.tw;
+    hacia.volteo.tw = { ...tw, desde: [...tw.desde], hasta: [...tw.hasta] };
+    hacia.raiz.position.copy(desde.raiz.position);
+    hacia.raiz.rotation.copy(desde.raiz.rotation);
+  }
 }
 
 export function liberar(raiz: THREE.Object3D) {
@@ -316,6 +392,17 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
   const latido = 1 + 0.25 * Math.sin(ahora / 260);
   const [apertura] = seguir(escena.apertura, [estado.abierto ? 1 : 0], ahora, DURACION.fundido);
   const total = escena.nodos.size;
+  if (escena.volteo) voltear(escena.raiz, escena.volteo, seguir(escena.volteo.tw, [estado.volteado ? Math.PI : 0], ahora, DURACION.voltear)[0]);
+  // Dado vuelta sobre el eje z, el abanico del despiece (en z) se invierte: si no, la capa de arriba se
+  // corre hacia la cámara y tapa a las otras (ver `despiezado`).
+  const abanico = escena.volteo?.eje === "z" && estado.volteado ? -1 : 1;
+  // Primero se da vuelta y después se saca: lo que se mueve o se esconde mientras gira, espera a que termine
+  // (si no, la tapa que se levanta "hacia afuera" arranca hundiéndose en el piso, con la tapa todavía abajo).
+  const volteando = escena.volteo ? Math.max(0, escena.volteo.tw.inicio + escena.volteo.tw.duracion - ahora) : 0;
+  // Abierto del lado donde no está lo de adentro (la pantalla de un celular que se arma desde atrás): la
+  // carcasa, con su placa al medio, taparía todo; se ve translúcida como una tapa.
+  const arriba = estado.volteado ? -1 : 1;
+  const carcasaTapa = !!escena.lados && arriba !== escena.lados.adentro;
 
   for (const [id, a] of escena.nodos) {
     const e = estado.piezas[id];
@@ -325,18 +412,18 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     const escalon = escena.despiece.subiendo ? a.orden : total - 1 - a.orden;
     const despiece = seguir(
       a.tw.despiece,
-      a.despiezado.map((v) => v * estado.despiece) as Vec3,
+      a.despiezado.map((v, i) => v * estado.despiece * (i === 2 ? abanico : 1)) as Vec3,
       ahora,
       DURACION.despiece,
       escalon * ESCALON_DESPIECE_MS,
     );
-    const desp = seguir(a.tw.desp, e.desp, ahora, DURACION.mover);
+    const desp = seguir(a.tw.desp, e.desp, ahora, DURACION.mover, volteando);
     a.nodo.position.set(
       a.reposo.x + desp[0] + despiece[0],
       a.reposo.y + desp[1] + despiece[1],
       a.reposo.z + desp[2] + despiece[2],
     );
-    const [rx, ry, rz] = seguir(a.tw.rot, e.rot, ahora, DURACION.girar);
+    const [rx, ry, rz] = seguir(a.tw.rot, e.rot, ahora, DURACION.girar, volteando);
     a.nodo.rotation.set(rx, ry, rz);
 
     // Rayos X: si hay piezas activas, lo que no es activo ni hijo de activo queda fantasma.
@@ -346,9 +433,10 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     const esFantasma = activos.size > 0 && (!soloGrandes || a.grande) && !esActiva && !a.ancestros.some((p) => activos.has(p));
     const [foco] = seguir(a.tw.foco, [esActiva ? 1 : 0], ahora, DURACION.foco);
     const [fantasma] = seguir(a.tw.fantasma, [esFantasma ? 1 : 0], ahora, DURACION.foco);
-    const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido);
+    const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido, volteando);
 
-    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, a.cubierta ? 1 - apertura : null, a.grande);
+    const comoTapa = a.cubierta || (carcasaTapa && a.ancestros.length === 0);
+    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, comoTapa ? 1 - apertura : null, a.grande);
   }
 }
 

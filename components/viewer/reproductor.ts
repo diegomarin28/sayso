@@ -18,6 +18,10 @@ import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
  * un paso saca o mueve una tapa (`ocultar`, `desplazar` o `rotar` una cubierta; la carcasa raíz no se
  * abre al girarla: girar el TV no es abrirlo) o despieza. Se cierra con `restaurar`, al armar
  * (`despiezar` 0) o con un paso que solo vuelve a la vista general (las tapas vuelven a su lugar).
+ *
+ * En la mano / dado vuelta (#233): un equipo acostado con caras que se sacan (`Lados`: la pantalla y las tapas
+ * de un celular o una tablet) arranca con la pantalla hacia arriba, como se ve en la mano. Al sacar o mover
+ * una cara, el equipo se da vuelta para que esa cara quede arriba; al cerrarse, vuelve a la pantalla.
  */
 
 export const OBJETIVO_GENERAL = "general";
@@ -32,6 +36,22 @@ export type EstadoPieza = {
 /** Qué piezas tapan el equipo: "tapa" (tapas, puertas, carcasas hijas) o "raiz" (la carcasa de la que cuelga todo). */
 export type Cubiertas = Record<string, "tapa" | "raiz">;
 
+/** Lado del plano (eje y) de cada cara: 1 arriba, -1 abajo. */
+export type Lado = 1 | -1;
+
+/**
+ * Las caras de un equipo acostado (#233): lo que se saca para abrirlo desde arriba o desde abajo (la pantalla,
+ * la tapa trasera), con su lado; `frente`, el lado de la pantalla (el que se ve en la mano); y los tornillos que
+ * sujetan cada cara (los de ese lado).
+ */
+export type Lados = {
+  frente: Lado;
+  caras: Record<string, Lado>;
+  tornillos: Record<string, Lado>;
+  /** De qué lado de la carcasa está lo de adentro (en un celular, del lado de la tapa trasera). */
+  adentro: Lado;
+};
+
 export type EstadoEscena = {
   piezas: Record<string, EstadoPieza>;
   despiece: number;
@@ -39,14 +59,24 @@ export type EstadoEscena = {
   /** Abierto: las cubiertas se ven translúcidas (rayos X). Cerrado (o sin dato): opacas. */
   abierto?: boolean;
   cubiertas?: Cubiertas;
+  lados?: Lados;
+  /** Dado vuelta: arriba queda el lado de abajo del plano (la pantalla de un celular, que se modela abajo). */
+  volteado?: boolean;
 };
 
 export type ContextoEventos = { casoId: string };
 
 const reposo = (): EstadoPieza => ({ rot: [0, 0, 0], desp: [0, 0, 0], visible: true, resaltada: false });
 
-export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {}): EstadoEscena {
-  const estado: EstadoEscena = { piezas: {}, despiece: 0, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 }, abierto: false, cubiertas };
+export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {}, lados?: Lados): EstadoEscena {
+  const estado: EstadoEscena = {
+    piezas: {},
+    despiece: 0,
+    camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 },
+    abierto: false,
+    cubiertas,
+    ...(lados ? { lados, volteado: lados.frente === -1 } : {}),
+  };
   for (const id of piezas) estado.piezas[id] = reposo();
   return estado;
 }
@@ -96,9 +126,12 @@ export function aplicarAccion(
   const piezas = { ...estado.piezas };
   const cambiar = (id: string, f: (p: EstadoPieza) => EstadoPieza) => (piezas[id] = f(piezas[id]));
   const cubierta = pieza !== undefined ? estado.cubiertas?.[pieza] : undefined;
-  // Sacar o mover una tapa abre el equipo (girar la carcasa raíz, no).
+  const cara = pieza !== undefined ? estado.lados?.caras[pieza] : undefined;
+  // Sacar o mover una tapa (o una cara, como la pantalla de una tablet) abre el equipo (girar la carcasa raíz, no).
   const abre =
-    (accion.t === "ocultar" || accion.t === "desplazar") && !!cubierta ? true : accion.t === "rotar" && cubierta === "tapa" ? true : undefined;
+    (accion.t === "ocultar" || accion.t === "desplazar") && (!!cubierta || !!cara) ? true : accion.t === "rotar" && (cubierta === "tapa" || !!cara) ? true : undefined;
+  // Y el equipo se da vuelta para que esa cara quede arriba.
+  const volteo = abre && cara ? { volteado: cara === -1 } : {};
 
   switch (accion.t) {
     case "camara":
@@ -122,9 +155,9 @@ export function aplicarAccion(
     case "despiezar":
       return { estado: { ...estado, despiece: accion.cantidad, abierto: accion.cantidad > 0 } };
     case "restaurar":
-      return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas) };
+      return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas, estado.lados) };
   }
-  return { estado: { ...estado, piezas, ...(abre ? { abierto: true } : {}) } };
+  return { estado: { ...estado, piezas, ...(abre ? { abierto: true } : {}), ...volteo } };
 }
 
 /** ¿El paso solo vuelve a la vista general? (Entonces el equipo se cierra.) */
@@ -132,15 +165,21 @@ export function soloVuelveAGeneral(coreografia: Coreografia): boolean {
   return coreografia.acciones.length > 0 && coreografia.acciones.every((a) => a.t === "camara" && a.objetivo === OBJETIVO_GENERAL);
 }
 
-/** Cierra el equipo: las tapas vuelven a su lugar (visibles, sin girar ni correr), armado y opaco. */
+/**
+ * Cierra el equipo: las tapas y las caras vuelven a su lugar (visibles, sin girar ni correr) con sus tornillos,
+ * armado, opaco y con la pantalla hacia arriba.
+ */
 export function cerrar(estado: EstadoEscena): EstadoEscena {
   const piezas = { ...estado.piezas };
-  for (const [id, tipo] of Object.entries(estado.cubiertas ?? {})) {
+  const lados = estado.lados;
+  const tapas: Array<[string, "tapa" | "raiz"]> = [...Object.entries(estado.cubiertas ?? {}), ...Object.keys(lados?.caras ?? {}).map((id) => [id, "tapa"] as [string, "tapa"])];
+  for (const [id, tipo] of tapas) {
     const p = piezas[id];
     if (!p) continue;
     piezas[id] = { ...p, visible: true, desp: [0, 0, 0], rot: tipo === "tapa" ? [0, 0, 0] : p.rot };
   }
-  return { ...estado, piezas, despiece: 0, abierto: false };
+  for (const id of Object.keys(lados?.tornillos ?? {})) if (piezas[id]) piezas[id] = { ...piezas[id], visible: true };
+  return { ...estado, piezas, despiece: 0, abierto: false, ...(lados ? { volteado: lados.frente === -1 } : {}) };
 }
 
 /** Empieza un paso nuevo: apaga los resaltados del paso anterior. */

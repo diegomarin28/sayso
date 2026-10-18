@@ -39,6 +39,7 @@ import {
 } from "./escena";
 import { Cubo } from "./guia/iconos";
 import { piezasGenericas, resumenOrigen, textoEtiquetaPieza, textoResumen, todoDelManual } from "./origen";
+import { conDesarme } from "./desarme";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import {
   bajarCalidad,
@@ -438,7 +439,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     () => prepararEscenaSegura(plano, biblioteca, tipoEquipo, new Set(claveGenericas ? claveGenericas.split(",") : [])),
     [plano, biblioteca, tipoEquipo, claveGenericas],
   );
-  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
   const onPasoRef = useRef(onPaso);
@@ -485,7 +486,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const avisosDados = useRef(new Set<string>());
   useEffect(() => {
     if (!soloPiezas.current) {
-      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
       avisosDados.current = new Set();
     }
     for (const aviso of escena.avisos) {
@@ -526,7 +527,11 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     // Un paso que solo vuelve a la vista general cierra el equipo (las tapas vuelven a su lugar).
     const inicio = comenzarPaso(estado.current);
     actualizar(soloVuelveAGeneral(paso.coreografia) ? cerrar(inicio) : inicio);
-    const timers = paso.coreografia.acciones.map((accion, i) =>
+    // Si el paso saca una cara (la tapa, la pantalla de una tablet), se ve cómo sale (#233).
+    // (La escena de ahora, de `ultima`: `escena` no va en las dependencias, ver abajo.)
+    const actual = ultima.current?.escena;
+    const conSalida = actual ? conDesarme(paso.coreografia, actual.lados, actual.nodos.keys(), 2 * actual.radio) : paso.coreografia;
+    const timers = conSalida.acciones.map((accion, i) =>
       setTimeout(() => {
         const r = aplicarAccion(estado.current, accion, { casoId });
         actualizar(r.estado);

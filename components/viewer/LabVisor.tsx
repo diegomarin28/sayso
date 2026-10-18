@@ -32,10 +32,10 @@ const paso = (dice: string, acciones: Coreografia["acciones"]): Coreografia => (
   acciones,
 });
 
-/** "Abrir tapa" con la tapa del plano que se muestra (la del celular, la de la consola…), no siempre la de notebook. */
+/** "Abrir tapa" y "Sacar la tapa" con la tapa del plano que se muestra (la del celular, la de la consola…), no siempre la de notebook. */
 const conLaTapaDe = (c: Coreografia, plano: PlanoDePiezas): Coreografia => {
   const tapa = plano.piezas.find((p) => p.padre && ES_TAPA.test(p.pieza))?.pieza;
-  return tapa ? { ...c, acciones: c.acciones.map((a) => (a.t === "rotar" ? { ...a, pieza: tapa } : a)) } : c;
+  return tapa ? { ...c, acciones: c.acciones.map((a) => ("pieza" in a && a.pieza === "tapa_inferior" ? { ...a, pieza: tapa } : a)) } : c;
 };
 
 const EXTRAS: Array<[string, Coreografia]> = [
@@ -43,6 +43,9 @@ const EXTRAS: Array<[string, Coreografia]> = [
     { t: "camara", objetivo: "general" },
     { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 },
   ])],
+  // Desarme en vivo (#233): el visor suma levantar y esconder la cara que el paso dice que se saca.
+  ["Sacar la tapa", paso("Sacá la tapa.", [{ t: "camara", objetivo: "general" }, { t: "resaltar", pieza: "tapa_inferior" }])],
+  ["Despegar la pantalla", paso("Despegá la pantalla con la púa.", [{ t: "camara", objetivo: "general" }])],
   ["Despiezar", paso("Así se separa todo.", [{ t: "despiezar", cantidad: 1 }, { t: "camara", objetivo: "general" }])],
   ["Ocultar batería", paso("Escondo la batería.", [{ t: "ocultar", pieza: "bateria" }])],
   ["Pieza inexistente", paso("Esta pieza no existe.", [{ t: "resaltar", pieza: "condensador_de_flujo" }])],
@@ -177,7 +180,7 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
 
         <Seccion titulo="Acciones sueltas">
           {EXTRAS.map(([nombre, c]) => (
-            <Boton key={nombre} onClick={() => reproducir(nombre === "Abrir tapa" ? conLaTapaDe(c, plano) : c)}>{nombre}</Boton>
+            <Boton key={nombre} onClick={() => reproducir(nombre === "Abrir tapa" || nombre === "Sacar la tapa" ? conLaTapaDe(c, plano) : c)}>{nombre}</Boton>
           ))}
         </Seccion>
 
