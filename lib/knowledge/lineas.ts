@@ -93,7 +93,8 @@ function claseVista(campo: string | undefined): ClaseVista | null {
 
 const ID_PIEZA = /^[a-z0-9_]+$/;
 
-export function parsearContenido(lineas: Linea[], doc: string, urls?: string[]): Contenido {
+/** `tipoEquipo`: para la seguridad de cada paso (reglas y mensaje según el equipo). */
+export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], tipoEquipo?: string): Contenido {
   const r: Contenido = {
     piezas: [],
     pasos: [],
@@ -129,7 +130,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[]):
       const [, orden, texto, piezas, riesgo] = campos;
       const propuesto = Riesgo.safeParse(riesgo.toLowerCase());
       // La tabla de seguridad decide; la IA solo puede subir el riesgo.
-      const evaluado = evaluarRiesgo(texto, { riesgoPropuesto: propuesto.success ? propuesto.data : "medio", ignorarNegadas: true });
+      const evaluado = evaluarRiesgo(texto, { riesgoPropuesto: propuesto.success ? propuesto.data : "medio", ignorarNegadas: true, tipoEquipo });
       const p = PasoReparacion.safeParse({
         id: `paso-${orden}`,
         orden: Number(orden),

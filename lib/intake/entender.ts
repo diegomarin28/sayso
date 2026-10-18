@@ -59,5 +59,5 @@ export async function entender(texto: string, llamar?: LlamarIA, id: string = cr
 
   const caso = Caso.parse({ id, clase, sintoma, estado: "captura", creadoEn: new Date().toISOString() });
   // Se evalúa el texto original de la persona, no el resumen de la IA.
-  return { caso, tipoEquipo, seguridad: evaluarPedido(limpio), porIA };
+  return { caso, tipoEquipo, seguridad: evaluarPedido(limpio, { tipoEquipo }), porIA };
 }
