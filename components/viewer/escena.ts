@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ES_CUBIERTA } from "../../lib/planogenerator/cubiertas";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
-import { desplazamientoDespiece, type Cubiertas, type EstadoEscena } from "./reproductor";
+import { despiezado, type Cubiertas, type EstadoEscena } from "./reproductor";
 import { ACTIVO_RESPALDO } from "./tema";
 import { crearTween, seguir, type Tween } from "./tween";
 
@@ -30,6 +30,7 @@ const BORDE_FANTASMA = new THREE.Color("#a9bacb");
 const OSCURO_BORDE_ACTIVO = 0.08;
 const BORDE_ACTIVO = ACTIVO.clone().multiplyScalar(OSCURO_BORDE_ACTIVO);
 const ANGULO_BORDES = 30; // grados: solo aristas marcadas, no las de superficies curvas
+const ANGULO_BORDES_CUBIERTA = 60;
 
 /** Cuánto brilla la pieza activa con el naranja (por el que se ajustó el bloom). */
 const BRILLO_ACTIVO = 0.9;
@@ -63,6 +64,8 @@ type MallaAnimable = {
   /** LineDashedMaterial si la ubicación es incierta. */
   borde: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
   incierta: boolean;
+  /** De una tapa o carcasa: menos aristas, sin punteado, y casi sin bordes con el equipo abierto. */
+  cubierta: boolean;
   color: THREE.Color;
   opacidad: number;
   transparente: boolean;
@@ -81,6 +84,8 @@ export type NodoAnimable = {
   ancestros: string[];
   /** Posición en la secuencia del despiece (de abajo hacia arriba). */
   orden: number;
+  /** Cuánto se mueve en el despiece completo, en ejes del padre (`despiezado`: capas en un equipo plano). */
+  despiezado: Vec3;
   /** Tapa, puerta o carcasa: opaca con el equipo cerrado, translúcida cuando se abre. */
   cubierta: boolean;
   tw: Record<"desp" | "despiece" | "rot" | "visible" | "foco" | "fantasma", Tween>;
@@ -117,6 +122,7 @@ export function prepararEscena(
   const ids = [...nodos.keys()];
   const profundidad = (id: string) => ancestrosDe(nodos.get(id)!, raiz).length;
   const enOrden = [...ids].sort((a, b) => profundidad(a) - profundidad(b) || ids.indexOf(a) - ids.indexOf(b));
+  const despiece = despiezado(plano.piezas.map((p) => ({ id: p.pieza, centro: p.pos, dim: p.dim, padre: p.padre ?? null })));
 
   for (const [id, nodo] of nodos) {
     const padre = nodo.parent?.userData as Partial<DatosPieza> | undefined;
@@ -124,11 +130,12 @@ export function prepararEscena(
       id,
       nodo,
       principal: nodo.getObjectByName(id + SUFIJO_MALLA) as THREE.Mesh,
-      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza), genericas.has(id))),
+      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza), genericas.has(id), ES_CUBIERTA.test(id))),
       reposo: nodo.position.clone(),
       centroPadre: padre?.centro ?? null,
       ancestros: ancestrosDe(nodo, raiz),
       orden: enOrden.indexOf(id),
+      despiezado: despiece.get(id) ?? [0, 0, 0],
       cubierta: ES_CUBIERTA.test(id),
       tw: {
         desp: crearTween([0, 0, 0]),
@@ -204,7 +211,7 @@ export function esIncierta(d: Pick<DatosPieza, "origen">): boolean {
   return d.origen === "estimada" || d.origen === "plantilla";
 }
 
-function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false): MallaAnimable {
+function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false, cubierta = false): MallaAnimable {
   const malla = m as MallaAnimable["malla"];
   const mat = malla.material;
   if (generica) {
@@ -214,9 +221,10 @@ function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false): Mall
   }
   mat.emissive.copy(ACTIVO);
   mat.emissiveIntensity = 0;
-  const geometria = new THREE.EdgesGeometry(malla.geometry, ANGULO_BORDES);
+  // Una carcasa tiene biseles, nervios y rejillas: con 30° era una maraña de líneas finas al abrirla.
+  const geometria = new THREE.EdgesGeometry(malla.geometry, cubierta ? ANGULO_BORDES_CUBIERTA : ANGULO_BORDES);
   let material: THREE.LineBasicMaterial;
-  if (incierta) {
+  if (incierta && !cubierta) {
     geometria.computeBoundingBox();
     const lado = geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().reduce((a, b) => Math.max(a, b), 0);
     const trazo = Math.min(Math.max(lado * TRAZO_PUNTEADO, 0.3), 3);
@@ -225,7 +233,7 @@ function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false): Mall
     material = new THREE.LineBasicMaterial({ color: BORDE, transparent: true, opacity: 0.6 });
   }
   const borde = new THREE.LineSegments(geometria, material);
-  if (incierta) borde.computeLineDistances(); // sin esto, el punteado no se dibuja
+  if (incierta && !cubierta) borde.computeLineDistances(); // sin esto, el punteado no se dibuja
   borde.name = `${malla.name}__borde`;
   borde.raycast = () => {};
   malla.add(borde);
@@ -233,6 +241,7 @@ function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false): Mall
     malla,
     borde,
     incierta,
+    cubierta,
     color: mat.color.clone(),
     opacidad: mat.opacity,
     transparente: mat.transparent,
@@ -291,11 +300,10 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     if (!e) continue;
 
     // Posición y giro.
-    const centro = (a.nodo.userData as DatosPieza).centro;
     const escalon = escena.despiece.subiendo ? a.orden : total - 1 - a.orden;
     const despiece = seguir(
       a.tw.despiece,
-      desplazamientoDespiece(centro, a.centroPadre, estado.despiece),
+      a.despiezado.map((v) => v * estado.despiece) as Vec3,
       ahora,
       DURACION.despiece,
       escalon * ESCALON_DESPIECE_MS,
@@ -321,7 +329,9 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
 }
 
 /** Una cubierta con el equipo abierto se ve así de translúcida como mucho (aunque su receta sea opaca, ej. una puerta). */
-const OPACIDAD_CUBIERTA_ABIERTA = 0.2;
+const OPACIDAD_CUBIERTA_ABIERTA = 0.12;
+/** Con el equipo abierto, los bordes de una tapa o carcasa se ven a esta fracción: no tapan lo de adentro. */
+const BORDE_CUBIERTA_ABIERTA = 0.45;
 
 /**
  * `cerrada`: null si no es una cubierta; si lo es, 1 = equipo cerrado (opaca aunque su receta o su
@@ -349,7 +359,9 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   const b = m.borde.material;
   b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(BORDE_ACTIVO, foco);
   // El punteado se marca un poco más que el borde sólido: es la señal de "no verificado".
-  b.opacity = lerp(lerp(m.incierta ? 0.45 : 0.22, 0.4, fantasma), m.incierta ? 0.85 : 0.7, foco) * visible;
+  const punteado = m.incierta && !m.cubierta;
+  const bordeCubierta = m.cubierta && cubierta !== null ? lerp(BORDE_CUBIERTA_ABIERTA, 1, cerrada) : 1;
+  b.opacity = lerp(lerp(punteado ? 0.45 : 0.22, 0.4, fantasma), punteado ? 0.85 : 0.7, foco) * visible * bordeCubierta;
   m.borde.visible = b.opacity > 0.01;
 }
 
@@ -386,6 +398,23 @@ const FRACCION_LIBRE_MIN = 0.4;
  * los objetos en pantalla, así que para bajar la pieza es negativo).
  * En un celular en vertical el ancho es el que limita: se encuadra para que entre en los dos ejes.
  */
+/** Con el despiece, el radio del equipo entero se toma casi completo (sin recortar las puntas). */
+const MARGEN_DESPIECE = 1;
+
+/** La caja del equipo con cada pieza donde la deja el despiece (`cantidad`), sin moverlas de verdad. */
+export function cajaDespiezada(escena: EscenaPreparada, cantidad: number): THREE.Box3 {
+  const antes = new Map<NodoAnimable, THREE.Vector3>();
+  for (const a of escena.nodos.values()) {
+    antes.set(a, a.nodo.position.clone());
+    a.nodo.position.set(a.reposo.x + a.despiezado[0] * cantidad, a.reposo.y + a.despiezado[1] * cantidad, a.reposo.z + a.despiezado[2] * cantidad);
+  }
+  escena.raiz.updateMatrixWorld(true);
+  const caja = new THREE.Box3().setFromObject(escena.raiz);
+  for (const [a, p] of antes) a.nodo.position.copy(p);
+  escena.raiz.updateMatrixWorld(true);
+  return caja;
+}
+
 export function encuadre(
   escena: EscenaPreparada,
   objetivo: string,
@@ -396,7 +425,10 @@ export function encuadre(
   reservadoArriba = 0,
 ) {
   const nodo = escena.nodos.get(objetivo)?.nodo ?? escena.raiz;
-  const caja = new THREE.Box3().setFromObject(nodo);
+  // Despiezado, el equipo entero se mide con cada pieza en su lugar final (no un margen fijo): lo que se
+  // abre hacia los costados (los aros de un parlante, las capas de un celular) entra en la pantalla.
+  const cajaEquipo = () => (despiece > 0 ? cajaDespiezada(escena, despiece) : new THREE.Box3().setFromObject(escena.raiz));
+  const caja = nodo === escena.raiz ? cajaEquipo() : new THREE.Box3().setFromObject(nodo);
   const esfera = caja.getBoundingSphere(new THREE.Sphere());
   // Una pieza se encuadra con su entorno para que se entienda dónde está.
   // Con el despiece las piezas suben y se abren: se deja más margen.
@@ -407,14 +439,16 @@ export function encuadre(
   // 12 cm, un conector de celular quedaba como un puntito al borde del celular entero (prueba real).
   const { width, height } = tamPantalla;
   const ajusteGeneral = width < height ? 1 : 0.8;
-  const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * (ajusteGeneral + 0.45 * despiece), (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
+  // Despiezado no se recorta nada (en horizontal, 0,8 cortaba las puntas del despiece).
+  const ajuste = despiece > 0 ? Math.max(ajusteGeneral, MARGEN_DESPIECE) : ajusteGeneral;
+  const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * ajuste, (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
   let radio: number;
   if (nodo === escena.raiz) radio = radioGeneral(caja, esfera);
   else {
-    const cajaEquipo = new THREE.Box3().setFromObject(escena.raiz);
-    const radioEquipo = cajaEquipo.getBoundingSphere(new THREE.Sphere()).radius;
-    const entorno = Math.min(ENTORNO_PIEZA_CM, radioEquipo * FRACCION_ENTORNO_PIEZA);
-    radio = Math.min(Math.max(esfera.radius * 2.6, entorno), radioGeneral(cajaEquipo, cajaEquipo.getBoundingSphere(new THREE.Sphere())));
+    const equipo = cajaEquipo();
+    const esferaEquipo = equipo.getBoundingSphere(new THREE.Sphere());
+    const entorno = Math.min(ENTORNO_PIEZA_CM, esferaEquipo.radius * FRACCION_ENTORNO_PIEZA);
+    radio = Math.min(Math.max(esfera.radius * 2.6, entorno), radioGeneral(equipo, esferaEquipo));
   }
   const objetivoPos = esfera.center;
   const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));

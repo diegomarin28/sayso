@@ -11,7 +11,7 @@
  * objetos de /lab/galeria. Esos se abren en /lab/visor?plano=guardado (ver CLAVE_PLANO_GUARDADO).
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EJEMPLOS } from "../../components/viewer/ejemplos";
@@ -47,12 +47,14 @@ async function main() {
   ].filter((e) => !solo || solo.includes(e.id));
   mkdirSync(salida, { recursive: true });
 
+  // El perfil de Chrome se borra al terminar: cada corrida dejaba uno y llenaron el disco.
+  const perfil = mkdtempSync(join(tmpdir(), "galeria3d-"));
   const chrome = spawn(
     CHROME,
     [
       "--headless=new", `--remote-debugging-port=${PUERTO}`, "--hide-scrollbars",
       "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist",
-      `--user-data-dir=${mkdtempSync(join(tmpdir(), "galeria3d-"))}`, "about:blank",
+      `--user-data-dir=${perfil}`, "about:blank",
     ],
     { stdio: "ignore" },
   );
@@ -140,6 +142,8 @@ async function main() {
     console.log(`\n${filas.length} equipos, ${conAvisos.length} con avisos. Hoja: ${join(salida, "index.html")}`);
   } finally {
     chrome.kill();
+    await esperar(500);
+    rmSync(perfil, { recursive: true, force: true });
   }
 }
 
