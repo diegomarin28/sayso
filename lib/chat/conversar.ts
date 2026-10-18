@@ -111,8 +111,8 @@ ${marcas3D(piezas)}`;
 function reglasBusqueda(piezas: string[], primera = false): string {
   return `${COMUNES}
 ${alcance(primera)}
-No hay manual ni guía de este modelo a mano: buscá en la web una guía de reparación de ESTE modelo para lo que pregunta y respondé con sus pasos, citándola.
-No narres la búsqueda ("voy a buscar…"): respondé directo con los pasos. Si no encontrás una guía de este modelo, respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
+No hay manual ni guía de este modelo a mano. Antes de responder, usá SIEMPRE la herramienta web_search para buscar una guía de reparación de ESTE modelo para lo que pregunta (no respondas de memoria). Después respondé con sus pasos, citándola.
+No narres la búsqueda ("voy a buscar…"): respondé directo con los pasos. Solo si buscaste y no hay una guía de este modelo, respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
 ${marcas3D(piezas)}`;
 }
 
@@ -216,6 +216,15 @@ function emitirTexto(texto: string, ctx: Contexto): EventoChat {
 type Pedido = "manual" | "no_cubre";
 type Resultado = "ok" | "bloqueo" | Pedido;
 
+/**
+ * Opciones de una fase:
+ * - `encabezado`: frase que va justo antes de la primera frase de la respuesta (no antes de saber si hay una):
+ *   "Te paso los pasos de una guía de la web" solo si llegaron pasos.
+ * - `soloDeLaWeb`: el texto vale recién después de un resultado de búsqueda real. Lo que el modelo diga antes
+ *   (o en vez de buscar) no se muestra, y si nunca buscó, la fase termina en "no_cubre" (#236).
+ */
+type OpcionesFase = { encabezado?: string; soloDeLaWeb?: boolean };
+
 /** Una llamada al modelo, emitiendo frase por frase. Si arranca con la marca `detectar`, devuelve esa marca. */
 async function* fase(
   stream: StreamIA,
@@ -223,10 +232,11 @@ async function* fase(
   ctx: Contexto,
   detectar: Pedido | null,
   etapa: string,
+  opciones: OpcionesFase = {},
 ): AsyncGenerator<EventoChat, Resultado> {
   const acumulador = new AcumuladorUso(etapa, params.model);
   try {
-    return yield* frases(stream, params, ctx, detectar, acumulador);
+    return yield* frases(stream, params, ctx, detectar, acumulador, opciones);
   } finally {
     // También si se cortó a mitad (pidió el manual o hubo bloqueo): lo que ya se consumió se paga.
     const uso = acumulador.uso();
@@ -241,22 +251,34 @@ async function* frases(
   ctx: Contexto,
   detectar: Pedido | null,
   acumulador: AcumuladorUso,
+  { encabezado, soloDeLaWeb = false }: OpcionesFase = {},
 ): AsyncGenerator<EventoChat, Resultado> {
   const marca = detectar ? new RegExp(`^\\s*\\[\\[\\s*${detectar}`, "i") : null;
   const seg = new Segmentador(ctx.piezas);
   let crudo = "";
+  let buscado = !soloDeLaWeb;
+  let pendiente = encabezado;
   for await (const ev of stream(params)) {
     acumulador.ver(ev);
+    // Llegó un resultado de búsqueda (no un error): desde acá el texto sale de la web.
+    if (ev.type === "content_block_start" && ev.content_block.type === "web_search_tool_result" && Array.isArray(ev.content_block.content)) {
+      buscado = true;
+      crudo = "";
+    }
     if (ev.type !== "content_block_delta") continue;
     const listos: Segmento[] = [];
     if (ev.delta.type === "text_delta") {
       crudo += ev.delta.text;
       if (marca?.test(crudo)) return detectar!;
-      listos.push(...seg.texto(ev.delta.text));
-    } else if (ev.delta.type === "citations_delta") {
+      if (buscado) listos.push(...seg.texto(ev.delta.text));
+    } else if (ev.delta.type === "citations_delta" && buscado) {
       seg.cita(ev.delta.citation);
     }
     for (const s of listos) {
+      if (pendiente) {
+        yield emitirTexto(pendiente, ctx);
+        pendiente = undefined;
+      }
       const e = emitir(s, ctx);
       yield e;
       if (e.tipo === "bloqueo") return "bloqueo";
@@ -264,8 +286,13 @@ async function* frases(
       if (ctx.paso >= ctx.maxFrases) return "ok";
     }
   }
+  if (!buscado) return "no_cubre";
   for (const s of seg.cerrar()) {
     if (ctx.paso >= ctx.maxFrases) break;
+    if (pendiente) {
+      yield emitirTexto(pendiente, ctx);
+      pendiente = undefined;
+    }
     const e = emitir(s, ctx);
     yield e;
     if (e.tipo === "bloqueo") return "bloqueo";
@@ -405,8 +432,8 @@ export async function* conversar(
   async function* sinGuia(aviso: string, yaHabloDeIfixit: boolean): AsyncGenerator<EventoChat, void> {
     const previo = yaHabloDeIfixit ? "Esa guía no tiene este procedimiento." : aviso;
     let r: Resultado = "no_cubre";
+    let busquedas = 0;
     if (LIMITES.chat.busquedaWeb) {
-      yield emitirTexto(`${previo} Te paso los pasos de una guía pública de la web, sin verificar.`, ctx);
       Object.assign(ctx, { doc: "Guía pública", paginas: null, urls: undefined, verificable: false });
       r = yield* fase(
         stream,
@@ -421,12 +448,17 @@ export async function* conversar(
         ctx,
         "no_cubre",
         "experto: guía pública buscada en la web",
+        // El aviso va recién cuando llega el primer paso de una guía encontrada (no antes de buscar).
+        { encabezado: `${previo} Te paso los pasos de una guía de la web, sin verificar.`, soloDeLaWeb: true },
       );
+      busquedas = ctx.usos.at(-1)?.busquedas ?? 0;
     }
     if (r !== "no_cubre") return;
     const tipo = ctx.tipoEquipo;
+    // Solo dice que buscó si de verdad buscó (#236).
+    const sinGuiaWeb = !LIMITES.chat.busquedaWeb ? "" : busquedas > 0 ? " Busqué una guía de este modelo en la web y no encontré." : " No tengo una guía de este modelo.";
     yield emitirTexto(
-      `${LIMITES.chat.busquedaWeb ? "Tampoco encontré una guía de este modelo." : previo} Te doy los pasos generales para un equipo de tipo ${tipo}: no son de este modelo, así que andá con cuidado.`,
+      `${previo}${sinGuiaWeb} Te doy los pasos generales para un equipo de tipo ${tipo}: no son de este modelo, así que andá con cuidado.`,
       ctx,
     );
     Object.assign(ctx, { doc: `Pasos generales para ${tipo}`, paginas: null, urls: undefined, verificable: false, sinFuente: `Pasos generales para ${tipo} (sin fuente)` });

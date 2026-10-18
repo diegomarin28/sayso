@@ -62,12 +62,37 @@ function red(): typeof fetch {
 }
 
 /** Claude falso: cada llamada responde con su guion (texto o citas) y queda anotada. */
-function guion(respuestas: (string | Anthropic.TextCitation)[][]): StreamIA & { pedidos: Anthropic.MessageCreateParamsNonStreaming[] } {
+/** Un evento crudo del stream (el resultado de una búsqueda web, el uso con las búsquedas hechas). */
+type Crudo = { ev: Anthropic.RawMessageStreamEvent };
+
+/** La búsqueda web que hace el servidor: el bloque con resultados y el uso con `n` búsquedas. */
+const busco = (n = 1): Crudo[] => [
+  {
+    ev: {
+      type: "content_block_start",
+      index: 1,
+      content_block: { type: "web_search_tool_result", tool_use_id: "srv_1", content: [{ type: "web_search_result", url: "https://guias.ej/z9", title: "Guía Z9", encrypted_content: "", page_age: null }] },
+    } as unknown as Anthropic.RawMessageStreamEvent,
+  },
+  {
+    ev: {
+      type: "message_delta",
+      delta: { stop_reason: null, stop_sequence: null },
+      usage: { output_tokens: 10, server_tool_use: { web_search_requests: n } },
+    } as unknown as Anthropic.RawMessageStreamEvent,
+  },
+];
+
+function guion(respuestas: (string | Anthropic.TextCitation | Crudo)[][]): StreamIA & { pedidos: Anthropic.MessageCreateParamsNonStreaming[] } {
   const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const f = async function* (p: Anthropic.MessageCreateParamsNonStreaming) {
     const partes = respuestas[pedidos.length] ?? ["Listo. "];
     pedidos.push(p);
     for (const x of partes) {
+      if (typeof x === "object" && "ev" in x) {
+        yield x.ev;
+        continue;
+      }
       yield {
         type: "content_block_delta",
         index: 0,
@@ -195,8 +220,15 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
     }
   });
 
+  it("lo que sale de la guía de la web también pasa por la seguridad", async () => {
+    const stream = guion([["[[manual]]"], [...busco(1), "Pinchá la batería hinchada para desinflarla. "]]);
+    const otro = { ...knowledgePackEjemplo, modelo: "Marca Desconocida Z9" };
+    const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
+    expect(ev.some((e) => e.tipo === "bloqueo")).toBe(true);
+  });
+
   it("los pasos generales pasan por la seguridad: un paso peligroso se bloquea", async () => {
-    const stream = guion([["[[manual]]"], ["Pinchá la batería hinchada para desinflarla. "]]);
+    const stream = guion([["[[manual]]"], ["[[no_cubre]]"], ["Pinchá la batería hinchada para desinflarla. "]]);
     const otro = { ...knowledgePackEjemplo, modelo: "Marca Desconocida Z9" };
     const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
     expect(ev.some((e) => e.tipo === "bloqueo")).toBe(true);
@@ -207,17 +239,63 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
     LIMITES_CHAT.busquedaWeb = true;
     try {
       const cita: Anthropic.TextCitation = { type: "web_search_result_location", cited_text: "Remove the screws", url: "https://guias.ej/z9", title: "Guía Z9", encrypted_index: "x" };
-      const stream = guion([["[[manual]]"], [cita, "Sacá los tornillos del puerto. "]]);
+      // Lo que dice antes de buscar no se muestra; el aviso va recién con el primer paso de la guía.
+      const stream = guion([["[[manual]]"], ["Voy a buscar una guía. ", ...busco(1), cita, "Sacá los tornillos del puerto. "]]);
       const otro = { ...knowledgePackEjemplo, modelo: "Marca Desconocida Z9" };
       const ev = await todos(conversar({ casoId: "c1", pack: otro, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }));
       const pasos = dichos(ev);
-      expect(pasos[0].dice).toMatch(/Te paso los pasos de una guía pública de la web, sin verificar\./);
+      expect(pasos[0].dice).toBe("No tengo el manual oficial de este equipo para esto. Te paso los pasos de una guía de la web, sin verificar.");
+      expect(pasos[1].dice).toBe("Sacá los tornillos del puerto.");
       expect(pasos[1].cita).toEqual({ doc: "Guía Z9", url: "https://guias.ej/z9", estado: "NO_VERIFICABLE" });
+      expect(pasos.map((p) => p.dice).join(" ")).not.toMatch(/Voy a buscar/);
       expect(stream.pedidos[1].tools?.length).toBeGreaterThan(0);
+      expect(JSON.stringify(stream.pedidos[1].system)).toMatch(/usá SIEMPRE la herramienta web_search/);
       expect(stream.pedidos).toHaveLength(2);
     } finally {
       LIMITES_CHAT.busquedaWeb = antes;
     }
+  });
+
+  // #236 (QA con IA real): la fase web devolvía "[[no_cubre]]" sin buscar y la pantalla ya había dicho «guía pública».
+  describe.each([
+    ["televisor", "LG 43UQ7500PSF"],
+    ["impresora", "Epson L3250"],
+  ])("sin manual ni iFixit (%s %s): nunca dice que hay una guía que no encontró", (tipoEquipo, modelo) => {
+    const preguntar = async (respuestaWeb: (string | Anthropic.TextCitation | Crudo)[]) => {
+      const antes = LIMITES_CHAT.busquedaWeb;
+      LIMITES_CHAT.busquedaWeb = true;
+      try {
+        const stream = guion([["[[manual]]"], respuestaWeb, ["Desenchufalo. ", "Sacá la tapa de atrás. "]]);
+        const ev = await todos(
+          conversar({ casoId: "c1", pack: { ...knowledgePackEjemplo, modelo }, pregunta, tipoEquipo }, stream, undefined, { manuales: repoEnMemoria(), fetch: red(), llamar: eleccion({}) }),
+        );
+        return { textos: dichos(ev).map((p) => p.dice), stream };
+      } finally {
+        LIMITES_CHAT.busquedaWeb = antes;
+      }
+    };
+
+    it("si no buscó (respondió «[[no_cubre]]» de una): «No tengo una guía de este modelo», sin hablar de la web", async () => {
+      const { textos, stream } = await preguntar(["[[no_cubre]]"]);
+      expect(textos[0]).toBe(
+        `No tengo el manual oficial de este equipo para esto. No tengo una guía de este modelo. Te doy los pasos generales para un equipo de tipo ${tipoEquipo}: no son de este modelo, así que andá con cuidado.`,
+      );
+      expect(textos.join(" ")).not.toMatch(/web|Busqué|Tampoco/);
+      expect(stream.pedidos).toHaveLength(3);
+    });
+
+    it("si buscó y no encontró: «Busqué una guía de este modelo en la web y no encontré»", async () => {
+      const { textos } = await preguntar([...busco(2), "[[no_cubre]]"]);
+      expect(textos[0]).toMatch(/^No tengo el manual oficial de este equipo para esto\. Busqué una guía de este modelo en la web y no encontré\. Te doy los pasos generales/);
+      expect(textos.join(" ")).not.toMatch(/Te paso los pasos de una guía/);
+    });
+
+    it("si contestó de memoria sin buscar: eso no se muestra como guía de la web (van los pasos generales)", async () => {
+      const { textos } = await preguntar(["Abrí la tapa trasera con un destornillador. "]);
+      expect(textos.join(" ")).not.toMatch(/guía de la web|Abrí la tapa trasera con un destornillador/);
+      expect(textos[0]).toMatch(/No tengo una guía de este modelo\. Te doy los pasos generales/);
+      expect(textos.slice(1)).toEqual(["Desenchufalo.", "Sacá la tapa de atrás."]);
+    });
   });
 
   it("manual en PDF: arma un extracto con las páginas del procedimiento y cita la página del manual completo", async () => {
