@@ -50,6 +50,8 @@ export async function leerManual(
   etapa: string,
   /** Escalada: otro modelo (no comparte la caché del prefijo) y el motivo, para el costo. */
   escalar?: { modelo: string; motivo: MotivoEscalada },
+  /** Tiempo máximo: si se pasa, vuelve lo que ya escribió (`motivo` "tiempo", ver `CORTE_POR_TIEMPO`). */
+  hastaMs?: number,
 ): Promise<Lectura> {
   const { documento, ...fijo } = prefijoManual(m);
   const r = await enviar(
@@ -61,6 +63,7 @@ export async function leerManual(
     },
     etapa,
     escalar?.motivo,
+    hastaMs !== undefined ? { hastaMs } : undefined,
   );
   return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
 }
@@ -73,8 +76,9 @@ export async function leerManualWeb(
   enviar: EnviarMensaje,
   etapa: string,
   escalar?: { modelo: string; motivo: MotivoEscalada },
+  hastaMs?: number,
 ): Promise<Lectura> {
-  return leerDocumentos(bloquesManualWeb(m), tarea, maxTokens, enviar, etapa, escalar);
+  return leerDocumentos(bloquesManualWeb(m), tarea, maxTokens, enviar, etapa, escalar, hastaMs);
 }
 
 /** Lee documentos ya armados (secciones web, guías públicas o el manual oficial junto a una guía), con la tarea al final. */
@@ -85,6 +89,7 @@ export async function leerDocumentos(
   enviar: EnviarMensaje,
   etapa: string,
   escalar?: { modelo: string; motivo: MotivoEscalada },
+  hastaMs?: number,
 ): Promise<Lectura> {
   const r = await enviar(
     {
@@ -96,6 +101,7 @@ export async function leerDocumentos(
     },
     etapa,
     escalar?.motivo,
+    hastaMs !== undefined ? { hastaMs } : undefined,
   );
   return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
 }
