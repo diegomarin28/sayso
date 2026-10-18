@@ -36,9 +36,10 @@ export const MODELO_DE = {
   guiaPublica: MODELOS.corto as string,
   /**
    * Cartógrafo (/api/plano) con el recorte del manual, imágenes o solo texto. Con el manual entero
-   * usa `lectura` (comparte la caché del manual). La batería de pruebas compara Sonnet y Haiku.
+   * usa `lectura` (comparte la caché del manual). Arranca con el barato y escala (ver `ESCALADA` y
+   * `revisarPropuesta` en lib/planogenerator/generador.ts). La batería de pruebas compara Sonnet y Haiku.
    */
-  plano: MODELOS.vision as string,
+  plano: MODELOS.corto as string,
 };
 
 /** Umbrales y límites del carril A, en un solo lugar (regla "nada hardcodeado"). */

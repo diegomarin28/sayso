@@ -1,13 +1,15 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { KnowledgePack, PlanoDePiezas, knowledgePackEjemplo } from "../../shared";
-import { MODELO_DE, MODELOS, type EnviarMensaje, type LlamarIA, type PedidoIA } from "../ia/claude";
+import { ESCALADA, MODELO_DE, MODELOS, type EnviarMensaje, type LlamarIA, type PedidoIA } from "../ia/claude";
 import { SUFIJO_MALLA, construirEscena } from "./construir";
 import {
   generarPlano,
+  MIN_VISTAS_EN_PAGINA,
   paginaDelManual,
   planoDesdePlantilla,
   planoDesdePropuesta,
+  revisarPropuesta,
   type PiezaPropuesta,
   type PropuestaPlano,
 } from "./generador";
@@ -318,18 +320,53 @@ describe("modelo del cartógrafo (comparación de la batería de pruebas)", () =
   };
   const recorte = { base64: "JVBERi0=", paginas: [68, 51] };
 
-  it("por defecto usa MODELO_DE.plano (Sonnet): el modelo de la app no cambia", async () => {
-    const { pedidos, llamar } = conPedido();
-    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte }, llamar);
-    expect(MODELO_DE.plano).toBe(MODELOS.vision);
-    expect(pedidos[0].modelo).toBe(MODELOS.vision);
-    expect(r).toMatchObject({ camino: "recorte", modelo: MODELOS.vision });
+  it("por defecto arranca con MODELO_DE.plano (el barato); si vio en una página la mayoría de las piezas, no escala", async () => {
+    const pedidos: PedidoIA[] = [];
+    const todasConPagina = { ...propuestaBuena, piezas: propuestaBuena.piezas.map((p) => ({ ...p, pagina: 1 })) };
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte }, async (p) => (pedidos.push(p), JSON.stringify(todasConPagina)));
+    expect(MODELO_DE.plano).toBe(MODELOS.corto);
+    expect(pedidos.map((p) => p.modelo)).toEqual([MODELOS.corto]);
+    expect(r).toMatchObject({ camino: "recorte", modelo: MODELOS.corto, escalada: null });
   });
 
-  it("con `modelo` (solo la batería) usa ese modelo en el recorte", async () => {
+  it("con el recorte, si vio en una página menos de la mitad de las piezas, escala UNA vez al más capaz y lo avisa", async () => {
+    const { pedidos, llamar } = conPedido(); // propuestaBuena: 3 de 8 piezas con página
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte }, llamar);
+    expect(pedidos.map((p) => p.modelo)).toEqual([MODELOS.corto, ESCALADA.hacia]);
+    expect(pedidos[1].escalada).toBe("confianza_baja");
+    expect(r).toMatchObject({ modelo: ESCALADA.hacia, escalada: "confianza_baja", origen: "ia" });
+    expect(r.avisos[0]).toMatch(/pasó a .* porque el modelo no estaba seguro/);
+  });
+
+  it("si la salida del barato no valida, escala (en vez de reintentar con el mismo)", async () => {
+    const pedidos: PedidoIA[] = [];
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte }, async (p) => (pedidos.push(p), pedidos.length === 1 ? "no es json" : JSON.stringify(propuestaBuena)));
+    expect(pedidos.map((p) => p.modelo)).toEqual([MODELOS.corto, ESCALADA.hacia]);
+    expect(r).toMatchObject({ origen: "ia", escalada: "no_valido" });
+  });
+
+  it("sin páginas del manual (solo el pack) no escala por confianza: solo puede estimar", async () => {
+    const pedidos: PedidoIA[] = [];
+    const sinPaginas = { ...propuestaBuena, piezas: propuestaBuena.piezas.map((p) => ({ ...p, pagina: null, confianza: "baja" as const })) };
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp }, async (p) => (pedidos.push(p), JSON.stringify(sinPaginas)));
+    expect(pedidos.map((p) => p.modelo)).toEqual([MODELOS.corto]);
+    expect(r).toMatchObject({ camino: "texto", escalada: null });
+  });
+
+  it("revisarPropuesta: cuenta solo piezas del pack vistas en una página con confianza", () => {
+    const ids = kp.piezas.map((p) => p.id).filter((id) => id !== "base" && id !== "tapa_inferior");
+    const con = (n: number, confianza: "alta" | "baja" = "alta") => ({ ...propuestaBuena, piezas: ids.map((id, i) => pieza({ pieza: id, pagina: i < n ? 3 : null, confianza })) });
+    expect(revisarPropuesta(con(Math.ceil(ids.length * MIN_VISTAS_EN_PAGINA)), kp, "recorte")).toBeNull();
+    expect(revisarPropuesta(con(Math.ceil(ids.length * MIN_VISTAS_EN_PAGINA) - 1), kp, "imagenes")).toBe("confianza_baja");
+    expect(revisarPropuesta(con(ids.length, "baja"), kp, "recorte")).toBe("confianza_baja");
+    expect(revisarPropuesta(con(0), kp, "texto")).toBeNull();
+    expect(revisarPropuesta(con(0), kp, "manual")).toBeNull();
+  });
+
+  it("con `modelo` (solo la batería) usa ese modelo en el recorte y no escala (cada modelo se mide solo)", async () => {
     const { pedidos, llamar } = conPedido();
     const r = await generarPlano({ casoId: "c", knowledgePack: kp, recorte, modelo: MODELOS.corto }, llamar);
-    expect(pedidos[0].modelo).toBe(MODELOS.corto);
+    expect(pedidos.map((p) => p.modelo)).toEqual([MODELOS.corto]);
     expect(r.modelo).toBe(MODELOS.corto);
   });
 
