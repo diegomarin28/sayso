@@ -3,3 +3,4 @@ export * from "./reproductor";
 export { prepararPaso, type PasoPreparado } from "./paso";
 export { GuiaExperto, type GuiaExpertoProps } from "./guia/GuiaExperto";
 export { fuenteApi, leerNdjson, type EventoChat, type FuenteChat } from "./guia/eventos-chat";
+export { precargarPiezas, usePrecargaPiezas } from "./biblioteca";
