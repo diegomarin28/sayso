@@ -53,6 +53,12 @@ export type GuiaExpertoProps = {
   preguntaDictada?: { texto: string; id: number };
   /** Se llama cuando un paso dice que una pieza hay que cambiarla (coreografía con "cambiar"). Solo ids del plano y nunca en un paso bloqueado. */
   onCambiarPieza?: (pieza: string) => void;
+  /**
+   * Se llama una vez por respuesta cuando terminó de decirse su último paso (con cuántos pasos tuvo), ej. para
+   * preguntar «¿Se resolvió?». No se llama si terminó en un bloqueo, con un error o si la persona preguntó
+   * otra cosa a mitad. Retomar una guía con "Seguir con la guía" y llegar al final también avisa.
+   */
+  onUltimoPaso?: (pasos: number) => void;
   /** Para /lab y tests: de dónde salen las respuestas (por defecto, /api/chat). */
   fuente?: FuenteChat;
   efectos?: ModoEfectos;
@@ -86,6 +92,7 @@ export function GuiaExperto({
   accesorioEntrada,
   preguntaDictada,
   onCambiarPieza,
+  onUltimoPaso,
   fuente = fuenteApi,
   efectos,
   className = "",
@@ -145,7 +152,7 @@ export function GuiaExperto({
       setPasos([]);
       setIndice(0);
       yaMostrados.current = new Set(opciones.vistos);
-      const r = new Reproductor({ modo: modoRef.current, alCambiar: setControles, inicio: opciones.inicio });
+      const r = new Reproductor({ modo: modoRef.current, alCambiar: setControles, alUltimoPaso: onUltimoPaso, inicio: opciones.inicio });
       reproductor.current = r;
       return r.reproducir(
         eventos(ctl.signal),
@@ -173,7 +180,7 @@ export function GuiaExperto({
         return null;
       });
     },
-    [pack, plano, idsPlano, decir, onCambiarPieza],
+    [pack, plano, idsPlano, decir, onCambiarPieza, onUltimoPaso],
   );
 
   const preguntar = useCallback(
