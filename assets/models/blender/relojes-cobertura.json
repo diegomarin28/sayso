@@ -1,0 +1,39 @@
+{
+  "smartwatch": {
+    "nuevas": [
+      "caja_reloj@redonda",
+      "caja_reloj@cuadrada",
+      "pantalla@reloj_redonda",
+      "pantalla@reloj_cuadrada",
+      "tapa_reloj@cuadrada",
+      "base_carga_magnetica@reloj"
+    ],
+    "reutilizadas": [
+      "correa_reloj",
+      "corona_reloj",
+      "sensor_optico",
+      "tapa_reloj",
+      "bobina_carga",
+      "bateria@celular",
+      "placa"
+    ],
+    "variantes": [
+      {
+        "formaPantalla": "redonda",
+        "escala": 1
+      },
+      {
+        "formaPantalla": "redonda",
+        "escala": 0.86
+      },
+      {
+        "formaPantalla": "cuadrada",
+        "escala": 1
+      },
+      {
+        "formaPantalla": "cuadrada",
+        "escala": 0.86
+      }
+    ]
+  }
+}

@@ -8,6 +8,7 @@
   "carcasas": "carcasas.glb",
   "dispositivos": "dispositivos.glb",
   "cotidianos": "cotidianos.glb",
+  "relojes_demo": "relojes_demo.glb",
   "facultad": "facultad.glb",
   "campus": "campus.glb",
   "tablet_demo": "tablet_demo.glb",
@@ -331,6 +332,72 @@
     4.4,
     0.8,
     5.5
+   ]
+  },
+  "caja_reloj@redonda": {
+   "familia": "relojes_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja circular hueca de reloj; bisel, anclajes de correa, puerto de corona separado.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj@cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja cuadrada redondeada hueca de smartwatch, 4,4 × 5,2 cm, con anclajes.",
+   "caja": [
+    4.4,
+    1.1,
+    5.35
+   ]
+  },
+  "pantalla@reloj_redonda": {
+   "familia": "relojes_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Pantalla circular con bisel fino y vidrio, sin esfera ni agujas analógicas.",
+   "caja": [
+    4.2,
+    0.223,
+    4.2
+   ]
+  },
+  "pantalla@reloj_cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Pantalla cuadrada redondeada, vidrio y bisel independiente de la caja.",
+   "caja": [
+    4.15,
+    0.229,
+    4.95
+   ]
+  },
+  "tapa_reloj@cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Dorso cuadrado redondeado con ventana para el sensor óptico y cuatro tornillos.",
+   "caja": [
+    4.2,
+    0.155,
+    5
+   ]
+  },
+  "base_carga_magnetica@reloj": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Base de carga magnética circular con aro de alineación y salida del cable.",
+   "caja": [
+    3.6,
+    0.57,
+    5.35
    ]
   },
   "correa_reloj": {
