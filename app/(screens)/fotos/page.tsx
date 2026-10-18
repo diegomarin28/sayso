@@ -55,7 +55,7 @@ export default function CapturaGuiada() {
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
   /** "No encuentro la etiqueta": se muestra dónde más está el modelo, antes de saltearla. */
   const [buscarOtro, setBuscarOtro] = useState(false);
-  const donde = dondeBuscarModelo(tipoEquipo);
+  const donde = dondeBuscarModelo(tipoEquipo, caso?.sintoma);
 
   useEffect(() => {
     if (!caso || pedidos) return;
@@ -152,7 +152,8 @@ export default function CapturaGuiada() {
   const alcanza = claves.length ? claves.some(sirve) : (pedidos ?? []).some((_, i) => sirve(i));
   const aSacar = claves.length ? claves : (pedidos ?? []).map((_, i) => i);
 
-  const mostrarOtros = buscarOtro && pedido?.tipo === "etiqueta" && !toma.url && !toma.revisando;
+  // También después de un rechazo (#255): la foto rechazada sigue en `toma.url` y antes el panel no se abría.
+  const mostrarOtros = buscarOtro && pedido?.tipo === "etiqueta" && !toma.revisando && !aceptada;
   /** Qué hay que sacar ahora (si es de otro lugar, eso). */
   const queSacar = toma.alternativa
     ? `Sacale una foto a ${toma.alternativa.charAt(0).toLowerCase()}${toma.alternativa.slice(1)}, que se lea el modelo.`
