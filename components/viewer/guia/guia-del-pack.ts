@@ -103,3 +103,22 @@ export function guiaDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreogra
 
   return salida.map((c, i) => ({ paso: i + 1, ...c }));
 }
+
+/**
+ * Los pasos guardados del pack, tal cual (sin sumar nada): para "Seguir con la guía" al abrir un caso
+ * desde "Mis casos" sin volver a preguntar (#219, sin IA). Cada paso con su cita (el sello de siempre:
+ * "Manual ✓ p. N" o "Guía pública"), la cámara y el resaltado de sus piezas del plano. Un paso de riesgo
+ * alto frena la guía, como en `guiaDelPack`.
+ */
+export function pasosDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreografia[] {
+  const enPlano = new Set(plano.piezas.map((p) => p.pieza));
+  const salida: Omit<Coreografia, "paso">[] = [];
+  for (const p of [...pack.pasos].sort((a, b) => a.orden - b.orden)) {
+    if (p.riesgo === "alto") {
+      salida.push({ dice: `Acá frenamos: ${p.texto} Esto lo tiene que hacer un técnico.`, acciones: [{ t: "restaurar" }], riesgo: "alto" });
+      break;
+    }
+    salida.push({ dice: p.texto, ...(p.cita ? { cita: p.cita } : {}), acciones: irA(p.piezas.filter((id) => enPlano.has(id))), riesgo: p.riesgo });
+  }
+  return salida.map((c, i) => ({ paso: i + 1, ...c }));
+}
