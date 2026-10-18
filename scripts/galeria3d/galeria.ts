@@ -19,11 +19,13 @@ import { GALERIA_CAMPUS } from "../../components/viewer/galeria/campus";
 import { CLAVE_PLANO_GUARDADO } from "../../components/viewer/lab-guardado";
 import { avisos, leerPng, medir, type Aviso } from "./analisis";
 import { equiposDeCasos, type Equipo } from "./equipos";
+import { navegadorDeLaGaleria } from "./navegador";
 
-const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PUERTO = 9338;
 const ESPERA_CARGA_MS = 9000;
 const ESPERA_DESPIECE_MS = 4500;
+/** Un comando al navegador que no responde en este tiempo corta la corrida (antes quedaba colgada con Chrome abierto). */
+const PLAZO_COMANDO_MS = 60_000;
 
 type Fila = { id: string; cerrado: Aviso[]; despiezado: Aviso[]; consola: string[] };
 
@@ -47,10 +49,11 @@ async function main() {
   ].filter((e) => !solo || solo.includes(e.id));
   mkdirSync(salida, { recursive: true });
 
-  // El perfil de Chrome se borra al terminar: cada corrida dejaba uno y llenaron el disco.
+  // El perfil de Chrome se borra al terminar (también si se corta la corrida): cada corrida dejaba uno y llenaron el disco.
+  const navegador = navegadorDeLaGaleria();
   const perfil = mkdtempSync(join(tmpdir(), "galeria3d-"));
   const chrome = spawn(
-    CHROME,
+    navegador,
     [
       "--headless=new", `--remote-debugging-port=${PUERTO}`, "--hide-scrollbars",
       "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist",
@@ -58,6 +61,13 @@ async function main() {
     ],
     { stdio: "ignore" },
   );
+  const cortar = () => {
+    chrome.kill();
+    rmSync(perfil, { recursive: true, force: true });
+    process.exit(130);
+  };
+  process.once("SIGINT", cortar);
+  process.once("SIGTERM", cortar);
   try {
     let destino: { webSocketDebuggerUrl: string } | undefined;
     for (let i = 0; i < 50 && !destino; i++) {
@@ -66,7 +76,7 @@ async function main() {
         destino = ((await (await fetch(`http://127.0.0.1:${PUERTO}/json`)).json()) as Array<{ type: string; webSocketDebuggerUrl: string }>).find((t) => t.type === "page");
       } catch {}
     }
-    if (!destino) throw new Error("no arrancó Chrome (¿está en CHROME?)");
+    if (!destino) throw new Error(`no arrancó el navegador (${navegador})`);
     const ws = new WebSocket(destino.webSocketDebuggerUrl);
     await new Promise((r) => (ws.onopen = r));
     let n = 0;
@@ -85,9 +95,11 @@ async function main() {
       if (d.method === "Runtime.exceptionThrown") consola.push("excepción: " + d.params.exceptionDetails.exception?.description);
     };
     const cmd = (method: string, params = {}) =>
-      new Promise<Record<string, unknown>>((r) => {
-        pendientes.set(++n, r);
-        ws.send(JSON.stringify({ id: n, method, params }));
+      new Promise<Record<string, unknown>>((r, rechazar) => {
+        const id = ++n;
+        const plazo = setTimeout(() => rechazar(new Error(`el navegador no respondió ${method} en ${PLAZO_COMANDO_MS / 1000} s`)), PLAZO_COMANDO_MS);
+        pendientes.set(id, (x) => (clearTimeout(plazo), r(x)));
+        ws.send(JSON.stringify({ id, method, params }));
       });
     const evaluar = async (expr: string) => ((await cmd("Runtime.evaluate", { expression: expr, returnByValue: true })).result as { value: unknown }).value;
     await cmd("Runtime.enable");
@@ -141,6 +153,8 @@ async function main() {
     const conAvisos = filas.filter((f) => f.cerrado.length || f.despiezado.length || f.consola.length);
     console.log(`\n${filas.length} equipos, ${conAvisos.length} con avisos. Hoja: ${join(salida, "index.html")}`);
   } finally {
+    process.off("SIGINT", cortar);
+    process.off("SIGTERM", cortar);
     chrome.kill();
     await esperar(500);
     rmSync(perfil, { recursive: true, force: true });
