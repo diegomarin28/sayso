@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Coreografia, PlanoDePiezas } from "../../shared";
-import { EJEMPLOS, coreografiaHeladera, planoHeladera } from "./ejemplos";
+import { EJEMPLOS, coreografiaHeladera, coreografiaImpresoraLaser, planoHeladera } from "./ejemplos";
 import { prepararPaso } from "./paso";
 import { OBJETIVO_GENERAL, aplicarCoreografia, estadoInicial } from "./reproductor";
 
@@ -35,6 +35,25 @@ describe("ejemplos del lab", () => {
     expect(planoHeladera.piezas.filter((p) => p.pieza !== "carcasa_heladera").every((p) => p.padre === "carcasa_heladera")).toBe(true);
     expect(estado.camara).toEqual({ objetivo: "compresor", zoom: 1.2 });
     expect(estado.piezas.compresor.resaltada).toBe(true);
+  });
+
+  it("impresora láser: abre la tapa de adelante, saca el tóner hacia el frente y termina en la unidad fusora", () => {
+    const { plano } = EJEMPLOS.impresora_laser;
+    let estado = estadoInicial(plano.piezas.map((p) => p.pieza), { carcasa_impresora: "raiz", puerta_frontal: "tapa" });
+    for (const c of coreografiaImpresoraLaser) {
+      const r = aplicarCoreografia(estado, c, ctx);
+      expect(r.eventos).toEqual([]);
+      estado = r.estado;
+    }
+    expect(estado.piezas.puerta_frontal.visible).toBe(false);
+    expect(estado.abierto).toBe(true);
+    // El cartucho sale por el frente (z), más allá de la carcasa.
+    const carcasa = plano.piezas.find((p) => p.pieza === "carcasa_impresora")!;
+    const cartucho = plano.piezas.find((p) => p.pieza === "cartucho_toner")!;
+    expect(cartucho.pos[2] + estado.piezas.cartucho_toner.desp[2] - cartucho.dim[2] / 2).toBeGreaterThan(carcasa.dim[2] / 2);
+    expect(estado.camara).toEqual({ objetivo: "unidad_fusora", zoom: 1.2 });
+    expect(estado.piezas.unidad_fusora.resaltada).toBe(true);
+    for (const c of coreografiaImpresoraLaser) expect(prepararPaso(c, ctx).evaluacion.bloqueado, `paso ${c.paso}`).toBe(false);
   });
 
   it("los pasos que no nombran el compresor pasan el filtro de seguridad", () => {

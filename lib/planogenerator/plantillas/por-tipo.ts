@@ -58,6 +58,7 @@ const CARA: Record<string, string[]> = {
   heladera: ["puerta_heladera", "puerta_freezer"],
   lavarropas: ["puerta_ojo_de_buey"],
   microondas: ["puerta"],
+  impresora_laser: ["puerta_frontal"],
   celular: ["pantalla"],
   tablet: ["pantalla"],
 };

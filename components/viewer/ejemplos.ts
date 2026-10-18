@@ -87,6 +87,29 @@ export const coreografiaHeladera: Coreografia[] = [
   ]),
 ];
 
+/**
+ * Cambiar el tóner de una láser: se abre la tapa de adelante, el cartucho sale derecho hacia el frente
+ * (z) y la cámara termina en la unidad fusora, que queda atrás y es lo que quema.
+ */
+export const coreografiaImpresoraLaser: Coreografia[] = [
+  paso(1, "Abro la tapa de adelante, la que baja.", [
+    { t: "ocultar", pieza: "puerta_frontal" },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(2, "Saco el cartucho de tóner tirando derecho hacia vos.", [
+    { t: "desplazar", pieza: "cartucho_toner", vec: [0, 0, 26] },
+    { t: "camara", objetivo: "cartucho_toner" },
+    { t: "resaltar", pieza: "cartucho_toner" },
+  ]),
+  {
+    ...paso(3, "Atrás queda la unidad fusora. Quema: con la impresora recién usada, esperá media hora antes de meter la mano.", [
+      { t: "camara", objetivo: "unidad_fusora", zoom: 1.2 },
+      { t: "resaltar", pieza: "unidad_fusora" },
+    ]),
+    riesgo: "medio",
+  },
+];
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
@@ -98,7 +121,7 @@ export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string
   aspiradora: { plano: planoAspiradora, tipoEquipo: "aspiradora" },
   secador: { plano: planoSecador, tipoEquipo: "secador de pelo" },
   impresora: { plano: planoImpresora, tipoEquipo: "impresora" },
-  impresora_laser: { plano: planoImpresoraLaser, tipoEquipo: "impresora HP LaserJet" },
+  impresora_laser: { plano: planoImpresoraLaser, tipoEquipo: "impresora láser", coreografia: coreografiaImpresoraLaser },
   consola: { plano: planoConsola, tipoEquipo: "consola de videojuegos" },
   router: { plano: planoRouter, tipoEquipo: "router" },
   cafetera: { plano: planoCafetera, tipoEquipo: "cafetera" },
