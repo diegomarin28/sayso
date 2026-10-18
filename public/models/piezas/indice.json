@@ -9,7 +9,8 @@
   "dispositivos": "dispositivos.glb",
   "cotidianos": "cotidianos.glb",
   "facultad": "facultad.glb",
-  "campus": "campus.glb"
+  "campus": "campus.glb",
+  "tablet_demo": "tablet_demo.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -2573,6 +2574,50 @@
     7.5859,
     0.2,
     12.5
+   ]
+  },
+  "marco@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Marco perimetral hueco de tablet, perfil fino y aberturas de carga y botones.",
+   "caja": [
+    17.5,
+    0.75,
+    25.04
+   ]
+  },
+  "tapa_trasera@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Carcasa trasera desmontable: placa fina con labio perimetral y abertura de cámara.",
+   "caja": [
+    17.45,
+    0.27,
+    24.95
+   ]
+  },
+  "pantalla@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Frente completo de tablet con vidrio, bisel continuo y cámara frontal; cara activa +Y GLB.",
+   "caja": [
+    17.3,
+    0.197,
+    24.8
+   ]
+  },
+  "bateria@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Batería plana de dos celdas pouch, lengüetas de adhesivo y flex; independiente del panel.",
+   "caja": [
+    13.4,
+    0.3925,
+    17.8
    ]
   }
  }
