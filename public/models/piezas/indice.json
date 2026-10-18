@@ -13,7 +13,8 @@
   "facultad": "facultad.glb",
   "campus": "campus.glb",
   "tablet_demo": "tablet_demo.glb",
-  "notebook_demo": "notebook_demo.glb"
+  "notebook_demo": "notebook_demo.glb",
+  "alineacion_demo": "alineacion_demo.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3446,6 +3447,50 @@
     1.55,
     0.194,
     1.45
+   ]
+  },
+  "carcasa_televisor": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Carcasa de televisor, de frente se reconoce como un TV (por tipo, sin marca ni modelo): pantalla de vidrio oscuro dentro de un bisel fino con filete metálico, mentón abajo con una placa lisa y el LED de encendido, y pie de dos patas en \"V\" plateadas. Atrás: la joroba, rejillas y zona de puertos.",
+   "caja": [
+    100,
+    66.2685,
+    6.12
+   ]
+  },
+  "pantalla_panel": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios y tornillos, placa T-con con sus cables planos, las placas de los drivers arriba con sus flex y la etiqueta.",
+   "caja": [
+    100,
+    58,
+    2.3049
+   ]
+  },
+  "placa_carga": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores board-to-board, componentes chicos y agujeros de montaje.",
+   "caja": [
+    6,
+    0.215,
+    11.2
+   ]
+  },
+  "placa@televisor": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Placa principal de audio/video: SoC, memorias, blindaje de sintonizador y puertos de señal. Genérica para distintas marcas, no de un televisor exacto.",
+   "caja": [
+    16,
+    1.16,
+    10.25
    ]
   }
  }

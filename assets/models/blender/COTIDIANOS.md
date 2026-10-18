@@ -341,3 +341,17 @@ chat por #233; agregar mallas no cambia por sí solo la coreografía existente.
 Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/tablet_demo.py`.
 Renders: `blender -b --factory-startup --python assets/models/blender/tablet_demo.py -- --salida /tmp/tablet --renders assets/models/blender/renders/tablet_demo`.
 Test: `npx vitest run assets/models/blender/tablet-demo.test.ts`.
+
+## Alineación celular y TV (#188)
+
+`alineacion_demo.glb` conserva las familias anteriores y publica los nombres canónicos
+`carcasa_televisor`, `pantalla_panel`, `placa_carga` y la placa AV `placa@televisor`.
+Las cámaras reutilizan `camara@modulo` y `camara`: no se renombran porque ya existe
+un contrato del visor y pruebas que protegen esos nombres. El mapa exacto de IDs
+a nodos está en `alineacion-cobertura.json`. Materiales resueltos con las recetas
+existentes; AJUSTES explícitos. Dos celulares (escala 1 y 1,12) y TV 46/32 pulgadas.
+
+La placa principal de TV necesita `formaBiblioteca: "placa@televisor"` en el plano;
+no se cambia el selector compartido. T-con, soporte y tornillos existen en biblioteca,
+pero falta asegurar su inclusión en los planos. Seguimiento de integración en #188.
+Los renders son inspecciones de assets comprimidos; no sustituyen capturas del visor.
