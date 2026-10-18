@@ -11,6 +11,7 @@ for(const formato of ['over_ear','in_ear'] as const)for(const modelo of ['Equipo
  const p=terminarGuardado(planoAuriculares,kp,'auriculares').plano;
  expect(p.piezas.find(p=>!p.padre)?.pieza).toBe(formato==='over_ear'?'diadema':'estuche_auriculares');
  if(formato==='over_ear'){
+  expect(p.piezas.some(p=>/^(almohadilla_silicona|contacto_resorte|bateria_estuche|placa_estuche)(_|$)/.test(p.pieza))).toBe(false);
   const copa=p.piezas.find(p=>p.pieza===(modelo==='Equipo B'?'copa_derecha':'copa_izquierda'))!;
   const carcasa=p.piezas.find(p=>p.pieza===('carcasa_auricular'+(modelo==='Equipo B'?'_derecha':'')))!;
   expect(carcasa.pos).toEqual(copa.pos);

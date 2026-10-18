@@ -1,7 +1,7 @@
 import { Rasgos3D, type KnowledgePack, type PlanoDePiezas } from '../../shared';
 
 /** Solo datos explícitos y validados; no se consulta marca, modelo ni palabras del pack. */
-export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'rasgos3D'>, tipo?: string): PlanoDePiezas {
+export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'rasgos3D'> & Partial<Pick<KnowledgePack,'piezas'>>, tipo?: string): PlanoDePiezas {
   // Un plano de caché puede conservar una forma de un pack anterior: retirar solo nuestras
   // formas explícitas antes de aplicar los datos actuales. Sin ellas, devuelve la misma referencia.
   const viejas=plano.piezas.some(p=>p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato)@/));
@@ -12,7 +12,8 @@ export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'
   const datos=Rasgos3D.safeParse(pack.rasgos3D);
   if(!datos.success) return plano;
   if(tipo==='auriculares_vincha' && datos.data.auriculares?.formato==='over_ear') {
-    return {...plano,piezas:plano.piezas.map(p=>{
+    const pedidas=new Set(pack.piezas?.map(p=>p.id) ?? []);
+    return {...plano,piezas:plano.piezas.filter(p=>! /^(almohadilla_silicona|contacto_resorte|bateria_estuche|placa_estuche)(_|$)/.test(p.pieza) || pedidas.has(p.pieza)).map(p=>{
       const izquierda=plano.piezas.find(c=>c.pieza==='copa_izquierda');
       const derechaCopa=plano.piezas.find(c=>c.pieza==='copa_derecha');
       if(!p.padre && izquierda && derechaCopa) {
@@ -21,7 +22,7 @@ export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'
       }
       if(/^copa_/.test(p.pieza)) return {...p,formaBiblioteca:'carcasa_auricular_dato@copa'};
       if(/^almohadilla_copa_/.test(p.pieza)) return {...p,formaBiblioteca:'carcasa_auricular_dato@almohadilla'};
-      if(!/^(carcasa_auricular|almohadilla_oreja)(_|$)/.test(p.pieza))return p;
+      if(!/^(carcasa_auricular|almohadilla_oreja|almohadilla_silicona)(_|$)/.test(p.pieza))return p;
       const derecha=/derech|right/.test(p.pieza);
       const copa=plano.piezas.find(c=>c.pieza===(derecha?'copa_derecha':'copa_izquierda'));
       if(!copa)return p;
