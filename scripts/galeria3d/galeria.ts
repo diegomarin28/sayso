@@ -21,7 +21,6 @@ import { avisos, leerPng, medir, type Aviso } from "./analisis";
 import { equiposDeCasos, type Equipo } from "./equipos";
 import { navegadorDeLaGaleria } from "./navegador";
 
-const PUERTO = 9338;
 const ESPERA_CARGA_MS = 9000;
 const ESPERA_DESPIECE_MS = 4500;
 /** Un comando al navegador que no responde en este tiempo corta la corrida (antes quedaba colgada con Chrome abierto). */
@@ -55,7 +54,9 @@ async function main() {
   const chrome = spawn(
     navegador,
     [
-      "--headless=new", `--remote-debugging-port=${PUERTO}`, "--hide-scrollbars",
+      // Puerto libre que elige el navegador (lo escribe en su perfil): con uno fijo, dos sesiones con la galería a
+      // la vez se conectaban al navegador de la otra y capturaban su equipo (#304).
+      "--headless=new", "--remote-debugging-port=0", "--hide-scrollbars",
       "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist",
       `--user-data-dir=${perfil}`, "about:blank",
     ],
@@ -73,7 +74,8 @@ async function main() {
     for (let i = 0; i < 50 && !destino; i++) {
       await esperar(200);
       try {
-        destino = ((await (await fetch(`http://127.0.0.1:${PUERTO}/json`)).json()) as Array<{ type: string; webSocketDebuggerUrl: string }>).find((t) => t.type === "page");
+        const puerto = readFileSync(join(perfil, "DevToolsActivePort"), "utf8").split("\n")[0];
+        destino = ((await (await fetch(`http://127.0.0.1:${puerto}/json`)).json()) as Array<{ type: string; webSocketDebuggerUrl: string }>).find((t) => t.type === "page");
       } catch {}
     }
     if (!destino) throw new Error(`no arrancó el navegador (${navegador})`);
