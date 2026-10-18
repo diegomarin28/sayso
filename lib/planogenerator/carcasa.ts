@@ -1,4 +1,4 @@
-import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import { vistaEnImagen, type PiezaPlano, type PlanoDePiezas, type Vec3 } from "../../shared";
 import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
 import { pararPlano } from "./orientacion";
 import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
@@ -164,7 +164,7 @@ export function conTapaDePantalla(plano: PlanoDePiezas, plantilla: PlantillaDeEq
   if (!tapa || !raiz || !raizTipo || plano.piezas.some((p) => ES_TAPA_DE_PANTALLA.test(p.pieza))) return plano;
   const hijos = plantilla.plano.piezas.filter((p) => p.padre === tapa.pieza);
   const delPack = new Map(plano.piezas.map((p) => [p.pieza, p]));
-  const queda = (id: string) => delPack.get(id)?.origen === "manual";
+  const queda = (id: string) => vistaEnImagen(delPack.get(id)?.origen);
   // Pegada a la cara de ese lado del equipo, como en el esqueleto (las teclas sobresalen de la carcasa).
   const abajo = tapa.pos[1] < raizTipo.pos[1];
   const cara = (piezas: PiezaPlano[]) =>

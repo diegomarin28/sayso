@@ -1,5 +1,5 @@
 import indice from "../../public/models/piezas/indice.json";
-import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import { vistaEnImagen, type PiezaPlano, type PlanoDePiezas, type Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
 import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
 import { emparejar, equivalentes, PLANTILLAS_POR_TIPO, type PlantillaDeEquipo } from "./plantillas/por-tipo";
@@ -35,7 +35,7 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   const esta = new Set(plano.piezas.map((p) => p.pieza));
   // Las tapas no: las pone `conTapa`, sobre el plano terminado. Ni la tapa de pantalla con su panel (`conTapaDePantalla`).
   const candidatas = [
-    ...plano.piezas.filter((p) => p !== raiz && p.origen !== "manual").map((p) => p.pieza),
+    ...plano.piezas.filter((p) => p !== raiz && !vistaEnImagen(p.origen)).map((p) => p.pieza),
     ...ids.filter((id) => !esta.has(id)),
   ].filter((id) => !ES_TAPA.test(id) && !ES_TAPA_DE_PANTALLA.test(id));
   const deTapa = (p: PiezaPlano) => ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.padre ?? "");
@@ -175,7 +175,7 @@ export const VECES_LA_FORMA = 2.5;
 export function acotarMedidas(plano: PlanoDePiezas): { plano: PlanoDePiezas; avisos: string[] } {
   const avisos: string[] = [];
   const piezas = plano.piezas.map((p) => {
-    if (!p.padre || p.origen === "manual") return p;
+    if (!p.padre || vistaEnImagen(p.origen)) return p;
     const tipo = tipoPara(p.pieza, NOMBRES);
     const cajas = tipo ? NOMBRES.filter((n) => tipoDe(n) === tipo).flatMap((n) => INDICE.tipos[n].caja ?? []) : [];
     if (!cajas.length) return p;

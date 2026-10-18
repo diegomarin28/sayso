@@ -67,3 +67,20 @@ describe("textoEtiquetaPieza (#209: «sin verificar» una sola vez por pantalla)
     expect(textoEtiquetaPieza({})).toBeNull();
   });
 });
+
+describe("piezas ubicadas con fotos del interior (#235)", () => {
+  const foto = { origen: "foto" as const, cita: { doc: "Fotos del interior (ifixit.com)", url: "https://www.ifixit.com/Teardown/a", estado: "NO_VERIFICABLE" as const } };
+  it("la etiqueta dice de dónde sale; el resumen las cuenta aparte y no dice «todo del manual»", () => {
+    expect(textoEtiquetaPieza(foto)).toBe("Foto del interior · ifixit.com");
+    expect(textoEtiquetaPieza({ origen: "estimada" })).toBeNull();
+    const plano: PlanoDePiezas = {
+      ...planoEjemplo,
+      medidas: { ancho: "manual", prof: "manual" },
+      piezas: planoEjemplo.piezas.map((p, i) => ({ ...p, ...(i === 1 ? foto : { origen: "manual" as const }) })),
+    };
+    const r = resumenOrigen(plano);
+    expect(r.foto).toBe(1);
+    expect(todoDelManual(r)).toBe(false);
+    expect(textoResumen(r)).toContain("1 con fotos del interior");
+  });
+});
