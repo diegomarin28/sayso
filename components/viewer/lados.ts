@@ -11,7 +11,11 @@ import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
  */
 
 export type Lado = "arriba" | "abajo";
-export type Lados = { inicial: Lado; piezas: Record<string, Lado> };
+/**
+ * `adentro`: de qué lado de la carcasa queda lo de adentro (un celular se arma desde atrás: del lado de la tapa).
+ * Abierto del otro lado (despegando la pantalla), la carcasa, con su placa al medio, taparía todo.
+ */
+export type Lados = { inicial: Lado; piezas: Record<string, Lado>; adentro?: Lado };
 
 /** La cara que se usa: la pantalla o el teclado (no "cable_pantalla": empieza con eso). */
 export const ES_CARA_DE_USO = /^(pantalla|display|teclado|esfera)/;
@@ -47,5 +51,14 @@ export function ladosDelPlano(plano: PlanoDePiezas): Lados | undefined {
     .sort((a, b) => area(b) - area(a));
   const piezas: Record<string, Lado> = {};
   for (const p of plano.piezas) if (ES_TAPA.test(p.pieza) || caras.includes(p)) piezas[p.pieza] = lado(p);
-  return { inicial: caras.length ? lado(caras[0]) : "arriba", piezas };
+  return { inicial: caras.length ? lado(caras[0]) : "arriba", piezas, ...ladoDeAdentro(plano, piezas) };
+}
+
+/** Lo de adentro (ni carcasa, ni cara, ni tapa, ni tornillo): de qué lado del centro de la carcasa queda, en promedio. */
+function ladoDeAdentro(plano: PlanoDePiezas, caras: Record<string, Lado>): { adentro?: Lado } {
+  const carcasa = plano.piezas.filter((p) => !p.padre).sort((a, b) => area(b) - area(a))[0];
+  const resto = plano.piezas.filter((p) => p.padre && !(p.pieza in caras) && !p.pieza.startsWith("tornillo"));
+  if (!carcasa || !resto.length) return {};
+  const desvio = resto.reduce((s, p) => s + p.pos[1] - carcasa.pos[1], 0);
+  return { adentro: desvio < 0 ? "abajo" : "arriba" };
 }

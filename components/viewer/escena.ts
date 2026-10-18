@@ -320,6 +320,9 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
   const latido = 1 + 0.25 * Math.sin(ahora / 260);
   const [apertura] = seguir(escena.apertura, [estado.abierto ? 1 : 0], ahora, DURACION.fundido);
   const total = escena.nodos.size;
+  // Abierto del lado donde no está lo de adentro (la pantalla de un celular que se arma desde atrás): la
+  // carcasa, con su placa al medio, taparía todo; se ve translúcida como una tapa.
+  const carcasaTapa = !!escena.lados?.adentro && !!estado.lado && estado.lado !== escena.lados.adentro;
 
   for (const [id, a] of escena.nodos) {
     const e = estado.piezas[id];
@@ -352,7 +355,8 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     const [fantasma] = seguir(a.tw.fantasma, [esFantasma ? 1 : 0], ahora, DURACION.foco);
     const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido);
 
-    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, a.cubierta ? 1 - apertura : null, a.grande);
+    const comoTapa = a.cubierta || (carcasaTapa && a.ancestros.length === 0);
+    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, comoTapa ? 1 - apertura : null, a.grande);
   }
 }
 

@@ -4,6 +4,7 @@ import { planoNotebookBase } from "../../lib/planogenerator";
 import { planoCelular, planoHeladera, planoTablet } from "../../lib/planogenerator/plantillas/equipos";
 import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
+import { conDesarme } from "./guia/desarme";
 
 const ctx = { casoId: "t" };
 const preparar = () => {
@@ -245,6 +246,24 @@ describe("escena: cerrado / abierto", () => {
     animar(escena, abierto, 5001);
     animar(escena, abierto, 10000);
     expect(opacidadDe(escena, "tapa_inferior")).toBeLessThan(0.5);
+  });
+
+  // Se arman desde atrás: lo de adentro queda del lado de la tapa y la carcasa (con su placa al medio) en el
+  // de la pantalla. Abierto por la pantalla, sin nada resaltado, la carcasa taparía todo.
+  it.each([
+    ["celular", planoCelular, "Sacá la tapa trasera.", "Despegá la pantalla."],
+    ["tablet", planoTablet, "Sacá la tapa trasera.", "Despegá la pantalla de a poco."],
+  ])("%s: abierto por la pantalla, la carcasa se ve translúcida; por la tapa, opaca", (_, plano, porTapa, porPantalla) => {
+    const abrir = (dice: string) => {
+      const escena = prepararEscena(plano);
+      const inicio = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);
+      const e = con(inicio, ...conDesarme({ paso: 1, dice, acciones: [], riesgo: "bajo" }, plano).acciones);
+      animar(escena, e, 0);
+      animar(escena, e, 5000);
+      return opacidadDe(escena, "marco");
+    };
+    expect(abrir(porPantalla)).toBeLessThan(0.5);
+    expect(abrir(porTapa)).toBeCloseTo(1, 3);
   });
 });
 

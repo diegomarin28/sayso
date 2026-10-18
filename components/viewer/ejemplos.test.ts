@@ -60,7 +60,7 @@ describe("ejemplos del lab", () => {
 
   it("cada coreografía de ejemplo abre el equipo, pasa la seguridad con su tipo y termina con la pieza resaltada", () => {
     const conCoreografia = Object.entries(EJEMPLOS).filter(([, e]) => e.coreografia);
-    expect(conCoreografia.map(([n]) => n).sort()).toEqual(["celular", "heladera", "impresora_laser", "notebook", "tablet", "televisor"]);
+    expect(conCoreografia.map(([n]) => n).sort()).toEqual(["celular", "celular_por_pantalla", "heladera", "impresora_laser", "notebook", "tablet", "televisor"]);
     for (const [nombre, e] of conCoreografia) {
       const escena = prepararEscena(e.plano, undefined, e.tipoEquipo);
       let estado = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);

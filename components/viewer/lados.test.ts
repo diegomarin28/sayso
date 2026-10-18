@@ -35,6 +35,8 @@ describe("ladosDelPlano (por tipo)", () => {
     expect(lados.inicial).toBe("abajo");
     const tapa = Object.keys(lados.piezas).find((id) => id.startsWith("tapa"))!;
     expect(lados.piezas[tapa]).toBe("arriba");
+    // Se arma desde atrás: lo de adentro, del lado de la tapa (abierto por la pantalla, la carcasa se ve translúcida).
+    expect(lados.adentro).toBe("arriba");
   });
 
   it.each([
@@ -46,6 +48,7 @@ describe("ladosDelPlano (por tipo)", () => {
     const lados = ladosDelPlano(await esqueleto(tipo, ids))!;
     expect(lados.inicial).toBe("abajo");
     expect(Object.entries(lados.piezas).find(([id]) => id.startsWith("tapa"))?.[1]).toBe("arriba");
+    expect(lados.adentro).toBe("arriba");
   });
 
   it.each([
