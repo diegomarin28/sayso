@@ -195,6 +195,8 @@ export type Deps = {
   fetch?: Fetch;
   cache?: CachePacks;
   manuales?: RepoManuales;
+  /** Completar lo que la fuente no trae (líneas FALTA) es opcional: false lo saltea en esta llamada (por defecto, `LIMITES.pack.completarFaltantes`). */
+  completar?: boolean;
 };
 
 /** Pasa las páginas citadas del extracto a las del manual completo. */
@@ -496,12 +498,13 @@ export async function armarKnowledgePack(
   // en el mismo manual (páginas o secciones elegidas para eso) y, si no está, en iFixit. Los pasos van donde faltaban.
   // Completar es opcional: si la lectura ya llevó más de `completarHastaMs`, la guía queda como está, con el aviso.
   const aTiempoDeCompletar = Date.now() - inicio <= LIMITES.lectura.completarHastaMs && hayTiempo();
-  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length && !aTiempoDeCompletar) {
+  const completar = deps.completar ?? LIMITES.pack.completarFaltantes;
+  if (completar && contenido.faltantes.length && contenido.pasos.length && !aTiempoDeCompletar) {
     const falta = [...new Set(contenido.faltantes.map((f) => f.procedimiento))].join("; ");
     eventos.push(evento(casoId, "bibliotecario", "guia_incompleta", `La guía quedó incompleta (falta: ${falta}) para no hacerte esperar más.`, { falta }));
     console.warn(`[knowledge] completar salteado: ${Math.round((Date.now() - inicio) / 1000)} s (falta: ${falta})`);
   }
-  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length && aTiempoDeCompletar) {
+  if (completar && contenido.faltantes.length && contenido.pasos.length && aTiempoDeCompletar) {
     try {
       const manualConocido = encontrado
         ? { url: encontrado.url, titulo: encontrado.titulo, ...(encontrado.formato === "pdf" ? { pdf: encontrado.pdf } : { indice: encontrado.indice }) }
@@ -517,7 +520,10 @@ export async function armarKnowledgePack(
         );
       }
     } catch (e) {
-      if (e instanceof IAEnPausa) throw e;
+      // Completar es opcional: ni un error ni la IA en pausa tiran la guía que ya está armada (se entrega como está).
+      const falta = [...new Set(contenido.faltantes.map((f) => f.procedimiento))].join("; ");
+      const motivo = e instanceof IAEnPausa ? "ia_en_pausa" : "error";
+      eventos.push(evento(casoId, "bibliotecario", "guia_incompleta", `La guía quedó incompleta (falta: ${falta}): no pude buscar esa parte.`, { falta, motivo }));
       console.error("[knowledge] no pude completar la guía:", (e as Error).message);
     }
   }
@@ -675,7 +681,15 @@ async function completarFaltantes(
     });
     if (!f || ctx.resta() < LIMITES.lectura.minRestoMs) continue;
     const tarea = tareaCompletar(ctx.equipo, ctx.sintoma, procedimiento, c.piezas.map((p) => p.id));
-    const l = await leerDocumentos(bloquesDeFuente(f), tarea, LIMITES.lectura.maxTokensCompletar, ctx.enviar, "bibliotecario: completar la guía", undefined, ctx.resta());
+    // Si falla la lectura de una fuente (no la pausa de la IA), se prueba la siguiente (manual → iFixit).
+    const l = await leerDocumentos(bloquesDeFuente(f), tarea, LIMITES.lectura.maxTokensCompletar, ctx.enviar, "bibliotecario: completar la guía", undefined, ctx.resta()).catch(
+      (e: unknown) => {
+        if (e instanceof IAEnPausa) throw e;
+        console.error("[knowledge] no pude leer una fuente para completar la guía:", (e as Error).message);
+        return null;
+      },
+    );
+    if (!l) continue;
     const leido = parsearContenido(lineasConCitas(l.bloques), f.titulo, urlsDeFuente(f), ctx.tipo, f.oficial);
     const nuevo = f.tipo === "pdf" ? aPaginasDelManual(leido, f.paginas) : leido;
     if (!nuevo.pasos.length) continue;

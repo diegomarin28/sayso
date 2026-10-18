@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { beforeEach, describe, expect, it } from "vitest";
 import { fichaEjemplo, type PasoReparacion } from "../../shared";
 import type { EnviarMensaje, PedidoIA } from "../ia/claude";
+import { IAEnPausa } from "../ia/freno";
 import { armarKnowledgePack, insertarPasos, type CachePacks } from "./armar";
 import { olvidarConsultas } from "./consulta";
 import { repoEnMemoria } from "./manuales";
@@ -170,5 +171,42 @@ describe("completar la guía con lo que faltaba", () => {
     const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: sinFalta, llamar: eleccion(), fetch: red(), cache: sinCache, manuales: await repo(), subir: async () => "f" });
     expect(c.etapas).not.toContain("bibliotecario: completar la guía");
     expect(r.pack.pasos).toHaveLength(1);
+  });
+});
+
+describe("completar es opcional: se saltea sin romper la guía", () => {
+  beforeEach(() => olvidarConsultas());
+  const guiaSinCompletar = ["Probá con otro cable y otro cargador.", "Desatornillá el soporte del puerto y sacalo con la pinza.", "Volvé a armar y probá la carga: tiene que aparecer el rayo."];
+  const deps = async (enviar: EnviarMensaje, extra: Record<string, unknown> = {}) => ({ enviar, llamar: eleccion(), fetch: red(), cache: sinCache, manuales: await repo(), subir: async () => "f", ...extra });
+
+  it("apagado en esta llamada (completar: false): no lo intenta y la guía queda como salió", async () => {
+    const c = claude("manual");
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, await deps(c.enviar, { completar: false }));
+    expect(c.etapas).not.toContain("bibliotecario: completar la guía");
+    expect(r.pack.pasos.map((p) => p.texto)).toEqual(guiaSinCompletar);
+    expect(r.eventos.map((e) => e.tipo)).not.toContain("guia_completada");
+  });
+
+  it("si la IA se pausa justo ahí, entrega la guía igual (no responde 'IA en pausa')", async () => {
+    const c = claude("manual");
+    const enviar: EnviarMensaje = async (p, etapa, ...resto) => {
+      if (etapa === "bibliotecario: completar la guía") throw new IAEnPausa("limite");
+      return c.enviar(p, etapa, ...resto);
+    };
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, await deps(enviar));
+    expect(r.pack.pasos.map((p) => p.texto)).toEqual(guiaSinCompletar);
+    expect(r.eventos.find((e) => e.tipo === "guia_incompleta")).toMatchObject({ datos: { motivo: "ia_en_pausa" } });
+  });
+
+  it("si falla la lectura del manual, prueba iFixit (no corta todo)", async () => {
+    const c = claude("manual");
+    const enviar: EnviarMensaje = async (p, etapa, ...resto) => {
+      const esIfixit = JSON.stringify(p.messages[0].content).includes("ifixit.com");
+      if (etapa === "bibliotecario: completar la guía" && !esIfixit) throw new Error("500 de la API");
+      return c.enviar(p, etapa, ...resto);
+    };
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, await deps(enviar));
+    expect(r.pack.pasos).toHaveLength(5);
+    expect(r.pack.pasos[1].cita).toMatchObject({ estado: "NO_VERIFICABLE", url: `${GUIA}#s70` });
   });
 });
