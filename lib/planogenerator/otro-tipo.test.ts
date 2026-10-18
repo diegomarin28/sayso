@@ -204,3 +204,37 @@ describe("planos de la caché armados con el esqueleto de otro tipo (#239): se l
     expect(plano.piezas.find((p) => !p.padre)!.pieza).toBe("placa_consola");
   });
 });
+
+describe("auriculares de vincha: la carcasa y la almohadilla del pack van en la copa", () => {
+  const centro = (p: PiezaPlano) => p.pos.map((v) => +v.toFixed(2));
+  it.each([
+    ["Sony WH-1000XM4", ["almohadilla_oreja", "carcasa_auricular", "bateria_auricular"]],
+    ["JBL Tune 510BT", ["carcasa_auricular", "almohadilla_oreja", "tornillo_copa"]],
+  ])("%s: la carcasa adentro de la copa (que sigue) y la almohadilla en el lugar de la de la copa", async (modelo, piezas) => {
+    const viejo = guardadoComo("estuche_auriculares", [8, 3.5, 6], [["carcasa_auricular", [2.7, 2.3, 3.65], [-1.95, 3, 0], "plantilla"]]);
+    const plano = await leer(viejo, pack(modelo, piezas), "auriculares");
+    const de = (id: string) => plano.piezas.find((p) => p.pieza === id)!;
+    // Las dos copas siguen: la carcasa no reemplaza a ninguna (la biblioteca la dibujaría como la de un in-ear).
+    expect(ids(plano)).toEqual(expect.arrayContaining(["copa_izquierda", "copa_derecha", "almohadilla_copa_derecha"]));
+    const copa = de("copa_izquierda");
+    expect(centro(de("carcasa_auricular"))).toEqual(centro(copa));
+    de("carcasa_auricular").dim.forEach((v, i) => expect(v).toBeLessThan(copa.dim[i]));
+    // La almohadilla del pack ocupa el lugar de la de la copa: no quedan dos en el mismo lado.
+    expect(ids(plano)).not.toContain("almohadilla_copa_izquierda");
+    expect(centro(de("almohadilla_oreja"))[0]).toBeCloseTo(copa.pos[0], 1);
+  });
+
+  it("si el pack dice el lado, va de ese lado", async () => {
+    const plano = await leer(planoViejo(17, 15, []), pack("Bose QuietComfort 45", ["almohadilla_oreja_derecha", "carcasa_auricular_derecho"]), "auriculares de vincha");
+    const de = (id: string) => plano.piezas.find((p) => p.pieza === id)!;
+    expect(de("almohadilla_oreja_derecha").pos[0]).toBeGreaterThan(0);
+    expect(centro(de("carcasa_auricular_derecho"))).toEqual(centro(de("copa_derecha")));
+    expect(ids(plano)).toContain("almohadilla_copa_izquierda");
+  });
+
+  it("en unos in-ear (sin copa) la carcasa sigue siendo la del auricular", async () => {
+    const plano = await leer(planoViejo(6, 5, []), pack("Samsung Galaxy Buds2", ["estuche_auriculares", "carcasa_auricular"]), "auriculares");
+    expect(ids(plano)).not.toContain("copa_izquierda");
+    expect(ids(plano)).not.toContain("carcasa_auricular_izquierdo");
+  });
+});
