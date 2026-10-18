@@ -365,11 +365,16 @@ export function encuadre(
   // Con el despiece las piezas suben y se abren: se deja más margen.
   // Un equipo alto (heladera) tiene que entrar entero a lo alto; uno chato (notebook) no cambia.
   // En una pantalla vertical (celular) la vista general va con el radio entero: con 0,8 un celular se salía por los costados.
-  const alto = caja.getSize(new THREE.Vector3()).y / 2;
+  // Una pieza nunca se encuadra más lejos que el equipo entero (en un celular, 12 cm de mínimo es más que el celular).
   const { width, height } = tamPantalla;
   const ajusteGeneral = width < height ? 1 : 0.8;
-  const radio =
-    nodo === escena.raiz ? Math.max(esfera.radius * (ajusteGeneral + 0.45 * despiece), alto * 1.15) : Math.max(esfera.radius * 2.6, 12);
+  const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * (ajusteGeneral + 0.45 * despiece), (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
+  let radio: number;
+  if (nodo === escena.raiz) radio = radioGeneral(caja, esfera);
+  else {
+    const cajaEquipo = new THREE.Box3().setFromObject(escena.raiz);
+    radio = Math.min(Math.max(esfera.radius * 2.6, 12), radioGeneral(cajaEquipo, cajaEquipo.getBoundingSphere(new THREE.Sphere())));
+  }
   const objetivoPos = esfera.center;
   const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));
   const libre = (height - reservado) / height;

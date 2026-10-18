@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { cargadorGlb } from "./cargador";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
-import { planoAire, planoHeladera } from "../../components/viewer/ejemplos";
+import { planoAire, planoHeladera, planoTelevisor } from "../../components/viewer/ejemplos";
 import {
   IndicePiezas,
   RECETA_CUERPO,
@@ -466,6 +466,35 @@ describe("construirEscena con biblioteca", () => {
         expect(materiales.has(o.material as THREE.Material)).toBe(false);
         materiales.add(o.material as THREE.Material);
       });
+    }
+  });
+
+  /** Mismo TV con otro tamaño de pantalla (ancho y alto escalados, la profundidad igual). */
+  const tvDe = (escala: number): PlanoDePiezas => ({
+    ...planoTelevisor,
+    piezas: planoTelevisor.piezas.map((p) => ({
+      ...p,
+      dim: [p.dim[0] * escala, p.dim[1] * escala, p.dim[2]] as Vec3,
+      pos: [p.pos[0] * escala, p.pos[1] * escala, p.pos[2]] as Vec3,
+    })),
+  });
+
+  it.each([
+    ["46\" (plantilla)", planoTelevisor],
+    ["32\"", tvDe(0.7)],
+  ])("TV de %s cerrado: desde atrás se ve la tapa, no las placas (las patas no le comen la profundidad al cuerpo)", (_, plano) => {
+    const { raiz, nodos } = construirEscena(plano, { biblioteca, tipoEquipo: "televisor" });
+    raiz.updateMatrixWorld(true);
+    const carcasa = nodos.get("carcasa_televisor")!.getObjectByName("carcasa_televisor" + SUFIJO_MALLA)!;
+    const mallas: THREE.Object3D[] = [];
+    raiz.traverse((o) => o instanceof THREE.Mesh && mallas.push(o));
+    for (const id of ["fuente", "placa_control", "parlante_izquierdo", "parlante_derecho"]) {
+      const centro = new THREE.Box3().setFromObject(nodos.get(id)!.getObjectByName(id + SUFIJO_MALLA)!).getCenter(new THREE.Vector3());
+      const rayo = new THREE.Raycaster(new THREE.Vector3(centro.x, centro.y, -100), new THREE.Vector3(0, 0, 1));
+      const primero = rayo.intersectObjects(mallas, false)[0]?.object;
+      let duena: THREE.Object3D | null = primero ?? null;
+      while (duena && duena !== carcasa) duena = duena.parent;
+      expect(duena, `${id}: lo primero que se ve desde atrás es ${primero?.name}`).toBe(carcasa);
     }
   });
 

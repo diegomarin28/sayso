@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
+import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
 import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, usarColorActivo } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
@@ -124,6 +125,36 @@ describe("escena: encuadre en celular", () => {
     const radio = caja.getBoundingSphere(new THREE.Sphere()).radius * 0.8;
     const borde = proyectar(camara, e, e.objetivo.clone().addScaledVector(derecha, radio));
     expect(Math.abs(borde.x)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("escena: encuadre de una pieza en un equipo chico", () => {
+  const tam = { width: 390, height: 600 };
+  const distancia = (plano: Parameters<typeof prepararEscena>[0], objetivo: string, zoom = 1) => {
+    const escena = prepararEscena(plano);
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const e = encuadre(escena, objetivo, zoom, camara, tam);
+    return e.posicion.distanceTo(e.objetivo);
+  };
+
+  it("en un celular, la batería y el conector se ven más cerca que el celular entero (no más lejos)", () => {
+    const general = distancia(planoCelular, "general");
+    expect(distancia(planoCelular, "bateria", 1.2)).toBeLessThan(general);
+    expect(distancia(planoCelular, "conector_carga", 1.5)).toBeLessThan(general);
+  });
+
+  it("en una notebook, la batería tampoco queda más lejos que la notebook entera", () => {
+    expect(distancia(planoNotebookBase, "bateria", 1.2)).toBeLessThan(distancia(planoNotebookBase, "general"));
+  });
+
+  it("en un equipo grande no cambia: una pieza chica se encuadra con su entorno (12 cm de radio como mínimo)", () => {
+    const escena = prepararEscena(planoHeladera);
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const conMinimo = encuadre(escena, "termostato", 1, camara, tam);
+    const caja = new THREE.Box3().setFromObject(escena.nodos.get("termostato")!.nodo);
+    expect(caja.getBoundingSphere(new THREE.Sphere()).radius * 2.6).toBeLessThan(12);
+    expect(conMinimo.posicion.distanceTo(conMinimo.objetivo)).toBeLessThan(distancia(planoHeladera, "general"));
+    expect(conMinimo.posicion.distanceTo(conMinimo.objetivo)).toBeGreaterThan(30);
   });
 });
 

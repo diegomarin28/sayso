@@ -1451,13 +1451,16 @@ def carcasa_televisor():
     bisel_f = caja((W, 1.2, H), (0, -P / 2 + 0.6, z0 + H / 2), "plastico", bisel=0.2)
     restar(bisel_f, caja((W - 1.4, 2.0, H - 1.4), (0, -P / 2 + 0.6, z0 + H / 2), mat=None))
     caja((W - 0.4, 0.6, H - 0.4), (0, -P / 2 + 1.5, z0 + H / 2))
-    caja((W - 20.0, P - 1.8, H - 20.0), (0, 0.9, z0 + H / 2), bisel=1.5)
+    # La joroba llega casi hasta abajo: ahí van los parlantes y la entrada del cable.
+    caja((W - 14.0, P - 1.8, H - 10.0), (0, 0.9, z0 + 0.8 + (H - 10.0) / 2), bisel=1.5)
     for i in range(12):
         caja((0.6, 0.1, 8.0), (-20.0 + i * 1.5, P / 2 + 0.01, z0 + H - 18.0), "ranura")
     caja((12.0, 0.3, 8.0), (W / 2 - 18.0, P / 2 - 0.1, z0 + 16.0), "ranura")
+    # Patas tan profundas como el cuerpo: la profundidad del plano es la del televisor (con patas de 18 cm,
+    # el cuerpo quedaba de 3 cm y la pantalla y las placas se salían por adelante y por atrás).
     for sx in (-1, 1):
-        caja((2.5, 18.0, 0.8), (sx * 35.0, -1.0, 0.4), "plastico", bisel=0.2)
-        caja((2.5, 2.0, z0), (sx * 35.0, -1.0, z0 / 2 + 0.4), "plastico")
+        caja((2.5, P, 0.8), (sx * 35.0, 0, 0.4), "plastico", bisel=0.2)
+        caja((2.5, 2.0, z0), (sx * 35.0, 0, z0 / 2 + 0.4), "plastico")
     return armar("carcasa@televisor", EQUIPOS_TV)
 
 

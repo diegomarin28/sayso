@@ -34,6 +34,7 @@ import {
   planoSecador,
   planoTelevisor,
 } from "../../lib/planogenerator/plantillas/equipos";
+import { planoNotebookBase } from "../../lib/planogenerator/plantillas/notebook";
 
 export {
   planoAuriculares,
@@ -110,12 +111,74 @@ export const coreografiaImpresoraLaser: Coreografia[] = [
   },
 ];
 
+/**
+ * TV: se da vuelta (girar la carcasa no lo abre), se saca la tapa de atrás (la carcasa es la tapa: al
+ * ocultarla quedan las placas) y se muestran la placa principal y la fuente.
+ */
+export const coreografiaTelevisor: Coreografia[] = [
+  paso(1, "Doy vuelta el televisor para verlo desde atrás.", [
+    { t: "rotar", pieza: "carcasa_televisor", eje: "y", grados: 180 },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(2, "Saco la tapa de atrás: abajo quedan las dos placas.", [
+    { t: "ocultar", pieza: "carcasa_televisor" },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(3, "Esta es la placa principal, la de las entradas HDMI.", [
+    { t: "camara", objetivo: "placa_control", zoom: 1.3 },
+    { t: "resaltar", pieza: "placa_control" },
+  ]),
+  {
+    ...paso(4, "Y esta es la fuente. Aunque el televisor esté desenchufado, no la toques: puede guardar carga.", [
+      { t: "camara", objetivo: "fuente", zoom: 1.3 },
+      { t: "resaltar", pieza: "fuente" },
+    ]),
+    riesgo: "medio",
+  },
+];
+
+/** Celular boca abajo: se saca la tapa trasera y se muestran la batería y el conector de carga. */
+export const coreografiaCelular: Coreografia[] = [
+  paso(1, "Saco la tapa de atrás.", [
+    { t: "ocultar", pieza: "tapa_trasera" },
+    { t: "camara", objetivo: "general" },
+  ]),
+  {
+    ...paso(2, "La batería ocupa el medio. Está pegada: no la dobles ni hagas palanca con nada de metal.", [
+      { t: "camara", objetivo: "bateria", zoom: 1.2 },
+      { t: "resaltar", pieza: "bateria" },
+    ]),
+    riesgo: "medio",
+  },
+  paso(3, "Abajo está el conector de carga, en su plaquita.", [
+    { t: "camara", objetivo: "conector_carga", zoom: 1.5 },
+    { t: "resaltar", pieza: "conector_carga" },
+  ]),
+];
+
+/** Notebook dada vuelta: se levanta la tapa de abajo, primero la batería y después el ventilador. */
+export const coreografiaNotebook: Coreografia[] = [
+  paso(1, "Saco la tapa de abajo.", [
+    { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 },
+    { t: "camara", objetivo: "general" },
+  ]),
+  paso(2, "Lo primero es desconectar la batería de la placa.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.2 },
+    { t: "resaltar", pieza: "bateria" },
+  ]),
+  paso(3, "El ventilador está sobre la placa: ahí se junta el polvo.", [
+    { t: "camara", objetivo: "ventilador", zoom: 1.3 },
+    { t: "resaltar", pieza: "ventilador" },
+  ]),
+];
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
   aire: { plano: planoAire, tipoEquipo: "aire acondicionado split" },
-  celular: { plano: planoCelular, tipoEquipo: "celular" },
-  televisor: { plano: planoTelevisor, tipoEquipo: "televisor" },
+  celular: { plano: planoCelular, tipoEquipo: "celular", coreografia: coreografiaCelular },
+  televisor: { plano: planoTelevisor, tipoEquipo: "televisor", coreografia: coreografiaTelevisor },
+  notebook: { plano: planoNotebookBase, tipoEquipo: "notebook", coreografia: coreografiaNotebook },
   lavarropas: { plano: planoLavarropas, tipoEquipo: "lavarropas" },
   microondas: { plano: planoMicroondas, tipoEquipo: "microondas" },
   aspiradora: { plano: planoAspiradora, tipoEquipo: "aspiradora" },
