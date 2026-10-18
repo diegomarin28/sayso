@@ -383,3 +383,7 @@ Renders de las dos formas comprimidas en `renders/tablet_variantes/`.
 no cambia la forma de hoy. Contrato propuesto en `tv-variantes-cobertura.json`;
 conexión al pack y caché integrada (#302). Renders frontales de 46 y 32 pulgadas en
 `renders/tv_variantes/`; el giro del estudio es solo para las imágenes.
+
+## Auriculares por formato explícito
+
+`rasgos3D.auriculares.formato` distingue `over_ear` e `in_ear`, solo si las fuentes lo traen. Sin dato conserva la elección anterior. `auriculares_variantes.glb` aporta arco, copa y almohadilla ovalada con nombres aislados; in-ear reutiliza la biblioteca actual. Los componentes nombrados por el pack se contienen en la copa correspondiente, después de recolocar el resto. El cambio de estuche a diadema no reinterpreta sus medidas como las del otro formato.

@@ -34,7 +34,7 @@ import { ES_TAPA } from "./cubiertas";
 import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
 import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
-import { aplicarRasgos3D } from "./variantes-pack";
+import { aplicarRasgos3D, conRaizPorRasgos } from "./variantes-pack";
 import { ubicarTeclas } from "./teclas";
 import { sinPisarLoVisto } from "./lugar-libre";
 
@@ -559,7 +559,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
-  const limpio = tipo ? sinEsqueletoAjeno(conRaizDeLaForma(plano, tipo), ids, tipo) : { plano, avisos: [] };
+  const limpio = tipo ? sinEsqueletoAjeno(conRaizPorRasgos(conRaizDeLaForma(plano, tipo), kp, tipo), ids, tipo) : { plano, avisos: [] };
   const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
   const teclas = ubicarTeclas(acotado.plano, ids);

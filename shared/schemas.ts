@@ -124,6 +124,7 @@ export const Repuesto = z.object({
 export const Rasgos3D = z.object({
   televisor: z.object({ apoyo: z.enum(["central", "laterales"]).optional() }).optional(),
   tablet: z.object({ botonFrontal: z.boolean().optional() }).optional(),
+  auriculares: z.object({ formato: z.enum(["over_ear", "in_ear"]).optional() }).optional(),
 });
 export type Rasgos3D = z.infer<typeof Rasgos3D>;
 

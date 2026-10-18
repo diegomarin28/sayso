@@ -1,0 +1,20 @@
+{
+  "familia": "auriculares_variantes",
+  "dato_pack": "rasgos3D.auriculares.formato",
+  "variantes": [
+    "over_ear",
+    "in_ear"
+  ],
+  "nodos_explicitos": [
+    "carcasa_auricular_dato@diadema",
+    "carcasa_auricular_dato@copa",
+    "carcasa_auricular_dato@almohadilla"
+  ],
+  "in_ear": "Reutiliza el estuche y las cápsulas actuales",
+  "sin_dato": "Conservar selección y forma anteriores",
+  "casos_probados": [
+    "carcasa/almohadilla izquierda",
+    "carcasa/almohadilla derecha"
+  ],
+  "coordinacion": 302
+}
