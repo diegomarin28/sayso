@@ -20,6 +20,19 @@ Las hojas por equipo muestran las piezas nuevas; los IDs reutilizados se enumera
 Incluye 52 renders individuales y 13 hojas. Las piezas de cada hoja se normalizan para poder
 compararlas: esa vista no representa su tamaño relativo, un montaje ni un despiece real.
 
+## Revisar los GLB finales comprimidos
+
+Los renders de las familias nuevas se revisaron después de comprimir, usando
+`decodificar.mts` para reconstruir las recetas reales del visor. No son capturas
+del producto: la auditoría de cámara, etiquetas y coreografía en iPhone sigue aparte.
+
+```sh
+node --import tsx assets/models/blender/decodificar.mts public/models/piezas /tmp/sayso-revision
+blender -b --factory-startup --python-exit-code 1 --python assets/models/blender/revisar_publicados.py -- --script notebook_demo.py --glb /tmp/sayso-revision/notebook_demo.glb --renders assets/models/blender/renders/notebook_demo
+```
+
+Cambiar script y GLB por la familia a revisar. Sin APIs, credenciales ni costo de IA.
+
 ## Reglas de forma y materiales
 
 Cada pieza nueva tiene regla explícita en `AJUSTES` de `piezas.py`, exportada al índice y a
