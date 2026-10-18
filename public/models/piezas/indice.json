@@ -17,7 +17,8 @@
   "alineacion_demo": "alineacion_demo.glb",
   "impresoras_demo": "impresoras_demo.glb",
   "tablet_variantes": "tablet_variantes.glb",
-  "tv_variantes": "tv_variantes.glb"
+  "tv_variantes": "tv_variantes.glb",
+  "auriculares_variantes": "auriculares_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3593,6 +3594,39 @@
     100,
     66.2685,
     6.12
+   ]
+  },
+  "carcasa_auricular_dato@diadema": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Diadema curva acolchada que une ambas copas.",
+   "caja": [
+    19.9989,
+    1.12,
+    10.5233
+   ]
+  },
+  "carcasa_auricular_dato@copa": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Copa ovalada hueca, con borde y cubierta trasera; no cápsula in-ear estirada.",
+   "caja": [
+    7,
+    2.9,
+    8.6
+   ]
+  },
+  "carcasa_auricular_dato@almohadilla": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Almohadilla ovalada con abertura central para la oreja.",
+   "caja": [
+    6.9,
+    1.6,
+    8.5
    ]
   }
  }

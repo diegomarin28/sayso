@@ -108,7 +108,7 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
 });
 
 /** Lo que hace falta del pack para elegir la plantilla: su clase y los ids de sus piezas. */
-export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string; formaPantalla?: FormaPantalla };
+export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string; formaPantalla?: FormaPantalla; rasgos3D?: KnowledgePack["rasgos3D"] };
 
 /**
  * La plantilla con el plano de la forma de pantalla del pack (un reloj redondo usa el esqueleto redondo).
@@ -207,7 +207,11 @@ const MIN_DISTINTIVAS = 2;
  * freezer es una heladera). Sin señal suficiente, `undefined`: el que llama usa la caja genérica.
  */
 export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
-  const elegida = elegirPorTipo(kp, tipoEquipo);
+  let elegida = elegirPorTipo(kp, tipoEquipo);
+  const formato = kp.rasgos3D?.auriculares?.formato;
+  if (elegida && ["auriculares", "auriculares_vincha"].includes(elegida.id) && (formato === "over_ear" || formato === "in_ear")) {
+    elegida = PLANTILLAS_POR_TIPO.find(p => p.id === (formato === "over_ear" ? "auriculares_vincha" : "auriculares"));
+  }
   const especial = elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
   // Con el plano de la forma de pantalla del pack (dato del pack; sin dato, la más común del tipo).
   return especial && conFormaDePantalla(especial, kp.formaPantalla);

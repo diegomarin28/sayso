@@ -84,6 +84,7 @@ REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
 RASGO|televisor|apoyo|central o laterales: solo si las fuentes muestran el apoyo del televisor; si no se sabe, OMITIR, nunca inferir por marca/modelo.
 RASGO|tablet|botonFrontal|si o no: solo si las fuentes muestran inequívocamente si la tablet tiene botón frontal. Si no se sabe, OMITIR la línea; nunca inferir por marca/modelo.
+RASGO|auriculares|formato|over_ear o in_ear: solo si las fuentes muestran diadema con copas o cápsulas in-ear; si no se sabe, OMITIR, nunca inferir por marca/modelo.
 FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
 ${forma}${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
 1. Chequeos sin abrir (3 a 6 pasos): primero descartá lo que NO es una falla de hardware y lo que se revisa con el equipo cerrado, según el tipo de equipo y el síntoma: apagar del todo y reiniciar, configuración y ajustes, actualizar el sistema o el firmware, modo seguro o restablecer (avisando qué se pierde), las pruebas de diagnóstico del fabricante, cables, cargador, enchufe, pilas o accesorios, limpieza por fuera. Cada chequeo dice cómo se hace y qué cambia si ese era el problema.
