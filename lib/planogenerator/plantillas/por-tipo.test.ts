@@ -32,6 +32,8 @@ describe("elegirPlantilla", () => {
   it("impresora láser (la de la demo) contra la de chorro de tinta", () => {
     expect(elegirPlantilla(pack("otro", []), "Impresora HP LaserJet M404dn")?.id).toBe("impresora_laser");
     expect(elegirPlantilla(pack("otro", []), "impresora láser")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", []), "Impresora láser Brother HL-L2350DW")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", []), "impresora láser")?.cara).toEqual(["puerta_frontal"]);
     expect(elegirPlantilla(pack("otro", []), "Impresora")?.id).toBe("impresora");
     expect(elegirPlantilla(pack("otro", []), "impresora multifunción de tinta")?.id).toBe("impresora");
   });

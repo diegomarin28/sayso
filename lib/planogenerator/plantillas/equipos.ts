@@ -205,7 +205,8 @@ export const planoImpresora: PlanoDePiezas = {
 /**
  * Impresora láser (la de la demo es una): gabinete con el cassette de papel abajo, rodillo de recogida,
  * cartucho de tóner con su tambor, rodillo de transferencia, unidad fusora atrás, unidad láser arriba,
- * placa, fuente, motor y ventilador. Medidas típicas de una láser monocromática de escritorio.
+ * placa, fuente, motor, ventilador y la tapa de adelante (la del tóner). Medidas típicas de una láser
+ * monocromática de escritorio.
  */
 export const planoImpresoraLaser: PlanoDePiezas = {
   modelo: "Impresora láser genérica (ejemplo del lab)",
@@ -225,6 +226,7 @@ export const planoImpresoraLaser: PlanoDePiezas = {
       ["engranaje_arrastre", [0.7, 6, 6], [16.5, 11, 0], "cilindro"],
       ["sensor_papel", [1.6, 3.6, 1.1], [8, 8, -9]],
       ["ventilador_fuente", [2, 6, 6], [-17, 13, -2], "cilindro"],
+      ["puerta_frontal", [30, 9.5, 1.6], [0, 11.75, 18.3]],
     ]),
   ],
 };

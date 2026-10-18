@@ -1559,6 +1559,23 @@ def carcasa_impresora():
     return armar("carcasa@impresora", EQUIPOS_IMPRESORA)
 
 
+def puerta_impresora():
+    """Tapa frontal de impresora láser (la del tóner): panel ancho y bajo que baja con bisagras abajo,
+    rebaje para los dedos arriba, guías de papel y nervios del lado de adentro y los brazos que la frenan."""
+    W, H = 33.0, 11.0
+    panel = caja((W, 1.4, H), (0, -0.2, H / 2), bisel=0.5)
+    restar(panel, caja((7.0, 1.0, 1.6), (0, -0.9, H - 0.6), mat=None))  # rebaje para los dedos
+    caja((W - 1.6, 0.4, H - 1.6), (0, 0.65, H / 2), "conector")  # contracara
+    for x in (-12.0, -6.0, 0.0, 6.0, 12.0):
+        caja((0.3, 0.9, H - 3.0), (x, 1.2, H / 2), "conector")  # nervios
+    for sx in (-1, 1):
+        caja((1.0, 1.4, H - 2.0), (sx * 9.0, 1.4, H / 2), "plastico", bisel=0.1)  # guías del papel
+        cilindro(0.55, 2.4, (sx * (W / 2 - 3.0), 0.2, 0.3), "plastico", seg=16, eje="x")  # bisagra
+        caja((0.4, 0.4, 5.0), (sx * (W / 2 - 0.8), 1.0, H - 3.0), "metal")  # brazo que la frena
+    caja((W - 8.0, 0.2, 0.4), (0, -0.95, H - 2.2), "ranura")
+    return armar("puerta@impresora", EQUIPOS_IMPRESORA)
+
+
 # Cada familia es un GLB aparte (public/models/piezas/<familia>.glb): el visor baja solo las que usa el plano.
 FAMILIAS = {
     "computo": [
@@ -1574,6 +1591,7 @@ FAMILIAS = {
     "frio_calor": [serpentin, condensador_heladera, evaporador, termostato, resistencia, valvula],
     "estructura": [
         tornillo, manguera, filtro, filtro_cartucho, cable, cable_redondo, bisagra, bisagra_puerta, puerta, puerta_ojo_de_buey,
+        puerta_impresora,
         bandeja, bandeja_goteo, bandeja_estante,
     ],
     "carcasas": [carcasa_heladera, carcasa_split, carcasa_televisor, carcasa_lavarropas, carcasa_microondas, carcasa_impresora],

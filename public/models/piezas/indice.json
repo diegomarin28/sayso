@@ -1243,6 +1243,17 @@
     12
    ]
   },
+  "puerta@impresora": {
+   "familia": "estructura",
+   "descripcion": "Tapa frontal de impresora láser (la del tóner): panel ancho y bajo que baja con bisagras abajo, rebaje para los dedos arriba, guías de papel y nervios del lado de adentro y los brazos que la frenan.",
+   "equipos": "impresora laser laserjet",
+   "ajuste": "libre",
+   "caja": [
+    33,
+    11.25,
+    3.15
+   ]
+  },
   "bandeja": {
    "familia": "estructura",
    "descripcion": "Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente.",
