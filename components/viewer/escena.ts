@@ -102,7 +102,16 @@ export type EscenaPreparada = {
 };
 
 
-export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
+/** Gris de las piezas genéricas (`piezasGenericas`: el esqueleto del tipo las suma, el pack no las nombra). */
+const GRIS_GENERICA = new THREE.Color("#8d96a1");
+
+/** `genericas`: piezas que se pintan en gris, sin su receta (ver `piezasGenericas` en origen.ts). */
+export function prepararEscena(
+  plano: PlanoDePiezas,
+  biblioteca?: BibliotecaPiezas,
+  tipoEquipo?: string,
+  genericas: ReadonlySet<string> = new Set(),
+): EscenaPreparada {
   const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca, tipoEquipo });
   const animables = new Map<string, NodoAnimable>();
   const ids = [...nodos.keys()];
@@ -115,7 +124,7 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
       id,
       nodo,
       principal: nodo.getObjectByName(id + SUFIJO_MALLA) as THREE.Mesh,
-      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza))),
+      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza), genericas.has(id))),
       reposo: nodo.position.clone(),
       centroPadre: padre?.centro ?? null,
       ancestros: ancestrosDe(nodo, raiz),
@@ -153,13 +162,18 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
  * Como `prepararEscena`, pero si las piezas de Blender rompen algo, arma la escena con las
  * primitivas (cajas y cilindros) y lo avisa: el 3D nunca queda vacío por culpa del GLB.
  */
-export function prepararEscenaSegura(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas | null, tipoEquipo?: string): EscenaPreparada {
-  if (!biblioteca) return prepararEscena(plano, undefined, tipoEquipo);
+export function prepararEscenaSegura(
+  plano: PlanoDePiezas,
+  biblioteca?: BibliotecaPiezas | null,
+  tipoEquipo?: string,
+  genericas?: ReadonlySet<string>,
+): EscenaPreparada {
+  if (!biblioteca) return prepararEscena(plano, undefined, tipoEquipo, genericas);
   try {
-    return prepararEscena(plano, biblioteca, tipoEquipo);
+    return prepararEscena(plano, biblioteca, tipoEquipo, genericas);
   } catch (e) {
     console.warn("[visor] las piezas de Blender fallaron, uso primitivas:", e);
-    const escena = prepararEscena(plano, undefined, tipoEquipo);
+    const escena = prepararEscena(plano, undefined, tipoEquipo, genericas);
     escena.avisos.unshift("Las piezas detalladas no cargaron en este equipo: se muestran formas simples.");
     return escena;
   }
@@ -190,9 +204,14 @@ export function esIncierta(d: Pick<DatosPieza, "origen">): boolean {
   return d.origen === "estimada" || d.origen === "plantilla";
 }
 
-function prepararMalla(m: THREE.Mesh, incierta: boolean): MallaAnimable {
+function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false): MallaAnimable {
   const malla = m as MallaAnimable["malla"];
   const mat = malla.material;
+  if (generica) {
+    mat.color.copy(GRIS_GENERICA);
+    mat.metalness = 0.1;
+    mat.roughness = 0.7;
+  }
   mat.emissive.copy(ACTIVO);
   mat.emissiveIntensity = 0;
   const geometria = new THREE.EdgesGeometry(malla.geometry, ANGULO_BORDES);

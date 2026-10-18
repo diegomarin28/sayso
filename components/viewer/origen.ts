@@ -6,6 +6,16 @@ import type { OrigenDato3D, PiezaPlano, PlanoDePiezas } from "../../shared";
  * etiqueta dice de dónde sale su pieza, con documento y página cuando hay.
  */
 
+/**
+ * Las piezas genéricas: las que el esqueleto del tipo suma y el pack del caso no nombra (origen "plantilla" y
+ * fuera del pack, ver `seguirPlantilla`). El visor las pinta en gris. Sin pack (lab), ninguna.
+ */
+export function piezasGenericas(plano: PlanoDePiezas, piezasDelPack?: ReadonlyArray<{ id: string }>): Set<string> {
+  if (!piezasDelPack?.length) return new Set();
+  const delPack = new Set(piezasDelPack.map((p) => p.id));
+  return new Set(plano.piezas.filter((p) => p.origen === "plantilla" && !delPack.has(p.pieza)).map((p) => p.pieza));
+}
+
 export type ResumenOrigen = Record<OrigenDato3D | "sinDato", number> & { medidasEstimadas: boolean };
 
 export function resumenOrigen(plano: PlanoDePiezas): ResumenOrigen {

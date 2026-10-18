@@ -32,7 +32,7 @@ export const fuenteSimulada: FuenteChat = async function* (pedido, senal) {
     pasos = [
       {
         paso: 1,
-        dice: `${nombrada.nombre}: ${nombrada.ubicacion}. Te la marco en naranja.`,
+        dice: `${nombrada.nombre}: ${nombrada.ubicacion}. Te la marco en el 3D.`,
         // Sin marcas, como suele responder la IA: la guía va a la pieza nombrada sola (B6, pieza-nombrada.ts).
         acciones: [{ t: "restaurar" }],
         riesgo: "bajo",

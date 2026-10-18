@@ -20,7 +20,7 @@ describe("guiaDelPack: el paso a paso de la guía simulada, con el pack (#161, s
     // Al sacar la tapa: qué hay adentro, primero lo que usa la guía.
     expect(g[1].dice).toBe("Adentro vas a ver el ventilador, la placa madre y el disipador. Te las marco en el 3D.");
     expect(resaltadas(g[1].acciones)).toEqual(["ventilador", "placa_madre", "disipador"]);
-    expect(g[2].dice).toBe("Ubicá el ventilador: sobre el disipador, a la derecha del procesador. Expulsa el aire caliente. Te lo marco en naranja.");
+    expect(g[2].dice).toBe("Ubicá el ventilador: sobre el disipador, a la derecha del procesador. Expulsa el aire caliente. Te lo marco en el 3D.");
     expect(g[2].acciones[0]).toEqual({ t: "camara", objetivo: "ventilador", zoom: 1.4 });
     expect(g[3].dice).toMatch(/^Aflojá los dos tornillos/);
     expect(resaltadas(g[3].acciones)).toEqual(["ventilador", "tornillos_ventilador"]);
@@ -44,7 +44,7 @@ describe("guiaDelPack: el paso a paso de la guía simulada, con el pack (#161, s
     expect(g[1].dice).toBe("Despegá la tapa trasera con calor.");
     expect(g[2].dice).toMatch(/^Adentro vas a ver la batería/);
     // "Desconectá el flex" es desarmar, no cortar la corriente: antes va el "ubicá".
-    expect(g[3].dice).toBe("Ubicá la batería: en el centro. Alimenta el celular. Te la marco en naranja.");
+    expect(g[3].dice).toBe("Ubicá la batería: en el centro. Alimenta el celular. Te la marco en el 3D.");
     expect(g[4].dice).toBe("Desconectá el flex de la batería.");
   });
 
@@ -65,7 +65,7 @@ describe("guiaDelPack: el paso a paso de la guía simulada, con el pack (#161, s
     const g = guiaDelPack(tv, planoCon("fuente_alimentacion_tv"));
     expect(g[0].dice).toBe("Desenchufá el TV y esperá un minuto.");
     for (const c of g) expect(evaluarPedido(c.dice, { tipoEquipo: "televisor" }).bloqueado).toBe(false);
-    expect(g[1].dice).toBe("Ubicá la fuente de alimentación: detrás del panel. Convierte la corriente. Te la marco en naranja.");
+    expect(g[1].dice).toBe("Ubicá la fuente de alimentación: detrás del panel. Convierte la corriente. Te la marco en el 3D.");
     expect(g[2].dice).toBe("Revisá la fuente.");
   });
 
@@ -113,7 +113,7 @@ describe("guiaDelPack: el paso a paso de la guía simulada, con el pack (#161, s
       advertencias: [],
     };
     const ubica = guiaDelPack(impresora, planoCon("cartucho_toner")).find((c) => c.dice.startsWith("Ubicá"));
-    expect(ubica?.dice).toBe("Ubicá el cartucho de tóner: dentro de la impresora, detrás de la puerta del frente. Te lo marco en naranja.");
+    expect(ubica?.dice).toBe("Ubicá el cartucho de tóner: dentro de la impresora, detrás de la puerta del frente. Te lo marco en el 3D.");
   });
 
   it("sin pasos en el pack no inventa una guía", () => {
