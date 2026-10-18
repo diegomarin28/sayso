@@ -108,7 +108,9 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
  * la guía la saca. Va sobre el plano ya terminado (último paso de `terminarPlano`), así envuelve las piezas
  * donde quedaron, al generar, al leer de la caché y con el esqueleto solo:
  * - una tapa que envuelve al equipo (consola, router: sin carcasa propia) envuelve todo lo que hay;
- * - una chapa fina (la trasera del celular, la inferior de la notebook) va arriba de todo, del tamaño de la carcasa.
+ * - una chapa fina (la trasera del celular, la inferior de la notebook) va del lado donde la pone el esqueleto,
+ *   del tamaño de la carcasa: arriba de todo en un celular o una notebook (se los mira por atrás), abajo de todo
+ *   en un reloj (el dorso; arriba se ve la pantalla, que dice si es cuadrado o redondo).
  */
 export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): PlanoDePiezas {
   const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => ES_TAPA.test(p.pieza));
@@ -138,10 +140,11 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   const raizTipo = plantilla.plano.piezas.find((p) => !p.padre) ?? plantilla.plano.piezas[0];
   const escala = [raiz.dim[0] / raizTipo.dim[0], 1, raiz.dim[2] / raizTipo.dim[2]];
   const alto = tapa.dim[1];
+  const abajo = tapa.pos[1] < raizTipo.pos[1];
   const nueva: PiezaPlano = {
     ...base,
     dim: [tapa.dim[0] * escala[0], alto, tapa.dim[2] * escala[2]],
-    pos: [raiz.pos[0], techo + alto / 2, raiz.pos[2]],
+    pos: [raiz.pos[0], abajo ? piso - alto / 2 : techo + alto / 2, raiz.pos[2]],
     pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
   };
   return { ...plano, piezas: [...piezas, nueva] };

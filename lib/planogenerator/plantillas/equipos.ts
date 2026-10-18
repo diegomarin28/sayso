@@ -368,14 +368,18 @@ export const planoAuriculares: PlanoDePiezas = {
   ],
 };
 
-/** Reloj inteligente acostado, con la pantalla hacia arriba y la correa. */
+/**
+ * Reloj inteligente de pantalla CUADRADA, acostado, con la pantalla hacia arriba y la correa. La caja y la
+ * pantalla de reloj de la biblioteca son redondas: hasta que haya formas cuadradas (#247), usan formas de
+ * rectángulo redondeado que ya existen (`formaBiblioteca`): el marco y la pantalla de celular, estirados.
+ */
 export const planoReloj: PlanoDePiezas = {
   modelo: "Reloj inteligente genérico (ejemplo)",
   unidades: "cm",
   piezas: [
-    pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]),
+    { ...pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]), formaBiblioteca: "marco" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0], "caja", "caja_reloj"), formaBiblioteca: "pantalla" },
     ...hijos("caja_reloj", [
-      ["pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0]],
       ["placa", [3.4, 0.2, 3.6], [0, 1.15, 0]],
       ["bateria", [3, 0.4, 2.8], [0, 0.85, 0.3]],
       ["motor_vibracion", [2.2, 0.3, 0.9], [0, 0.6, -1.7]],
@@ -389,16 +393,15 @@ export const planoReloj: PlanoDePiezas = {
 };
 
 /**
- * Reloj de pantalla REDONDA (el mismo tipo, otra forma de pantalla: dato del pack, `formaPantalla`):
- * caja y pantalla circulares. La biblioteca todavía no tiene caja ni pantalla de reloj redondas, así que
- * usan formas redondas que ya existen (`formaBiblioteca`): la tapa del reloj estirada en alto y la esfera.
+ * Reloj de pantalla REDONDA (el mismo tipo, otra forma de pantalla: dato del pack, `formaPantalla`): caja y
+ * pantalla circulares, con las formas de reloj de la biblioteca (que son redondas).
  */
 export const planoRelojRedondo: PlanoDePiezas = {
   modelo: "Reloj inteligente redondo genérico (ejemplo)",
   unidades: "cm",
   piezas: [
-    { ...pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"), formaBiblioteca: "tapa_reloj" },
-    { ...pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"), formaBiblioteca: "esfera_reloj" },
+    pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"),
+    pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"),
     ...hijos("caja_reloj", [
       ["placa", [3.2, 0.2, 3.2], [0, 1.15, 0]],
       ["bateria", [2.8, 0.4, 2.6], [0, 0.85, 0.2]],
