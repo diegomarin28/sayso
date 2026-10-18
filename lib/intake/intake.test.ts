@@ -281,10 +281,12 @@ describe("fotos por TIPO de equipo (#229), nunca por modelo: dos variantes de ca
     expect(pedidos.some((p) => p.tipo === "frente")).toBe(true);
   });
 
-  it.each([["notebook Lenovo IdeaPad 3"], ["laptop HP Pavilion 15"]])("notebook (%s) que sí prende: la lista de la IA no se toca", async (tipoEquipo) => {
+  it.each([["notebook Lenovo IdeaPad 3"], ["laptop HP Pavilion 15"]])("notebook (%s) que sí prende: la lista de la IA no se toca (salvo la alternativa de la captura)", async (tipoEquipo) => {
     const lista: Array<[PedidoDeFoto["tipo"], string]> = [["etiqueta", "Dá vuelta la notebook y sacale una foto a la etiqueta."], ["otro", "Sacá una foto de cerca a la tecla P."]];
     const { pedidos } = await decidirPedidos("notebook", "la tecla P no anda", pedidosIA(...lista), tipoEquipo);
-    expect(pedidos.map((p) => [p.tipo, p.instruccion])).toEqual(lista);
+    expect(pedidos.map((p) => p.tipo)).toEqual(["etiqueta", "otro"]);
+    expect(pedidos[0].instruccion.startsWith(lista[0][1])).toBe(true);
+    expect(pedidos[1].instruccion).toBe(lista[1][1]);
   });
 
   it("el síntoma «no prende» se reconoce con o sin tildes y en sus formas comunes", async () => {
@@ -317,5 +319,54 @@ describe("validador de fotos: juzga contra lo que se pidió (#229)", () => {
 
   it("sin el pedido (versión vieja de la pantalla), sigue con la descripción del tipo de foto", () => {
     expect(EntradaCalidad.parse({ casoId: "c", tipoPedido: "frente", imagen: { base64: "x", mediaType: "image/jpeg" } }).instruccion).toBeUndefined();
+  });
+});
+
+describe("etiqueta o captura de «Acerca de» en equipos con pantalla y sistema, por tipo y sin marcas", () => {
+  const pedidosIA = (...lista: Array<[PedidoDeFoto["tipo"], string]>) =>
+    falso({ pedidos: lista.map(([tipo, instruccion]) => ({ tipo, instruccion, advertencia: null })) });
+  const etiquetaDe = async (tipoEquipo: string | undefined, sintoma = "anda lento", clase: "notebook" | "otro" = "otro", llamar: LlamarIA = pedidosIA(["etiqueta", "Sacale una foto a la etiqueta."], ["frente", "Foto del frente."])) =>
+    (await decidirPedidos(clase, sintoma, llamar, tipoEquipo)).pedidos.find((p) => p.tipo === "etiqueta")!.instruccion;
+  const MARCAS = /apple|iphone|ipad|samsung|android|windows|macos|ios\b|playstation|xbox|nintendo/i;
+
+  it.each([
+    ["notebook", "notebook Dell Inspiron 15", "la notebook"],
+    ["notebook", "laptop Asus", "la notebook"],
+    ["celular", "iPhone 13", "el celular"],
+    ["celular", "celular Motorola Moto G84", "el celular"],
+    ["tablet", "iPad Air", "la tablet"],
+    ["tablet", "tablet Lenovo Tab M10", "la tablet"],
+    ["reloj", "Apple Watch SE", "el reloj"],
+    ["reloj", "smartwatch Xiaomi", "el reloj"],
+    ["consola", "PlayStation 5", "la consola"],
+    ["consola", "consola Nintendo Switch", "la consola"],
+    ["computadora", "computadora de escritorio", "la computadora"],
+    ["computadora", "PC gamer", "la computadora"],
+  ])("%s (%s): además de la etiqueta, ofrece la captura de Información o «Acerca de»", async (_, tipoEquipo, equipo) => {
+    const texto = await etiquetaDe(tipoEquipo);
+    expect(texto.startsWith("Sacale una foto a la etiqueta.")).toBe(true);
+    expect(texto).toContain(`y ${equipo} prende: sacá una captura de la pantalla de Información o «Acerca de» del sistema`);
+    expect(texto.replace(tipoEquipo, "")).not.toMatch(MARCAS);
+  });
+
+  it("también con la lista fija (si la IA falla) y con la clase notebook sin tipo", async () => {
+    const falla: LlamarIA = async () => {
+      throw new ErrorIA("caída");
+    };
+    expect(await etiquetaDe("celular Samsung A52", "anda lento", "otro", falla)).toMatch(/captura de la pantalla de Información/);
+    expect(await etiquetaDe(undefined, "anda lento", "notebook", falla)).toMatch(/y la notebook prende: sacá una captura/);
+  });
+
+  it.each([["heladera Whirlpool"], ["televisor Samsung"], ["lavarropas Drean"], ["auriculares JBL"], ["cafetera Oster"]])("%s: solo la etiqueta, sin captura", async (tipoEquipo) => {
+    expect(await etiquetaDe(tipoEquipo)).not.toMatch(/captura/);
+  });
+
+  it.each([["notebook HP 14"], ["celular Moto G32"]])("%s que no prende: sin la captura (necesita el equipo prendido)", async (tipoEquipo) => {
+    expect(await etiquetaDe(tipoEquipo, "no prende")).not.toMatch(/captura|Acerca de/);
+  });
+
+  it("si la IA ya pidió la captura en la etiqueta, no se repite", async () => {
+    const texto = await etiquetaDe("celular", "anda lento", "otro", pedidosIA(["etiqueta", "Sacá una captura de Información del sistema, donde dice el modelo."], ["frente", "Foto del frente."]));
+    expect(texto.match(/captura/g)).toHaveLength(1);
   });
 });
