@@ -179,7 +179,7 @@ export const CASOS_DEMO: CasoPrueba[] = [
     id: "hp-laserjet-m404",
     equipo: "Impresora láser (facultad)",
     clase: "otro",
-    tipoEquipo: "impresora",
+    tipoEquipo: "impresora láser",
     marca: "HP",
     modelo: "LaserJet Pro M404dn",
     relato: "La impresora HP LaserJet de la facultad saca las hojas con manchas y el tóner se corre al tocarlo.",

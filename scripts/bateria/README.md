@@ -44,6 +44,19 @@ npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto --demo         
 - Qué queda guardado: el **manual** (búsqueda y vistas) y el **plano 3D** por marca + modelo; el **pack** por marca + modelo + síntoma (se precalienta con un síntoma general: con otro síntoma se vuelve a armar, pero desde el manual ya guardado, que es lo barato).
 - La tabla dice si cada equipo **ya estaba** en la caché (no gastó).
 
+## Ver los equipos de la demo en el celular, sin IA
+
+Arma "Mis casos" con lo que ya quedó en la caché de Supabase (el último pack de cada equipo y su plano,
+terminado con el código actual igual que lo devuelve `/api/plano`). No llama a la IA ni a la app.
+
+```bash
+npx tsx --env-file=.env.local scripts/bateria/correr.ts --mis-casos --demo --salida mis-casos.json
+```
+
+Después, en el navegador (o el celular) con la app abierta: cargá el JSON en
+`localStorage["sayso:mis-casos:v1"]` y abrí "Mis casos". Cada equipo abre directo en la pantalla del experto.
+Si un equipo no tiene pack o plano guardado, la lista lo dice (hay que precalentarlo antes, con OK de gasto).
+
 ## Seguridad sin IA
 
 ```bash

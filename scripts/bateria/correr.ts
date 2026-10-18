@@ -19,6 +19,9 @@
  * Ensayo general de la demo (los 4 equipos de CASOS_DEMO, IA real):
  *   npx tsx --env-file=.env.local scripts/bateria/correr.ts --demo --confirmo-gasto --sin-comparar --tope 0.45
  *
+ * "Mis casos" con lo que ya está en la caché, SIN IA (para ver la guía y el 3D en el celular; ver mis-casos.ts):
+ *   npx tsx --env-file=.env.local scripts/bateria/correr.ts --mis-casos --demo --salida mis-casos.json
+ *
  * `--demo` con `--precalentar`: los equipos de la demo (EQUIPOS_DEMO en precalentar.ts). Sin `--equipos` ni `--demo`,
  * precalienta los equipos de la batería (`--solo` también vale).
  */
@@ -51,6 +54,22 @@ async function main() {
   const solo = opcion("--solo")?.split(",");
   const casos = solo ? todos.filter((c) => solo.includes(c.id)) : todos;
   if (casos.length === 0) throw new Error(`--solo no coincide con ningún caso (${todos.map((c) => c.id).join(", ")})`);
+
+  if (process.argv.includes("--mis-casos")) {
+    const salida = opcion("--salida");
+    if (!salida) throw new Error("--mis-casos necesita --salida archivo.json");
+    // Import tardío: trae el cliente de Supabase del servidor.
+    const { supabaseServidor } = await import("../../lib/supabase/cliente");
+    const { misCasosDeLaCache } = await import("./mis-casos");
+    const db = supabaseServidor();
+    if (!db) throw new Error("Sin Supabase: corré con `npx tsx --env-file=.env.local …`.");
+    const r = await misCasosDeLaCache(db, casos);
+    for (const c of r.casos) console.log(`  ✓ ${c.ficha?.marca.valor} ${c.ficha?.modelo.valor}: ${c.guia?.preparado.pack.pasos.length} pasos, ${c.guia?.plano.plano.piezas.length} piezas`);
+    for (const f of r.faltan) console.log(`  ✗ ${f.id}: ${f.falta}`);
+    writeFileSync(salida, JSON.stringify(r.casos, null, 2));
+    console.log(`${r.casos.length} casos en ${salida}: cargalos en localStorage["sayso:mis-casos:v1"] y abrí "Mis casos".`);
+    return;
+  }
 
   if (modoPrecalentar) {
     const lista = process.argv.includes("--demo") ? EQUIPOS_DEMO : opcion("--equipos");
