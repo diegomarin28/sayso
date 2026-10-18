@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { planoCelular, planoHeladera, planoTablet } from "../../lib/planogenerator/plantillas/equipos";
+import { planoCelular, planoHeladera, planoTablet, planoTelevisor } from "../../lib/planogenerator/plantillas/equipos";
 import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 import { conDesarme } from "./guia/desarme";
@@ -430,6 +430,19 @@ describe("resaltado de una pieza grande (#231: no rellenar todo de celeste)", ()
       const escena = resaltar(plano, grande);
       expect(escena.nodos.get(otra)!.grande).toBe(true);
       expect(mat(escena, otra).opacity).toBeLessThan(0.6);
+    });
+  }
+
+  // #188: la carcasa raíz es madre de todo; su pantalla (grande) no la tapa, lo de adentro (chico) sigue igual.
+  for (const [plano, raiz, pantalla, adentro] of [
+    [planoCelular, "marco", "pantalla", "bateria"],
+    [planoTelevisor, "carcasa_televisor", "pantalla_panel", "placa_control"],
+  ] as const) {
+    it(`resaltada la carcasa (${raiz}), su hija grande (${pantalla}) pasa a fantasma y ${adentro} no`, () => {
+      const escena = resaltar(plano, raiz);
+      expect(escena.nodos.get(pantalla)!.ancestros).toContain(raiz);
+      expect(mat(escena, pantalla).opacity).toBeLessThan(0.6);
+      expect(mat(escena, adentro).opacity).toBeCloseTo(mat(prepararEscena(plano), adentro).opacity, 3);
     });
   }
 

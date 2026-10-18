@@ -137,8 +137,12 @@ export function aplicarAccion(
     case "ocultar":
       cambiar(accion.pieza, (p) => ({ ...p, visible: false, resaltada: false }));
       break;
-    case "despiezar":
-      return { estado: { ...estado, despiece: accion.cantidad, abierto: accion.cantidad > 0 } };
+    case "despiezar": {
+      // Un equipo acostado se despieza mirado del lado de lo de adentro: desde la pantalla de un celular, las
+      // capas se verían por debajo, oscuras (#188). Al armarlo, vuelve a su cara de uso.
+      const ladoDespiece = accion.cantidad > 0 ? estado.lados?.adentro : estado.lados?.inicial;
+      return { estado: { ...estado, despiece: accion.cantidad, abierto: accion.cantidad > 0, ...(ladoDespiece ? { lado: ladoDespiece } : {}) } };
+    }
     case "restaurar":
       return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas, estado.lados) };
   }

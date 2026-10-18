@@ -101,6 +101,15 @@ describe("el reproductor lleva la cámara al lado de la tapa", () => {
     expect(r.lado).toBe("abajo");
   });
 
+  it.each([
+    ["celular", equipos.planoCelular],
+    ["tablet", equipos.planoTablet],
+  ])("%s: despiezado se mira del lado de lo de adentro (arriba); armado vuelve a la pantalla (#188)", (_, plano) => {
+    const despiezado = aplicarAccion(conLados(plano), { t: "despiezar", cantidad: 1 }, ctx).estado;
+    expect(despiezado.lado).toBe("arriba");
+    expect(aplicarAccion(despiezado, { t: "despiezar", cantidad: 0 }, ctx).estado.lado).toBe("abajo");
+  });
+
   it("reloj: sacar el dorso lleva la cámara abajo", () => {
     const r = aplicarAccion(conLados(equipos.planoReloj), { t: "ocultar", pieza: "tapa_reloj" }, ctx).estado;
     expect(r.lado).toBe("abajo");
