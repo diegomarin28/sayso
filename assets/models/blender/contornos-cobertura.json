@@ -1,0 +1,40 @@
+{
+  "tablet": {
+    "nuevas": [
+      "carcasa_contorno@tablet",
+      "panel_contorno@tablet"
+    ],
+    "reutilizadas": [
+      "placa"
+    ],
+    "variantes": [
+      {
+        "escala": 0.85
+      },
+      {
+        "escala": 1.2
+      }
+    ],
+    "funcion": "Mallas auxiliares abiertas: no sustituyen el frente opaco del equipo cerrado. El visor puede resaltar el borde sin ocultar lo de adentro.",
+    "integracion_pendiente": "#231 / #261: selección de borde y transparencia dinámica en otro chat"
+  },
+  "tv": {
+    "nuevas": [
+      "carcasa_contorno@tv",
+      "panel_contorno@tv"
+    ],
+    "reutilizadas": [
+      "placa"
+    ],
+    "variantes": [
+      {
+        "escala": 0.85
+      },
+      {
+        "escala": 1.2
+      }
+    ],
+    "funcion": "Mallas auxiliares abiertas: no sustituyen el frente opaco del equipo cerrado. El visor puede resaltar el borde sin ocultar lo de adentro.",
+    "integracion_pendiente": "#231 / #261: selección de borde y transparencia dinámica en otro chat"
+  }
+}

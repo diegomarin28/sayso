@@ -299,6 +299,29 @@ Nuevas:
 Reutilizadas: `fuente`, `transformador`, `capacitor`, `conector@usb_c`, `conector_usb_a`, `cable@redondo`.
 
 
+## Piezas grandes con borde claro — #231
+
+`contornos_demo.py` publica **contornos_demo.glb** (menos de 10 KB), con
+`carcasa_contorno@tablet`, `panel_contorno@tablet`, `carcasa_contorno@tv` y
+`panel_contorno@tv`. Son mallas con abertura central, pared y labio continuo;
+no hay un rectángulo sólido invisible detrás que vuelva a tapar las piezas.
+Los renders muestran una placa a través del centro, en dos tamaños por tipo.
+
+Son **formas auxiliares para el resaltado**. No se deben elegir como reemplazo de
+la pantalla o carcasa completa en estado cerrado: el equipo perdería su cara.
+El chat del visor controla cuándo usar el borde y cuánto transparentar la superficie
+original (#261). Este PR no resuelve el texto del paso ni cambia shaders del visor.
+Las reglas son por tipo/orientación y dimensiones; no hay marcas ni modelos.
+
+![Interior visible de tablet](renders/contornos_demo/interior_visible_tablet_1.jpg)
+![Interior visible de TV](renders/contornos_demo/interior_visible_tv_1.jpg)
+
+Cobertura: `contornos-cobertura.json`. Los tests tiran rayos por varios puntos del
+centro (deben atravesar) y por el borde (deben chocar), a escalas 0,85 y 1,2.
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/contornos_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/contornos_demo.py -- --salida /tmp/contornos --renders assets/models/blender/renders/contornos_demo`.
+Test: `npx vitest run assets/models/blender/contornos-demo.test.ts`.
+
 ## Tablet completa — #233
 
 `tablet_demo.py` publica **tablet_demo.glb** (12 KB): `marco@tablet` hueco,
