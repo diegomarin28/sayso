@@ -1,7 +1,7 @@
 {
  "familia":"tv_variantes",
  "tipo":"televisor",
- "dato_propuesto":"rasgos3D.televisor.apoyo",
+ "dato_pack":"rasgos3D.televisor.apoyo",
  "variantes":[
   {"dato":"central","nodo":"carcasa_tv_dato@pie_central"},
   {"dato":"laterales","nodo":"carcasa_tv_dato@pie_laterales"}

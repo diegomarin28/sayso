@@ -82,6 +82,7 @@ PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la v
 PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
+RASGO|televisor|apoyo|central o laterales: solo si las fuentes muestran el apoyo del televisor; si no se sabe, OMITIR, nunca inferir por marca/modelo.
 RASGO|tablet|botonFrontal|si o no: solo si las fuentes muestran inequívocamente si la tablet tiene botón frontal. Si no se sabe, OMITIR la línea; nunca inferir por marca/modelo.
 FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
 ${forma}${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
