@@ -1,4 +1,4 @@
-import type { Ficha, PlanoDePiezas } from "../../shared";
+import type { Ficha, KnowledgePack, PlanoDePiezas } from "../../shared";
 import type { EnviarMensaje, LlamarIA } from "../ia/claude";
 import type { Fetch } from "../knowledge/descargar";
 import { claveManual } from "../knowledge/manuales";
@@ -31,6 +31,15 @@ export type ResultadoObtener = Omit<ResultadoGenerador, "propuesta" | "camino" |
 
 const memoria = cachePlanosEnMemoria();
 
+/**
+ * Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
+ * Y se termina igual que uno nuevo: esqueleto del tipo, medidas con sentido y piezas sueltas (`terminarPlano`).
+ */
+export function terminarGuardado(plano: PlanoDePiezas, kp: KnowledgePack, tipoEquipo?: string) {
+  const tipo = elegirPlantilla(kp, tipoEquipo);
+  return terminarPlano(tipo ? ajustarPlanoAlTipo(plano, tipo) : plano, kp, tipo);
+}
+
 export async function obtenerPlano(
   entrada: EntradaObtener,
   deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch } = {},
@@ -42,9 +51,7 @@ export async function obtenerPlano(
 
   const kp = entrada.knowledgePack;
   const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
-  // Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
-  // Y se termina igual que uno nuevo: esqueleto del tipo, medidas con sentido y piezas sueltas (`terminarPlano`).
-  const terminar = (plano: PlanoDePiezas) => terminarPlano(tipo ? ajustarPlanoAlTipo(plano, tipo) : plano, kp, tipo);
+  const terminar = (plano: PlanoDePiezas) => terminarGuardado(plano, kp, entrada.tipoEquipo);
 
   let guardado: PlanoGuardado | null = null;
   if (clave) {
