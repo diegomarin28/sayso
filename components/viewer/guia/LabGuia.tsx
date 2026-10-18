@@ -31,7 +31,7 @@ export function LabGuia() {
   const clave = `${origen}-${real}`;
 
   return (
-    <main className="flex h-dvh flex-col bg-black md:flex-row">
+    <main className="flex h-dvh flex-col bg-escena md:flex-row">
       <GuiaExperto
         key={clave}
         className="min-h-0 flex-1"
@@ -62,7 +62,7 @@ export function LabGuia() {
         aria-label={panel ? "Cerrar el panel de pruebas" : "Abrir el panel de pruebas"}
         aria-expanded={panel}
         onClick={() => setPanel((p) => !p)}
-        className="fixed right-3 bottom-24 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/75 text-lg text-white backdrop-blur md:hidden"
+        className="fixed right-3 bottom-24 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-borde bg-superficie/90 text-lg text-texto backdrop-blur md:hidden"
       >
         {panel ? <Cerrar /> : <Engranaje />}
       </button>
@@ -112,7 +112,7 @@ function Opcion<T extends string>({ titulo, valor, opciones, onCambio }: { titul
             key={o}
             type="button"
             onClick={() => onCambio(o)}
-            className={`rounded px-3 py-1.5 ${o === valor ? "bg-acento text-black" : "bg-superficie"}`}
+            className={`rounded px-3 py-1.5 ${o === valor ? "bg-acento text-fondo" : "bg-superficie"}`}
           >
             {o}
           </button>

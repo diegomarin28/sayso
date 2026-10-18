@@ -40,24 +40,24 @@ export function VerPaginaManual({ pagina, onCerrar }: { pagina: PaginaManual; on
       role="dialog"
       aria-modal
       aria-label={`Manual: ${titulo}`}
-      className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-fondo/95 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
-        <p className="min-w-0 truncate text-sm text-white/80">{titulo}</p>
+        <p className="min-w-0 truncate text-sm text-texto-suave">{titulo}</p>
         <button
           ref={cerrar}
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar la página del manual"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-borde bg-superficie text-texto active:scale-95"
         >
           <Cerrar size={20} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- imagen generada al vuelo (URL de /api/knowledge), sin optimizar */}
-        <img src={pagina.url} alt={`Página ${pagina.pagina} del manual`} className="mx-auto h-auto w-full max-w-3xl rounded-lg bg-white" />
+        <img src={pagina.url} alt={`Página ${pagina.pagina} del manual`} className="mx-auto h-auto w-full max-w-3xl rounded-lg bg-white" /* papel: la página del manual es blanca */ />
       </div>
     </div>
   );

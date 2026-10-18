@@ -224,7 +224,7 @@ export function GuiaExperto({
   const horizontal = useCelularHorizontal();
 
   return (
-    <div className={`flex flex-col bg-black text-texto ${className}`}>
+    <div className={`flex flex-col bg-escena text-texto ${className}`}>
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-0">
           <Visor
@@ -241,10 +241,10 @@ export function GuiaExperto({
           />
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black via-black/70 to-transparent px-5 pt-5 pb-10 max-[440px]:px-3 max-[440px]:pt-3 max-[440px]:pb-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-escena via-escena/70 to-transparent px-5 pt-5 pb-10 max-[440px]:px-3 max-[440px]:pt-3 max-[440px]:pb-6">
           <div ref={cabecera} className="flex flex-col gap-3 max-[440px]:gap-2">
             {origenPlano === "plantilla" && (
-              <p className="self-start rounded-full border border-probable/50 bg-black/60 px-3 py-1 text-xs text-probable">
+              <p className="self-start rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
                 Esquema genérico, no es tu modelo exacto
               </p>
             )}
@@ -274,7 +274,7 @@ export function GuiaExperto({
             <EstadoExperto estado={estado} detalle={detalle} />
             {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
             {horizontal && (
-              <p className="flex items-center gap-2 self-start rounded-full border border-white/20 bg-black/75 px-4 py-1.5 text-sm text-white backdrop-blur">
+              <p className="flex items-center gap-2 self-start rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
                 <GirarCelular size={18} /> Girá el celular para ver mejor
               </p>
             )}
@@ -316,7 +316,7 @@ export function GuiaExperto({
           type="submit"
           disabled={!texto.trim()}
           aria-label={etiquetaBoton}
-          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-black transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
+          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
         >
           {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
           <span className="max-[480px]:hidden">{etiquetaBoton}</span>
