@@ -373,5 +373,5 @@ de caché que no incluyan el interior y animar el retiro de la carcasa por paso.
 `tablet_variantes.glb` publica `pantalla_tablet_dato@con_boton` y
 `pantalla_tablet_dato@sin_boton`. Ninguna entra en la elección automática: sin el
 dato del pack sigue la pantalla actual. Contrato propuesto y dos variantes en
-`tablet-variantes-cobertura.json`; carga por `formaBiblioteca` pendiente de #302.
+`tablet-variantes-cobertura.json`; carga por `formaBiblioteca` conectada al finalizar planos nuevos y de caché (#302).
 Renders de las dos formas comprimidas en `renders/tablet_variantes/`.

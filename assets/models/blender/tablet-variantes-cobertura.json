@@ -1,7 +1,7 @@
 {
   "familia": "tablet_variantes",
   "tipo": "tablet",
-  "dato_propuesto": "rasgos3D.tablet.botonFrontal",
+  "dato_pack": "rasgos3D.tablet.botonFrontal",
   "variantes": [
     {"dato": false, "nodo": "pantalla_tablet_dato@sin_boton"},
     {"dato": true, "nodo": "pantalla_tablet_dato@con_boton"}

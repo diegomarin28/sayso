@@ -120,6 +120,12 @@ export const Repuesto = z.object({
   cita: Cita,
 });
 
+/** Rasgos observados en las fuentes; ausente significa conservar la forma actual. */
+export const Rasgos3D = z.object({
+  tablet: z.object({ botonFrontal: z.boolean().optional() }).optional(),
+});
+export type Rasgos3D = z.infer<typeof Rasgos3D>;
+
 export const KnowledgePack = z.object({
   modelo: z.string(),
   clase: ClaseEquipo,
@@ -135,6 +141,7 @@ export const KnowledgePack = z.object({
    * Sin dato, el 3D usa la forma más común del tipo y la marca como estimada.
    */
   formaPantalla: z.enum(["cuadrada", "redonda"]).optional(),
+  rasgos3D: Rasgos3D.optional(),
 });
 export type KnowledgePack = z.infer<typeof KnowledgePack>;
 

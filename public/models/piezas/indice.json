@@ -3554,7 +3554,7 @@
    "familia": "tablet_variantes",
    "ajuste": "libre",
    "equipos": "tablet tableta",
-   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia +Y GLB.",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia -Y GLB (frente del plano de tablet).",
    "caja": [
     17.3,
     0.197,
@@ -3565,7 +3565,7 @@
    "familia": "tablet_variantes",
    "ajuste": "libre",
    "equipos": "tablet tableta",
-   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia +Y GLB.",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia -Y GLB (frente del plano de tablet).",
    "caja": [
     17.3,
     0.215,

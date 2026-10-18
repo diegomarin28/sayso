@@ -131,7 +131,7 @@ export function Visor({
   // Con los efectos forzados ("si", para comparar en /lab) no se baja nada.
   const alBajarRendimiento = useCallback(() => setRendimiento((r) => bajarRendimiento(r, efectosActivos)), [efectosActivos]);
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
-  const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
+  const biblioteca = useBibliotecaPiezas(plano.piezas.flatMap((p) => [p.pieza, ...(p.formaBiblioteca ? [p.formaBiblioteca] : [])]));
   const soportaWebGL2 = useSoportaWebGL2();
   // Una vez al montar (el lienzo solo existe en el cliente) y antes de preparar la escena: ver tema.ts.
   useState(() => usarColorActivo(colorActivoDelDocumento()));

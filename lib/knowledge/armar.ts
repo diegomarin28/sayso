@@ -82,6 +82,7 @@ PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la v
 PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
+RASGO|tablet|botonFrontal|si o no: solo si las fuentes muestran inequívocamente si la tablet tiene botón frontal. Si no se sabe, OMITIR la línea; nunca inferir por marca/modelo.
 FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
 ${forma}${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
 1. Chequeos sin abrir (3 a 6 pasos): primero descartá lo que NO es una falla de hardware y lo que se revisa con el equipo cerrado, según el tipo de equipo y el síntoma: apagar del todo y reiniciar, configuración y ajustes, actualizar el sistema o el firmware, modo seguro o restablecer (avisando qué se pierde), las pruebas de diagnóstico del fabricante, cables, cargador, enchufe, pilas o accesorios, limpieza por fuera. Cada chequeo dice cómo se hace y qué cambia si ese era el problema.
@@ -512,6 +513,7 @@ export async function armarKnowledgePack(
     advertencias: contenido.advertencias,
     repuestos: contenido.repuestos,
     ...(contenido.formaPantalla ? { formaPantalla: contenido.formaPantalla } : {}),
+    ...(contenido.rasgos3D ? { rasgos3D: contenido.rasgos3D } : {}),
   });
   // Sin pasos igual se sigue: la persona llega al 3D (plantilla) con la guía marcada NO VERIFICADO.
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
