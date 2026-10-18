@@ -437,3 +437,97 @@ export const planoTablet: PlanoDePiezas = {
     ]),
   ],
 };
+
+// Lo que el jurado puede traer y no tenía esqueleto (antes caían en "no adivina").
+
+/** Batería externa (power bank) vista desde arriba: cuerpo con la celda, la placa de carga, los USB y el botón. */
+export const planoPowerBank: PlanoDePiezas = {
+  modelo: "Batería externa genérica (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    // Cuerpo y tapa propios (sin forma): el marco y la tapa trasera de la biblioteca son de celular, con la isla de cámaras.
+    pieza("cuerpo_powerbank", [7, 1.6, 14], [0, 0.8, 0], "extrusion"),
+    ...hijos("cuerpo_powerbank", [
+      ["bateria", [6.2, 0.9, 9.2], [0, 0.6, 1.8]],
+      ["placa", [6, 0.15, 3.4], [0, 0.4, -4.8]],
+      ["conector_usb_c", [1.5, 0.32, 0.82], [-1.5, 0.75, -6.6]],
+      ["conector_usb_a", [1.6, 0.8, 1.6], [1.5, 0.85, -6.2]],
+      ["microswitch", [1, 0.5, 0.6], [3, 0.8, -4.8]],
+      ["tapa_powerbank", [6.9, 0.2, 13.9], [0, 1.7, 0]],
+    ]),
+  ],
+};
+
+/** Cámara de acción acostada, el lente arriba: módulo de cámara, placa, batería con su tapa, pantalla trasera y botón. */
+export const planoCamaraAccion: PlanoDePiezas = {
+  modelo: "Cámara de acción genérica (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_camara", [7, 3.4, 5], [0, 1.7, 0], "extrusion"),
+    ...hijos("cuerpo_camara", [
+      // Un solo lente, cilindro: con este tamaño la biblioteca elegiría `camara@modulo`, la isla de tres cámaras de un celular.
+      ["lente_camara", [2.4, 1, 2.4], [-1.6, 3.3, 0.6], "cilindro"],
+      ["placa", [5.8, 0.2, 4.2], [0, 2.1, 0]],
+      ["bateria", [3.6, 1.2, 4.2], [2, 1, 0]],
+      ["pantalla", [4.6, 0.3, 3.4], [0.3, 0.15, 0]],
+      ["microfono_mems", [0.6, 0.3, 0.4], [2.5, 2.4, 2.2]],
+      ["microswitch", [1, 0.5, 0.6], [2.4, 3.2, -1.6]],
+      ["conector_usb_c", [1.5, 0.32, 0.82], [-2, 1, 2.3]],
+      ["tapa_trasera", [0.2, 2.8, 4.4], [3.6, 1.6, 0]],
+    ]),
+  ],
+};
+
+/** Afeitadora / cortadora de pelo acostada, el cabezal adelante: motor, pila recargable, placa, interruptor y conector. */
+export const planoAfeitadora: PlanoDePiezas = {
+  modelo: "Afeitadora genérica (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_afeitadora", [4.4, 3.6, 16], [0, 1.8, 0], "extrusion"),
+    ...hijos("cuerpo_afeitadora", [
+      ["cabezal_corte", [4.2, 1.2, 2.6], [0, 2.4, -8.6]],
+      ["motor", [2.4, 2.4, 3.6], [0, 1.8, -4.6]],
+      ["pila_aa", [1.44, 1.44, 5.1], [0, 1.5, 1.5]],
+      ["placa", [3, 0.15, 5], [0, 2.9, 1.5]],
+      ["selector_deslizante", [1.4, 0.7, 2.2], [0, 3.5, -1.5]],
+      ["conector_carga", [1.2, 0.6, 1.2], [0, 1.8, 7.7]],
+    ]),
+  ],
+};
+
+/** Planchita de pelo cerrada y acostada: las dos placas calefactoras con su resistencia, termostato, placa, bisagra y cable. */
+export const planoPlanchita: PlanoDePiezas = {
+  modelo: "Planchita genérica (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_planchita", [3.4, 3.4, 28], [0, 1.7, 0], "extrusion"),
+    ...hijos("cuerpo_planchita", [
+      ["suela_plancha_superior", [2.6, 0.3, 9], [0, 1.9, -8.5]],
+      ["suela_plancha_inferior", [2.6, 0.3, 9], [0, 1.5, -8.5]],
+      ["resistencia_superior", [2.2, 0.3, 8.5], [0, 2.4, -8.5]],
+      ["resistencia_inferior", [2.2, 0.3, 8.5], [0, 1, -8.5]],
+      ["termostato", [1, 0.5, 1.6], [0, 2.9, -2]],
+      ["placa", [2.4, 0.15, 7], [0, 2.5, 3.5]],
+      ["selector_deslizante", [1.2, 0.7, 2], [0, 3.2, 7.5]],
+      ["bisagra", [2.6, 0.8, 1.6], [0, 1.7, 12.5]],
+      ["cable_alimentacion", [1, 0.9, 12], [0, 1.7, 20]],
+    ]),
+  ],
+};
+
+/** Cepillo de dientes eléctrico acostado, el cabezal adelante: motor, pila, placa, botón y la bobina de carga abajo. */
+export const planoCepilloElectrico: PlanoDePiezas = {
+  modelo: "Cepillo de dientes eléctrico genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_cepillo", [2.8, 2.8, 19], [0, 1.4, 0], "extrusion"),
+    ...hijos("cuerpo_cepillo", [
+      ["cabezal_cepillo", [1.2, 1.4, 5], [0, 1.6, -11.5]],
+      ["motor_vibracion", [1.4, 1.4, 3.6], [0, 1.4, -6]],
+      ["pila_aa", [1.44, 1.44, 5.1], [0, 1.3, 0.5]],
+      ["placa", [1.8, 0.15, 6], [0, 2.2, 0.5]],
+      ["microswitch", [1, 0.5, 0.8], [0, 2.6, -3.5]],
+      ["bobina_carga", [2.2, 2.2, 0.3], [0, 1.4, 8.8]],
+    ]),
+  ],
+};

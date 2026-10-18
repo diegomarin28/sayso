@@ -47,6 +47,11 @@ export const GALERIA: EquipoGaleria[] = [
   { id: "parlante", titulo: "Parlante bluetooth", detalle: "Parlantes, radiadores pasivos, batería", grupo: "en_la_mano", ...de("parlante") },
   { id: "cargador", titulo: "Cargador", detalle: "Clavija, transformador, capacitor, USB", grupo: "en_la_mano", ...de("cargador") },
   { id: "control_remoto", titulo: "Control remoto", detalle: "Botones, LED infrarrojo, pilas", grupo: "en_la_mano", ...de("control_remoto") },
+  { id: "powerbank", titulo: "Batería externa", detalle: "Celda, placa de carga, USB", grupo: "en_la_mano", ...de("powerbank") },
+  { id: "camara", titulo: "Cámara de acción", detalle: "Lente, batería, pantalla", grupo: "en_la_mano", ...de("camara") },
+  { id: "afeitadora", titulo: "Afeitadora", detalle: "Cabezal, motor, pila recargable", grupo: "en_la_mano", ...de("afeitadora") },
+  { id: "planchita", titulo: "Planchita de pelo", detalle: "Placas, resistencias, termostato", grupo: "en_la_mano", ...de("planchita") },
+  { id: "cepillo", titulo: "Cepillo eléctrico", detalle: "Motor, pila, bobina de carga", grupo: "en_la_mano", ...de("cepillo") },
 ];
 
 /** Cuántas formas sabe dibujar la biblioteca, contando las variantes (sale del índice de Blender). */

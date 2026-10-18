@@ -4,8 +4,13 @@ import { palabras, tipoPara } from "../biblioteca";
 import { TIPOS_DE_PIEZA } from "../tipos";
 import { planoNotebookBase } from "./notebook";
 import {
+  planoAfeitadora,
   planoAire,
   planoAspiradora,
+  planoCamaraAccion,
+  planoCepilloElectrico,
+  planoPlanchita,
+  planoPowerBank,
   planoAuriculares,
   planoCargador,
   planoControlRemoto,
@@ -70,6 +75,11 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("parlante", "parlante bluetooth", planoParlanteBluetooth, "parlant altavoz", undefined, false, "bluetooth jbl echo alexa"),
   t("cargador", "cargador", planoCargador, "cargador adaptador fuente"),
   t("control_remoto", "control remoto", planoControlRemoto, "control remoto mando", undefined, false, "tele tv televisor aire distancia"),
+  t("powerbank", "batería externa", planoPowerBank, "powerbank power bank", undefined, false, "externa"),
+  t("camara", "cámara", planoCamaraAccion, "camara gopro filmadora videocamara", undefined, false, "hero accion fotos"),
+  t("afeitadora", "afeitadora", planoAfeitadora, "afeitadora maquinita cortadora rasuradora trimmer barbera patillera"),
+  t("planchita", "planchita de pelo", planoPlanchita, "planchita alisadora buclera rizador"),
+  t("cepillo", "cepillo eléctrico", planoCepilloElectrico, "cepillo", undefined, false, "dientes dental oral"),
 ];
 
 const NOMBRES_DE_TIPO = TIPOS_DE_PIEZA.map((x) => x.tipo);

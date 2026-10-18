@@ -58,9 +58,9 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
   - **Plantilla por tipo de equipo** (`plantillas/por-tipo.ts`, planos en `plantillas/equipos.ts`): notebook, celular,
     heladera, aire, televisor, lavarropas, microondas, aspiradora, secador, impresora, consola, router y cafetera, y lo
     que alguien trae en la mano: tablet, auriculares, reloj inteligente, mouse, teclado, joystick, parlante bluetooth,
-    cargador y control remoto. Por nombre gana la que más palabras comparte (las `pistas`, marcas o contexto, valen
+    cargador, control remoto, batería externa, cámara de acción, afeitadora, planchita y cepillo eléctrico. Por nombre gana la que más palabras comparte (las `pistas`, marcas o contexto, valen
     medio: "Galaxy Tab" es tablet, "control de la tele" es control remoto); si empatan, la nombrada primero
-    ("cargador de celular" es un cargador). Sin el nombre del aparato (una planchita, un pendrive) no adivina.
+    ("cargador de celular" es un cargador). Sin el nombre del aparato ni un esqueleto parecido (un pendrive, una linterna) no adivina.
   - **Completar lo que la IA no ubicó**: con la plantilla del tipo (`propuestaDePlantillaDeTipo`: por id o por tipo de
     pieza; en un equipo parado, la cara), no con la de notebook. Así un TV con una sola pieza ubicada no queda vacío.
   - **Lo que nadie ubicó igual va al 3D** (`sueltas.ts`, `conSueltas`): una pieza del pack que ni la IA ni la plantilla
