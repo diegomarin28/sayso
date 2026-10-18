@@ -105,7 +105,7 @@ export function DeDondeSale({ datos, onCerrar }: { datos: DatosTransparencia; on
                 {manual.fuentes.length > 0 && (
                   <ul className="mt-1.5 list-disc pl-5 text-texto-suave">
                     {manual.fuentes.map((f) => (
-                      <li key={`${f.doc}${f.url ?? ""}`}>
+                      <li key={`${f.doc}${f.url ?? ""}`} className="[overflow-wrap:anywhere]">
                         {f.url ? (
                           <a href={f.url} target="_blank" rel="noopener noreferrer" className="underline">
                             {f.doc}
