@@ -1,10 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 import { planoNotebookBase, type BibliotecaPiezas } from "../../lib/planogenerator";
 import { prepararEscena, prepararEscenaSegura } from "./escena";
-import { bajarCalidad, calidadInicial, esNegro, puntosVigia, Vigia, type SoporteGL } from "./salud";
+import { bajarCalidad, bajarRendimiento, calidadInicial, dprPara, esNegro, puntosVigia, RENDIMIENTO_PLENO, Vigia, type SoporteGL } from "./salud";
 
 const iphone: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 4, tactil: true };
 const mac: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 8, tactil: false };
+
+describe("bajarRendimiento (si no llega a 30 fps)", () => {
+  it("primero apaga el bloom; si sigue lento, dibuja a densidad 1", () => {
+    const uno = bajarRendimiento(RENDIMIENTO_PLENO, true);
+    expect(uno).toEqual({ sinBloom: true, dprBajo: false });
+    expect(dprPara(uno)).toEqual([1, 2]);
+    const dos = bajarRendimiento(uno, false);
+    expect(dos).toEqual({ sinBloom: true, dprBajo: true });
+    expect(dprPara(dos)).toBe(1);
+  });
+
+  it("con el bloom ya apagado (equipo sin buffers flotantes o efectos en 'no') baja directo la densidad", () => {
+    expect(dprPara(bajarRendimiento(RENDIMIENTO_PLENO, false))).toBe(1);
+  });
+});
 
 describe("calidadInicial", () => {
   it("en la compu: efectos, multisampling (hasta 4) y luz de entorno", () => {

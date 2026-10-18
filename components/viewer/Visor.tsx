@@ -35,7 +35,18 @@ import {
 } from "./escena";
 import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
-import { bajarCalidad, calidadInicial, esNegro, puntosVigia, soporteDe, Vigia, type Calidad } from "./salud";
+import {
+  bajarCalidad,
+  bajarRendimiento,
+  calidadInicial,
+  dprPara,
+  esNegro,
+  puntosVigia,
+  RENDIMIENTO_PLENO,
+  soporteDe,
+  Vigia,
+  type Calidad,
+} from "./salud";
 import { OBJETIVO_GENERAL, aplicarAccion, cerrar, comenzarPaso, estadoInicial, soloVuelveAGeneral, type EstadoEscena } from "./reproductor";
 
 /**
@@ -97,7 +108,8 @@ export function Visor({
   className,
 }: VisorProps) {
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
-  const [rindeBien, setRindeBien] = useState(true);
+  // Escalones cuando el equipo no llega a 30 fps (ver `bajarRendimiento` en salud.ts).
+  const [rendimiento, setRendimiento] = useState(RENDIMIENTO_PLENO);
   // null hasta conocer el WebGL del equipo (ver salud.ts).
   const [calidad, setCalidad] = useState<Calidad | null>(null);
   const [falla, setFalla] = useState<Falla | null>(null);
@@ -106,7 +118,9 @@ export function Visor({
   const [vigiando, setVigiando] = useState(true);
   // Cambiar `ronda` arranca un vigía nuevo (después de bajar la calidad), sin rearmar el lienzo.
   const [ronda, setRonda] = useState(0);
-  const efectosActivos = efectos !== "no" && !!calidad?.efectos && (efectos === "si" || rindeBien);
+  const efectosActivos = efectos !== "no" && !!calidad?.efectos && (efectos === "si" || !rendimiento.sinBloom);
+  // Con los efectos forzados ("si", para comparar en /lab) no se baja nada.
+  const alBajarRendimiento = useCallback(() => setRendimiento((r) => bajarRendimiento(r, efectosActivos)), [efectosActivos]);
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
   const biblioteca = useBibliotecaPiezas(plano.piezas.map((p) => p.pieza));
   const soportaWebGL2 = useSoportaWebGL2();
@@ -191,7 +205,7 @@ export function Visor({
   return (
     <div className={className} style={{ position: "relative", background: "#000", touchAction: "none" }}>
       <Resguardo key={intento} onError={() => setFalla("error")}>
-        <Canvas dpr={[1, 2]} onCreated={alCrear}>
+        <Canvas dpr={dprPara(rendimiento)} onCreated={alCrear}>
           <color attach="background" args={["#000000"]} />
           {vista === "isometrica" ? (
             <OrthographicCamera makeDefault position={[100, 100, 100]} near={0.1} far={2000} zoom={10} />
@@ -217,9 +231,7 @@ export function Visor({
           {calidad && biblioteca !== undefined && vigiando && !falla && (
             <VigiaNegro key={ronda} renderizaSolo={!efectosActivos} onNegro={alVerNegro} onListo={() => setVigiando(false)} />
           )}
-          {efectos === "auto" && (
-            <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={() => setRindeBien(false)} />
-          )}
+          {efectos !== "si" && <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={alBajarRendimiento} />}
           {calidad && efectosActivos && (
             <Resguardo onError={() => setCalidad((c) => (c ? { ...c, efectos: false } : c))}>
               <EffectComposer multisampling={calidad.multisampling}>
