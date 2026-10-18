@@ -7,7 +7,7 @@ import { USAR_FIXTURE } from "../_datos/api";
 import { piezasParaComprar } from "./piezas-compra";
 
 /**
- * Pantalla 6 — repuestos. Franja "Ver dónde comprar repuestos" con las piezas que se pueden comprar
+ * Pantalla 6 — repuestos. Ícono de carrito en el encabezado ("Ver dónde comprar repuestos (n)") con las piezas que se pueden comprar
  * (`piezasParaComprar`): las que tienen número de parte citado en el manual o, si el manual no los
  * trae, las de la guía para buscar por modelo. Cuando el experto dice que una pieza hay que
  * cambiarla (`piezaACambiar`, de onCambiarPieza de <GuiaExperto>), un aviso abre el panel con esa
@@ -53,14 +53,21 @@ export function Repuestos({
 
   return (
     <>
-      {/* Franja visible (antes era un botón chico que en celular mostraba solo un número). */}
+      {/* Ícono de carrito en el encabezado, con el número en una insignia (#199: la franja de abajo le sacaba ~50 px al 3D). */}
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-acento/50 bg-acento/10 px-4 text-sm font-medium text-texto transition hover:border-acento active:scale-[0.99]"
+        aria-label={`Ver dónde comprar repuestos (${items.length})`}
+        title="Ver dónde comprar repuestos"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-acento/60 bg-superficie text-texto transition hover:border-acento active:scale-95"
       >
-        <Carrito /> Ver dónde comprar repuestos
-        <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
+        <Carrito />
+        <span
+          aria-hidden
+          className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-acento px-1 text-[11px] font-bold text-black"
+        >
+          {items.length}
+        </span>
       </button>
 
       {/* Aviso (no tapa el 3D mientras el experto explica): abre el panel con esa pieza primero. */}
@@ -167,8 +174,8 @@ export function Repuestos({
 function Carrito() {
   return (
     <svg
-      width="18"
-      height="18"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

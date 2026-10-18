@@ -56,7 +56,8 @@ export function Encabezado({
         <Link href="/" aria-label="Sayso: volver al inicio">
           <Orbe estado={orbe} />
         </Link>
-        <div className="flex-1">
+        {/* min-w-0: con botones al lado (el experto), el progreso se achica en vez de pasar por debajo. */}
+        <div className="min-w-0 flex-1">
           <div className="flex gap-1.5" aria-hidden>
             {PASOS.map((_, i) => (
               <div
