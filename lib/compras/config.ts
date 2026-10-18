@@ -17,6 +17,11 @@ export const COMPRAS = {
   /** Tope de cada página leída (los avisos de Mercado Libre son largos). */
   tokensPorPagina: 12_000,
   vueltas: 8,
+  /**
+   * Pasado este tiempo se deja de buscar y se pide el JSON con lo que hay (sin herramientas): la ruta
+   * corta a los 120 s (maxDuration) y un 504 de Vercel se veía como "no pude buscar".
+   */
+  plazoMs: 75_000,
   ...LIMITES_COMPRAS,
   /** Largo mínimo (sin espacios ni guiones) para aceptar una coincidencia de número de parte o modelo. */
   minCoincidencia: 4,

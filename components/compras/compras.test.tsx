@@ -42,8 +42,13 @@ const respuesta = (status: number, cuerpo: unknown) =>
 const fuenteCon = (r: Response | Error, plazo?: number) =>
   crearFuenteApi((async () => (r instanceof Error ? Promise.reject(r) : r)) as typeof fetch, plazo);
 /** HTML de la vista; los espacios duros de Intl ("$ 250") como espacios comunes. */
-const html = (estado: Parameters<typeof VistaCompras>[0]["estado"]) =>
-  renderToStaticMarkup(<VistaCompras estado={estado} pieza="ventilador" numeroParte="5F10S13875" onBuscar={() => {}} />).replace(/\u00a0/g, " ");
+const html = (estado: Parameters<typeof VistaCompras>[0]["estado"], pedido: Parameters<typeof VistaCompras>[0]["pedido"] = PEDIDO) =>
+  renderToStaticMarkup(<VistaCompras estado={estado} pedido={pedido} onBuscar={() => {}} />).replace(/\u00a0/g, " ");
+/** Las dos piezas del caso real (iPhone 13): una sin número de parte y otra con. Y un TV. */
+const CONECTOR: PedidoCompra = { pieza: "conector_lightning", nombre: "Conector Lightning de carga", numeroParte: null, modelo: "iPhone 13", marca: "Apple" };
+const BATERIA: PedidoCompra = { pieza: "bateria", nombre: "Batería", numeroParte: "661-21991", modelo: "iPhone 13", marca: "Apple" };
+const FUENTE_TV: PedidoCompra = { pieza: "fuente", nombre: "Fuente de alimentación", numeroParte: null, modelo: "55V6C", marca: "TCL" };
+const PLACA_TV: PedidoCompra = { pieza: "placa_principal", nombre: "Placa principal", numeroParte: "40-MT56E1-MAB2HG", modelo: "55V6C", marca: "TCL" };
 
 describe("fuente de /api/compras", () => {
   const senal = () => new AbortController().signal;
@@ -55,12 +60,13 @@ describe("fuente de /api/compras", () => {
 
   it.each([
     ["sin conexión", new TypeError("Failed to fetch"), MENSAJES.sinConexion],
-    ["la IA no pudo (502)", respuesta(502, { error: "La IA no pudo responder." }), MENSAJES.general],
-    ["error interno (500) sin JSON", respuesta(500, "<html>"), MENSAJES.general],
+    ["la IA no pudo (502)", respuesta(502, { error: "La IA no pudo responder." }), MENSAJES.ia],
+    ["el servidor cortó por tiempo (504 de Vercel, sin JSON)", respuesta(504, "An error occurred with your deployment\n\nFUNCTION_INVOCATION_TIMEOUT"), MENSAJES.tardo],
+    ["error interno (500) sin JSON", respuesta(500, "<html>"), MENSAJES.interno],
     ["entrada inválida (400)", respuesta(400, { error: "Entrada inválida" }), MENSAJES.faltanDatos],
-    ["IA en pausa (503)", respuesta(503, { codigo: "ia_en_pausa" }), MENSAJE_PAUSA],
-    ["200 con forma rara", respuesta(200, { opciones: [{ url: "javascript:alert(1)" }] }), MENSAJES.general],
-    ["200 vacío", respuesta(200, "null"), MENSAJES.general],
+    ["tope de gasto: IA en pausa (503)", respuesta(503, { codigo: "ia_en_pausa" }), MENSAJE_PAUSA],
+    ["200 con forma rara", respuesta(200, { opciones: [{ url: "javascript:alert(1)" }] }), MENSAJES.interno],
+    ["200 vacío", respuesta(200, "null"), MENSAJES.interno],
   ])("%s → mensaje claro", async (_, r, mensaje) => {
     await expect(fuenteCon(r)(PEDIDO, senal())).rejects.toThrow(mensaje);
   });
@@ -130,18 +136,44 @@ describe("<VistaCompras>", () => {
     expect(hrefSeguro("https://tienda.uy/x")).toBe("https://tienda.uy/x");
   });
 
-  it("sin resultados: mensaje claro y buscar de nuevo", () => {
-    const h = html({ t: "listo", opciones: [] });
-    expect(h).toContain("No encontré publicaciones de este repuesto con envío a Uruguay");
-    expect(h).toContain("Buscar de nuevo");
-    expect(h).not.toContain("<li");
+  it("el título dice el nombre de la pieza, no el id del pack", () => {
+    const h = html({ t: "inicio" }, CONECTOR);
+    expect(h).toContain("Conector Lightning de carga");
+    expect(h).not.toContain("conector_lightning");
+    // Sin nombre en el pack, el id legible.
+    expect(html({ t: "inicio" }, { ...CONECTOR, nombre: null })).toContain("Conector lightning");
   });
 
-  it("si falla: el mensaje y buscar de nuevo, como alerta", () => {
-    const h = html({ t: "error", mensaje: MENSAJES.sinConexion });
-    expect(h).toContain('role="alert"');
-    expect(h).toContain(MENSAJES.sinConexion);
+  it.each([
+    ["celular, sin N.º de parte", CONECTOR, "busqué por modelo", "conector-lightning-de-carga-apple-iphone-13"],
+    ["celular, con N.º de parte", BATERIA, "N.º de parte 661-21991", "661-21991"],
+    ["TV, sin N.º de parte", FUENTE_TV, "busqué por modelo", "fuente-de-alimentacion-tcl-55v6c"],
+    ["TV, con N.º de parte", PLACA_TV, "N.º de parte 40-MT56E1-MAB2HG", "40-mt56e1-mab2hg"],
+  ])("sin resultados (%s): dice qué pasó y ofrece buscarlo en Mercado Libre, sin decir que está verificado", (_, pedido, dice, consulta) => {
+    const h = html({ t: "listo", opciones: [] }, pedido);
+    expect(h).toContain(`No encontré publicaciones de ${pedido.nombre} para ${pedido.marca} ${pedido.modelo} con envío a Uruguay`);
+    expect(h).toContain(dice);
+    expect(h).toContain(`href="https://listado.mercadolibre.com.uy/${consulta}"`);
+    expect(h).toContain("no está verificado que sea compatible");
     expect(h).toContain("Buscar de nuevo");
+    expect(h).not.toContain("<li");
+    expect(h).not.toMatch(/probá de nuevo/i);
+  });
+
+  it("búsqueda incompleta (el agente no cerró a tiempo): lo dice, no que no hay", () => {
+    const h = html({ t: "listo", opciones: [], motivo: "incompleta" }, CONECTOR);
+    expect(h).toContain("No llegué a terminar la búsqueda de Conector Lightning de carga a tiempo");
+    expect(h).not.toContain("No encontré publicaciones");
+    expect(h).toContain("Buscarlo en Mercado Libre");
+  });
+
+  it.each(Object.entries(MENSAJES))("si falla (%s): la causa, la alternativa y buscar de nuevo, como alerta", (_, mensaje) => {
+    const h = html({ t: "error", mensaje }, CONECTOR);
+    expect(h).toContain('role="alert"');
+    expect(h).toContain(mensaje);
+    expect(h).toContain("Buscarlo en Mercado Libre");
+    expect(h).toContain("Buscar de nuevo");
+    expect(mensaje).not.toMatch(/probá de nuevo/i);
   });
 
   it("antes de buscar, un botón; buscando, un aviso (cada búsqueda cuesta: no arranca sola)", () => {

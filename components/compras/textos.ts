@@ -34,3 +34,27 @@ export const COMPATIBILIDAD: Record<Compatibilidad, { etiqueta: string; texto: s
 export function avisoPrecio(o: OpcionCompra): string | null {
   return o.precio.estado === "confirmado" ? null : "Precio sin confirmar: miralo en la publicación";
 }
+
+/** El nombre de la pieza para mostrar: el del pack, o el id legible ("conector_lightning" → "Conector lightning"). */
+export function nombrePieza(pieza: string, nombre?: string | null): string {
+  if (nombre?.trim()) return nombre.trim();
+  const t = pieza.replace(/_/g, " ").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * La alternativa honesta cuando la búsqueda no trae nada: una búsqueda en Mercado Libre Uruguay armada con
+ * el nombre de la pieza, la marca y el modelo (o el número de parte, si hay). No es un resultado verificado:
+ * la pantalla lo dice. Solo abre la página de búsqueda.
+ */
+export function enlaceBusqueda(p: { pieza: string; nombre?: string | null; numeroParte?: string | null; modelo: string; marca?: string | null }): string {
+  const terminos = p.numeroParte ? [p.numeroParte] : [nombrePieza(p.pieza, p.nombre), p.marca ?? "", p.modelo];
+  const consulta = terminos
+    .join(" ")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `https://listado.mercadolibre.com.uy/${consulta}`;
+}
