@@ -35,6 +35,7 @@ import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
 import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
 import { ubicarTeclas } from "./teclas";
+import { sinPisarLoVisto } from "./lugar-libre";
 
 /**
  * B4 — Generador del plano 3D desde el manual.
@@ -549,6 +550,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
  * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
+ * 2c. lo que no se vio no queda encima de lo que se vio en el manual o en una foto: va al lugar libre más cercano (`sinPisarLoVisto`);
  * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
  * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado; y la tapa de pantalla de una notebook (`conTapaDePantalla`);
  * 5. si el tipo tiene varias formas de pantalla y el pack no trajo la suya, la común queda estimada (`marcarFormaEstimada`).
@@ -560,11 +562,12 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
   const teclas = ubicarTeclas(acotado.plano, ids);
+  const libre = sinPisarLoVisto(teclas.plano);
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
-  const sueltas = sumarSueltas(teclas.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
+  const sueltas = sumarSueltas(libre.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
   const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
-  return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...sueltas.avisos, ...forma.avisos] };
+  return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...libre.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 
 /** De dónde salieron las fotos del interior (#235): un nombre para la cita y la página de cada foto. */
