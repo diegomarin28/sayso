@@ -1,11 +1,9 @@
 "use client";
 
-import { useId } from "react";
-
 /**
  * Marca de Sayso: un celular en vista explosionada (como en un manual), separado en sus capas:
- * la pantalla, la placa con sus chips y la tapa con la cámara. Mientras el experto piensa, las
- * capas se separan un poco más. Los colores salen de globals.css (--dato, --nebulosa, --acento).
+ * la pantalla, la placa y la tapa con la cámara. Un solo color (--marca, en globals.css).
+ * Mientras el experto piensa, las capas se separan un poco más.
  */
 
 export type EstadoMarca = "quieto" | "pensando";
@@ -40,26 +38,19 @@ function canto(c: P, ancho: number, largo: number, grosor: number): string {
   return p.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
 }
 
-const ANCHO = 14;
-const LARGO = 28;
-const PANTALLA: P = [32, 12];
-const PLACA: P = [32, 31.5];
-const TAPA: P = [32, 51];
-
-/** Líneas guía de la vista explosionada: de cada esquina de la tapa a la de la pantalla. */
-const GUIAS = (
-  [
-    [-1, -1],
-    [1, -1],
-    [1, 1],
-    [-1, 1],
-  ] as const
-).map(([a, b]) => [en(TAPA, (a * ANCHO) / 2, (b * LARGO) / 2), en(PANTALLA, (a * ANCHO) / 2, (b * LARGO) / 2)]);
+const ANCHO = 16;
+const LARGO = 30;
+const PANTALLA: P = [32, 19];
+const PLACA: P = [32, 32];
+const TAPA: P = [32, 45];
 
 export function Simbolo({ estado = "quieto", tam = 44 }: { estado?: EstadoMarca; tam?: number }) {
-  // Un id por instancia: si hay dos símbolos en pantalla, cada degradé es el suyo.
-  const degrade = `sayso-${useId().replace(/:/g, "")}`;
-  const linea = { strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
+  const capa = {
+    stroke: "var(--marca)",
+    strokeWidth: 2,
+    strokeLinejoin: "round" as const,
+    fill: "var(--superficie)",
+  };
   return (
     <svg
       width={tam}
@@ -70,39 +61,23 @@ export function Simbolo({ estado = "quieto", tam = 44 }: { estado?: EstadoMarca;
       data-estado={estado}
       aria-hidden
     >
-      <defs>
-        <linearGradient id={degrade} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="var(--dato)" />
-          <stop offset="1" stopColor="var(--nebulosa)" />
-        </linearGradient>
-      </defs>
-      {/* líneas guía, como en el despiece de un manual */}
-      <g stroke="var(--dato)" strokeWidth="0.8" strokeDasharray="1.6 2" opacity="0.55">
-        {GUIAS.map(([[x1, y1], [x2, y2]], i) => (
-          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />
-        ))}
+      {/* tapa, con la cámara */}
+      <g className="marca-capa-abajo">
+        <polygon points={canto(TAPA, ANCHO, LARGO, 2)} fill="var(--marca)" fillOpacity="0.45" />
+        <polygon points={rect(TAPA, ANCHO, LARGO)} {...capa} />
+        <polygon points={rect(TAPA, 5, 5, 3, -9)} stroke="var(--marca)" strokeWidth="1.6" strokeLinejoin="round" />
       </g>
-      {/* tapa trasera, con la cámara */}
-      <g className="marca-capa-abajo" {...linea}>
-        <polygon points={canto(TAPA, ANCHO, LARGO, 2.2)} fill="var(--nebulosa)" fillOpacity="0.35" />
-        <polygon points={rect(TAPA, ANCHO, LARGO)} fill="var(--superficie)" stroke="var(--nebulosa)" strokeWidth="1.8" />
-        <polygon points={rect(TAPA, 5, 6, 2.5, -8.5)} stroke="var(--nebulosa)" strokeWidth="1.4" />
+      {/* placa */}
+      <g>
+        <polygon points={canto(PLACA, ANCHO - 2, LARGO - 2, 1.5)} fill="var(--marca)" fillOpacity="0.45" />
+        <polygon points={rect(PLACA, ANCHO - 2, LARGO - 2)} {...capa} />
+        <polygon points={rect(PLACA, 5, 6, -1.5, -4)} fill="var(--marca)" />
       </g>
-      {/* placa con chips */}
-      <g {...linea}>
-        <polygon points={canto(PLACA, ANCHO - 2, LARGO - 2, 1.4)} fill="var(--acento)" fillOpacity="0.35" />
-        <polygon points={rect(PLACA, ANCHO - 2, LARGO - 2)} fill="var(--superficie)" stroke="var(--acento)" strokeWidth="1.8" />
-        <polygon points={rect(PLACA, 5, 6, -2, -6)} fill="var(--acento)" />
-        <polygon points={rect(PLACA, 3.5, 3.5, 2.5, 1)} fill="var(--acento)" fillOpacity="0.7" />
-        <polygon points={rect(PLACA, 8, 4, 0, 8)} fill="var(--acento)" fillOpacity="0.45" />
-      </g>
-      {/* pantalla */}
-      <g className="marca-capa-arriba" {...linea}>
-        <polygon points={canto(PANTALLA, ANCHO, LARGO, 2.2)} fill={`url(#${degrade})`} fillOpacity="0.5" />
-        <polygon points={rect(PANTALLA, ANCHO, LARGO)} fill="var(--superficie)" stroke={`url(#${degrade})`} strokeWidth="2" />
-        <polygon points={rect(PANTALLA, ANCHO - 3.5, LARGO - 4.5)} fill={`url(#${degrade})`} fillOpacity="0.35" />
-        {/* la isla de la cámara de adelante */}
-        <polygon points={rect(PANTALLA, 4.5, 1.6, 0, -10.6)} fill="var(--texto)" />
+      {/* pantalla, con la isla de la cámara */}
+      <g className="marca-capa-arriba">
+        <polygon points={canto(PANTALLA, ANCHO, LARGO, 2)} fill="var(--marca)" fillOpacity="0.45" />
+        <polygon points={rect(PANTALLA, ANCHO, LARGO)} {...capa} />
+        <polygon points={rect(PANTALLA, 5, 1.8, 0, -11)} fill="var(--marca)" />
       </g>
     </svg>
   );

@@ -14,6 +14,7 @@ import {
 } from "../../../shared";
 import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
+import { pedidosSimulados } from "./pedidos-simulados";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -117,23 +118,7 @@ export async function pedidosDeFoto(
 ): Promise<z.infer<typeof RespPedidos>> {
   if (USAR_FIXTURE) {
     await esperar(300);
-    return RespPedidos.parse({
-      pedidos: [
-        {
-          tipo: "frente",
-          instruccion: "Sacale una foto de frente, con la tapa abierta.",
-        },
-        {
-          tipo: "etiqueta",
-          instruccion: "Dala vuelta y sacale una foto a la etiqueta de abajo. Que se lean las letras.",
-          advertencia: "Apagala y desenchufala antes de darla vuelta.",
-        },
-        {
-          tipo: "puertos",
-          instruccion: "Ahora los costados, donde están los puertos.",
-        },
-      ],
-    });
+    return RespPedidos.parse({ pedidos: pedidosSimulados(tipoEquipo, caso.sintoma) });
   }
   const tipo = tipoEquipo?.trim() || undefined;
   return unaVez(`pedidos|${caso.id}|${caso.clase}|${tipo ?? ""}`, () =>

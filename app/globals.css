@@ -15,6 +15,7 @@
   --acento: #ffb020; /* ámbar: acciones principales (texto negro encima) */
   --dato: #4fd1e0; /* cian: datos, medidas, escaneo, 3D */
   --nebulosa: #8b6bff; /* violeta: la nebulosa del fondo y el degradé de la marca */
+  --marca: #a3b1bd; /* gris del logo (un solo color) */
   --escena: #0e1a24; /* fondo del visor 3D: igual al de la app */
   --confirmado: #3ddc97;
   --probable: #ffd666; /* más claro que el ámbar de los botones, para no confundirlos */
