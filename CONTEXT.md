@@ -16,6 +16,11 @@ El reparto es una propuesta de Diego: si cambia, se actualiza esta tabla en un P
 
 **Cuentas de 20 USD:** son limitadas. Reglas de ahorro para Juanma e Iaio: usar Sonnet para escribir, Haiku para clasificar, no pegar PDFs enteros en el chat de desarrollo (usar scripts que corten las páginas), pedir cambios chicos y pequeños commits, y cuando se acaba el cupo pasarle el trabajo a Diego avisando en el grupo.
 
+**Juanma tiene poca RAM** (decisión de Diego, 18/10):
+- En su máquina no corre `npm run build`, ni la app (`next dev`/`next start`), ni navegadores. Prueba con `npm test` y `npm run typecheck`, y el build lo hace la verificación de GitHub: fusiona solo si "verificar" está en verde.
+- Todo lo que necesita la app corriendo o el navegador (recorridos, capturas, QA, mirar un arreglo en pantalla) lo hace **Iaio**. Si un arreglo de Juanma hay que verlo en pantalla, Juanma abre un issue `carril-c` para que Iaio lo mire.
+- Las tareas del carril A que solo se comprueban en pantalla pasan al carril C.
+
 ## Qué estamos construyendo (30 segundos)
 
 Hackatón Build 101, 17–18 oct 2026, ~15 h, 3 personas. **Experto al lado:** el usuario dice qué se rompió → la IA pide fotos según el equipo → lee la chapa y confirma el modelo → busca el manual y guías del modelo → arma un 3D con piezas nombradas → guía por voz resaltando, girando y moviendo piezas → el usuario pregunta por voz o texto → pasos peligrosos se bloquean. Demo con una notebook del jurado.
@@ -114,7 +119,7 @@ Cuando le hables a la persona:
 1. **Sincronizar:** `git fetch origin` y crear la rama de la tarea desde `origin/main`, en el mismo worktree: `git switch -c <carril>/<tarea> origin/main`. Si hay cambios sin guardar, avisá antes.
 2. **Plan:** si la tarea ya está dentro del bloque aprobado, seguí sin preguntar.
 3. **Construir** solo dentro de las carpetas del carril. Commits chicos.
-4. **Verificar:** `npm test`, `npm run typecheck` y `npm run build`. Si algo falla, lo arreglás antes de seguir. Si es una pantalla, pedile a la persona que la mire en `npm run dev` y confirme.
+4. **Verificar:** `npm test`, `npm run typecheck` y `npm run build`. Si algo falla, lo arreglás antes de seguir. Si es una pantalla, pedile a la persona que la mire en `npm run dev` y confirme. (Juanma: sin `build` ni `dev` local, ver "Juanma tiene poca RAM".)
 5. **Actualizar con main:** `git fetch origin` y `git rebase origin/main`, y volver a verificar.
    - Si el conflicto es en archivos de **otro carril o en `shared/`**: no lo resuelvas vos. Pará y decile a la persona que avise en el grupo.
 6. **PR:** `gh pr create --base main` con título claro y 2–3 líneas de qué cambió.
