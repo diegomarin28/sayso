@@ -208,3 +208,11 @@ export function manualWebDeIfixit(g: GuiaIfixit): ManualWeb {
   }));
   return { url: g.url, titulo: g.titulo, secciones: [intro, ...pasos] };
 }
+
+/**
+ * La foto de cada paso, por la URL del paso (la misma que lleva la cita cuando la guía se lee como manual
+ * web): así la guía muestra la foto del paso que está diciendo (`fotoDePaso` en `<GuiaExperto>`).
+ */
+export function fotosPorPaso(g: GuiaIfixit): Record<string, string> {
+  return Object.fromEntries(g.pasos.filter((p) => p.fotos.length).map((p) => [p.url, p.fotos[0]]));
+}

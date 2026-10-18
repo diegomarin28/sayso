@@ -2,7 +2,7 @@
 
 import { Fragment, useState, type ReactNode } from "react";
 import type { Coreografia, KnowledgePack } from "../../../shared";
-import { Anterior, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
+import { Anterior, Foto, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
 import type { EstadoControles } from "./reproducir";
 
 /**
@@ -21,6 +21,7 @@ export function TarjetaPaso({
   completa,
   onElegir,
   onVerManual,
+  verFoto = false,
   controles,
 }: {
   c: Coreografia;
@@ -31,6 +32,8 @@ export function TarjetaPaso({
   onElegir: (i: number) => void;
   /** Si está, el paso cita una página que tiene imagen: botón "Ver en el manual". */
   onVerManual?: () => void;
+  /** Lo que cita es la foto de un paso (guía con fotos, ej. iFixit): el botón dice "Ver la foto del paso". */
+  verFoto?: boolean;
   /** Botones de la guía (anterior, pausa, siguiente): ver `ControlesGuia`. */
   controles?: ReactNode;
 }) {
@@ -83,7 +86,15 @@ export function TarjetaPaso({
             onClick={onVerManual}
             className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-borde bg-superficie px-2.5 py-1 text-xs font-medium text-texto active:scale-95"
           >
-            <Libro size={14} /> Ver en el manual
+            {verFoto ? (
+              <>
+                <Foto size={14} /> Ver la foto del paso
+              </>
+            ) : (
+              <>
+                <Libro size={14} /> Ver en el manual
+              </>
+            )}
           </button>
         )}
       </div>

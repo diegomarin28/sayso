@@ -5,7 +5,7 @@ import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../..
 import { Visor, type ModoEfectos } from "../Visor";
 import { ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
-import { paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
+import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { conPiezaNombrada } from "./pieza-nombrada";
 import { datosTransparencia, DeDondeSale } from "./transparencia";
@@ -41,6 +41,8 @@ export type GuiaExpertoProps = {
    * La da /api/knowledge (campo de Juanma); la pantalla solo traduce ese campo a esta función.
    */
   imagenPagina?: (pagina: number) => string | null | undefined;
+  /** La foto del paso que cita el paso, por la URL de la cita (guías con fotos, ej. iFixit: `fotosPorPaso`). */
+  fotoDePaso?: (url: string) => string | null | undefined;
   /** Si viene, el experto arranca solo (ej. con el síntoma del caso). */
   preguntaInicial?: string;
   /** Voz (C3): decir la frase en voz alta y resolver cuando termina. Sin voz, se usa un tiempo de lectura. */
@@ -86,6 +88,7 @@ export function GuiaExperto({
   tipoEquipo,
   manualFileId,
   imagenPagina,
+  fotoDePaso,
   preguntaInicial,
   decir = decirConTiempoDeLectura,
   onEvento,
@@ -271,7 +274,8 @@ export function GuiaExperto({
   // "¿De dónde sale esto?": manual, origen del 3D y citas de esta respuesta (plan §10).
   const [transparenciaAbierta, setTransparenciaAbierta] = useState(false);
   const transparencia = useMemo(() => datosTransparencia(pack, plano, origenPlano, pasos), [pack, plano, origenPlano, pasos]);
-  const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina);
+  // La página del manual que cita el paso o, si cita un paso con foto (iFixit), esa foto.
+  const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina) ?? fotoParaPaso(pasoActual, fotoDePaso);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
@@ -311,6 +315,7 @@ export function GuiaExperto({
                 completa={completa}
                 onElegir={verPaso}
                 onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
+                verFoto={!!paginaDelPaso?.foto}
                 controles={
                   <>
                     {controles && (controles.total > 1 || !controles.completa) && (
