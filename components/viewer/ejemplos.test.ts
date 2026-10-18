@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Coreografia, PlanoDePiezas } from "../../shared";
 import { EJEMPLOS, coreografiaHeladera, coreografiaImpresoraLaser, planoHeladera } from "./ejemplos";
+import { prepararEscena } from "./escena";
 import { prepararPaso } from "./paso";
 import { OBJETIVO_GENERAL, aplicarCoreografia, estadoInicial } from "./reproductor";
 
@@ -54,6 +55,28 @@ describe("ejemplos del lab", () => {
     expect(estado.camara).toEqual({ objetivo: "unidad_fusora", zoom: 1.2 });
     expect(estado.piezas.unidad_fusora.resaltada).toBe(true);
     for (const c of coreografiaImpresoraLaser) expect(prepararPaso(c, ctx).evaluacion.bloqueado, `paso ${c.paso}`).toBe(false);
+  });
+
+  it("cada coreografía de ejemplo abre el equipo, pasa la seguridad con su tipo y termina con la pieza resaltada", () => {
+    const conCoreografia = Object.entries(EJEMPLOS).filter(([, e]) => e.coreografia);
+    expect(conCoreografia.map(([n]) => n).sort()).toEqual(["celular", "heladera", "impresora_laser", "notebook", "televisor"]);
+    for (const [nombre, e] of conCoreografia) {
+      const escena = prepararEscena(e.plano, undefined, e.tipoEquipo);
+      let estado = estadoInicial(escena.nodos.keys(), escena.cubiertas);
+      let ultima: Coreografia | undefined;
+      for (const c of e.coreografia!) {
+        const preparado = prepararPaso(c, { ...ctx, tipoEquipo: e.tipoEquipo });
+        // La heladera nombra el compresor a propósito: la tabla lo bloquea (ver coreografiaHeladera).
+        if (!(nombre === "heladera" && c.paso === 3)) expect(preparado.evaluacion.bloqueado, `${nombre} paso ${c.paso}`).toBe(false);
+        const r = aplicarCoreografia(estado, c, ctx);
+        expect(r.eventos, `${nombre} paso ${c.paso}`).toEqual([]);
+        estado = r.estado;
+        ultima = c;
+      }
+      expect(estado.abierto, nombre).toBe(true);
+      const resaltada = ultima!.acciones.find((a) => a.t === "resaltar");
+      expect(resaltada && estado.piezas[resaltada.pieza].resaltada, nombre).toBe(true);
+    }
   });
 
   it("los pasos que no nombran el compresor pasan el filtro de seguridad", () => {
