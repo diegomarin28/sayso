@@ -57,6 +57,10 @@ Después, en el navegador (o el celular) con la app abierta: cargá el JSON en
 `localStorage["sayso:mis-casos:v1"]` y abrí "Mis casos". Cada equipo abre directo en la pantalla del experto.
 Si un equipo no tiene pack o plano guardado, la lista lo dice (hay que precalentarlo antes, con OK de gasto).
 
+**Desde el celular, sin consola:** con la app levantada en modo fixture (`npm run build && npx next start -H 0.0.0.0`,
+con `NEXT_PUBLIC_DATOS=fixture` en `.env.local`), abrí `http://<IP de la Mac>:3000/lab/demo` en el iPhone (misma red)
+y tocá «Cargar … equipos en Mis casos». El chat responde simulado: no gasta IA.
+
 ## Seguridad sin IA
 
 ```bash
