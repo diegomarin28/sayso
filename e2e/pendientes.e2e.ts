@@ -15,7 +15,7 @@ import { llegarALaFicha, llegarAlExperto, preguntar } from "./recorrido";
  */
 
 /** Issues con el arreglo ya fusionado en main: sus tests se corren siempre. */
-const ARREGLADOS = new Set<number>([]);
+const ARREGLADOS = new Set<number>([227, 228, 231]);
 
 const pedidos = (process.env.E2E_PENDIENTES ?? "").split(",").map((s) => s.trim());
 function pendiente(issue: number) {
@@ -160,17 +160,46 @@ test("#231 · al resaltar una pieza grande (carcasa) se siguen viendo las piezas
 
 // ---------- #231: ningún texto de paso termina cortado en "…" / "...." ----------
 
-/** El texto del paso en la tarjeta: ni termina en "...."/"…" ni queda cortado por el recorte de líneas. */
+/**
+ * El texto del paso en la tarjeta no se lee cortado:
+ * - no termina en "...."/"…" y el navegador no le agrega "…" (line-clamp o text-overflow: ellipsis),
+ * - si no entra (el texto largo se recorta y se desvanece), hay "ver más" y al tocarlo se lee entero.
+ */
 async function textoDelPasoCortado(page: Page): Promise<string | null> {
-  const p = page.locator("[aria-live=polite] p.font-medium").first();
+  const tarjeta = page.locator("[aria-live=polite]").filter({ has: page.locator("p.font-medium") }).first();
+  const p = tarjeta.locator("p.font-medium").first();
   await expect(p).toBeVisible();
-  const r = await p.evaluate((el) => ({
-    texto: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
-    recortado: el.scrollHeight > el.clientHeight + 1,
-  }));
+  // Las palabras aparecen subiendo (transform): mientras se animan el texto mide de más. Se espera a que terminen.
+  const quieto = () =>
+    p.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => null))));
+  /** Oculto de verdad: el texto se pasa de la caja (con margen) y la caja lo recorta. */
+  const oculto = () =>
+    p.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return el.scrollHeight > el.clientHeight + 4 && s.overflowY !== "visible";
+    });
+  await quieto();
+  const r = await p.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return {
+      texto: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
+      recortado: el.scrollHeight > el.clientHeight + 4 && s.overflowY !== "visible",
+      // El navegador dibuja "…" solo con estas dos propiedades.
+      puntosDelNavegador: s.textOverflow === "ellipsis" || (s.webkitLineClamp !== "none" && s.webkitLineClamp !== ""),
+    };
+  });
   if (/(\.{3,}|…)$/.test(r.texto)) return `termina en puntos suspensivos: «${r.texto.slice(-60)}»`;
-  if (r.recortado) return `se ve cortado con «…» (no entra en la tarjeta): «${r.texto.slice(0, 80)}»`;
-  return null;
+  if (!r.recortado) return null;
+  if (r.puntosDelNavegador) return `se corta con «…» del navegador: «${r.texto.slice(0, 80)}»`;
+  const verMas = tarjeta.getByRole("button", { name: "ver más" });
+  // La app decide "ver más" al medir el texto: se le da un momento.
+  const hayVerMas = await verMas.waitFor({ state: "visible", timeout: 2000 }).then(() => true, () => false);
+  if (!hayVerMas) return `no entra en la tarjeta y no hay «ver más»: «${r.texto.slice(0, 80)}»`;
+  await tocar(verMas);
+  await quieto();
+  const entero = !(await oculto());
+  await tocar(tarjeta.getByRole("button", { name: "ver menos" }));
+  return entero ? null : `con «ver más» sigue sin leerse entero: «${r.texto.slice(0, 80)}»`;
 }
 
 test("#231 · ningún texto de paso termina en «....» ni queda cortado @webkit", async ({ page, context }, info) => {

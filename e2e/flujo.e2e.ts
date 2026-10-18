@@ -140,16 +140,11 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await expect(page.locator("dt", { hasText: "Marca" })).toContainText("Leído · revisalo");
       await expect(page.locator("dt", { hasText: "N.º de serie" })).toContainText("Probable");
       await expect(page.locator("dt", { hasText: "Año" })).toContainText("No se sabe");
-      const es = page.getByRole("button", { name: /Sí, es este/ });
-      await expect(es).toBeDisabled();
+      // Un solo botón confirma todo lo que está a la vista (#228); editar es solo si un dato está mal.
+      const es = page.getByRole("button", { name: /Confirmar todo/ });
+      await expect(es).toBeEnabled();
       await revisarPantalla(page, libreta);
       await captura(page, info, "07-ficha");
-
-      // Revisa cada dato leído: "Correcto".
-      for (const campo of ["Marca", "Modelo", "N.º de serie"]) {
-        await page.getByRole("button", { name: `${campo} correcto` }).click();
-        await expect(page.locator("dt", { hasText: campo })).toContainText("Revisado por vos");
-      }
 
       await page.getByRole("button", { name: "Completar Año" }).click();
       const anio = page.getByRole("textbox", { name: "Año" });
@@ -159,10 +154,9 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await captura(page, info, "08-ficha-editando");
       await page.getByRole("button", { name: "Guardar" }).click();
       await expect(page.getByRole("button", { name: "Editar Año" })).toContainText("2021");
-      await expect(page.locator("dt", { hasText: "Año" })).toContainText("Revisado por vos");
 
       await expect(es).toBeEnabled();
-      await alAlcance(page, es, libreta, "Sí, es este");
+      await alAlcance(page, es, libreta, "Confirmar todo");
       await es.click();
       await expect(page).toHaveURL(/\/preparando$/);
     });
