@@ -218,7 +218,8 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await expect(campo).toHaveValue("");
 
       await expect(page.getByText("Batería: parte delantera. Te la marco en naranja.")).toBeVisible();
-      await expect(page.getByText("El experto dice")).toBeVisible();
+      // Mientras llega dice "El experto dice"; cuando terminó, "Paso 1 de 1".
+      await expect(page.getByText(/^(El experto dice|Paso 1 de 1)$/)).toBeVisible();
       await expect(page.getByRole("button", { name: /Conversación/ })).toBeVisible();
       await page.waitForTimeout(1_500); // la cámara va a la pieza
       await revisarPantalla(page, libreta);

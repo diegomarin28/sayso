@@ -199,7 +199,7 @@ export function escucharConsola(page: Page, libreta: Libreta) {
 
 /**
  * Revisa la pantalla como la vería alguien en el celular:
- * - nada se sale de costado ni hay scroll horizontal (problema),
+ * - nada se sale de costado ni hay scroll horizontal (problema; en filas deslizables, observación),
  * - el cartel "Girá el celular" no aparece en vertical (problema),
  * - botones con área de toque menor a 44×44 px (observación: guía de Apple/Google),
  * - texto cortado dentro de su caja (observación).
@@ -217,13 +217,34 @@ export async function revisarPantalla(page: Page, libreta: Libreta) {
       const b = el.getBoundingClientRect();
       return s.visibility !== "hidden" && s.display !== "none" && Number(s.opacity) > 0.05 && b.width > 2 && b.height > 2;
     };
+    /** Dentro de una fila que se desliza de costado: salirse del borde es a propósito. */
+    const enCarrusel = (el: Element) => {
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        const o = getComputedStyle(p).overflowX;
+        if ((o === "auto" || o === "scroll") && p.scrollWidth > p.clientWidth) return true;
+      }
+      return false;
+    };
     const fuera: string[] = [];
+    const deslizar: string[] = [];
     const chicos: string[] = [];
     const cortados: string[] = [];
+    const medidor = document.createElement("canvas").getContext("2d")!;
     for (const el of document.querySelectorAll("button, a, input, textarea, [role=button]")) {
       if (!visible(el) || el.closest("[aria-hidden=true]")) continue;
       const b = el.getBoundingClientRect();
-      if (b.left < -1 || b.right > vw + 1) fuera.push(`${nombreDe(el)} (x ${Math.round(b.left)}→${Math.round(b.right)} de ${vw})`);
+      if (b.left < -1 || b.right > vw + 1) {
+        const dato = `${nombreDe(el)} (x ${Math.round(b.left)}→${Math.round(b.right)} de ${vw})`;
+        (enCarrusel(el) ? deslizar : fuera).push(dato);
+      }
+      // Placeholder que no entra en su caja (se lee cortado).
+      if (el instanceof HTMLInputElement && el.placeholder && !el.value) {
+        const s = getComputedStyle(el);
+        medidor.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+        const libre = el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+        if (medidor.measureText(el.placeholder).width > libre + 1)
+          cortados.push(`${el.placeholder} (placeholder, ${Math.round(libre)}px de ancho)`);
+      }
       if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA" && (b.height < 44 || b.width < 44))
         chicos.push(`${nombreDe(el)} (${Math.round(b.width)}×${Math.round(b.height)})`);
     }
@@ -239,6 +260,7 @@ export async function revisarPantalla(page: Page, libreta: Libreta) {
       vw,
       desborde: document.documentElement.scrollWidth - vw,
       fuera,
+      deslizar,
       chicos,
       cortados,
       cartelGirar: !!girar && getComputedStyle(girar).display !== "none",
@@ -246,6 +268,7 @@ export async function revisarPantalla(page: Page, libreta: Libreta) {
   });
   if (r.desborde > 1) libreta.anotar("problema", `Scroll horizontal: la página mide ${r.desborde}px más que la pantalla (${r.vw}px)`);
   for (const f of r.fuera) libreta.anotar("problema", `Se sale de la pantalla: ${f}`);
+  for (const f of r.deslizar) libreta.anotar("observación", `Hay que deslizar de costado para verlo: ${f}`);
   if (r.cartelGirar) libreta.anotar("problema", `Aparece "Girá el celular a vertical" estando en vertical`);
   for (const c of r.chicos) libreta.anotar("observación", `Área de toque menor a 44×44 px: ${c}`);
   for (const c of r.cortados) libreta.anotar("observación", `Texto cortado: "${c}"`);
