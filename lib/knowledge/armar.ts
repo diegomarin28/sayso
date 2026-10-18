@@ -3,7 +3,7 @@ import { KnowledgePack, type Evento, type Ficha, type PasoReparacion } from "../
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { formasDePantallaDe } from "../planogenerator/plantillas/por-tipo";
 import { tiposParaPrompt } from "../planogenerator/tipos";
-import { calcularUso, enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
+import { calcularUso, CORTE_POR_TIEMPO, enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
@@ -111,7 +111,14 @@ ${tiposParaPrompt()}
  * nunca pasa de `LIMITES.guiaPublica.busquedas` en total (contando las continuaciones) ni paga otra
  * continuación después de gastar `LIMITES.guiaPublica.maxUsd` (#256): se queda con lo que ya leyó.
  */
-async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje, adjuntos: Anthropic.DocumentBlockParam[] = []): Promise<Lectura> {
+async function guiaPublica(
+  equipo: string,
+  sintoma: string,
+  enviar: EnviarMensaje,
+  adjuntos: Anthropic.DocumentBlockParam[] = [],
+  /** Cuánto tiempo queda de la guía (ver `LIMITES.lectura.totalMs`): cada continuación usa lo que quede. */
+  resta: () => number = () => LIMITES.lectura.totalMs,
+): Promise<Lectura> {
   const tarea = tareaPack(equipo, sintoma, false, [], false, adjuntos.length > 0);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: [...adjuntos, { type: "text", text: tarea }] }];
   const bloques: Anthropic.TextBlock[] = [];
@@ -129,13 +136,15 @@ async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaj
         messages,
       },
       "bibliotecario: guía pública",
+      undefined,
+      { hastaMs: resta() },
     );
     bloques.push(...r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"));
     motivo = r.stop_reason;
     const uso = calcularUso("bibliotecario: guía pública", MODELO_DE.guiaPublica, r.usage ?? {});
     busquedas += uso.busquedas;
     usd += uso.usd;
-    if (r.stop_reason !== "pause_turn") break;
+    if (r.stop_reason !== "pause_turn" || resta() < LIMITES.lectura.minRestoMs) break;
     // Continuar podría buscar otra vez o pasar el tope de gasto: se queda con lo que ya hay.
     if (busquedas >= LIMITES.guiaPublica.busquedas || usd >= LIMITES.guiaPublica.maxUsd) {
       console.warn(`[knowledge] guía pública: no sigo (${busquedas} búsquedas, US$ ${usd.toFixed(4)})`);
@@ -225,6 +234,12 @@ export async function armarKnowledgePack(
   const eventos: Evento[] = [];
   /** Si algo falló (API, red, PDF), el resultado NO se guarda en la caché: se vuelve a intentar la próxima vez. */
   let huboFalla = false;
+  // Presupuesto de tiempo de una guía nueva (la de caché vuelve arriba, sin esto): la lectura del manual hasta
+  // `presupuestoMs` y todo junto hasta `totalMs`. Lo que sigue a la lectura solo arranca si queda `minRestoMs`.
+  const inicio = Date.now();
+  const resta = () => LIMITES.lectura.totalMs - (Date.now() - inicio);
+  const hayTiempo = () => resta() >= LIMITES.lectura.minRestoMs;
+  const plazoLectura = () => Math.max(0, Math.min(LIMITES.lectura.presupuestoMs, resta()));
   let vistaInterior: VistaInteriorImagen | null = null;
   let imagenesPaginas: Record<number, string> = {};
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
@@ -324,12 +339,12 @@ export async function armarKnowledgePack(
   if (fuenteManual) {
     const leer = async (escalar?: { modelo: string; motivo: MotivoEscalada }): Promise<[Lectura, Contenido] | null> => {
       if (manual) {
-        const l = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual", escalar);
+        const l = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual", escalar, plazoLectura());
         return [l, aPaginasDelManual(parsearContenido(lineasConCitas(l.bloques), manual.titulo, undefined, tipoEquipo ?? ficha.clase), manual.paginas)];
       }
       if (manualWeb) {
         // Manual web: sin páginas (no hay vistas para el 3D); cada cita lleva la URL de su sección.
-        const l = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web", escalar);
+        const l = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web", escalar, plazoLectura());
         return [l, parsearContenido(lineasConCitas(l.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase)];
       }
       return null;
@@ -337,7 +352,8 @@ export async function armarKnowledgePack(
     try {
       [lectura, contenido] = (await leer()) ?? [null, null];
       // Escalada (una sola vez): si el modelo barato no sacó ningún paso del manual, lo relee el más capaz.
-      if (contenido && !pasosDelManual(contenido) && puedeEscalar(MODELO_DE.lectura)) {
+      // Si la lectura se cortó por tiempo, no: se usa lo que ya escribió.
+      if (contenido && !pasosDelManual(contenido) && puedeEscalar(MODELO_DE.lectura) && lectura?.motivo !== CORTE_POR_TIEMPO && hayTiempo()) {
         eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no sacó pasos citados del manual: la repito con un modelo más capaz."));
         [lectura, contenido] = (await leer({ modelo: ESCALADA.hacia, motivo: "sin_pasos" })) ?? [lectura, contenido];
       }
@@ -356,6 +372,15 @@ export async function armarKnowledgePack(
     }
   }
   const conManual = fuenteManual !== null && contenido !== null && pasosDelManual(contenido);
+  // Cortada por tiempo: se usan las líneas que ya salieron, sin caer en la guía pública (otros 2 min), y la guía
+  // parcial no se guarda en la caché (la próxima vez se lee entera).
+  const cortadaPorTiempo = lectura?.motivo === CORTE_POR_TIEMPO;
+  if (cortadaPorTiempo) {
+    huboFalla = true;
+    eventos.push(evento(casoId, "bibliotecario", "lectura_cortada", "La lectura del manual tardaba demasiado: uso lo que ya leí."));
+  }
+  /** ¿Se puede probar otra fuente después del manual? No si se cortó por tiempo ni si ya no queda tiempo. */
+  const seguir = () => !cortadaPorTiempo && hayTiempo();
   let fuentesPublicas: string[] = [];
   let fotosPasos: Record<string, string> = {};
   /** Fuentes del pack sin manual cuando el código las conoce (ej. la guía de iFixit, con su atribución). */
@@ -369,7 +394,7 @@ export async function armarKnowledgePack(
   /** Guía de iFixit (gratis, sin IA para buscarla) leída con citas: cada cita lleva la URL de su paso. */
   const conIfixit = async (guia: GuiaIfixit): Promise<boolean> => {
     const web = manualWebDeIfixit(guia);
-    const l = await leerDocumentos([...adjuntos, ...bloquesManualWeb(web)], tareaPack(equipoDescrito, sintoma, false, [], true, adjuntos.length > 0), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía de iFixit");
+    const l = await leerDocumentos([...adjuntos, ...bloquesManualWeb(web)], tareaPack(equipoDescrito, sintoma, false, [], true, adjuntos.length > 0), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía de iFixit", undefined, resta());
     const c = conPaginasDelManual(parsearContenido(lineasConCitas(l.bloques), guia.titulo, [...urlsAdjuntos, ...web.secciones.map((x) => x.url)], tipoEquipo ?? ficha.clase, esAdjunto));
     if (!c.pasos.length) return false;
     [lectura, contenido] = [l, c];
@@ -380,7 +405,7 @@ export async function armarKnowledgePack(
     return true;
   };
   const idIfixit = registro && esSoloGuia(registro) ? idDeGuiaIfixit(registro.fuentes_publicas[0]) : null;
-  if (!conManual && idIfixit !== null) {
+  if (!conManual && idIfixit !== null && seguir()) {
     // Guía de iFixit ya conocida: se vuelve a pedir por su API (gratis), sin buscar en la web.
     try {
       const guia = await guiaIfixit(idIfixit, deps.fetch);
@@ -389,7 +414,7 @@ export async function armarKnowledgePack(
       if (e instanceof IAEnPausa) throw e;
       console.error("[knowledge] no pude releer la guía de iFixit:", (e as Error).message);
     }
-  } else if (!conManual && esSoloGuia(registro)) {
+  } else if (!conManual && esSoloGuia(registro) && seguir()) {
     // Guía pública ya conocida: el código baja esas páginas (gratis) y se leen como texto, sin búsqueda web.
     try {
       const guardadas = registro!.fuentes_publicas;
@@ -399,7 +424,7 @@ export async function armarKnowledgePack(
         deps.fetch,
       );
       if (paginas.secciones.length) {
-        const l = await leerManualWeb(paginas, tareaPack(equipoDescrito, sintoma, false, [], true), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía pública guardada");
+        const l = await leerManualWeb(paginas, tareaPack(equipoDescrito, sintoma, false, [], true), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía pública guardada", undefined, resta());
         const c = parsearContenido(lineasConCitas(l.bloques), "Guías públicas", paginas.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase, false);
         if (c.pasos.length) {
           [lectura, contenido, fuentesPublicas] = [l, c, paginas.secciones.map((x) => x.url)];
@@ -411,7 +436,7 @@ export async function armarKnowledgePack(
       console.error("[knowledge] no pude releer la guía pública guardada:", (e as Error).message);
     }
   }
-  if (!conManual && fuentesPublicas.length === 0 && !esSoloGuia(registro)) {
+  if (!conManual && fuentesPublicas.length === 0 && !esSoloGuia(registro) && seguir()) {
     // iFixit antes que la búsqueda web: gratis, con pasos y fotos. Se guarda para no volver a buscar el manual.
     try {
       const guia = await buscarGuiaIfixit(nombreEquipo, sintoma, deps.fetch);
@@ -432,9 +457,9 @@ export async function armarKnowledgePack(
       console.error("[knowledge] no pude usar la guía de iFixit:", (e as Error).message);
     }
   }
-  if (!conManual && fuentesPublicas.length === 0) {
+  if (!conManual && fuentesPublicas.length === 0 && seguir()) {
     try {
-      lectura = await guiaPublica(equipoDescrito, sintoma, enviar, adjuntos);
+      lectura = await guiaPublica(equipoDescrito, sintoma, enviar, adjuntos, resta);
       contenido = conPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública", urlsAdjuntos, tipoEquipo ?? ficha.clase, esAdjunto));
       fuentesPublicas = fuentesWeb(lectura.bloques).map((f) => f.url).slice(0, LIMITES.guiaPublica.maxFuentes);
       // Se guardan sus fuentes (si no hay un manual guardado), así la próxima no se paga la búsqueda web.
@@ -458,15 +483,27 @@ export async function armarKnowledgePack(
       contenido = parsearContenido([], "Fuente pública");
     }
   }
-  if (!contenido || !lectura) throw new Error("inalcanzable");
+  // Sin tiempo para otra fuente después de una lectura fallida: guía vacía, sin guardar (como si fallara la guía pública).
+  if (!contenido || !lectura) {
+    huboFalla = true;
+    lectura = { bloques: [], motivo: null };
+    contenido = parsearContenido([], "Fuente pública");
+  }
   // Lo que la fuente no trajo (líneas FALTA, ej. "cómo abrir el equipo"): el código busca esa parte, una sola vez,
   // en el mismo manual (páginas o secciones elegidas para eso) y, si no está, en iFixit. Los pasos van donde faltaban.
-  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length) {
+  // Completar es opcional: si la lectura ya llevó más de `completarHastaMs`, la guía queda como está, con el aviso.
+  const aTiempoDeCompletar = Date.now() - inicio <= LIMITES.lectura.completarHastaMs && hayTiempo();
+  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length && !aTiempoDeCompletar) {
+    const falta = [...new Set(contenido.faltantes.map((f) => f.procedimiento))].join("; ");
+    eventos.push(evento(casoId, "bibliotecario", "guia_incompleta", `La guía quedó incompleta (falta: ${falta}) para no hacerte esperar más.`, { falta }));
+    console.warn(`[knowledge] completar salteado: ${Math.round((Date.now() - inicio) / 1000)} s (falta: ${falta})`);
+  }
+  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length && aTiempoDeCompletar) {
     try {
       const manualConocido = encontrado
         ? { url: encontrado.url, titulo: encontrado.titulo, ...(encontrado.formato === "pdf" ? { pdf: encontrado.pdf } : { indice: encontrado.indice }) }
         : null;
-      const r = await completarFaltantes(contenido, { equipo: equipoDescrito, nombreEquipo, sintoma, tipo: tipoEquipo ?? ficha.clase, enviar, deps, manual: manualConocido });
+      const r = await completarFaltantes(contenido, { equipo: equipoDescrito, nombreEquipo, sintoma, tipo: tipoEquipo ?? ficha.clase, enviar, deps, manual: manualConocido, resta });
       if (r) {
         contenido = r.contenido;
         eventos.push(
@@ -611,6 +648,8 @@ type ContextoCompletar = {
   deps: Deps;
   /** El manual que ya se encontró (con el PDF o el índice web en memoria), o null si no hay. */
   manual: { url: string; titulo: string; pdf?: Pdf; indice?: PaginaWeb } | null;
+  /** Cuánto tiempo queda de la guía (ver `LIMITES.lectura.totalMs`). */
+  resta: () => number;
 };
 
 /** Busca lo que faltaba (primero en el manual, después en iFixit) y lo inserta. Null si ninguna fuente lo trae. */
@@ -630,9 +669,9 @@ async function completarFaltantes(
       if (e instanceof IAEnPausa) throw e;
       return null;
     });
-    if (!f) continue;
+    if (!f || ctx.resta() < LIMITES.lectura.minRestoMs) continue;
     const tarea = tareaCompletar(ctx.equipo, ctx.sintoma, procedimiento, c.piezas.map((p) => p.id));
-    const l = await leerDocumentos(bloquesDeFuente(f), tarea, LIMITES.lectura.maxTokensPack, ctx.enviar, "bibliotecario: completar la guía");
+    const l = await leerDocumentos(bloquesDeFuente(f), tarea, LIMITES.lectura.maxTokensCompletar, ctx.enviar, "bibliotecario: completar la guía", undefined, ctx.resta());
     const leido = parsearContenido(lineasConCitas(l.bloques), f.titulo, urlsDeFuente(f), ctx.tipo, f.oficial);
     const nuevo = f.tipo === "pdf" ? aPaginasDelManual(leido, f.paginas) : leido;
     if (!nuevo.pasos.length) continue;
