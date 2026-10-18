@@ -30,7 +30,7 @@ import {
 import type { ManualRecortado } from "./recorte";
 import { palabras } from "./biblioteca";
 import { ES_TAPA } from "./cubiertas";
-import { acotarMedidas, seguirPlantilla } from "./seguir-plantilla";
+import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
 import { ubicarTeclas } from "./teclas";
 
@@ -509,6 +509,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
 
 /**
  * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
+ * 0. lo que un esqueleto anterior sumó y el tipo de hoy no tiene se saca (`sinEsqueletoAjeno`: planos de la caché);
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
  * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
@@ -519,14 +520,15 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
-  const seguido = tipo ? seguirPlantilla(plano, ids, tipo) : { plano, avisos: [] };
+  const limpio = tipo ? sinEsqueletoAjeno(plano, ids, tipo) : { plano, avisos: [] };
+  const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
   const teclas = ubicarTeclas(acotado.plano, ids);
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(teclas.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
   const forma = marcarFormaEstimada(tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, tipo, kp);
-  return { plano: forma.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...sueltas.avisos, ...forma.avisos] };
+  return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */
