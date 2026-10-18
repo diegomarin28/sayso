@@ -5,13 +5,20 @@
  *
  *   NEXT_PUBLIC_DATOS=fixture npm run build && npx next start -p 3000      # en otra terminal
  *   npx tsx scripts/galeria3d/galeria.ts [--base http://localhost:3000] [--salida galeria3d] [--solo tv,celular]
+ *       [--casos mis-casos.json] [--campus] [--sin-ejemplos]
+ *
+ * `--casos`: los planos de la caché que arma `scripts/bateria/correr.ts --mis-casos` (sin IA); `--campus`: los
+ * objetos de /lab/galeria. Esos se abren en /lab/visor?plano=guardado (ver CLAVE_PLANO_GUARDADO).
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EJEMPLOS } from "../../components/viewer/ejemplos";
+import { GALERIA_CAMPUS } from "../../components/viewer/galeria/campus";
+import { CLAVE_PLANO_GUARDADO } from "../../components/viewer/lab-guardado";
 import { avisos, leerPng, medir, type Aviso } from "./analisis";
+import { equiposDeCasos, type Equipo } from "./equipos";
 
 const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PUERTO = 9338;
@@ -19,6 +26,7 @@ const ESPERA_CARGA_MS = 9000;
 const ESPERA_DESPIECE_MS = 4500;
 
 type Fila = { id: string; cerrado: Aviso[]; despiezado: Aviso[]; consola: string[] };
+
 
 function opcion(nombre: string, porDefecto?: string): string | undefined {
   const i = process.argv.indexOf(`--${nombre}`);
@@ -31,7 +39,12 @@ async function main() {
   const base = opcion("base", "http://localhost:3000")!;
   const salida = opcion("salida", "galeria3d")!;
   const solo = opcion("solo")?.split(",");
-  const ids = Object.keys(EJEMPLOS).filter((id) => !solo || solo.includes(id));
+  const casos = opcion("casos");
+  const equipos: Equipo[] = [
+    ...(process.argv.includes("--sin-ejemplos") ? [] : Object.keys(EJEMPLOS).map((id) => ({ id }))),
+    ...(casos ? equiposDeCasos(JSON.parse(readFileSync(casos, "utf8"))) : []),
+    ...(process.argv.includes("--campus") ? GALERIA_CAMPUS.map((e) => ({ id: `campus-${e.id}`, plano: e.plano, tipoEquipo: e.tipoEquipo })) : []),
+  ].filter((e) => !solo || solo.includes(e.id));
   mkdirSync(salida, { recursive: true });
 
   const chrome = spawn(
@@ -80,17 +93,18 @@ async function main() {
     await cmd("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 
     /**
-     * Captura solo el lienzo del 3D, la guarda y la mide. Antes oculta los botones y chips que el visor
-     * pone encima ("Vista isométrica", el origen de las ubicaciones): no son el equipo.
+     * Captura solo el lienzo del 3D, la guarda y la mide. Antes oculta lo que el visor pone encima
+     * ("Vista isométrica", el origen de las ubicaciones, las etiquetas, el medidor de fps del lab): no es el equipo.
      */
     const capturar = async (archivo: string): Promise<Aviso[]> => {
       const r = (await evaluar(`(() => {
         const lienzo = document.querySelector("canvas");
         if (!lienzo) return null;
         const c = lienzo.getBoundingClientRect();
-        for (const el of document.querySelectorAll("button, p")) {
+        for (const el of document.querySelectorAll("body *")) {
+          if (el.contains(lienzo) || !["absolute", "fixed"].includes(getComputedStyle(el).position)) continue;
           const e = el.getBoundingClientRect();
-          if (getComputedStyle(el).position === "absolute" && e.top < c.bottom && e.bottom > c.top) el.style.visibility = "hidden";
+          if (e.top < c.bottom && e.bottom > c.top && e.left < c.right && e.right > c.left) el.style.visibility = "hidden";
         }
         return [c.x, c.y, c.width, c.height];
       })()`)) as number[] | null;
@@ -103,9 +117,12 @@ async function main() {
     };
 
     const filas: Fila[] = [];
-    for (const id of ids) {
+    await cmd("Page.navigate", { url: `${base}/lab/visor` }); // el localStorage es por origen
+    await esperar(1500);
+    for (const { id, plano, tipoEquipo } of equipos) {
       consola = [];
-      await cmd("Page.navigate", { url: `${base}/lab/visor?plano=${encodeURIComponent(id)}` });
+      if (plano) await evaluar(`localStorage.setItem(${JSON.stringify(CLAVE_PLANO_GUARDADO)}, ${JSON.stringify(JSON.stringify({ plano, tipoEquipo }))})`);
+      await cmd("Page.navigate", { url: `${base}/lab/visor?plano=${plano ? "guardado" : encodeURIComponent(id)}` });
       // El lienzo arranca en 300 × 150 hasta que toma el tamaño del visor; recién ahí corre la espera.
       for (let i = 0; i < 60 && !(await evaluar(`(document.querySelector("canvas")?.getBoundingClientRect().height ?? 0) > 200`)); i++) await esperar(250);
       await esperar(ESPERA_CARGA_MS);

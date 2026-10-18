@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   PlanoDePiezas,
   coreografiaEjemplo,
@@ -12,6 +12,7 @@ import {
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
 import { EJEMPLOS } from "./ejemplos";
+import { CLAVE_PLANO_GUARDADO } from "./lab-guardado";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
 
@@ -53,9 +54,34 @@ const EXTRAS: Array<[string, Coreografia]> = [
   ["Restaurar", paso("Vuelvo todo a su lugar.", [{ t: "restaurar" }, { t: "camara", objetivo: "general" }])],
 ];
 
-/** `planoInicial`: uno de PLANOS (ej. `/lab/visor?plano=heladera`, para capturas). */
+function leerGuardado(): string | null {
+  try {
+    return localStorage.getItem(CLAVE_PLANO_GUARDADO);
+  } catch {
+    return null;
+  }
+}
+
+function planoGuardado(texto: string | null): { plano: PlanoDePiezas; tipoEquipo?: string } | null {
+  if (!texto) return null;
+  try {
+    const d = JSON.parse(texto);
+    return { plano: PlanoDePiezas.parse(d.plano), tipoEquipo: typeof d.tipoEquipo === "string" ? d.tipoEquipo : undefined };
+  } catch (e) {
+    console.warn("[lab] el plano guardado no es válido:", e);
+    return null;
+  }
+}
+
+/** `planoInicial`: uno de PLANOS (ej. `/lab/visor?plano=heladera`, para capturas) o "guardado". */
 export function LabVisor({ planoInicial }: { planoInicial?: string }) {
   const [planoId, setPlanoId] = useState<IdPlano>(planoInicial && planoInicial in PLANOS ? planoInicial : "plantilla");
+  const textoGuardado = useSyncExternalStore(
+    () => () => {},
+    () => (planoInicial === "guardado" ? leerGuardado() : null),
+    () => null,
+  );
+  const guardado = useMemo(() => planoGuardado(textoGuardado), [textoGuardado]);
   const [generado, setGenerado] = useState<PlanoDePiezas | null>(null);
   const [estadoGenerador, setEstadoGenerador] = useState("");
   const [pegado, setPegado] = useState("");
@@ -64,7 +90,8 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
   const [filtrado, setFiltrado] = useState<PasoPreparado | null>(null);
   const [efectos, setEfectos] = useState<ModoEfectos>("auto");
   const [efectosActivos, setEfectosActivos] = useState(true);
-  const elegido = planoId === "generado" && generado ? { plano: generado } : (PLANOS[planoId] ?? PLANOS.plantilla);
+  const elegido: (typeof PLANOS)[string] =
+    planoId === "generado" && generado ? { plano: generado } : guardado && planoInicial === "guardado" && planoId === "plantilla" ? guardado : (PLANOS[planoId] ?? PLANOS.plantilla);
   const plano = elegido.plano;
   const usarGenerado = (p: PlanoDePiezas) => {
     setGenerado(p);
