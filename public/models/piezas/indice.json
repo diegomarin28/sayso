@@ -14,7 +14,8 @@
   "campus": "campus.glb",
   "tablet_demo": "tablet_demo.glb",
   "notebook_demo": "notebook_demo.glb",
-  "alineacion_demo": "alineacion_demo.glb"
+  "alineacion_demo": "alineacion_demo.glb",
+  "impresoras_demo": "impresoras_demo.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3491,6 +3492,61 @@
     16,
     1.16,
     10.25
+   ]
+  },
+  "bandeja_papel@laser": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser",
+   "descripcion": "Cassette extraíble de papel: piso, paredes, guías laterales y asa frontal.",
+   "caja": [
+    33,
+    4.7,
+    30.55
+   ]
+  },
+  "bandeja_papel@tinta": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora tinta inkjet",
+   "descripcion": "Bandeja abierta para alimentación de tinta: papel, guías ajustables y extensión.",
+   "caja": [
+    30,
+    1.8,
+    20.5
+   ]
+  },
+  "placa@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Placa digital de control: procesador, memoria, USB, flex y agujeros de montaje.",
+   "caja": [
+    12,
+    1.21,
+    9.25
+   ]
+  },
+  "fuente@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Fuente conmutada: PCB, transformador aislado, capacitores, disipador y conectores.",
+   "caja": [
+    12,
+    2.575,
+    7
+   ]
+  },
+  "ventilador_fuente@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Ventilador axial de impresora: marco cuadrado, aspas, motor y fijaciones.",
+   "caja": [
+    6,
+    1.6,
+    6
    ]
   }
  }

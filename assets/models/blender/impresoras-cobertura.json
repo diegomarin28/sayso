@@ -1,0 +1,61 @@
+{
+  "familia": "impresoras_demo",
+  "variantes": {
+    "laser": {
+      "nuevas": [
+        "bandeja_papel@laser",
+        "placa@impresora",
+        "fuente@impresora",
+        "ventilador_fuente@impresora"
+      ],
+      "reutilizadas": [
+        "unidad_fusora",
+        "unidad_laser",
+        "cartucho_toner",
+        "rodillo",
+        "motor",
+        "engranaje_arrastre",
+        "sensor_papel",
+        "carcasa@impresora",
+        "puerta@impresora"
+      ]
+    },
+    "tinta": {
+      "nuevas": [
+        "bandeja_papel@tinta",
+        "placa@impresora"
+      ],
+      "reutilizadas": [
+        "fuente",
+        "carro_impresion",
+        "cabezal_impresion",
+        "cartucho_tinta",
+        "riel_lineal",
+        "cinta_encoder",
+        "rodillo_arrastre",
+        "rodillo",
+        "motor",
+        "engranaje_arrastre"
+      ],
+      "excluidas": [
+        "unidad_fusora",
+        "unidad_laser",
+        "cartucho_toner"
+      ]
+    }
+  },
+  "nombres_plano": {
+    "bandeja_papel": [
+      "bandeja_papel@laser",
+      "bandeja_papel@tinta"
+    ],
+    "placa_control": "placa@impresora",
+    "fuente": [
+      "fuente",
+      "fuente@impresora"
+    ],
+    "ventilador_fuente": "ventilador_fuente@impresora"
+  },
+  "pendiente": "La carcasa tinta tapa_impresora es envolvente del visor, no una malla de esta familia. Los planos incompletos de caché deben completarse por tecnología en el generador; agregar mallas no crea piezas ausentes del plano.",
+  "renders": "Piezas y hojas de despiece ilustrativas; no son prueba de montaje físico ni capturas de la app."
+}
