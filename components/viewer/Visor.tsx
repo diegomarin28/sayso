@@ -235,7 +235,8 @@ export function Visor({
           {calidad && biblioteca !== undefined && vigiando && !falla && (
             <VigiaNegro key={ronda} renderizaSolo={!efectosActivos} onNegro={alVerNegro} onListo={() => setVigiando(false)} />
           )}
-          {efectos !== "si" && <PerformanceMonitor bounds={() => [30, 1000]} flipflops={1} onDecline={alBajarRendimiento} />}
+          {/* Ventanas cortas (6 × 250 ms): un celular que no llega a 30 fps baja la calidad en ~1,5 s, no en 10. */}
+          {efectos !== "si" && <PerformanceMonitor ms={250} iterations={6} bounds={() => [30, 1000]} flipflops={1} onDecline={alBajarRendimiento} />}
           {calidad && efectosActivos && (
             <Resguardo onError={() => setCalidad((c) => (c ? { ...c, efectos: false } : c))}>
               <EffectComposer multisampling={calidad.multisampling}>
