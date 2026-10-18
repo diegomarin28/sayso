@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, usarColorActivo } from "./escena";
+import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiqueta, usarColorActivo } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -270,5 +270,30 @@ describe("escena: vista general en el celular", () => {
         const p = new THREE.Vector3(x, caja.max.y, z).project(camara);
         expect(Math.abs(p.x)).toBeLessThanOrEqual(1);
       }
+  });
+});
+
+describe("separarEtiqueta: etiquetas de piezas resaltadas a la vez no se pisan (#179)", () => {
+  const lienzo = { width: 390, height: 600 };
+  const caja = (x: number, y: number) => ({ x, y, ancho: 140, alto: 34 });
+  it("si no choca, queda donde estaba", () => {
+    expect(separarEtiqueta(caja(20, 200), [caja(20, 100)], lienzo)).toEqual(caja(20, 200));
+  });
+  it("si choca, se corre al lugar libre más cercano (abajo o arriba de la otra)", () => {
+    const r = separarEtiqueta(caja(30, 210), [caja(20, 200)], lienzo);
+    expect(r.x).toBe(30);
+    expect(Math.abs(r.y - 200)).toBeGreaterThanOrEqual(34 + 4);
+  });
+  it("tres juntas (ventilador, placa y disipador): ninguna pisa a otra", () => {
+    const puestas: ReturnType<typeof caja>[] = [];
+    for (const c of [caja(100, 250), caja(110, 255), caja(90, 245)]) puestas.push(separarEtiqueta(c, puestas, lienzo));
+    for (let i = 0; i < puestas.length; i++)
+      for (let j = i + 1; j < puestas.length; j++) expect(Math.abs(puestas[i].y - puestas[j].y), `${i} y ${j}`).toBeGreaterThanOrEqual(34 + 4);
+  });
+  it("nunca debajo de la frase ni fuera del lienzo; sin lugar, queda donde estaba", () => {
+    const r = separarEtiqueta(caja(20, 120), [caja(20, 120)], lienzo, 100);
+    expect(r.y).toBeGreaterThanOrEqual(108);
+    const chico = { width: 390, height: 60 };
+    expect(separarEtiqueta(caja(20, 10), [caja(20, 10)], chico)).toEqual(caja(20, 10));
   });
 });

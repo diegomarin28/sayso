@@ -468,6 +468,34 @@ export function colocarEtiqueta(
   };
 }
 
+/** Un recuadro en px del lienzo. */
+export type Recuadro = { x: number; y: number; ancho: number; alto: number };
+/** Lo mínimo entre dos etiquetas resaltadas a la vez. */
+const SEPARACION_ETIQUETAS = 4;
+
+const seCruzan = (a: Recuadro, b: Recuadro) =>
+  a.x < b.x + b.ancho + SEPARACION_ETIQUETAS &&
+  b.x < a.x + a.ancho + SEPARACION_ETIQUETAS &&
+  a.y < b.y + b.alto + SEPARACION_ETIQUETAS &&
+  b.y < a.y + a.alto + SEPARACION_ETIQUETAS;
+
+/**
+ * Varias piezas resaltadas a la vez (el disipador y la placa, la batería y la placa): la etiqueta se
+ * corre hasta no pisar las que ya se ubicaron en este cuadro. Primero hacia el lado que la aleja de
+ * la otra (abajo si está más abajo, arriba si no); si por ahí se sale del lienzo, hacia el otro. Si
+ * no hay lugar en ningún lado, queda donde estaba (mejor encimada que fuera de la pantalla).
+ */
+export function separarEtiqueta(r: Recuadro, ocupadas: Recuadro[], lienzo: { width: number; height: number }, reservadoArriba = 0): Recuadro {
+  const minY = reservadoArriba + MARGEN_ETIQUETA;
+  const maxY = lienzo.height - MARGEN_ETIQUETA - r.alto;
+  const libre = (y: number) => y >= minY && y <= maxY && !ocupadas.some((o) => seCruzan({ ...r, y }, o));
+  if (libre(r.y)) return r;
+  // Candidatos: justo abajo o justo arriba de cada una con la que podría chocar; el más cercano que esté libre.
+  const candidatos = ocupadas.flatMap((o) => [o.y + o.alto + SEPARACION_ETIQUETAS, o.y - r.alto - SEPARACION_ETIQUETAS]);
+  const mejor = candidatos.filter(libre).sort((a, b) => Math.abs(a - r.y) - Math.abs(b - r.y))[0];
+  return mejor === undefined ? r : { ...r, y: mejor };
+}
+
 /**
  * Dónde va la etiqueta respecto de la pieza (`ancla`, en px del lienzo): arriba a la derecha
  * si entra; abajo si arriba chocaría con la frase (`reservadoArriba`); a la izquierda si a la

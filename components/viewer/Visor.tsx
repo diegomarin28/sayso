@@ -23,6 +23,8 @@ import {
   continuarAnimacion,
   encuadre,
   colocarEtiqueta,
+  separarEtiqueta,
+  type Recuadro,
   LINEA_ETIQUETA,
   liberar,
   piezasResaltadas,
@@ -513,6 +515,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
 
   useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000));
 
+  const ocupadasRef = useRef({ cuadro: -1, cajas: [] as Recuadro[] });
   const delKp = useMemo(() => new Map(piezas?.map((p) => [p.id, p]) ?? []), [piezas]);
   const delPlano = useMemo(() => new Map(plano.piezas.map((p) => [p.pieza, p])), [plano]);
 
@@ -530,6 +533,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
             numeroKp={kp?.etiquetaManual}
             origen={textoOrigenPieza(delPlano.get(id) ?? {})}
             reservado={reservado}
+            ocupadasRef={ocupadasRef}
           />
         ) : null;
       })}
@@ -582,14 +586,19 @@ type EtiquetaProps = {
   origen: string;
   /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
   reservado: { current: number };
+  /** Las etiquetas ya ubicadas en este cuadro (las de otras piezas resaltadas): no se pisan. */
+  ocupadasRef: EtiquetasDelCuadro;
 };
+
+/** Registro compartido entre las etiquetas: se vacía al empezar cada cuadro (`cuadro` cambia). */
+type EtiquetasDelCuadro = { current: { cuadro: number; cajas: Recuadro[] } };
 
 /**
  * Etiqueta anclada arriba de la pieza. La línea guía y el recuadro se dibujan en px de pantalla
  * hacia el lado donde entran (`ladoEtiqueta`): arriba a la derecha si se puede; abajo si arriba
  * se encimaría con la frase; a la izquierda si a la derecha se sale del lienzo.
  */
-function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaProps) {
+function Etiqueta({ animable, nombre, numeroKp, origen, reservado, ocupadasRef }: EtiquetaProps) {
   const datos = animable.nodo.userData as DatosPieza;
   const numero = datos.etiquetaManual ?? numeroKp;
   const base = animable.principal.position;
@@ -608,18 +617,25 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaPro
   // Cada cuadro: dónde cae la pieza en pantalla y dónde va el recuadro (adentro del lienzo, sin
   // saltar de lado). Se escribe directo en el DOM: sin re-render ni transición de posición (no tiembla).
   const punto = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const el = caja.current;
     if (!el) return;
     punto.set(...desde);
     animable.nodo.localToWorld(punto).project(camara);
     const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
-    const u = colocarEtiqueta(ancla, { ancho: el.offsetWidth, alto: el.offsetHeight }, tam, reservado.current, lado.current);
+    const medida = { ancho: el.offsetWidth, alto: el.offsetHeight };
+    const u = colocarEtiqueta(ancla, medida, tam, reservado.current, lado.current);
     lado.current = u.lado;
+    // Sin pisar las etiquetas de otras piezas resaltadas en este mismo cuadro.
+    if (ocupadasRef.current.cuadro !== clock.elapsedTime) ocupadasRef.current = { cuadro: clock.elapsedTime, cajas: [] };
+    const r = separarEtiqueta({ x: ancla.x + u.caja.x, y: ancla.y + u.caja.y, ...medida }, ocupadasRef.current.cajas, tam, reservado.current);
+    ocupadasRef.current.cajas.push(r);
+    const y = r.y - ancla.y;
     el.style.left = `${u.caja.x}px`;
-    el.style.top = `${u.caja.y}px`;
+    el.style.top = `${y}px`;
+    // La línea va a la esquina más cercana a la pieza (arriba si el recuadro quedó abajo de la pieza).
     linea.current?.setAttribute("x2", String(u.punta.x));
-    linea.current?.setAttribute("y2", String(u.punta.y));
+    linea.current?.setAttribute("y2", String(y >= 0 ? y : y + medida.alto));
   });
 
   return createPortal(

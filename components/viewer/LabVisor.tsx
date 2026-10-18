@@ -10,7 +10,7 @@ import {
   type Evento,
 } from "../../shared";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
+import { ES_CUBIERTA, ES_TAPA } from "../../lib/planogenerator/cubiertas";
 import { EJEMPLOS } from "./ejemplos";
 import type { PasoPreparado } from "./paso";
 import { Visor, type ModoEfectos } from "./Visor";
@@ -36,6 +36,16 @@ const conLaTapaDe = (c: Coreografia, plano: PlanoDePiezas): Coreografia => {
   const tapa = plano.piezas.find((p) => p.padre && ES_TAPA.test(p.pieza))?.pieza;
   return tapa ? { ...c, acciones: c.acciones.map((a) => (a.t === "rotar" ? { ...a, pieza: tapa } : a)) } : c;
 };
+
+/** Tres piezas internas resaltadas a la vez (sin tapas ni la raíz): para ver que sus etiquetas no se pisen. */
+const resaltarTres = (plano: PlanoDePiezas): Coreografia =>
+  paso(
+    "Estas tres piezas.",
+    plano.piezas
+      .filter((p) => p.padre && !ES_CUBIERTA.test(p.pieza))
+      .slice(0, 3)
+      .map((p) => ({ t: "resaltar" as const, pieza: p.pieza })),
+  );
 
 const EXTRAS: Array<[string, Coreografia]> = [
   ["Abrir tapa", paso("Sacá la tapa inferior.", [
@@ -152,6 +162,7 @@ export function LabVisor({ planoInicial }: { planoInicial?: string }) {
           {EXTRAS.map(([nombre, c]) => (
             <Boton key={nombre} onClick={() => reproducir(nombre === "Abrir tapa" ? conLaTapaDe(c, plano) : c)}>{nombre}</Boton>
           ))}
+          <Boton onClick={() => reproducir(resaltarTres(plano))}>Resaltar tres</Boton>
         </Seccion>
 
         <Seccion titulo="Resaltar pieza">
