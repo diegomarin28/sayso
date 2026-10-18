@@ -4,6 +4,7 @@ import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
 import { emparejar, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
+const ES_TAPA = /^tapa/;
 const NOMBRES = Object.keys(INDICE.tipos);
 
 /**
@@ -23,12 +24,13 @@ export function seguirPlantilla(plano: PlanoDePiezas, ids: string[], plantilla: 
   if (!raiz || !raizT) return { plano, avisos: [] };
 
   const esta = new Set(plano.piezas.map((p) => p.pieza));
+  // Las tapas no: las pone `conTapa`, sobre el plano terminado.
   const candidatas = [
     ...plano.piezas.filter((p) => p !== raiz && p.origen !== "manual").map((p) => p.pieza),
     ...ids.filter((id) => !esta.has(id)),
-  ];
+  ].filter((id) => !ES_TAPA.test(id));
   // La raíz del esqueleto no se empareja: una pieza no pasa a medir lo que la carcasa.
-  const sinRaiz = { ...plantilla, plano: { ...plantilla.plano, piezas: plantilla.plano.piezas.filter((p) => p !== raizT) } };
+  const sinRaiz = { ...plantilla, plano: { ...plantilla.plano, piezas: plantilla.plano.piezas.filter((p) => p !== raizT && !ES_TAPA.test(p.pieza)) } };
   const { usadas } = emparejar([...new Set(candidatas)], sinRaiz);
   const tiposDelPlano = new Set([...plano.piezas.map((p) => p.pieza), ...ids].map((id) => tipoPara(id, NOMBRES)).filter(Boolean));
   const cara = plantilla.cara.filter((idT) => !usadas.has(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)));

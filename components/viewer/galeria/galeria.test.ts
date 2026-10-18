@@ -10,7 +10,7 @@ const nombres = Object.keys(indice.tipos);
 /** Piezas de ejemplo sin forma a propósito: se ve la primitiva de respaldo. */
 const SIN_FORMA = new Set([
   "sensor_temperatura", "plato_giratorio", "cuerpo_parlante", "cuerpo_control",
-  "cuerpo_powerbank", "tapa_powerbank", "cuerpo_camara", "lente_camara", "cuerpo_afeitadora", "cabezal_corte", "cuerpo_planchita", "cuerpo_cepillo", "cabezal_cepillo",
+  "tapa_consola", "tapa_router", "tapa_impresora", "cuerpo_powerbank", "tapa_powerbank", "cuerpo_camara", "lente_camara", "cuerpo_afeitadora", "cabezal_corte", "cuerpo_planchita", "cuerpo_cepillo", "cabezal_cepillo",
 ]);
 
 describe("galería del pitch (/lab/galeria)", () => {

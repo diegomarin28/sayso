@@ -171,3 +171,33 @@ describe("las reglas no miran el modelo", () => {
     expect(avisos).toHaveLength(1);
   });
 });
+
+describe("arranca cerrado: los equipos sin carcasa propia tienen una tapa que los envuelve", () => {
+  const dentro = (plano: PlanoDePiezas, tapa: string, id: string) => {
+    const t = pieza(plano, tapa)!;
+    return pieza(plano, id)!.pos.every((v, i) => Math.abs(v - t.pos[i]) <= t.dim[i] / 2 + 1e-6);
+  };
+  it.each([
+    ["consola PlayStation 5", "tapa_consola", ["placa_consola", "ventilador", "fuente", "unidad_optica"]],
+    ["consola Xbox Series S", "tapa_consola", ["placa_consola", "ventilador", "fuente"]],
+    ["router TP-Link Archer C6", "tapa_router", ["placa_router", "puerto_rj45_1", "boton_reset"]],
+    ["router Huawei HG8145", "tapa_router", ["placa_router", "conector_coaxial", "jaula_sfp"]],
+  ])("%s, al generar: la tapa envuelve lo que ubicó la IA y arranca del piso", async (tipoEquipo, tapa, ids) => {
+    const ia = iaEstimada(ids.map((id, i): [string, number, number, number, number] => [id, -0.6 + i * 0.4, 0.2 * (i % 2), 0.2, 0.2]), 30, 24);
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack(tipoEquipo, ids), tipoEquipo }, ia);
+    expect(() => PlanoDePiezas.parse(r.plano)).not.toThrow();
+    expect(pieza(r.plano, tapa), tapa).toBeDefined();
+    for (const id of ids) expect(dentro(r.plano, tapa, id), `${id} dentro de ${tapa}`).toBe(true);
+    const t = pieza(r.plano, tapa)!;
+    const piso = Math.min(...r.plano.piezas.map((p) => p.pos[1] - p.dim[1] / 2));
+    expect(t.pos[1] - t.dim[1] / 2).toBeCloseTo(piso, 5);
+  });
+
+  it("un celular sigue con su tapa trasera fina, arriba (no una caja que lo envuelve)", async () => {
+    const ia = iaEstimada([["bateria", 0, 0.2, 0.7, 0.5], ["placa_madre", 0, -0.6, 0.8, 0.3]], 7.2, 15);
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack("Motorola Edge 40", ["bateria", "placa_madre"]), tipoEquipo: "celular" }, ia);
+    const tapa = pieza(r.plano, "tapa_trasera")!;
+    expect(tapa.dim[1]).toBeLessThan(0.5);
+    expect(tapa.pos[1]).toBeGreaterThan(Math.max(...r.plano.piezas.filter((p) => p !== tapa && p.padre).map((p) => p.pos[1])));
+  });
+});

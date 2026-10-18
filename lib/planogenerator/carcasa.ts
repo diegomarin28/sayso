@@ -4,6 +4,22 @@ import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 /** Si el alto de la cara está más lejos que esto (en veces) del típico del tipo, no es el alto: es la profundidad. */
 export const FACTOR_ALTO_DUDOSO = 2;
+/** Margen (cm) de una tapa que envuelve al equipo. */
+const MARGEN_TAPA = 0.5;
+/** Una tapa envuelve al equipo (no es la chapa de arriba) si adentro tiene el centro de al menos esta fracción de las piezas. */
+const ENVUELVE_DESDE = 0.5;
+
+/**
+ * ¿La tapa del esqueleto envuelve al equipo (consola, router, sin carcasa propia) o es una chapa fina
+ * arriba (celular, notebook)? Por las piezas que quedan adentro, no por la altura: las antenas de un
+ * router son más altas que su tapa.
+ */
+function envuelve(tapa: PiezaPlano, plano: PlanoDePiezas): boolean {
+  const otras = plano.piezas.filter((p) => p !== tapa);
+  const adentro = otras.filter((p) => p.pos.every((v, i) => Math.abs(v - tapa.pos[i]) <= tapa.dim[i] / 2));
+  return adentro.length >= ENVUELVE_DESDE * otras.length;
+}
+
 /** Al estirar la planta, una pieza que ocupa al menos esta fracción (un panel) se estira con ella. */
 const OCUPA_LA_PLANTA = 0.8;
 
@@ -14,8 +30,6 @@ const OCUPA_LA_PLANTA = 0.8;
  *   la notebook ya tiene la suya: su base no se toca),
  *   con el espesor real del equipo; si las piezas apiladas quedan más gruesas que el equipo (un
  *   celular de 1,6 cm en vez de 0,8), se comprime el alto;
- * - si el equipo acostado tiene tapa (la trasera del celular, la inferior de la notebook) y el plano
- *   no la trae, se agrega: así el 3D arranca CERRADO y se abre cuando la guía saca la tapa;
  * - un equipo parado (TV, heladera…) se para (ver `pararPlano`).
  * Idempotente: un plano ya ajustado (o de una plantilla, que ya viene en su forma) no cambia. Se
  * aplica al generar y también al leer de la caché (los planos viejos se arreglan solos).
@@ -77,25 +91,43 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
     });
   }
 
-  // La tapa del tipo, si el equipo acostado la tiene y el plano no (el 3D arranca cerrado).
-  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => p.pieza.startsWith("tapa"));
-  if (tapa && !piezas.some((p) => p.pieza.startsWith("tapa"))) {
-    const raiz = piezas.find((p) => p.pieza === id)!;
-    const [W, , D] = raiz.dim;
-    const escala = [W / raizTipo.dim[0], 1, D / raizTipo.dim[2]];
-    const alto = tapa.dim[1];
-    const nueva: PiezaPlano = {
-      pieza: tapa.pieza,
-      forma: tapa.forma,
-      dim: [tapa.dim[0] * escala[0], alto, tapa.dim[2] * escala[2]],
-      pos: [raiz.pos[0], techo() + alto / 2, raiz.pos[2]],
-      pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
-      padre: id,
-      origen: "plantilla",
-    };
-    piezas = [...piezas, nueva];
-  }
-
   const ajustado = { ...plano, piezas, ...(medidas ? { medidas } : {}) };
   return plantilla.parado ? pararPlano(ajustado) : ajustado;
+}
+
+/**
+ * La tapa del tipo, si el equipo acostado la tiene y el plano no: el 3D arranca CERRADO y se abre cuando
+ * la guía la saca. Va sobre el plano ya terminado (último paso de `terminarPlano`), así envuelve las piezas
+ * donde quedaron, al generar, al leer de la caché y con el esqueleto solo:
+ * - una tapa que envuelve al equipo (consola, router: sin carcasa propia) envuelve todo lo que hay;
+ * - una chapa fina (la trasera del celular, la inferior de la notebook) va arriba de todo, del tamaño de la carcasa.
+ */
+export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo, ids: string[] = []): PlanoDePiezas {
+  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => p.pieza.startsWith("tapa"));
+  const raiz = plano.piezas.find((p) => !p.padre);
+  if (!tapa || !raiz || plano.piezas.some((p) => p.pieza.startsWith("tapa"))) return plano;
+  // Si el pack la nombra (la guía la va a sacar), con ese id.
+  const nombre = ids.find((id) => id.startsWith("tapa")) ?? tapa.pieza;
+  const piezas = plano.piezas;
+  const piso = Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2));
+  const techo = Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));
+  const base = { pieza: nombre, forma: tapa.forma, padre: raiz.pieza, origen: "plantilla" as const };
+
+  if (envuelve(tapa, plantilla.plano)) {
+    const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
+    const max = [0, 1, 2].map((i) => Math.max(...piezas.map((p) => p.pos[i] + p.dim[i] / 2)) + MARGEN_TAPA);
+    min[1] = piso; // apoyada en el piso
+    const dim = max.map((v, i) => v - min[i]) as Vec3;
+    return { ...plano, piezas: [...piezas, { ...base, dim, pos: max.map((v, i) => (v + min[i]) / 2) as Vec3, pivote: [0, 0, 0] }] };
+  }
+  const raizTipo = plantilla.plano.piezas.find((p) => !p.padre) ?? plantilla.plano.piezas[0];
+  const escala = [raiz.dim[0] / raizTipo.dim[0], 1, raiz.dim[2] / raizTipo.dim[2]];
+  const alto = tapa.dim[1];
+  const nueva: PiezaPlano = {
+    ...base,
+    dim: [tapa.dim[0] * escala[0], alto, tapa.dim[2] * escala[2]],
+    pos: [raiz.pos[0], techo + alto / 2, raiz.pos[2]],
+    pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
+  };
+  return { ...plano, piezas: [...piezas, nueva] };
 }
