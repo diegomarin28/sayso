@@ -1,6 +1,19 @@
 import { z } from "zod";
 import { FormaPieza, PlanoDePiezas, type KnowledgePack, type OrigenDato3D, type PiezaPlano } from "../../shared";
-import { bloqueImagen, enviarMensaje, ErrorIA, MODELO_DE, pedirJson, type EnviarMensaje, type ImagenEntrada, type LlamarIA } from "../ia/claude";
+import {
+  bloqueImagen,
+  enviarMensaje,
+  ErrorIA,
+  ESCALADA,
+  MODELO_DE,
+  pedirJson,
+  pedirJsonConEscalada,
+  TEXTO_ESCALADA,
+  type EnviarMensaje,
+  type ImagenEntrada,
+  type LlamarIA,
+  type MotivoEscalada,
+} from "../ia/claude";
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
@@ -113,8 +126,9 @@ export type EntradaGenerador = {
    */
   recorte?: ManualRecortado;
   /**
-   * Solo para comparar modelos (batería de pruebas): reemplaza a `MODELO_DE.plano`. Con el
-   * manual entero no aplica: ese camino usa el modelo de lectura para compartir la caché.
+   * Solo para comparar modelos (batería de pruebas): reemplaza a `MODELO_DE.plano` y no escala
+   * (cada modelo se mide solo). Con el manual entero no aplica: ese camino usa el modelo de
+   * lectura para compartir la caché.
    */
   modelo?: string;
 };
@@ -128,10 +142,28 @@ export type ResultadoGenerador = {
   avisos: string[];
   origen: "ia" | "plantilla";
   camino: CaminoPlano;
-  /** Modelo que ubicó las piezas. */
+  /** Modelo que ubicó las piezas (el más capaz si hubo escalada). */
   modelo: string;
+  /** Si se pasó del modelo barato al más capaz, por qué (ver `revisarPropuesta`). */
+  escalada?: MotivoEscalada | null;
   propuesta?: PropuestaPlano;
 };
+
+/** Con páginas del manual, si menos de esta parte de las piezas se vio en una página, se escala. */
+export const MIN_VISTAS_EN_PAGINA = 0.5;
+
+/**
+ * Cuándo el cartógrafo pasa del modelo barato al más capaz (además de si la salida no valida):
+ * solo si leyó páginas del manual (recorte o imágenes) y vio en una página menos de la mitad de las
+ * piezas del pack. Sin manual no: solo puede estimar, y lo estimado sigue al esqueleto del tipo.
+ */
+export function revisarPropuesta(propuesta: PropuestaPlano, kp: KnowledgePack, camino: CaminoPlano): MotivoEscalada | null {
+  if (camino !== "recorte" && camino !== "imagenes") return null;
+  const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
+  if (!ids.length) return null;
+  const vistas = new Set(propuesta.piezas.filter((p) => p.pagina !== null && p.confianza !== "baja").map((p) => p.pieza));
+  return ids.filter((id) => vistas.has(id)).length < ids.length * MIN_VISTAS_EN_PAGINA ? "confianza_baja" : null;
+}
 
 export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA, enviar?: EnviarMensaje): Promise<ResultadoGenerador> {
   const kp = entrada.knowledgePack;
@@ -155,32 +187,35 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
   const camino: CaminoPlano = manual && !entrada.imagenes?.length ? "manual" : recorte ? "recorte" : entrada.imagenes?.length ? "imagenes" : "texto";
   const modelo = camino === "manual" ? MODELO_DE.lectura : (entrada.modelo ?? MODELO_DE.plano);
   const tarea = `Equipo: ${kp.clase}, modelo ${kp.modelo}. ${paginas} ${guiaManual}\nPiezas del knowledge pack:\n${lista}\n\nUbicá cada pieza.`;
+  let escalada: MotivoEscalada | null = null;
   try {
-    const propuesta =
-      camino === "manual" && manual
-        ? await ubicarLeyendoManual({ fileId: manual.fileId, titulo: manual.titulo ?? kp.modelo }, tarea, enviar)
-        : await pedirJson(
-            PropuestaPlano,
-            {
-              modelo,
-              system: SYSTEM_PLANO,
-              contenido: [
-                ...(recorte
-                  ? [
-                      {
-                        type: "document" as const,
-                        source: { type: "base64" as const, media_type: "application/pdf" as const, data: recorte.base64 },
-                      },
-                    ]
-                  : []),
-                ...(entrada.imagenes ?? []).map(bloqueImagen),
-                { type: "text", text: tarea },
-              ],
-              maxTokens: 6000,
-              etapa: recorte ? "cartografo: ubicar piezas (recorte)" : "cartografo: ubicar piezas",
-            },
-            llamar,
-          );
+    let propuesta: PropuestaPlano;
+    if (camino === "manual" && manual) {
+      propuesta = await ubicarLeyendoManual({ fileId: manual.fileId, titulo: manual.titulo ?? kp.modelo }, tarea, enviar);
+    } else {
+      const pedido = {
+        modelo,
+        system: SYSTEM_PLANO,
+        contenido: [
+          ...(recorte
+            ? [
+                {
+                  type: "document" as const,
+                  source: { type: "base64" as const, media_type: "application/pdf" as const, data: recorte.base64 },
+                },
+              ]
+            : []),
+          ...(entrada.imagenes ?? []).map(bloqueImagen),
+          { type: "text" as const, text: tarea },
+        ],
+        maxTokens: 6000,
+        etapa: recorte ? "cartografo: ubicar piezas (recorte)" : "cartografo: ubicar piezas",
+      };
+      // Un modelo pedido a mano (batería) se mide solo; si no, el barato escala al más capaz si hace falta.
+      if (entrada.modelo) propuesta = await pedirJson(PropuestaPlano, pedido, llamar);
+      else ({ resultado: propuesta, escalada } = await pedirJsonConEscalada(PropuestaPlano, pedido, llamar, (p) => revisarPropuesta(p, kp, camino)));
+    }
+    const modeloFinal = escalada ? ESCALADA.hacia : modelo;
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
     // Con el tipo de equipo: carcasa del tipo, tapa y, si se usa parado (TV, heladera…), su cara grande
     // como planta y después parado (ver carcasa.ts).
@@ -190,8 +225,9 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
     const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
-    const avisos = [...avisosCara, ...armado.avisos, ...sueltas.avisos];
-    return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo, propuesta };
+    const avisoEscalada = escalada ? [`El cartógrafo pasó a ${modeloFinal} porque ${TEXTO_ESCALADA[escalada]}.`] : [];
+    const avisos = [...avisoEscalada, ...avisosCara, ...armado.avisos, ...sueltas.avisos];
+    return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo: modeloFinal, escalada, propuesta };
   } catch (e) {
     if (!(e instanceof ErrorIA)) throw e;
     // La plantilla del tipo de equipo (heladera, aire, TV…); la de notebook o, sin tipo, la caja genérica de siempre.
