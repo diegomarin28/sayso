@@ -43,6 +43,8 @@ Cómo trabajar:
    (por ejemplo Apple, para iPhone 12 y posteriores: "<modelo> Repair Manual" en support.apple.com, del programa Self Service Repair).
    Para esos, probá la página del índice con probar_manual_web y respondé con "formato":"web". Un manual oficial del fabricante, aunque sea web, va antes que una guía de terceros.
 4. Preferí el sitio del fabricante; después iFixit; después otros. Un manual que cubre varios modelos hermanos (ej. "E14 Gen 2 / E15 Gen 2") vale si nombra el modelo.
+5. Si no aparece el del modelo exacto, buscá el de su SERIE o LÍNEA: en televisores y electrodomésticos los manuales de servicio suelen ser por serie o por chasis
+   (ej. "<marca> <serie> service manual", "<marca> <modelo> chassis"), y valen para todos los modelos de esa serie. Usalo antes de rendirte.
 Cuando termines, respondé SOLO con JSON, sin texto alrededor:
 {"encontrado":true,"url":"<la URL que probar_pdf o probar_manual_web confirmó>","titulo":"<título del manual>","fuente":"fabricante|ifixit|otro","formato":"pdf|web"}
 o {"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null} si no lo conseguiste.

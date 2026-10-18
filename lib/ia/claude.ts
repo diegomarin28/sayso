@@ -70,7 +70,7 @@ export const LIMITES = {
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
   guiaPublica: { busquedas: 4, continuaciones: 3 },
-  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30 },
+  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4 },
 } as const;
 
 // ---------- Costo ----------
