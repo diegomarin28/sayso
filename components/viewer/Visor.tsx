@@ -38,7 +38,7 @@ import {
   usarColorActivo,
 } from "./escena";
 import { Cubo } from "./guia/iconos";
-import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
+import { piezasGenericas, resumenOrigen, textoEtiquetaPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import {
   bajarCalidad,
@@ -572,7 +572,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
             animable={a}
             nombre={kp?.nombre}
             numeroKp={kp?.etiquetaManual}
-            origen={textoOrigenPieza(delPlano.get(id) ?? {})}
+            origen={textoEtiquetaPieza(delPlano.get(id) ?? {})}
             reservado={reservado}
             id={id}
             registro={etiquetas}
@@ -628,8 +628,8 @@ type EtiquetaProps = {
   animable: NodoAnimable;
   nombre?: string;
   numeroKp?: string;
-  /** De dónde sale la ubicación (ej. "Manual · HMM p. 54", "Estimada", "Genérica"). */
-  origen: string;
+  /** Si la ubicación sale del manual, de dónde (ej. "Manual · HMM p. 54"); si no, null: solo el nombre (#209). */
+  origen: string | null;
   /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
   reservado: { current: number };
   id: string;
@@ -727,7 +727,7 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
           )}
           <span className={`flex flex-col leading-tight ${numero ? "" : "pl-1"}`}>
             <span>{nombre ?? nombreLegible(datos.pieza)}</span>
-            <span className="text-[10px] font-normal text-texto-suave">{origen}</span>
+            {origen && <span className="text-[10px] font-normal text-texto-suave">{origen}</span>}
           </span>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planoEjemplo, type PlanoDePiezas } from "../../shared";
-import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
+import { piezasGenericas, resumenOrigen, textoEtiquetaPieza, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 
 const con = (origenes: (PlanoDePiezas["piezas"][number]["origen"])[], medidas?: PlanoDePiezas["medidas"]): PlanoDePiezas => ({
   ...planoEjemplo,
@@ -56,5 +56,14 @@ describe("piezasGenericas", () => {
   it("sin pack (el lab), ninguna", () => {
     expect(piezasGenericas(plano).size).toBe(0);
     expect(piezasGenericas(plano, []).size).toBe(0);
+  });
+});
+
+describe("textoEtiquetaPieza (#209: «sin verificar» una sola vez por pantalla)", () => {
+  it("la etiqueta dice de dónde sale solo si es del manual; estimada, genérica o sin dato: solo el nombre", () => {
+    expect(textoEtiquetaPieza({ origen: "manual", cita: { doc: "HMM", pagina: 54, estado: "NO_VERIFICABLE" } })).toBe("Manual · HMM p. 54");
+    expect(textoEtiquetaPieza({ origen: "estimada", cita: { doc: "HMM", pagina: 12, estado: "NO_VERIFICABLE" } })).toBeNull();
+    expect(textoEtiquetaPieza({ origen: "plantilla" })).toBeNull();
+    expect(textoEtiquetaPieza({})).toBeNull();
   });
 });

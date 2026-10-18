@@ -45,6 +45,16 @@ export function textoResumen(r: ResumenOrigen): string {
 
 const NOMBRE: Record<OrigenDato3D, string> = { manual: "Manual", estimada: "Estimada", plantilla: "Genérica" };
 
+/**
+ * Lo que dice la etiqueta de una pieza en el 3D, debajo del nombre: solo si la ubicación sale del manual
+ * ("Manual · HMM p. 54"); si es estimada o genérica, nada (#209: "sin verificar" se repetía hasta 5 veces
+ * por pantalla). Esa incertidumbre se dice una vez: el punto y el panel del ícono del 3D (`textoResumen`)
+ * y el contorno punteado de cada pieza.
+ */
+export function textoEtiquetaPieza(p: Pick<PiezaPlano, "origen" | "cita">): string | null {
+  return p.origen === "manual" ? textoOrigenPieza(p) : null;
+}
+
 /** Ej. "Manual · HMM p. 54", "Estimada · p. 12", "Genérica", "Sin verificar". */
 export function textoOrigenPieza(p: Pick<PiezaPlano, "origen" | "cita">): string {
   if (!p.origen) return "Sin verificar";
