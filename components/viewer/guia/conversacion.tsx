@@ -2,7 +2,7 @@
 
 import { Fragment, useState, type ReactNode } from "react";
 import type { Coreografia, KnowledgePack } from "../../../shared";
-import { Anterior, Foto, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
+import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
 import type { EstadoControles } from "./reproducir";
 
 /**
@@ -13,7 +13,12 @@ import type { EstadoControles } from "./reproducir";
 
 export type MensajeChat = { rol: "persona"; texto: string; id: number } | { rol: "experto"; c: Coreografia; id: number };
 
-/** Paso actual: número, total (si ya llegaron todos), texto y cita. Queda a la vista hasta el siguiente. */
+/**
+ * Paso actual, compacto para que el 3D se vea grande (prueba real: a 390×844 el 3D ocupa al menos la
+ * mitad del alto). Arriba, en una línea: número de paso, sello de la cita y puntos para volver a un paso.
+ * El texto, en 3 líneas con "ver más". Abajo, en una sola fila, los controles (con "Ver en el manual"
+ * como ícono). Queda a la vista hasta el siguiente.
+ */
 export function TarjetaPaso({
   c,
   indice,
@@ -34,28 +39,37 @@ export function TarjetaPaso({
   onVerManual?: () => void;
   /** Lo que cita es la foto de un paso (guía con fotos, ej. iFixit): el botón dice "Ver la foto del paso". */
   verFoto?: boolean;
-  /** Botones de la guía (anterior, pausa, siguiente): ver `ControlesGuia`. */
+  /** Botones de la guía (anterior, pausa, siguiente): ver `ControlesGuia`. Va en la misma fila que "Ver en el manual". */
   controles?: ReactNode;
 }) {
   const bloqueo = c.riesgo === "alto";
+  const [entero, setEntero] = useState(false);
+  // "Ver más" solo si el texto no entra en 3 líneas (se mide al dibujarlo).
+  const [largo, setLargo] = useState(false);
+  const medir = (el: HTMLParagraphElement | null) => {
+    if (el && !entero) setLargo(el.scrollHeight > el.clientHeight + 1);
+  };
   return (
     <div
       aria-live="polite"
-      className={`pointer-events-auto rounded-2xl border p-4 shadow-xl backdrop-blur-md max-[440px]:p-3 ${
+      className={`pointer-events-auto rounded-2xl border px-3 pt-2 pb-2.5 shadow-xl backdrop-blur-md ${
         bloqueo ? "border-peligro/60 bg-peligro/20" : "border-borde bg-fondo/85"
       }`}
     >
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className={`text-xs font-semibold tracking-widest uppercase ${bloqueo ? "text-peligro" : "text-acento"}`}>
-          {bloqueo
-            ? "Paso bloqueado"
-            : total > 1 || completa
-              ? `Paso ${indice + 1}${completa ? ` de ${total}` : ""}`
-              : "El experto dice"}
-        </p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className={`shrink-0 text-[11px] font-semibold tracking-widest uppercase ${bloqueo ? "text-peligro" : "text-acento"}`}>
+            {bloqueo
+              ? "Paso bloqueado"
+              : total > 1 || completa
+                ? `Paso ${indice + 1}${completa ? ` de ${total}` : ""}`
+                : "El experto dice"}
+          </p>
+          <EtiquetaCita c={c} />
+        </div>
         {total > 1 && (
           // El punto se ve chico, pero se toca en 44 px de alto: el botón es más grande que el punto.
-          <div className="-my-4 -mr-1 flex items-center" role="group" aria-label="Pasos">
+          <div className="-my-3.5 -mr-1 flex shrink items-center overflow-hidden" role="group" aria-label="Pasos">
             {Array.from({ length: total }, (_, i) => (
               <button
                 key={i}
@@ -63,19 +77,19 @@ export function TarjetaPaso({
                 onClick={() => onElegir(i)}
                 aria-label={`Ver el paso ${i + 1}`}
                 aria-current={i === indice}
-                className="group flex h-11 cursor-pointer items-center px-1"
+                className="group flex h-11 cursor-pointer items-center px-[3px]"
               >
                 <span
                   aria-hidden
-                  className={`block h-2.5 rounded-full transition-all group-hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/60"}`}
+                  className={`block h-1.5 rounded-full transition-all group-hover:bg-texto-suave ${i === indice ? "w-4 bg-acento" : "w-1.5 bg-texto-suave/60"}`}
                 />
               </button>
             ))}
-            {!completa && <span className="mx-1 h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
+            {!completa && <span className="mx-[3px] h-1.5 w-1.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
           </div>
         )}
       </div>
-      <p className="text-lg leading-snug font-medium max-[440px]:text-base">
+      <p ref={medir} className={`mt-1 text-[15px] leading-snug font-medium ${entero ? "" : "line-clamp-3"}`}>
         {c.dice.split(/\s+/).map((palabra, i) => (
           <Fragment key={i}>
             <span className="palabra" style={{ animationDelay: `${i * 40}ms` }}>
@@ -84,27 +98,25 @@ export function TarjetaPaso({
           </Fragment>
         ))}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <EtiquetaCita c={c} />
+      {(largo || entero) && (
+        <button type="button" onClick={() => setEntero((e) => !e)} className="-my-2 h-8 text-xs font-medium text-acento">
+          {entero ? "ver menos" : "ver más"}
+        </button>
+      )}
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">{controles}</div>
         {onVerManual && (
           <button
             type="button"
             onClick={onVerManual}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-borde bg-superficie px-2.5 py-1 text-xs font-medium text-texto active:scale-95"
+            aria-label={verFoto ? "Ver la foto del paso" : "Ver en el manual"}
+            title={verFoto ? "Ver la foto del paso" : "Ver en el manual"}
+            className="mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-borde bg-superficie text-texto active:scale-95"
           >
-            {verFoto ? (
-              <>
-                <Foto size={14} /> Ver la foto del paso
-              </>
-            ) : (
-              <>
-                <Libro size={14} /> Ver en el manual
-              </>
-            )}
+            {verFoto ? <Foto size={18} /> : <Libro size={18} />}
           </button>
         )}
       </div>
-      {controles}
     </div>
   );
 }
@@ -134,7 +146,7 @@ export function ControlesGuia({
     "flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30 max-[400px]:px-2.5";
   const auto = c.modo === "auto";
   return (
-    <div className="mt-3 flex items-center gap-2 max-[400px]:gap-1.5" role="group" aria-label="Controles de la guía">
+    <div className="mt-2 flex items-center gap-2 max-[400px]:gap-1.5" role="group" aria-label="Controles de la guía">
       <button type="button" onClick={onAnterior} disabled={!c.hayAnterior} aria-label="Paso anterior" className={`${boton} border-borde bg-superficie text-texto`}>
         <Anterior size={18} />
       </button>
@@ -174,21 +186,31 @@ export function ControlesGuia({
 /** Cada instrucción cita documento y página, o se marca NO VERIFICADO. */
 export function EtiquetaCita({ c }: { c: Coreografia }) {
   if (c.riesgo === "alto") return null;
-  const verificada = c.cita?.estado === "VERIFICADO";
+  const { texto, verificada } = selloCita(c);
   return (
     <span
-      className={`mt-2 inline-flex max-w-full items-center gap-1 truncate rounded-md px-2 py-0.5 text-xs ${
-        verificada ? "bg-confirmado/15 text-confirmado" : "bg-probable/15 text-probable"
+      className={`inline-flex max-w-full items-center truncate rounded px-1.5 py-px text-[11px] ${
+        verificada ? "bg-confirmado/15 text-confirmado" : "bg-texto-suave/15 text-texto-suave"
       }`}
       title={c.cita?.doc}
     >
-      {c.cita && verificada
-        ? `${c.cita.pagina ? `Manual p. ${c.cita.pagina}` : "Manual"} ✓`
-        : c.cita?.pagina
-          ? `p. ${c.cita.pagina} · no verificado`
-          : "NO VERIFICADO"}
+      {texto}
     </span>
   );
+}
+
+/**
+ * Sello discreto de dónde sale el paso (prueba real: "NO VERIFICADO" asustaba y ocupaba lugar).
+ * Con cita verificada: "Manual ✓ p. N". Con una página que no se pudo verificar: "Manual p. N · sin
+ * verificar" (no se esconde). Sin cita del manual: "Guía pública", en gris. La transparencia entera
+ * sigue en "¿De dónde sale esto?".
+ */
+export function selloCita(c: Pick<Coreografia, "cita">): { texto: string; verificada: boolean } {
+  const verificada = c.cita?.estado === "VERIFICADO";
+  const pagina = c.cita?.pagina ? ` p. ${c.cita.pagina}` : "";
+  if (c.cita && verificada) return { texto: `Manual ✓${pagina}`, verificada };
+  if (c.cita?.pagina) return { texto: `Manual${pagina} · sin verificar`, verificada };
+  return { texto: "Guía pública", verificada };
 }
 
 /** Preguntas para tocar, armadas con las piezas del manual (sin IA: no gastan). */
@@ -215,46 +237,59 @@ export function conArticulo(nombre: string): { texto: string; plural: boolean } 
   return { texto: `${articulo} ${n}`, plural };
 }
 
-/** Fila arriba de la caja de texto: abrir la conversación y preguntas sugeridas. */
-export function FilaSugerencias({
-  sugerencias,
-  mensajes,
-  onPreguntar,
-  extra,
-}: {
-  sugerencias: string[];
-  mensajes: MensajeChat[];
-  onPreguntar: (texto: string) => void;
-  /** Otro botón de la fila, después de "Conversación" (ej. "¿De dónde sale esto?"). */
-  extra?: ReactNode;
-}) {
+/** Preguntas sugeridas para tocar, en una fila arriba de la caja de texto (se desliza de costado). */
+export function FilaSugerencias({ sugerencias, onPreguntar }: { sugerencias: string[]; onPreguntar: (texto: string) => void }) {
+  if (!sugerencias.length) return null;
+  return (
+    // Se desliza de costado: el borde derecho se funde para que se note que hay más preguntas.
+    <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
+      {sugerencias.map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onPreguntar(s)}
+          className="h-11 shrink-0 rounded-full border border-borde px-3 text-sm whitespace-nowrap text-texto-suave transition hover:border-texto-suave hover:text-texto"
+        >
+          {s}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Botón redondo de ícono (44 px) que flota sobre el 3D, con un número opcional en una insignia. */
+export function BotonIcono({ etiqueta, onClick, insignia, children }: { etiqueta: string; onClick: () => void; insignia?: number; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className="pointer-events-auto relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-borde bg-superficie/85 text-texto shadow-lg backdrop-blur active:scale-95"
+    >
+      {children}
+      {!!insignia && (
+        <span
+          aria-hidden
+          className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-acento px-1 text-[11px] font-bold text-fondo"
+        >
+          {insignia}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** "Conversación (n)": ícono con el número de preguntas en una insignia; abre la charla entera. */
+export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
   const [abierta, setAbierta] = useState(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+  if (!mensajes.length) return null;
   return (
     <>
-      {/* Se desliza de costado: el borde derecho se funde para que se note que hay más preguntas. */}
-      <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
-        {mensajes.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setAbierta(true)}
-            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-acento/60 bg-acento/10 px-3 text-sm font-medium text-texto"
-          >
-            <Globo /> Conversación{preguntas > 0 ? ` (${preguntas})` : ""}
-          </button>
-        )}
-        {extra}
-        {sugerencias.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onPreguntar(s)}
-            className="h-11 shrink-0 rounded-full border border-borde px-3 text-sm whitespace-nowrap text-texto-suave transition hover:border-texto-suave hover:text-texto"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={() => setAbierta(true)} insignia={preguntas}>
+        <Globo size={20} />
+      </BotonIcono>
 
       {abierta && (
         <div
@@ -291,7 +326,7 @@ export function FilaSugerencias({
                       m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
                     }`}
                   >
-                    <p className="leading-snug">{m.c.dice}</p>
+                    <p className="mb-1.5 leading-snug">{m.c.dice}</p>
                     <EtiquetaCita c={m.c} />
                   </li>
                 ),
@@ -301,23 +336,5 @@ export function FilaSugerencias({
         </div>
       )}
     </>
-  );
-}
-
-function Globo() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 5h16v11H9l-5 4z" />
-    </svg>
   );
 }

@@ -37,6 +37,7 @@ import {
   type NodoAnimable,
   usarColorActivo,
 } from "./escena";
+import { Cubo } from "./guia/iconos";
 import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import {
@@ -113,6 +114,8 @@ export function Visor({
   className,
 }: VisorProps) {
   const [vista, setVista] = useState<ModoVista>(vistaInicial);
+  /** Panel de opciones del 3D (vista y origen de las ubicaciones), cerrado: solo el ícono en la esquina. */
+  const [opciones, setOpciones] = useState(false);
   // Escalones cuando el equipo no llega a 30 fps (ver `bajarRendimiento` en salud.ts).
   const [rendimiento, setRendimiento] = useState(RENDIMIENTO_PLENO);
   // null hasta conocer el WebGL del equipo (ver salud.ts).
@@ -252,23 +255,40 @@ export function Visor({
         </Canvas>
       </Resguardo>
       {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
-      {!falla && controles && (
-        <p
-          className="pointer-events-none absolute bottom-16 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-borde bg-superficie/80 px-3 py-1 text-[11px] text-texto-suave backdrop-blur"
-          title="De dónde sale la ubicación de las piezas del 3D"
-        >
-          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${origen.verificado ? "bg-confirmado" : "bg-probable"}`} />
-          <span className="truncate">{origen.texto}</span>
-        </p>
-      )}
+      {/* Un solo botón de ícono en la esquina (prueba real: el 3D se veía chico): abre la vista y de dónde sale cada ubicación. */}
       {controles && (
-        <button
-          type="button"
-          onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
-          className="absolute bottom-3 left-3 h-11 rounded-full border border-borde bg-superficie/80 px-4 text-xs text-texto backdrop-blur active:scale-95"
-        >
-          {vista === "perspectiva" ? "Vista isométrica" : "Vista en perspectiva"}
-        </button>
+        <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
+          {opciones && (
+            <div className="aparece flex max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-2xl border border-borde bg-superficie/95 p-3 text-xs text-texto shadow-xl backdrop-blur">
+              {!falla && (
+                <p className="flex items-center gap-1.5 text-texto-suave" title="De dónde sale la ubicación de las piezas del 3D">
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${origen.verificado ? "bg-confirmado" : "bg-probable"}`} />
+                  {origen.texto}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => setVista((v) => (v === "perspectiva" ? "isometrica" : "perspectiva"))}
+                className="h-11 rounded-xl border border-borde bg-fondo/60 px-3 text-left font-medium active:scale-95"
+              >
+                {vista === "perspectiva" ? "Ver en vista isométrica" : "Ver en perspectiva"}
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setOpciones((o) => !o)}
+            aria-label="Opciones del 3D: vista y de dónde salen las ubicaciones"
+            aria-expanded={opciones}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-borde bg-superficie/85 text-texto shadow-lg backdrop-blur active:scale-95"
+          >
+            <Cubo size={20} />
+            {/* El punto dice de un vistazo si las ubicaciones son del manual (verde) o no (amarillo). */}
+            {!falla && (
+              <span aria-hidden className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${origen.verificado ? "bg-confirmado" : "bg-probable"}`} />
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -533,7 +553,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     });
     if (!medidas.length) return;
     const rects = medidas.map(({ m }) => ({ x: m.ancla.x + m.u.caja.x, y: m.ancla.y + m.u.caja.y, ancho: m.ancho, alto: m.alto }));
-    const separados = separarEtiquetas(rects, tam, reservado.current);
+    const separados = separarEtiquetas(rects, lienzoEtiquetas(tam), reservado.current);
     medidas.forEach(({ r, m }, i) => r.aplicar({ x: separados[i].x - m.ancla.x, y: separados[i].y - m.ancla.y }));
   });
 
@@ -600,6 +620,10 @@ function Limpieza({ fase, previoRef }: { fase: "antes" | "despues"; previoRef: {
 
 // ---------- Etiquetas con línea guía ----------
 
+/** Franja de abajo del lienzo con los botones de ícono (opciones del 3D; en la guía, charla y "¿de dónde sale?"): las etiquetas no se meten ahí. */
+const RESERVADO_ABAJO_PX = 60;
+const lienzoEtiquetas = (tam: { width: number; height: number }) => ({ width: tam.width, height: Math.max(tam.height - RESERVADO_ABAJO_PX, 0) });
+
 type EtiquetaProps = {
   animable: NodoAnimable;
   nombre?: string;
@@ -657,7 +681,7 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
         animable.nodo.localToWorld(punto).project(camara);
         const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
         const etiqueta = { ancho: el.offsetWidth, alto: el.offsetHeight };
-        const u = colocarEtiqueta(ancla, etiqueta, tam, reservado.current, lado.current, { ahora: performance.now(), cambio: cambio.current });
+        const u = colocarEtiqueta(ancla, etiqueta, lienzoEtiquetas(tam), reservado.current, lado.current, { ahora: performance.now(), cambio: cambio.current });
         lado.current = u.lado;
         cambio.current = u.cambio;
         return { ancla, u, ...etiqueta };
