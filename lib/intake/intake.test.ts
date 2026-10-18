@@ -170,6 +170,46 @@ describe("entender", () => {
   });
 });
 
+describe("entender: avisar cuando no entendió (#149)", () => {
+  it("un relato claro: claro y sin repregunta", async () => {
+    const r = await entender("mi heladera no enfría", falso({ clase: "otro", tipoEquipo: "heladera", sintoma: "No enfría.", confianza: "alta", claro: true, repregunta: "" }));
+    expect(r.claro).toBe(true);
+    expect(r.repregunta).toBeUndefined();
+  });
+
+  it("equipo claro con un síntoma sin sentido ('notebook dddd'): la IA dice que no está claro y qué preguntar", async () => {
+    const r = await entender(
+      "notebook dddd",
+      falso({ clase: "notebook", tipoEquipo: "notebook", sintoma: "dddd", confianza: "alta", claro: false, repregunta: "¿Qué le pasa a tu notebook?" }),
+    );
+    expect(r).toMatchObject({ claro: false, repregunta: "¿Qué le pasa a tu notebook?", tipoEquipo: "notebook" });
+  });
+
+  it("el código no confía en un 'claro' sin palabras de verdad ni equipo, y pone su propia pregunta", async () => {
+    const sinPalabras = await entender("dddd", falso({ clase: "notebook", tipoEquipo: "notebook", sintoma: "dddd", confianza: "alta", claro: true, repregunta: "" }));
+    expect(sinPalabras).toMatchObject({ claro: false, repregunta: "No te entendí bien. ¿Qué equipo es y qué le pasa?" });
+    const sinEquipo = await entender("no anda", falso({ clase: "otro", tipoEquipo: "equipo", sintoma: "No anda.", confianza: "media", claro: true, repregunta: "" }));
+    expect(sinEquipo.claro).toBe(false);
+  });
+
+  it("si la IA falla, no está claro (la pantalla vuelve a preguntar)", async () => {
+    const r = await entender("algo raro", falso("basura"));
+    expect(r.claro).toBe(false);
+    expect(r.repregunta).toBeTruthy();
+  });
+
+  it("un problema dicho con pocas palabras con un equipo sí es claro (el modelo viejo sin 'claro' también)", async () => {
+    const r = await entender("la tele no prende", falso({ clase: "otro", tipoEquipo: "televisor", sintoma: "No prende." }));
+    expect(r.claro).toBe(true);
+  });
+
+  it("una pregunta peligrosa se bloquea aunque no esté claro el resto", async () => {
+    const r = await entender("batería hinchada asdf", falso({ clase: "otro", tipoEquipo: "equipo", sintoma: "asdf", claro: false, repregunta: "¿Qué equipo es?" }));
+    expect(r.seguridad.bloqueado).toBe(true);
+    expect(r.claro).toBe(false);
+  });
+});
+
 describe("reconocer por foto", () => {
   it("lo que sale de la foto queda probable (fuente foto) y solo llena lo desconocido", async () => {
     const llamar = falso({ marca: "Samsung", modelo: "Galaxy A54", confianza: "media" });
