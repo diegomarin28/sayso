@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { cargadorGlb } from "./cargador";
 import indice from "../../public/models/piezas/indice.json";
 import { archivosPara, bibliotecaDesdeEscena, leerAjuste, modeloPara, type BibliotecaPiezas } from "./biblioteca";
 import { RECETAS_DETALLE, recetaPara } from "./materiales";
@@ -12,7 +12,7 @@ const entradas = Object.entries(indice.tipos).filter(([, t]) => t.familia === "d
 let biblioteca: BibliotecaPiezas;
 beforeAll(async () => {
   const b = readFileSync(archivo);
-  const escena = await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), "");
+  const escena = await cargadorGlb().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), "");
   biblioteca = bibliotecaDesdeEscena(escena.scene);
 });
 

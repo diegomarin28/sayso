@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { cargadorGlb } from "./cargador";
 import indice from "../../public/models/piezas/indice.json";
 import cobertura from "../../assets/models/blender/facultad-cobertura.json";
 import { archivosPara, bibliotecaDesdeEscena, leerAjuste, modeloPara, partesAjustadas, type BibliotecaPiezas } from "./biblioteca";
@@ -13,7 +13,7 @@ const entradas = Object.entries(indice.tipos).filter(([, t]) => t.familia === "f
 let biblioteca: BibliotecaPiezas;
 beforeAll(async () => {
   const b = readFileSync(archivo);
-  biblioteca = bibliotecaDesdeEscena((await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), "")).scene);
+  biblioteca = bibliotecaDesdeEscena((await cargadorGlb().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), "")).scene);
 });
 
 describe("equipos de facultad", () => {

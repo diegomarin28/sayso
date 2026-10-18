@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { cargadorGlb } from "./cargador";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { planoAire, planoHeladera } from "../../components/viewer/ejemplos";
@@ -33,7 +33,7 @@ beforeAll(async () => {
   for (const archivo of Object.values(indice.familias)) {
     const datos = readFileSync(CARPETA + archivo);
     const buffer = datos.buffer.slice(datos.byteOffset, datos.byteOffset + datos.byteLength);
-    const familia = bibliotecaDesdeEscena((await new GLTFLoader().parseAsync(buffer, "")).scene);
+    const familia = bibliotecaDesdeEscena((await cargadorGlb().parseAsync(buffer, "")).scene);
     porArchivo.set(archivo, familia);
     for (const [nombre, modelo] of familia) biblioteca.set(nombre, modelo);
   }
@@ -51,10 +51,25 @@ const cajaDe = (malla: THREE.Object3D) => {
 };
 
 describe("biblioteca de piezas (public/models/piezas)", () => {
-  it("cada GLB pesa menos de 2 MB y no sobra ninguno fuera del índice", () => {
+  it("cada GLB está comprimido (meshopt), pesa menos de 1 MB y no sobra ninguno fuera del índice", () => {
     const glbs = readdirSync(CARPETA).filter((f) => f.endsWith(".glb"));
     expect(glbs.sort()).toEqual(Object.values(indice.familias).sort());
-    for (const f of glbs) expect(statSync(CARPETA + f).size, f).toBeLessThan(2 * 1024 * 1024);
+    for (const f of glbs) {
+      expect(statSync(CARPETA + f).size, f).toBeLessThan(1024 * 1024);
+      // El JSON del GLB empieza en el byte 20 (después de la cabecera y del encabezado del bloque).
+      const datos = readFileSync(CARPETA + f);
+      const json = JSON.parse(datos.subarray(20, 20 + datos.readUInt32LE(12)).toString());
+      expect(json.extensionsRequired ?? [], `${f}: correr npm run modelos:comprimir`).toContain("EXT_meshopt_compression");
+    }
+  });
+
+  it("comprimir no cambia el tamaño de ningún tipo: la caja cargada coincide con la real del índice", () => {
+    const conCaja = Object.entries(indice.tipos).filter(([, t]) => t.caja);
+    expect(conCaja.length).toBe(Object.keys(indice.tipos).length);
+    for (const [nombre, t] of conCaja) {
+      const tam = biblioteca.get(nombre)!.caja.getSize(new THREE.Vector3()).toArray();
+      tam.forEach((v, i) => expect(Math.abs(v - t.caja![i]), `${nombre} eje ${i}`).toBeLessThan(Math.max(0.005 * t.caja![i], 0.01)));
+    }
   });
 
   it("el índice dice exactamente qué tipos hay en cada GLB", () => {
@@ -184,6 +199,64 @@ const planoCelular: PlanoDePiezas = {
 };
 
 const nombreDe = (modelo?: ModeloPieza) => [...biblioteca].find(([, m]) => m === modelo)?.[0];
+
+describe("empates por medidas casi iguales (como las que deja comprimir)", () => {
+  const caja = (x: number, y: number, z: number): ModeloPieza => ({
+    partes: [{ receta: RECETA_CUERPO, geometria: new THREE.BoxGeometry(x, y, z) }],
+    caja: new THREE.Box3(new THREE.Vector3(-x / 2, -y / 2, -z / 2), new THREE.Vector3(x / 2, y / 2, z / 2)),
+  });
+  const tam = (m: ModeloPieza, dim: [number, number, number]) => {
+    const [p] = partesAjustadas(m, dim);
+    p.geometria.computeBoundingBox();
+    return p.geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2));
+  };
+
+  it("una pieza simétrica (x = z) se orienta igual aunque una medida cambie un 0,2 %", () => {
+    const igual = { ...caja(1.6, 3.2, 1.6), ajuste: { modo: "redondo" as const, ejes: [0, 2] as [0, 2] } };
+    const casi = { ...caja(1.6, 3.2, 1.6 * 0.998), ajuste: igual.ajuste };
+    for (const dim of [[5, 0.5, 8], [26, 0.8, 7], [2, 30, 2]] as [number, number, number][]) expect(tam(casi, dim), `${dim}`).toEqual(tam(igual, dim));
+  });
+
+  it("justo en el límite para girar, una diferencia mínima no la hace girar", () => {
+    // 8 / 6,4 = 1,25: la mejora es exactamente el umbral. Apenas a cada lado (±0,03 %), igual resultado.
+    // Con `libre` siempre mide `dim` (girada o no): la diferencia se ve con una regla redonda, como filtro@cartucho.
+    const redondo = { modo: "redondo" as const, ejes: [0, 2] as [0, 2] };
+    const a = { ...caja(6.4 * 1.0003, 19.5, 6.4 * 1.0003), ajuste: redondo };
+    const b = { ...caja(6.4 * 0.9997, 19.5, 6.4 * 0.9997), ajuste: redondo };
+    expect(tam(b, [5, 0.5, 8])).toEqual(tam(a, [5, 0.5, 8]));
+  });
+});
+
+describe("GLB comprimido (posiciones cuantizadas)", () => {
+  it("las posiciones int16 normalizadas con la escala en el nodo dan la misma caja (no se recortan a ±1)", () => {
+    // Una caja de 20×2×10 cm guardada como hace KHR_mesh_quantization: enteros en [-1, 1] y la escala en el nodo.
+    const real = new THREE.BoxGeometry(20, 2, 10);
+    const pos = real.getAttribute("position");
+    const enteros = new Int16Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      enteros[i * 3] = Math.round((pos.getX(i) / 10) * 32767);
+      enteros[i * 3 + 1] = Math.round((pos.getY(i) / 10) * 32767);
+      enteros[i * 3 + 2] = Math.round((pos.getZ(i) / 10) * 32767);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(enteros, 3, true));
+    g.setIndex(real.getIndex());
+    const malla = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ name: "cuerpo.prueba" }));
+    malla.scale.setScalar(10);
+    const tipo = new THREE.Group();
+    tipo.name = "prueba";
+    tipo.add(malla);
+    const escena = new THREE.Group();
+    escena.add(tipo);
+
+    const modelo = bibliotecaDesdeEscena(escena).get("prueba")!;
+    expect(modelo.caja.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2))).toEqual([20, 2, 10]);
+    expect(modelo.partes[0].geometria.getAttribute("position").array).toBeInstanceOf(Float32Array);
+    const [p] = partesAjustadas(modelo, [40, 4, 20]);
+    p.geometria.computeBoundingBox();
+    expect(p.geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2))).toEqual([40, 4, 20]);
+  });
+});
 
 describe("modeloPara", () => {
   it("elige el prefijo más largo y no inventa", () => {

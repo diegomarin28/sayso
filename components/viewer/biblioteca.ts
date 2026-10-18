@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { IndicePiezas, archivosPara, bibliotecaDesdeEscena, type BibliotecaPiezas } from "../../lib/planogenerator";
+import { cargadorGlb } from "../../lib/planogenerator/cargador";
 
 /** Piezas genéricas modeladas en Blender (`npm run modelos:piezas`): un GLB por familia + el índice. */
 export const URL_PIEZAS = "/models/piezas/";
@@ -30,7 +30,7 @@ function cargarIndice(): Promise<IndicePiezas | null> {
 function cargarFamilia(archivo: string): Promise<BibliotecaPiezas | null> {
   let p = familias.get(archivo);
   if (!p) {
-    p = new GLTFLoader()
+    p = cargadorGlb()
       .loadAsync(URL_PIEZAS + archivo)
       .then((gltf) => bibliotecaDesdeEscena(gltf.scene))
       .catch((e: unknown) => {

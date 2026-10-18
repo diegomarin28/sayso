@@ -11,1253 +11,2293 @@
   "facultad": "facultad.glb"
  },
  "tipos": {
-  "base": {
-   "familia": "computo",
-   "descripcion": "Chasis (lado del teclado, boca abajo): bordes redondeados, puertos a los costados y rejilla atrás.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "tapa_inferior": {
-   "familia": "computo",
-   "descripcion": "Tapa inferior: placa con rejilla de ventilación, patas de goma y agujeros de los tornillos.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "placa_madre": {
-   "familia": "computo",
-   "descripcion": "Placa madre esquemática: agujeros de montaje, chips, componentes chicos y conectores. Todo bajo 0.18 cm.",
-   "equipos": "notebook laptop portatil netbook ultrabook",
-   "ajuste": "libre"
-  },
-  "disipador": {
-   "familia": "computo",
-   "descripcion": "Placa de cobre sobre el procesador, con soporte en X y cuatro tornillos con resorte.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "heatpipe": {
-   "familia": "computo",
-   "descripcion": "Dos caños de cobre aplastados, con las puntas redondeadas.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "ram": {
-   "familia": "computo",
-   "descripcion": "Módulo SO-DIMM: placa con muesca, contactos dorados, chips en las dos caras y etiqueta.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "ssd": {
-   "familia": "computo",
-   "descripcion": "SSD M.2 2280: placa, contactos con muesca M, controlador, dos NAND, etiqueta y media luna del tornillo.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "wifi": {
-   "familia": "computo",
-   "descripcion": "Placa Wi-Fi M.2 2230: blindaje metálico, dos conectores de antena y media luna del tornillo.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "pila": {
-   "familia": "computo",
-   "descripcion": "Pila de botón (tipo CR2032) con el aro aislante.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "bateria": {
-   "familia": "computo",
-   "descripcion": "Batería de tres celdas planas, placa de protección con cinta, conector y orejas de fijación.",
-   "equipos": "notebook laptop portatil netbook ultrabook",
-   "ajuste": "libre"
-  },
-  "disco_duro": {
-   "familia": "computo",
-   "descripcion": "Disco de 2,5\": carcasa de aluminio, etiqueta, tornillos de la tapa y conector SATA.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "soporte": {
-   "familia": "computo",
-   "descripcion": "Soporte metálico (bracket): chapa con alivianados, agujeros y orejas.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "pantalla": {
-   "familia": "computo",
-   "descripcion": "Módulo de pantalla: vidrio con esquinas redondeadas sobre el panel, chapa trasera, flex con conector y el agujero de la cámara frontal. Sirve también para la pantalla de una notebook (se estira).",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "bateria@celular": {
-   "familia": "computo",
-   "descripcion": "Batería de celular: celda plana (pouch) con etiqueta, placa de protección arriba, flex con conector y las tiras para despegarla.",
-   "equipos": "celular telefono smartphone movil",
-   "ajuste": "libre"
-  },
-  "camara": {
-   "familia": "computo",
-   "descripcion": "Cámara (frontal o de una notebook): bloque con lente, aro metálico y un tramo de flex.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "camara@modulo": {
-   "familia": "computo",
-   "descripcion": "Módulo de cámaras traseras: soporte metálico con tres cámaras (dos grandes y una chica) y el flash.",
-   "equipos": "celular telefono smartphone movil",
-   "ajuste": "proporcional"
-  },
-  "marco": {
-   "familia": "computo",
-   "descripcion": "Marco (chasis) de celular: aro de aluminio con placa media, botones, cortes de antena, boca del USB-C, agujeros del parlante y bandeja de la SIM.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "tapa_trasera": {
-   "familia": "computo",
-   "descripcion": "Tapa trasera de celular vista desde afuera: vidrio o plástico con bordes curvos, isla de las cámaras con su hueco y, del lado de adentro, la bobina de carga inalámbrica y el adhesivo del borde.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "placa": {
-   "familia": "electronica",
-   "descripcion": "Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores board-to-board, componentes chicos y agujeros de montaje.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "placa@control": {
-   "familia": "electronica",
-   "descripcion": "Placa de control de electrodoméstico: PCB con relés, capacitores, transformador chico, borneras y disipador.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "fuente": {
-   "familia": "electronica",
-   "descripcion": "Fuente de alimentación de placa abierta: capacitor grande, transformador de ferrite, disipadores, bobina y borneras.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "capacitor": {
-   "familia": "electronica",
-   "descripcion": "Capacitor electrolítico: lata con funda plástica, tapa de aluminio con la cruz de alivio y dos patas.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "capacitor@motor": {
-   "familia": "electronica",
-   "descripcion": "Capacitor de arranque o de marcha de un motor: lata grande con la etiqueta, tapa plástica y terminales faston.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "transformador": {
-   "familia": "electronica",
-   "descripcion": "Transformador de núcleo de hierro: chapas laminadas, bobinado de cobre con su papel, soporte con patas y terminales.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "panel": {
-   "familia": "electronica",
-   "descripcion": "Panel de control: frente de plástico con display, botones y una perilla.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "parlante": {
-   "familia": "electronica",
-   "descripcion": "Caja de parlante con rejilla, membrana y orejas con gomas.",
-   "equipos": "notebook laptop portatil netbook ultrabook",
-   "ajuste": "libre"
-  },
-  "parlante@celular": {
-   "familia": "electronica",
-   "descripcion": "Parlante de celular: caja de plástico con la salida de sonido hacia -Y, rejilla y contactos de resorte.",
-   "equipos": "celular telefono smartphone movil",
-   "ajuste": "libre"
-  },
-  "conector": {
-   "familia": "electronica",
-   "descripcion": "Puerto o conector (USB, alimentación): carcasa metálica con boca y lengüeta, patas para soldar.",
-   "equipos": "notebook laptop portatil netbook ultrabook",
-   "ajuste": "proporcional"
-  },
-  "conector@usb_c": {
-   "familia": "electronica",
-   "descripcion": "Conector de carga USB-C: carcasa ovalada con la boca hacia -Y, lengüeta con contactos y alas para atornillar.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "conector@terminal": {
-   "familia": "electronica",
-   "descripcion": "Conector de cables (tipo Molex o ficha de bornes): carcasa de plástico con contactos y cables saliendo atrás.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "pantalla@panel": {
-   "familia": "electronica",
-   "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios, placa T-con, flex de los drivers arriba y el cable.",
-   "equipos": "televisor tv monitor",
-   "ajuste": "libre"
-  },
-  "retroiluminacion": {
-   "familia": "electronica",
-   "descripcion": "Retroiluminación de televisor: chapa reflectora con tiras de LED (barras de aluminio con las lentes) y sus fichas.",
-   "equipos": "televisor tv monitor",
-   "ajuste": "libre"
-  },
-  "tira_led": {
-   "familia": "electronica",
-   "descripcion": "Tira de LED suelta (retroiluminación, luz interior): barra de aluminio con lentes y una ficha en la punta.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "ventilador": {
-   "familia": "movimiento",
-   "descripcion": "Ventilador centrífugo (blower): carcasa en D, rotor con álabes, aletas de cobre en la salida.",
-   "equipos": "notebook laptop portatil netbook ultrabook",
-   "ajuste": "redondo:xz"
-  },
-  "ventilador@axial": {
-   "familia": "movimiento",
-   "descripcion": "Ventilador axial (heladera, unidad exterior de aire, microondas): hélice de cinco aspas con su cubo, aro y motor.",
-   "equipos": "heladera refrigerador freezer congelador nevera aire split acondicionado climatizador televisor tv monitor lavarropas lavasecarropas lavadora secarropas microondas",
-   "ajuste": "redondo:xz"
-  },
-  "ventilador@tangencial": {
-   "familia": "movimiento",
-   "descripcion": "Turbina tangencial (unidad interior de aire split): jaula larga de álabes con discos de refuerzo y eje.",
-   "equipos": "aire split acondicionado climatizador",
-   "ajuste": "tramo:x:redondo"
-  },
-  "turbina@centrifuga": {
-   "familia": "movimiento",
-   "descripcion": "Turbina centrífuga (jaula de ardilla: horno, secarropas, aire de conducto): rueda corta de álabes curvos con disco trasero y cubo.",
-   "equipos": "",
-   "ajuste": "redondo:yz"
-  },
-  "motor": {
-   "familia": "movimiento",
-   "descripcion": "Motor eléctrico: carcasa con aletas de enfriamiento, tapas, eje, patas y caja de conexiones.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "bomba": {
-   "familia": "movimiento",
-   "descripcion": "Bomba de agua (desagote de lavarropas): voluta con el filtro y su tapa adelante, entrada y salida con espigas, motor sincrónico (núcleo, bobina y ficha) atrás y orejas para atornillarla.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "correa": {
-   "familia": "movimiento",
-   "descripcion": "Correa de transmisión (poly-V), parada como en un lavarropas: un lazo largo entre dos poleas.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "tambor": {
-   "familia": "movimiento",
-   "descripcion": "Tambor de lavarropas de carga frontal: cuba de acero perforada con nervios, abierta adelante, paletas, aro de balanceo atrás, cruceta de aluminio y eje.",
-   "equipos": "",
-   "ajuste": "redondo:xy"
-  },
-  "compresor": {
-   "familia": "movimiento",
-   "descripcion": "Compresor hermético (heladera o aire): cápsula con domo, costura soldada y chapa de datos, patas con gomas, caños de cobre (succión, descarga y el de proceso aplastado) y la caja del relé con el cable.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "serpentin": {
-   "familia": "frio_calor",
-   "descripcion": "Serpentín de aletas (evaporador o condensador de aire): aletas de aluminio atravesadas por caños de cobre con codos.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "condensador": {
-   "familia": "frio_calor",
-   "descripcion": "Condensador de heladera (tubo y alambre): caño negro en zigzag con varillas soldadas a los dos lados.",
-   "equipos": "heladera refrigerador freezer congelador nevera",
-   "ajuste": "libre"
-  },
-  "evaporador": {
-   "familia": "frio_calor",
-   "descripcion": "Evaporador de heladera (placa roll-bond): chapa de aluminio con los canales del gas en relieve, el capilar y el caño de succión.",
-   "equipos": "heladera refrigerador freezer congelador nevera",
-   "ajuste": "libre"
-  },
-  "termostato": {
-   "familia": "frio_calor",
-   "descripcion": "Termostato mecánico (heladera, horno): caja con eje y perilla, soporte, terminales y el tubo capilar enrollado.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "resistencia": {
-   "familia": "frio_calor",
-   "descripcion": "Resistencia calefactora tubular (lavarropas, horno, deshielo): caño doblado en U con brida y dos terminales.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "valvula": {
-   "familia": "frio_calor",
-   "descripcion": "Electroválvula de agua: cuerpo de plástico con la entrada roscada, bobina con terminales y dos salidas.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "tornillo": {
-   "familia": "estructura",
-   "descripcion": "Tornillo de cabeza redonda con cruz Phillips.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "manguera": {
-   "familia": "estructura",
-   "descripcion": "Manguera corrugada (desagote o carga de agua): tubo flexible en curva suave, con los extremos lisos.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "filtro": {
-   "familia": "estructura",
-   "descripcion": "Filtro de aire (aire split, campana): marco plástico con malla fina y dos nervios.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "filtro@cartucho": {
-   "familia": "estructura",
-   "descripcion": "Filtro de cartucho (agua, desagote): cilindro plisado con tapas y la rosca arriba.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "cable": {
-   "familia": "estructura",
-   "descripcion": "Cable plano (flex) con un conector en cada punta.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "cable@redondo": {
-   "familia": "estructura",
-   "descripcion": "Cable de alimentación o de conexión: cable redondo en curva suave con un conector en cada punta.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "bisagra": {
-   "familia": "estructura",
-   "descripcion": "Bisagra: hoja metálica con tres agujeros y el barril atrás.",
-   "equipos": "",
-   "ajuste": "tramo:x"
-  },
-  "bisagra@puerta": {
-   "familia": "estructura",
-   "descripcion": "Bisagra de puerta de electrodoméstico: planchuela gruesa con agujeros y el perno hacia abajo.",
-   "equipos": "",
-   "ajuste": "proporcional"
-  },
-  "puerta": {
-   "familia": "estructura",
-   "descripcion": "Puerta de heladera (o de horno, microondas): panel con burlete magnético, contrapuerta con estantes y manija.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "puerta@ojo_de_buey": {
-   "familia": "estructura",
-   "descripcion": "Puerta de lavarropas de carga frontal: aro con el vidrio abombado, la manija y la bisagra.",
-   "equipos": "lavarropas lavasecarropas lavadora secarropas",
-   "ajuste": "redondo:xy"
-  },
-  "bandeja": {
-   "familia": "estructura",
-   "descripcion": "Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "bandeja@goteo": {
-   "familia": "estructura",
-   "descripcion": "Bandeja de goteo o de condensado (aire split, heladera): batea larga y baja con nervios y el pico de desagote.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "bandeja@estante": {
-   "familia": "estructura",
-   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "carcasa@heladera": {
-   "familia": "carcasas",
-   "descripcion": "Gabinete de heladera: caja alta abierta adelante, divisor del freezer, estantes, compartimento del compresor y patas.",
-   "equipos": "heladera refrigerador freezer congelador nevera",
-   "ajuste": "libre"
-  },
-  "carcasa@split": {
-   "familia": "carcasas",
-   "descripcion": "Unidad interior de aire split: gabinete redondeado con la boca de salida abajo, aleta, rejilla arriba, display y placa de pared.",
-   "equipos": "aire split acondicionado climatizador",
-   "ajuste": "libre"
-  },
-  "carcasa@televisor": {
-   "familia": "carcasas",
-   "descripcion": "Carcasa de televisor: marco frontal, tapa trasera con la joroba, rejillas, zona de puertos y patas.",
-   "equipos": "televisor tv monitor",
-   "ajuste": "libre"
-  },
-  "carcasa@lavarropas": {
-   "familia": "carcasas",
-   "descripcion": "Gabinete de lavarropas de carga frontal: caja hueca con la boca redonda, panel de control, cajón de jabón y patas.",
-   "equipos": "lavarropas lavasecarropas lavadora secarropas",
-   "ajuste": "libre"
-  },
-  "carcasa@microondas": {
-   "familia": "carcasas",
-   "descripcion": "Gabinete de microondas: caja con la cavidad abierta adelante, columna de control, plato giratorio, rejillas y patas.",
-   "equipos": "microondas",
-   "ajuste": "libre"
-  },
-  "placa_madre@celular": {
-   "familia": "computo",
-   "descripcion": "Placa madre de celular: la misma placa compacta en L.",
-   "equipos": "celular telefono smartphone movil",
-   "ajuste": "libre"
-  },
-  "condensador@aletas": {
-   "familia": "frio_calor",
-   "descripcion": "Condensador de aletas (unidad exterior de aire): la forma del serpentín.",
-   "equipos": "aire split acondicionado climatizador",
-   "ajuste": "libre"
-  },
-  "condensador@electrolitico": {
-   "familia": "frio_calor",
-   "descripcion": "Condensador electrónico (capacitor): la forma del capacitor electrolítico.",
-   "equipos": "",
-   "ajuste": "redondo:xz"
-  },
-  "evaporador@aletas": {
-   "familia": "frio_calor",
-   "descripcion": "Evaporador de aletas (heladera no frost, aire split): la forma del serpentín.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
-  "turbina": {
-   "familia": "movimiento",
-   "descripcion": "Turbina tangencial (unidad interior de aire split): la misma jaula larga de álabes.",
-   "equipos": "aire split acondicionado climatizador",
-   "ajuste": "tramo:x:redondo"
-  },
-  "estante": {
-   "familia": "estructura",
-   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
-   "equipos": "",
-   "ajuste": "libre"
-  },
   "deposito_polvo": {
    "familia": "dispositivos",
    "descripcion": "Depósito desmontable de polvo: recipiente abierto, fondo, borde y manija lateral.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    12.8,
+    16.2,
+    12.6
+   ]
   },
   "filtro_hepa": {
    "familia": "dispositivos",
    "descripcion": "Filtro HEPA rectangular: marco, pliegues de papel y lengüeta de extracción.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    12,
+    2,
+    8.8
+   ]
   },
   "cepillo_rotativo": {
    "familia": "dispositivos",
    "descripcion": "Cepillo de piso: rodillo, dos hileras helicoidales de cerdas y apoyos del eje.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "tramo:x:redondo"
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    26,
+    4.9,
+    4.9023
+   ]
   },
   "boquilla_suelo": {
    "familia": "dispositivos",
    "descripcion": "Boquilla de aspiración de piso: cuerpo ancho, abertura inferior y conexión articulada.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    26,
+    10.3733,
+    10.9974
+   ]
   },
   "separador_ciclon": {
    "familia": "dispositivos",
    "descripcion": "Separador ciclónico: cono hueco, aro superior y entrada tangencial simplificada.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    11.6,
+    13.25,
+    9.6
+   ]
   },
   "rueda_goma": {
    "familia": "dispositivos",
    "descripcion": "Rueda con banda de goma, cubo y eje: base móvil o aspiradora.",
    "equipos": "aspiradora aspirador vacuum",
-   "ajuste": "redondo:yz"
+   "ajuste": "redondo:yz",
+   "caja": [
+    3.5,
+    8.15,
+    8.15
+   ]
   },
   "carcasa_secador": {
    "familia": "dispositivos",
    "descripcion": "Carcasa esquemática de secador: barril hueco, mango inclinado y boca de salida.",
    "equipos": "secador secadora pelo cabello",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    16,
+    17.9641,
+    8.8
+   ]
   },
   "boquilla_concentradora": {
    "familia": "dispositivos",
    "descripcion": "Boquilla concentradora de secador: entrada circular y salida achatada abierta.",
    "equipos": "secador secadora pelo cabello",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    8,
+    7.6,
+    7.6
+   ]
   },
   "difusor_secador": {
    "familia": "dispositivos",
    "descripcion": "Difusor de secador: copa perforada y dedos redondeados para distribuir el aire.",
    "equipos": "secador secadora pelo cabello",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    14.6,
+    8.6,
+    14.6
+   ]
   },
   "selector_deslizante": {
    "familia": "dispositivos",
    "descripcion": "Selector deslizante genérico con carril, corredera estriada y terminales, sin pinout.",
    "equipos": "secador secadora pelo cabello",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.5,
+    2.25,
+    1.7
+   ]
   },
   "soporte_mica": {
    "familia": "dispositivos",
    "descripcion": "Soporte aislante de mica en cruz para secador: placas y ranuras ilustrativas, sin alambre calefactor.",
    "equipos": "secador secadora pelo cabello",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    10,
+    5,
+    10
+   ]
   },
   "cartucho_tinta": {
    "familia": "dispositivos",
    "descripcion": "Cartucho de tinta: cuerpo, etiqueta, contactos y salida inferior, sin compatibilidad de marca.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4,
+    5.285,
+    3.555
+   ]
   },
   "cartucho_toner": {
    "familia": "dispositivos",
    "descripcion": "Cartucho de tóner: depósito alargado, asa, extremos y rodillo visible.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    27,
+    9.15,
+    9.2
+   ]
   },
   "cabezal_impresion": {
    "familia": "dispositivos",
    "descripcion": "Cabezal de inyección: bloque, conexiones de tinta y placa de boquillas inferior.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    7,
+    5,
+    5.2
+   ]
   },
   "carro_impresion": {
    "familia": "dispositivos",
    "descripcion": "Carro de impresión: bastidor abierto, apoyos del riel y pestañas de retención.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    13,
+    6,
+    9.7
+   ]
   },
   "rodillo_arrastre": {
    "familia": "dispositivos",
    "descripcion": "Rodillo de papel segmentado: tres camisas de goma sobre un eje metálico.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "tramo:x:redondo"
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    28,
+    2,
+    2
+   ]
   },
   "riel_lineal": {
    "familia": "dispositivos",
    "descripcion": "Guía lineal de carro: barra rectificada y dos apoyos desmontables.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "tramo:x:redondo"
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    32,
+    3,
+    3
+   ]
   },
   "cinta_encoder": {
    "familia": "dispositivos",
    "descripcion": "Cinta codificadora óptica: banda con marcas y ojales de sujeción, sin resolución calibrada.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "tramo:x"
+   "ajuste": "tramo:x",
+   "caja": [
+    31.6,
+    1.2,
+    0.2
+   ]
   },
   "engranaje_arrastre": {
    "familia": "dispositivos",
    "descripcion": "Engranaje de arrastre de papel: rueda dentada, cubo y agujero central, no apto para fabricación.",
    "equipos": "impresora printer multifuncion plotter",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    6,
+    0.7,
+    6
+   ]
   },
   "unidad_optica": {
    "familia": "dispositivos",
    "descripcion": "Unidad óptica de consola: carcasa metálica, abertura de disco y conectores traseros.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    14,
+    2.31,
+    14.7
+   ]
   },
   "blindaje_metalico": {
    "familia": "dispositivos",
    "descripcion": "Blindaje electrónico: chapa plegada con ventanas de ventilación y orejas de montaje.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    22,
+    1.2,
+    20.1
+   ]
   },
   "placa_consola": {
    "familia": "dispositivos",
    "descripcion": "Placa genérica de consola: procesador, memorias, conectores y reguladores sin distribución de marca.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    20,
+    1.19,
+    16.35
+   ]
   },
   "puerto_hdmi": {
    "familia": "dispositivos",
    "descripcion": "Puerto HDMI esquemático: carcasa trapezoidal abierta, lengüeta y contactos, sin pinout.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2,
+    0.8,
+    1.2
+   ]
   },
   "conector_usb_a": {
    "familia": "dispositivos",
    "descripcion": "Conector USB-A: caja metálica abierta y lengüeta con cuatro contactos.",
    "equipos": "consola videojuegos playstation xbox nintendo router modem wifi enrutador ont impresora printer multifuncion plotter",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.6,
+    0.75,
+    1.6
+   ]
   },
   "joystick_analogico": {
    "familia": "dispositivos",
    "descripcion": "Módulo de joystick analógico: caja, sensores laterales, eje y capuchón cóncavo simplificado.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.5,
+    2.725,
+    2
+   ]
   },
   "boton_gatillo": {
    "familia": "dispositivos",
    "descripcion": "Gatillo genérico de mando: palanca curva con pivote y apoyo del resorte.",
    "equipos": "consola videojuegos playstation xbox nintendo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4,
+    1.2,
+    2.5
+   ]
   },
   "antena_wifi": {
    "familia": "dispositivos",
    "descripcion": "Antena externa articulada: cuerpo, bisagra y base roscada, sin frecuencia ni ganancia especificadas.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "tramo:y:redondo"
+   "ajuste": "tramo:y:redondo",
+   "caja": [
+    1.8,
+    18.65,
+    1.8
+   ]
   },
   "placa_router": {
    "familia": "dispositivos",
    "descripcion": "Placa de router o módem: chip central, memorias, alimentación y conectores de antena ilustrativos.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    12,
+    1.73,
+    9
+   ]
   },
   "puerto_rj45": {
    "familia": "dispositivos",
    "descripcion": "Puerto de red RJ45: entrada abierta, guía de pestaña, ocho contactos e indicadores.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.8,
+    1.6,
+    2.105
+   ]
   },
   "jaula_sfp": {
    "familia": "dispositivos",
    "descripcion": "Jaula metálica de transceptor SFP: alojamiento rectangular y pestañas de retención, sin óptica interna.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.7,
+    1.29,
+    6
+   ]
   },
   "conector_coaxial": {
    "familia": "dispositivos",
    "descripcion": "Conector coaxial de módem: cuerpo roscado, tuerca y centro aislante.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.3856,
+    1.585,
+    1.6
+   ]
   },
   "boton_reset": {
    "familia": "dispositivos",
    "descripcion": "Pulsador de reset: cuerpo táctil, actuador y cuatro patas para placa.",
    "equipos": "router modem wifi enrutador ont",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    0.94,
+    0.675,
+    0.65
+   ]
   },
   "deposito_agua": {
    "familia": "dispositivos",
    "descripcion": "Depósito desmontable de agua: recipiente abierto, borde, tapa y toma inferior.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    12.5,
+    21.75,
+    8.5
+   ]
   },
   "portafiltro": {
    "familia": "dispositivos",
    "descripcion": "Portafiltro de espresso: copa abierta, orejas, mango aislante y dos salidas.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    16.65,
+    3.9,
+    6.4
+   ]
   },
   "caldera_cafetera": {
    "familia": "dispositivos",
    "descripcion": "Caldera esquemática de cafetera: recipiente cerrado, tapas atornilladas y racores; sin interior presurizado funcional.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    11,
+    13.4,
+    11
+   ]
   },
   "bloque_termico": {
    "familia": "dispositivos",
    "descripcion": "Bloque térmico de cafetera: bloque de aluminio con surcos, dos racores y soportes, sin circuito interno.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    12.8,
+    5.1,
+    6
+   ]
   },
   "valvula_antirretorno": {
    "familia": "dispositivos",
    "descripcion": "Válvula en línea: cuerpo hexagonal y racores en ambos extremos; no indica sentido de flujo real.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    7,
+    1.7321,
+    2
+   ]
   },
   "molino_muelas": {
    "familia": "dispositivos",
    "descripcion": "Par de muelas de molino: anillo dentado y cono central con dientes simplificados, sin ajuste de molienda.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    9,
+    3,
+    9
+   ]
   },
   "tolva_cafe": {
    "familia": "dispositivos",
    "descripcion": "Tolva de granos de café: recipiente cónico abierto, cuello inferior y borde.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    12,
+    12,
+    12
+   ]
   },
   "lanza_vapor": {
    "familia": "dispositivos",
    "descripcion": "Lanza de vapor de cafetera: tubo curvo, empuñadura aislante y punta, sin parámetros de presión.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    5.25,
+    14.05,
+    1.4
+   ]
   },
   "junta_portafiltro": {
    "familia": "dispositivos",
    "descripcion": "Junta anular de grupo de café: sello de goma con labio interior, sin medidas de compatibilidad.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    7,
+    0.8,
+    7
+   ]
   },
   "filtro_cafe": {
    "familia": "dispositivos",
    "descripcion": "Canastillo de café: copa metálica abierta con perforaciones ilustrativas en el fondo.",
    "equipos": "cafetera espresso cafe expreso",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    6,
+    2.5,
+    6
+   ]
   },
   "canasta_freidora": {
    "familia": "cotidianos",
    "descripcion": "Canasta de freidora de aire: cuba abierta, ranuras laterales y mango aislante.",
    "equipos": "air_fryer airfryer freidora aire",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    22,
+    9.8343,
+    29
+   ]
   },
   "rejilla_crujiente": {
    "familia": "cotidianos",
    "descripcion": "Inserto perforado de canasta: placa extraíble con ranuras y cuatro patas de silicona.",
    "equipos": "air_fryer airfryer freidora aire",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    20,
+    1.2,
+    19
+   ]
   },
   "jarra_licuadora": {
    "familia": "cotidianos",
    "descripcion": "Jarra cónica abierta con pico, nervaduras y asa lateral; recipiente ilustrativo.",
    "equipos": "licuadora batidora blender",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    17.7714,
+    20,
+    15
+   ]
   },
   "tapa_jarra": {
    "familia": "cotidianos",
    "descripcion": "Tapa circular de jarra con tapón central extraíble y reborde inferior.",
    "equipos": "licuadora batidora blender",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    14.4,
+    3.5,
+    14.4
+   ]
   },
   "cuchillas_licuadora": {
    "familia": "cotidianos",
    "descripcion": "Conjunto de cuatro cuchillas inclinadas y cubo central; sin filo funcional.",
    "equipos": "licuadora batidora blender",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    10.2225,
+    2.8066,
+    10.2225
+   ]
   },
   "acople_transmision": {
    "familia": "cotidianos",
    "descripcion": "Acople de transmisión dentado de licuadora: disco, seis dientes y alojamiento central.",
    "equipos": "licuadora batidora blender",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    5,
+    1.9,
+    5
+   ]
   },
   "junta_jarra": {
    "familia": "cotidianos",
    "descripcion": "Junta anular de jarra de licuadora, con labio interior; sin medidas de compatibilidad.",
    "equipos": "licuadora batidora blender",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    10,
+    0.5,
+    10
+   ]
   },
   "soporte_pan": {
    "familia": "cotidianos",
    "descripcion": "Jaula de soporte para tostada: dos marcos de alambre y travesaños separados.",
    "equipos": "tostadora toaster",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    14.3,
+    12.2639,
+    3.3
+   ]
   },
   "elevador_tostadora": {
    "familia": "cotidianos",
    "descripcion": "Elevador de tostadora: carro, guía vertical, resorte y palanca aislante.",
    "equipos": "tostadora toaster",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    18.5,
+    16,
+    3
+   ]
   },
   "jarra_pava": {
    "familia": "cotidianos",
    "descripcion": "Cuerpo abierto de pava eléctrica con pico y asa aislante, sin contenido.",
    "equipos": "pava hervidor kettle electrica",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    18.9656,
+    20,
+    16
+   ]
   },
   "base_contactos": {
    "familia": "cotidianos",
    "descripcion": "Base de alimentación de pava: disco y contactos concéntricos, sin circuito eléctrico.",
    "equipos": "pava hervidor kettle electrica",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    16,
+    3.35,
+    16
+   ]
   },
   "interruptor_basculante": {
    "familia": "cotidianos",
    "descripcion": "Interruptor basculante: marco, tecla inclinada y terminales inferiores.",
    "equipos": "pava hervidor kettle electrica plancha iron vapor air_fryer airfryer freidora aire",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2,
+    2.5265,
+    3.2
+   ]
   },
   "tapa_pava": {
    "familia": "cotidianos",
    "descripcion": "Tapa de pava eléctrica: disco con reborde y pomo aislante.",
    "equipos": "pava hervidor kettle electrica",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    12.6,
+    2.85,
+    12.6
+   ]
   },
   "filtro_pico": {
    "familia": "cotidianos",
    "descripcion": "Filtro antisarro del pico: marco trapezoidal y malla de alambre.",
    "equipos": "pava hervidor kettle electrica",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    5,
+    5,
+    0.5
+   ]
   },
   "magnetron": {
    "familia": "cotidianos",
    "descripcion": "Magnetrón ilustrativo: bloque de aletas, brida, antena cerámica y terminales. Sin interior funcional.",
    "equipos": "microondas microwave",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    11,
+    10.925,
+    12
+   ]
   },
   "guia_ondas": {
    "familia": "cotidianos",
    "descripcion": "Guía de ondas esquemática: conducto metálico rectangular con bridas abiertas.",
    "equipos": "microondas microwave",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    7,
+    5,
+    9.4
+   ]
   },
   "plato_microondas": {
    "familia": "cotidianos",
    "descripcion": "Plato giratorio de microondas: disco de vidrio con borde y tres apoyos inferiores.",
    "equipos": "microondas microwave",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    26.2,
+    1.35,
+    26.2
+   ]
   },
   "aro_rodillos": {
    "familia": "cotidianos",
    "descripcion": "Soporte del plato de microondas: anillo y tres ruedas radiales.",
    "equipos": "microondas microwave",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    20.3,
+    1.8,
+    20
+   ]
   },
   "acople_plato": {
    "familia": "cotidianos",
    "descripcion": "Acople de plato giratorio: cubo y tres brazos de arrastre.",
    "equipos": "microondas microwave",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.0964,
+    2.05,
+    4.7301
+   ]
   },
   "fusible_cartucho": {
    "familia": "cotidianos",
    "descripcion": "Fusible de cartucho: tubo cerámico y casquillos metálicos, sin valor eléctrico asignado.",
    "equipos": "microondas microwave cargador celular telefono adaptador",
-   "ajuste": "tramo:x:redondo"
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    3.1,
+    0.76,
+    0.76
+   ]
   },
   "suela_plancha": {
    "familia": "cotidianos",
    "descripcion": "Suela de plancha con punta redondeada y orificios de vapor ilustrativos.",
    "equipos": "plancha iron vapor",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    10,
+    0.8,
+    20.8165
+   ]
   },
   "deposito_plancha": {
    "familia": "cotidianos",
    "descripcion": "Depósito de agua de plancha: cuerpo afilado, boca de carga y conexión inferior.",
    "equipos": "plancha iron vapor",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    8,
+    6,
+    15.7843
+   ]
   },
   "boton_pulverizador": {
    "familia": "cotidianos",
    "descripcion": "Botón mecánico pulverizador de plancha: cabezal, vástago y tubo de entrada.",
    "equipos": "plancha iron vapor",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.5,
+    6.586,
+    3
+   ]
   },
   "helice_ventilador": {
    "familia": "cotidianos",
    "descripcion": "Hélice de ventilador de pie: cubo y tres palas curvas de espesor uniforme.",
    "equipos": "ventilador_pie ventilador pedestal",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    25.0095,
+    3.35,
+    26.9847
+   ]
   },
   "rejilla_ventilador": {
    "familia": "cotidianos",
    "descripcion": "Rejilla circular de ventilador: aros concéntricos y alambres radiales, separada de la hélice.",
    "equipos": "ventilador_pie ventilador pedestal",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    32.1599,
+    0.7943,
+    32.16
+   ]
   },
   "pedestal_ventilador": {
    "familia": "cotidianos",
    "descripcion": "Base de ventilador de pie: disco lastrado, cuatro apoyos y zócalo central.",
    "equipos": "ventilador_pie ventilador pedestal",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    34,
+    5.55,
+    34
+   ]
   },
   "tubo_telescopico": {
    "familia": "cotidianos",
    "descripcion": "Columna telescópica de ventilador: tubos concéntricos y collar de altura.",
    "equipos": "ventilador_pie ventilador pedestal",
-   "ajuste": "tramo:y:redondo"
+   "ajuste": "tramo:y:redondo",
+   "caja": [
+    4.4,
+    51.5,
+    4.4
+   ]
   },
   "perilla_mando": {
    "familia": "cotidianos",
    "descripcion": "Perilla circular de mando con estrías, indicador y eje inferior.",
    "equipos": "ventilador_pie ventilador pedestal air_fryer airfryer freidora aire plancha iron vapor tostadora toaster",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    4.1,
+    2.825,
+    4.1
+   ]
   },
   "caja_reloj": {
    "familia": "cotidianos",
    "descripcion": "Caja circular de reloj: anillo abierto con asas para pasadores de correa.",
    "equipos": "smartwatch reloj_inteligente wearable reloj reloj_pulsera analogico cuarzo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.4,
+    0.8,
+    5.5
+   ]
   },
   "correa_reloj": {
    "familia": "cotidianos",
    "descripcion": "Dos mitades de correa de pulsera con perforaciones, hebilla y pasadores; distinta de una correa de transmisión.",
    "equipos": "smartwatch reloj_inteligente wearable reloj reloj_pulsera analogico cuarzo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.6,
+    0.405,
+    19
+   ]
   },
   "corona_reloj": {
    "familia": "cotidianos",
    "descripcion": "Corona de ajuste de reloj: cilindro estriado con tija, separado de la caja.",
    "equipos": "reloj reloj_pulsera analogico cuarzo smartwatch reloj_inteligente wearable",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    0.75,
+    1.4,
+    0.75
+   ]
   },
   "mecanismo_reloj": {
    "familia": "cotidianos",
    "descripcion": "Movimiento ilustrativo de reloj de cuarzo: platina, ruedas y bobina, sin engrane calibrado.",
    "equipos": "reloj reloj_pulsera analogico cuarzo",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    3.4,
+    0.75,
+    3.4
+   ]
   },
   "agujas_reloj": {
    "familia": "cotidianos",
    "descripcion": "Conjunto de agujas analógicas con eje central; orientación meramente ilustrativa.",
    "equipos": "reloj reloj_pulsera analogico cuarzo",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.3912,
+    0.215,
+    2.1
+   ]
   },
   "esfera_reloj": {
    "familia": "cotidianos",
    "descripcion": "Esfera de reloj analógico con doce índices y alojamiento central.",
    "equipos": "reloj reloj_pulsera analogico cuarzo",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    3.8,
+    0.135,
+    3.8
+   ]
   },
   "pantalla@reloj": {
    "familia": "cotidianos",
    "descripcion": "Display circular de reloj inteligente con vidrio, marco y flex lateral.",
    "equipos": "smartwatch reloj_inteligente wearable",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4,
+    0.2,
+    4.8
+   ]
   },
   "tapa_reloj": {
    "familia": "cotidianos",
    "descripcion": "Tapa trasera circular de reloj con junta anular y cuatro alojamientos de tornillo.",
    "equipos": "reloj reloj_pulsera analogico cuarzo smartwatch reloj_inteligente wearable",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    4.2,
+    0.3,
+    4.2
+   ]
   },
   "sensor_optico": {
    "familia": "cotidianos",
    "descripcion": "Módulo óptico trasero de smartwatch: ventana, dos emisores y receptor; sin medición médica.",
    "equipos": "smartwatch reloj_inteligente wearable",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.4,
+    0.4,
+    3
+   ]
   },
   "bobina_carga": {
    "familia": "cotidianos",
    "descripcion": "Bobina plana de carga inductiva: espiral de cobre, respaldo de ferrita y terminales.",
    "equipos": "smartwatch reloj_inteligente wearable auriculares inalambricos earbuds tws cargador celular telefono adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    5,
+    0.2233,
+    5.35
+   ]
   },
   "carcasa_auricular": {
    "familia": "cotidianos",
    "descripcion": "Carcasa genérica de auricular inalámbrico: cápsula hueca y tallo con contactos.",
    "equipos": "auriculares inalambricos earbuds tws",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.8,
+    2.29,
+    1.44
+   ]
   },
   "almohadilla_silicona": {
    "familia": "cotidianos",
    "descripcion": "Almohadilla in-ear de silicona: campana abierta y conducto central.",
    "equipos": "auriculares inalambricos earbuds tws",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    1.3,
+    1.1,
+    1.3
+   ]
   },
   "estuche_auriculares": {
    "familia": "cotidianos",
    "descripcion": "Estuche abierto de auriculares con dos alojamientos y bisagra trasera, sin baterías modeladas dentro.",
    "equipos": "auriculares inalambricos earbuds tws",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    6,
+    4.75,
+    3.55
+   ]
   },
   "contacto_resorte": {
    "familia": "cotidianos",
    "descripcion": "Contacto de carga de resorte (pogo): camisa, vástago y base; ampliable por el plano.",
    "equipos": "auriculares inalambricos earbuds tws smartwatch reloj_inteligente wearable cargador celular telefono adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    0.36,
+    1,
+    0.36
+   ]
   },
   "microfono_mems": {
    "familia": "cotidianos",
    "descripcion": "Micrófono MEMS genérico: cápsula rectangular, puerto acústico y contactos inferiores.",
    "equipos": "auriculares inalambricos earbuds tws smartwatch reloj_inteligente wearable parlante_bluetooth parlante altavoz bluetooth",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    0.55,
+    0.275,
+    0.4
+   ]
   },
   "radiador_pasivo": {
    "familia": "cotidianos",
    "descripcion": "Radiador acústico pasivo: membrana central y suspensión anular; sin bobina ni respuesta calibrada.",
    "equipos": "parlante_bluetooth parlante altavoz bluetooth",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    10.8,
+    0.5,
+    10.8
+   ]
   },
   "malla_acustica": {
    "familia": "cotidianos",
    "descripcion": "Malla protectora acústica: marco y tejido de alambres cruzados; ajustable por eje.",
    "equipos": "parlante_bluetooth parlante altavoz bluetooth auriculares inalambricos earbuds tws",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    12,
+    0.3,
+    6
+   ]
   },
   "membrana_botones": {
    "familia": "cotidianos",
    "descripcion": "Membrana elastomérica de control remoto con teclas y pastillas conductoras inferiores.",
    "equipos": "control_remoto control remoto mando",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    4,
+    0.805,
+    12
+   ]
   },
   "portapilas": {
    "familia": "cotidianos",
    "descripcion": "Portapilas doble AA vacío: separador, contactos y resortes de compresión.",
    "equipos": "control_remoto control remoto mando",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    3.5,
+    1.5,
+    5.7
+   ]
   },
   "pila_aa": {
    "familia": "cotidianos",
    "descripcion": "Pila cilíndrica AA esquemática con terminal positivo saliente; sin química ni voltaje asignados.",
    "equipos": "control_remoto control remoto mando",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    1.44,
+    5.1,
+    1.44
+   ]
   },
   "led_infrarrojo": {
    "familia": "cotidianos",
    "descripcion": "Emisor infrarrojo de control: cápsula redondeada y dos terminales, sin longitud de onda especificada.",
    "equipos": "control_remoto control remoto mando",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    0.6,
+    1.95,
+    0.6
+   ]
   },
   "carcasa_cargador": {
    "familia": "cotidianos",
    "descripcion": "Carcasa vacía de cargador de celular con alojamiento USB; sin clavija ni circuito dentro.",
    "equipos": "cargador celular telefono adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    3.5,
+    4.4343,
+    3
+   ]
   },
   "clavija_red": {
    "familia": "cotidianos",
    "descripcion": "Clavija ilustrativa de dos espigas con soporte aislante; no declara norma ni compatibilidad local.",
    "equipos": "cargador celular telefono adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    3,
+    2.3,
+    1.6
+   ]
   },
   "nucleo_ferrita": {
    "familia": "cotidianos",
    "descripcion": "Núcleo toroidal de ferrita con bobinado de cobre simplificado, sin valor de inductancia.",
    "equipos": "cargador celular telefono adaptador",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    2.919,
+    1.24,
+    2.9374
+   ]
   },
   "bateria@celdas_pegadas": {
    "familia": "facultad",
    "descripcion": "Conjunto genérico de seis celdas pouch adheridas, con lengüetas de adhesivo y placa de protección. No representa una batería exacta de Air o Pro.",
    "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    24.5,
+    0.47,
+    14.1
+   ]
   },
   "placa_logica_integrada": {
    "familia": "facultad",
    "descripcion": "Placa lógica compacta con SoC, memorias soldadas y puertos; sin zócalos de RAM ni módulos SSD removibles. Disposición ilustrativa, no de un Mac específico.",
    "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil imac apple aio escritorio",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    18,
+    0.41,
+    6.45
+   ]
   },
   "trackpad": {
    "familia": "facultad",
    "descripcion": "Trackpad independiente: superficie lisa, soporte metálico posterior, cuatro orejas y flex.",
    "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    13.5,
+    0.41,
+    10.25
+   ]
   },
   "teclado": {
    "familia": "facultad",
    "descripcion": "Teclado externo genérico con matriz de teclas y barra espaciadora. No impone distribución regional.",
    "equipos": "teclado keyboard periferico",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    42,
+    1.8,
+    14
+   ]
   },
   "teclado@notebook": {
    "familia": "facultad",
    "descripcion": "Módulo de teclado fino de notebook con matriz de teclas y flex. Forma genérica de perfil bajo, sin marca ni distribución exacta.",
    "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    28,
+    0.335,
+    12.25
+   ]
   },
   "soporte_monitor": {
    "familia": "facultad",
    "descripcion": "Pie de monitor o equipo all-in-one: base, cuello inclinado, bisagra y placa de anclaje; no implica compatibilidad VESA.",
    "equipos": "imac apple aio escritorio monitor display pantalla",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    20,
+    22.85,
+    16
+   ]
   },
   "modulo_biometrico": {
    "familia": "facultad",
    "descripcion": "Módulo frontal de profundidad/biometría ilustrativo: cámara IR, emisor y soporte con flex. No reproduce el sistema Face ID ni asegura compatibilidad.",
    "equipos": "iphone apple celular telefono smartphone movil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    3.5,
+    0.55,
+    1.825
+   ]
   },
   "lector_huella": {
    "familia": "facultad",
    "descripcion": "Módulo genérico de lectura de huella: ventana y placa con flex. No especifica tecnología, ubicación o presencia en un modelo.",
    "equipos": "samsung galaxy celular telefono smartphone movil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.2,
+    0.245,
+    3.1
+   ]
   },
   "sensor_proximidad": {
    "familia": "facultad",
    "descripcion": "Sensor frontal de proximidad/luz: dos ventanas sobre una placa pequeña con flex, sin alcance especificado.",
    "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.1,
+    0.285,
+    1.45
+   ]
   },
   "motor_vibracion": {
    "familia": "facultad",
    "descripcion": "Actuador háptico lineal ilustrativo: cápsula rectangular, orejas y flex, sin parámetros de vibración.",
    "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.6,
+    0.5,
+    1.95
+   ]
   },
   "motor_vibracion@excentrico": {
    "familia": "facultad",
    "descripcion": "Motor vibrador rotativo pequeño con masa excéntrica en el eje, distinto del actuador lineal.",
    "equipos": "samsung galaxy celular telefono smartphone movil joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.0201,
+    1.2,
+    1.2
+   ]
   },
   "bandeja_sim": {
    "familia": "facultad",
    "descripcion": "Bandeja SIM extraíble: marco de una tarjeta, junta y frente con orificio de extracción. Solo para equipos que tengan bandeja física.",
    "equipos": "iphone apple celular telefono smartphone movil samsung galaxy celular telefono smartphone movil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.1,
+    0.4,
+    2.625
+   ]
   },
   "conector@lightning": {
    "familia": "facultad",
    "descripcion": "Puerto de carga de formato Lightning ilustrativo, abierto al frente con lengüeta y anclajes; no representa pinout ni compatibilidad.",
    "equipos": "iphone apple celular telefono smartphone movil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.5,
+    0.33,
+    0.65
+   ]
   },
   "placa_tcon": {
    "familia": "facultad",
    "descripcion": "Placa T-con independiente: PCB alargada, chip, blindaje y salidas de flex hacia el panel. Solo si el equipo usa módulo separado.",
    "equipos": "televisor tv led monitor display pantalla imac apple aio escritorio",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    15,
+    0.315,
+    5.95
+   ]
   },
   "placa_principal_av": {
    "familia": "facultad",
    "descripcion": "Placa principal de audio/video: SoC, memorias, blindaje de sintonizador y puertos de señal. Genérica para distintas marcas, no de un televisor exacto.",
    "equipos": "televisor tv led monitor display pantalla proyector projector datashow beamer",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    16,
+    1.16,
+    10.25
+   ]
   },
   "lampara_proyector": {
    "familia": "facultad",
    "descripcion": "Módulo de lámpara de proyector: reflector cóncavo, cápsula central, soporte y terminales. Representación visual, sin potencia ni procedimiento de recambio.",
    "equipos": "proyector projector datashow beamer",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    7.5,
+    4.25,
+    7.5
+   ]
   },
   "modulo_led_proyector": {
    "familia": "facultad",
    "descripcion": "Módulo de luz LED de proyector: emisor sobre sustrato, óptica primaria y disipador de aletas. Alternativa a lámpara, no obligatoria en todos los equipos.",
    "equipos": "proyector projector datashow beamer",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    6,
+    3.3,
+    6
+   ]
   },
   "lente_proyector": {
    "familia": "facultad",
    "descripcion": "Objetivo de proyector: barril, anillos de foco y zoom, lentes y brida. Sin distancia focal asignada.",
    "equipos": "proyector projector datashow beamer",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    8.4,
+    8.76,
+    8.4
+   ]
   },
   "rueda_color": {
    "familia": "facultad",
    "descripcion": "Rueda de color de algunos proyectores DLP: disco segmentado con motor y soporte; no usada en todas las tecnologías.",
    "equipos": "proyector projector datashow beamer",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    6.4,
+    1.74,
+    6.4
+   ]
   },
   "modulador_imagen": {
    "familia": "facultad",
    "descripcion": "Módulo genérico de formación de imagen de proyector: ventana óptica y placa con conector. No especifica DLP, LCD o resolución.",
    "equipos": "proyector projector datashow beamer",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    5,
+    0.42,
+    5.5
+   ]
   },
   "unidad_fusora": {
    "familia": "facultad",
    "descripcion": "Unidad fusora de impresora láser: dos rodillos, soportes y cubierta superior; sin calefacción funcional.",
    "equipos": "impresora printer multifuncion laser",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    26,
+    6.2,
+    6.3
+   ]
   },
   "cilindro_fotoconductor": {
    "familia": "facultad",
    "descripcion": "Cilindro fotoconductor de impresora láser: superficie, eje, tapas y engranaje. Distinto del tambor de lavarropas.",
    "equipos": "impresora printer multifuncion laser",
-   "ajuste": "tramo:x:redondo"
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    28,
+    3.3,
+    3.3
+   ]
   },
   "sensor_papel": {
    "familia": "facultad",
    "descripcion": "Sensor óptico de papel: horquilla emisora/receptora con palanca y tres terminales.",
    "equipos": "impresora printer multifuncion laser",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.6,
+    3.5923,
+    1.1
+   ]
   },
   "carcasa_mouse": {
    "familia": "facultad",
    "descripcion": "Cubierta hueca de mouse con dos botones separados y abertura de rueda; sin placa dentro.",
    "equipos": "mouse raton periferico",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    6.4,
+    2.52,
+    10.8716
+   ]
   },
   "rueda_scroll": {
    "familia": "facultad",
    "descripcion": "Rueda de desplazamiento de mouse: neumático estriado y eje, sin encoder integrado.",
    "equipos": "mouse raton periferico",
-   "ajuste": "redondo:yz"
+   "ajuste": "redondo:yz",
+   "caja": [
+    2.5,
+    2.32,
+    2.32
+   ]
   },
   "sensor_mouse": {
    "familia": "facultad",
    "descripcion": "Sensor óptico de mouse con lente inferior y PCB; no especifica resolución ni iluminación láser.",
    "equipos": "mouse raton periferico",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2.4,
+    0.825,
+    2
+   ]
   },
   "microswitch": {
    "familia": "facultad",
    "descripcion": "Microinterruptor de clic con actuador superior y tres terminales; sin especificación eléctrica.",
    "equipos": "mouse raton periferico joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2,
+    1.42,
+    0.7
+   ]
   },
   "tecla": {
    "familia": "facultad",
    "descripcion": "Tecla individual genérica: capuchón hueco con alojamiento inferior, sin leyenda ni distribución regional.",
    "equipos": "teclado keyboard periferico macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.8,
+    0.65,
+    1.8
+   ]
   },
   "switch_teclado": {
    "familia": "facultad",
    "descripcion": "Interruptor de teclado mecánico: carcasa, vástago en cruz y terminales. Alternativa al teclado de membrana, no presente en todos.",
    "equipos": "teclado keyboard periferico",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.5,
+    2.175,
+    1.5
+   ]
   },
   "mecanismo_tijera": {
    "familia": "facultad",
    "descripcion": "Mecanismo de tecla de perfil bajo: dos marcos cruzados con pivotes. No representa un mecanismo de marca exacto.",
    "equipos": "macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil teclado keyboard periferico",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.5,
+    0.4082,
+    1.2596
+   ]
   },
   "membrana_teclado": {
    "familia": "facultad",
    "descripcion": "Lámina de membrana de teclado: pistas impresas y matriz de contactos, sin circuito ni distribución funcional.",
    "equipos": "teclado keyboard periferico",
-   "ajuste": "libre"
+   "ajuste": "libre",
+   "caja": [
+    38,
+    0.09,
+    14.65
+   ]
   },
   "carcasa_mando": {
    "familia": "facultad",
    "descripcion": "Carcasa abierta de mando de videojuegos con dos empuñaduras y huecos para botones y sticks. No sigue una marca concreta.",
    "equipos": "joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    15.709,
+    2,
+    8.8103
+   ]
   },
   "cruceta_mando": {
    "familia": "facultad",
    "descripcion": "Cruceta direccional de mando: cruz con pivote inferior y superficies de contacto.",
    "equipos": "joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    3,
+    0.65,
+    3
+   ]
   },
   "boton_mando": {
    "familia": "facultad",
    "descripcion": "Botón de mando: capuchón redondeado, guía inferior y pestañas de retención, sin símbolo de marca.",
    "equipos": "joystick mando gamepad controlador",
-   "ajuste": "redondo:xz"
+   "ajuste": "redondo:xz",
+   "caja": [
+    1,
+    1.025,
+    0.9
+   ]
   },
   "potenciometro": {
    "familia": "facultad",
    "descripcion": "Potenciómetro rotativo de panel: cuerpo, eje estriado, tuerca y tres terminales; sin resistencia asignada.",
    "equipos": "parlante_pc parlante altavoz bocina pc computadora joystick mando gamepad controlador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.6,
+    2.45,
+    1.6
+   ]
   },
   "adaptador_notebook": {
    "familia": "facultad",
    "descripcion": "Envolvente genérica de adaptador externo de notebook: dos mitades y alivios de tensión. Sin circuito ni potencia especificada.",
    "equipos": "cargador_notebook cargador notebook laptop adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    12.8,
+    2.815,
+    5.02
+   ]
   },
   "conector@jack_dc": {
    "familia": "facultad",
    "descripcion": "Conector cilíndrico DC de cable: barril hueco, aislante y alivio; sin polaridad ni diámetro de compatibilidad.",
    "equipos": "cargador_notebook cargador notebook laptop adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1,
+    4.35,
+    1
+   ]
   },
   "conector@magsafe": {
    "familia": "facultad",
    "descripcion": "Conector magnético de alimentación de formato MagSafe ilustrativo: cara con cinco contactos y alivio. La generación y compatibilidad dependen del equipo.",
    "equipos": "cargador_notebook cargador notebook laptop adaptador macbook_air macbook air apple silicon notebook laptop portatil macbook_pro macbook pro apple silicon notebook laptop portatil",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    1.8,
+    0.5,
+    1.94
+   ]
   },
   "carcasa_zapatilla": {
    "familia": "facultad",
    "descripcion": "Carcasa vacía de regleta eléctrica con cuatro alojamientos, tornillos y entrada de cable; sin norma ni cableado funcional.",
    "equipos": "zapatilla regleta alargue extension electrica",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    28,
+    3,
+    6
+   ]
   },
   "toma_corriente": {
    "familia": "facultad",
    "descripcion": "Módulo de toma con dos alojamientos redondos y hueco de tierra ilustrativos. No declara norma, tensión ni compatibilidad de enchufe.",
    "equipos": "zapatilla regleta alargue extension electrica",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    4.6,
+    1.85,
+    4.6
+   ]
   },
   "contactos_zapatilla": {
    "familia": "facultad",
    "descripcion": "Barras y contactos interiores ilustrativos de regleta, sin trazado eléctrico ni garantía de seguridad o norma.",
    "equipos": "zapatilla regleta alargue extension electrica",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    25,
+    1.002,
+    2.8
+   ]
   },
   "protector_termico": {
    "familia": "facultad",
    "descripcion": "Protector térmico rearmable de panel: cuerpo, botón de rearme y dos terminales. Sin curva ni corriente nominal.",
    "equipos": "zapatilla regleta alargue extension electrica cargador_notebook cargador notebook laptop adaptador",
-   "ajuste": "proporcional"
+   "ajuste": "proporcional",
+   "caja": [
+    2,
+    3.8,
+    1.4
+   ]
+  },
+  "base": {
+   "familia": "computo",
+   "descripcion": "Chasis (lado del teclado, boca abajo): bordes redondeados, puertos a los costados y rejilla atrás.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    36,
+    1.2,
+    25
+   ]
+  },
+  "tapa_inferior": {
+   "familia": "computo",
+   "descripcion": "Tapa inferior: placa con rejilla de ventilación, patas de goma y agujeros de los tornillos.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    36,
+    0.25,
+    25
+   ]
+  },
+  "placa_madre": {
+   "familia": "computo",
+   "descripcion": "Placa madre de notebook: procesador con su chapita, reguladores de tensión, zócalo de RAM, ranura M.2, chips, conectores FPC y agujeros de montaje. Todo bajo 0.18 cm.",
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre",
+   "caja": [
+    32,
+    0.185,
+    13
+   ]
+  },
+  "disipador": {
+   "familia": "computo",
+   "descripcion": "Placa de cobre sobre el procesador, con soporte en X y cuatro tornillos con resorte.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    4.12,
+    0.33,
+    4.12
+   ]
+  },
+  "heatpipe": {
+   "familia": "computo",
+   "descripcion": "Dos caños de cobre aplastados, con las puntas redondeadas.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    5,
+    0.2,
+    0.72
+   ]
+  },
+  "ram": {
+   "familia": "computo",
+   "descripcion": "Módulo SO-DIMM: placa con muesca, contactos dorados, chips en las dos caras y etiqueta.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    6.8,
+    0.27,
+    3
+   ]
+  },
+  "ssd": {
+   "familia": "computo",
+   "descripcion": "SSD M.2 2280: placa, contactos con muesca M, controlador, dos NAND, etiqueta y media luna del tornillo.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    8,
+    0.222,
+    2.2
+   ]
+  },
+  "wifi": {
+   "familia": "computo",
+   "descripcion": "Placa Wi-Fi M.2 2230: blindaje metálico, dos conectores de antena y media luna del tornillo.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    2.2,
+    0.2155,
+    3
+   ]
+  },
+  "pila": {
+   "familia": "computo",
+   "descripcion": "Pila de botón (tipo CR2032) con el aro aislante.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    2,
+    0.3,
+    2
+   ]
+  },
+  "bateria": {
+   "familia": "computo",
+   "descripcion": "Batería de tres celdas planas, placa de protección con cinta, conector y orejas de fijación.",
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre",
+   "caja": [
+    26.7,
+    0.724,
+    7.345
+   ]
+  },
+  "disco_duro": {
+   "familia": "computo",
+   "descripcion": "Disco de 2,5\": carcasa de aluminio, etiqueta, tornillos de la tapa y conector SATA.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    10.405,
+    0.69,
+    7
+   ]
+  },
+  "soporte": {
+   "familia": "computo",
+   "descripcion": "Soporte metálico (bracket): chapa con alivianados, agujeros y orejas.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    6,
+    0.45,
+    4
+   ]
+  },
+  "pantalla": {
+   "familia": "computo",
+   "descripcion": "Módulo de pantalla: vidrio con esquinas redondeadas sobre el panel, chapa trasera, flex con conector y el agujero de la cámara frontal. Sirve también para la pantalla de una notebook (se estira).",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    7.2,
+    0.361,
+    15.6
+   ]
+  },
+  "bateria@celular": {
+   "familia": "computo",
+   "descripcion": "Batería de celular: celda plana (pouch) con etiqueta, placa de protección arriba, flex con conector y las tiras para despegarla.",
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre",
+   "caja": [
+    5.8,
+    0.459,
+    9.925
+   ]
+  },
+  "camara": {
+   "familia": "computo",
+   "descripcion": "Cámara (frontal o de una notebook): bloque con lente, aro metálico y un tramo de flex.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    0.9,
+    0.7,
+    1.345
+   ]
+  },
+  "camara@modulo": {
+   "familia": "computo",
+   "descripcion": "Módulo de cámaras traseras: soporte metálico con tres cámaras (dos grandes y una chica) y el flash.",
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "proporcional",
+   "caja": [
+    2.7,
+    0.68,
+    2.7
+   ]
+  },
+  "marco": {
+   "familia": "computo",
+   "descripcion": "Marco (chasis) de celular: aro de aluminio con placa media, botones, cortes de antena, boca del USB-C, agujeros del parlante y bandeja de la SIM.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    7.54,
+    0.8,
+    15.8
+   ]
+  },
+  "tapa_trasera": {
+   "familia": "computo",
+   "descripcion": "Tapa trasera de celular vista desde afuera: vidrio o plástico con bordes curvos, isla de las cámaras con su hueco y, del lado de adentro, la bobina de carga inalámbrica y el adhesivo del borde.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    7.3,
+    0.18,
+    15.7
+   ]
+  },
+  "placa": {
+   "familia": "electronica",
+   "descripcion": "Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores board-to-board, componentes chicos y agujeros de montaje.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    6,
+    0.204,
+    11.2
+   ]
+  },
+  "placa@control": {
+   "familia": "electronica",
+   "descripcion": "Placa de control de electrodoméstico: PCB con relés, capacitores, transformador chico, borneras y disipador.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    15,
+    2.56,
+    10
+   ]
+  },
+  "fuente": {
+   "familia": "electronica",
+   "descripcion": "Fuente de alimentación de placa abierta: capacitor grande, transformador de ferrite, disipadores, bobina y borneras.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    14,
+    3.18,
+    8
+   ]
+  },
+  "capacitor": {
+   "familia": "electronica",
+   "descripcion": "Capacitor electrolítico: lata con funda plástica, tapa de aluminio con la cruz de alivio y dos patas.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    1.605,
+    2.93,
+    1.6
+   ]
+  },
+  "capacitor@motor": {
+   "familia": "electronica",
+   "descripcion": "Capacitor de arranque o de marcha de un motor: lata grande con la etiqueta, tapa plástica y terminales faston.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    4.42,
+    8.5,
+    4.42
+   ]
+  },
+  "transformador": {
+   "familia": "electronica",
+   "descripcion": "Transformador de núcleo de hierro: chapas laminadas, bobinado de cobre con su papel, soporte con patas y terminales.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    8.4,
+    5.145,
+    4.865
+   ]
+  },
+  "panel": {
+   "familia": "electronica",
+   "descripcion": "Panel de control: frente de plástico con display, botones y una perilla.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    30,
+    8,
+    3.245
+   ]
+  },
+  "parlante": {
+   "familia": "electronica",
+   "descripcion": "Caja de parlante con rejilla, membrana y orejas con gomas.",
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "libre",
+   "caja": [
+    4.04,
+    0.55,
+    2.1
+   ]
+  },
+  "parlante@celular": {
+   "familia": "electronica",
+   "descripcion": "Parlante de celular: caja de plástico con la salida de sonido hacia -Y, rejilla y contactos de resorte.",
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre",
+   "caja": [
+    1.8,
+    0.41,
+    1.05
+   ]
+  },
+  "conector": {
+   "familia": "electronica",
+   "descripcion": "Puerto o conector (USB, alimentación): carcasa metálica con boca y lengüeta, patas para soldar.",
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "proporcional",
+   "caja": [
+    1.525,
+    0.6,
+    1.5
+   ]
+  },
+  "conector@usb_c": {
+   "familia": "electronica",
+   "descripcion": "Conector de carga USB-C: carcasa ovalada con la boca hacia -Y, lengüeta con contactos y alas para atornillar.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    1.5,
+    0.32,
+    0.8151
+   ]
+  },
+  "conector@terminal": {
+   "familia": "electronica",
+   "descripcion": "Conector de cables (tipo Molex o ficha de bornes): carcasa de plástico con contactos y cables saliendo atrás.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    2.4,
+    1.145,
+    3.6454
+   ]
+  },
+  "pantalla@panel": {
+   "familia": "electronica",
+   "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios y tornillos, placa T-con con sus cables planos, las placas de los drivers arriba con sus flex y la etiqueta.",
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre",
+   "caja": [
+    100,
+    58,
+    2.3049
+   ]
+  },
+  "retroiluminacion": {
+   "familia": "electronica",
+   "descripcion": "Retroiluminación de televisor: chapa reflectora con tiras de LED (barras de aluminio con las lentes) y sus fichas.",
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre",
+   "caja": [
+    96,
+    56,
+    0.4
+   ]
+  },
+  "tira_led": {
+   "familia": "electronica",
+   "descripcion": "Tira de LED suelta (retroiluminación, luz interior): barra de aluminio con lentes y una ficha en la punta.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    41.2,
+    1.2,
+    0.9
+   ]
+  },
+  "ventilador": {
+   "familia": "movimiento",
+   "descripcion": "Ventilador centrífugo (blower): carcasa en D, rotor con álabes, aletas de cobre en la salida.",
+   "equipos": "notebook laptop portatil netbook ultrabook",
+   "ajuste": "redondo:xz",
+   "caja": [
+    6.36,
+    0.9,
+    6
+   ]
+  },
+  "ventilador@axial": {
+   "familia": "movimiento",
+   "descripcion": "Ventilador axial (heladera, unidad exterior de aire, microondas): hélice de cinco aspas con su cubo, aro y motor.",
+   "equipos": "heladera refrigerador freezer congelador nevera aire split acondicionado climatizador televisor tv monitor lavarropas lavasecarropas lavadora secarropas microondas",
+   "ajuste": "redondo:xz",
+   "caja": [
+    13,
+    3.4,
+    13
+   ]
+  },
+  "ventilador@tangencial": {
+   "familia": "movimiento",
+   "descripcion": "Turbina tangencial (unidad interior de aire split): jaula larga de álabes con discos de refuerzo y eje.",
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    65.7,
+    9,
+    9
+   ]
+  },
+  "turbina@centrifuga": {
+   "familia": "movimiento",
+   "descripcion": "Turbina centrífuga (jaula de ardilla: horno, secarropas, aire de conducto): rueda corta de álabes curvos con disco trasero y cubo.",
+   "equipos": "",
+   "ajuste": "redondo:yz",
+   "caja": [
+    10.7,
+    12,
+    12
+   ]
+  },
+  "motor": {
+   "familia": "movimiento",
+   "descripcion": "Motor eléctrico: carcasa con aletas de enfriamiento, tapas, eje, patas y caja de conexiones.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    20,
+    14.0366,
+    11.5
+   ]
+  },
+  "bomba": {
+   "familia": "movimiento",
+   "descripcion": "Bomba de agua (desagote de lavarropas): voluta con el filtro y su tapa adelante, entrada y salida con espigas, motor sincrónico (núcleo, bobina y ficha) atrás y orejas para atornillarla.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    12.28,
+    10.2457,
+    9.645
+   ]
+  },
+  "correa": {
+   "familia": "movimiento",
+   "descripcion": "Correa de transmisión (poly-V), parada como en un lavarropas: un lazo largo entre dos poleas.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    28,
+    56,
+    2
+   ]
+  },
+  "tambor": {
+   "familia": "movimiento",
+   "descripcion": "Tambor de lavarropas de carga frontal: cuba de acero perforada con nervios, abierta adelante, paletas, aro de balanceo atrás, cruceta de aluminio y eje.",
+   "equipos": "",
+   "ajuste": "redondo:xy",
+   "caja": [
+    48.8,
+    48.8,
+    36
+   ]
+  },
+  "compresor": {
+   "familia": "movimiento",
+   "descripcion": "Compresor hermético (heladera o aire): cápsula con domo, costura soldada y chapa de datos, patas con gomas, caños de cobre (succión, descarga y el de proceso aplastado) y la caja del relé con el cable.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    18,
+    20.2,
+    18.7566
+   ]
+  },
+  "serpentin": {
+   "familia": "frio_calor",
+   "descripcion": "Serpentín de aletas (evaporador o condensador de aire): aletas de aluminio atravesadas por caños de cobre con codos.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    45.056,
+    20.4,
+    3.4
+   ]
+  },
+  "condensador": {
+   "familia": "frio_calor",
+   "descripcion": "Condensador de heladera (tubo y alambre): caño negro en zigzag con varillas soldadas a los dos lados.",
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre",
+   "caja": [
+    46.4881,
+    80,
+    1.16
+   ]
+  },
+  "evaporador": {
+   "familia": "frio_calor",
+   "descripcion": "Evaporador de heladera (placa roll-bond): chapa de aluminio con los canales del gas en relieve, el capilar y el caño de succión.",
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre",
+   "caja": [
+    41.2835,
+    31.2797,
+    1.4689
+   ]
+  },
+  "termostato": {
+   "familia": "frio_calor",
+   "descripcion": "Termostato mecánico (heladera, horno): caja con eje y perilla, soporte, terminales y el tubo capilar enrollado.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    5.6,
+    3.76,
+    9.9049
+   ]
+  },
+  "resistencia": {
+   "familia": "frio_calor",
+   "descripcion": "Resistencia calefactora tubular (lavarropas, horno, deshielo): caño doblado en U con brida y dos terminales.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    34.1,
+    4,
+    6
+   ]
+  },
+  "valvula": {
+   "familia": "frio_calor",
+   "descripcion": "Electroválvula de agua: cuerpo de plástico con la entrada roscada, bobina con terminales y dos salidas.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    8.05,
+    5.6,
+    2.8
+   ]
+  },
+  "tornillo": {
+   "familia": "estructura",
+   "descripcion": "Tornillo de cabeza redonda con cruz Phillips.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    0.6,
+    0.3,
+    0.6
+   ]
+  },
+  "manguera": {
+   "familia": "estructura",
+   "descripcion": "Manguera corrugada (desagote o carga de agua): tubo flexible en curva suave, con los extremos lisos.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    40.5138,
+    5.5641,
+    2.64
+   ]
+  },
+  "filtro": {
+   "familia": "estructura",
+   "descripcion": "Filtro de aire (aire split, campana): marco plástico con malla fina y dos nervios.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    26,
+    0.6,
+    30
+   ]
+  },
+  "filtro@cartucho": {
+   "familia": "estructura",
+   "descripcion": "Filtro de cartucho (agua, desagote): cilindro plisado con tapas y la rosca arriba.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    6.4,
+    19.5,
+    6.4
+   ]
+  },
+  "cable": {
+   "familia": "estructura",
+   "descripcion": "Cable plano (flex) con un conector en cada punta.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    6.3,
+    0.16,
+    1
+   ]
+  },
+  "cable@redondo": {
+   "familia": "estructura",
+   "descripcion": "Cable de alimentación o de conexión: cable redondo en curva suave con un conector en cada punta.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    31.25,
+    0.9,
+    2.1975
+   ]
+  },
+  "bisagra": {
+   "familia": "estructura",
+   "descripcion": "Bisagra: hoja metálica con tres agujeros y el barril atrás.",
+   "equipos": "",
+   "ajuste": "tramo:x",
+   "caja": [
+    4,
+    0.84,
+    2.37
+   ]
+  },
+  "bisagra@puerta": {
+   "familia": "estructura",
+   "descripcion": "Bisagra de puerta de electrodoméstico: planchuela gruesa con agujeros y el perno hacia abajo.",
+   "equipos": "",
+   "ajuste": "proporcional",
+   "caja": [
+    7,
+    3,
+    3
+   ]
+  },
+  "puerta": {
+   "familia": "estructura",
+   "descripcion": "Puerta de heladera (o de horno, microondas): panel con burlete magnético, contrapuerta con estantes y manija.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    60,
+    100,
+    10.25
+   ]
+  },
+  "puerta@ojo_de_buey": {
+   "familia": "estructura",
+   "descripcion": "Puerta de lavarropas de carga frontal: aro con el vidrio abombado, la manija y la bisagra.",
+   "equipos": "lavarropas lavasecarropas lavadora secarropas",
+   "ajuste": "redondo:xy",
+   "caja": [
+    46.5,
+    44,
+    12
+   ]
+  },
+  "bandeja": {
+   "familia": "estructura",
+   "descripcion": "Bandeja o cajón (verduras de heladera, cajón del freezer): caja abierta arriba, de plástico, con la manija en el frente.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    50,
+    19.8343,
+    30
+   ]
+  },
+  "bandeja@goteo": {
+   "familia": "estructura",
+   "descripcion": "Bandeja de goteo o de condensado (aire split, heladera): batea larga y baja con nervios y el pico de desagote.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    72.5,
+    3,
+    10
+   ]
+  },
+  "bandeja@estante": {
+   "familia": "estructura",
+   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    55,
+    1.2,
+    35
+   ]
+  },
+  "carcasa@heladera": {
+   "familia": "carcasas",
+   "descripcion": "Gabinete de heladera: caja alta abierta adelante, divisor del freezer, estantes, compartimento del compresor y patas.",
+   "equipos": "heladera refrigerador freezer congelador nevera",
+   "ajuste": "libre",
+   "caja": [
+    60,
+    173,
+    65
+   ]
+  },
+  "carcasa@split": {
+   "familia": "carcasas",
+   "descripcion": "Unidad interior de aire split: gabinete redondeado con la boca de salida abajo, aleta, rejilla arriba, display y placa de pared.",
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "libre",
+   "caja": [
+    80,
+    28,
+    20.42
+   ]
+  },
+  "carcasa@televisor": {
+   "familia": "carcasas",
+   "descripcion": "Carcasa de televisor: marco frontal, tapa trasera con la joroba, rejillas, zona de puertos y patas.",
+   "equipos": "televisor tv monitor",
+   "ajuste": "libre",
+   "caja": [
+    100,
+    66,
+    18
+   ]
+  },
+  "carcasa@lavarropas": {
+   "familia": "carcasas",
+   "descripcion": "Gabinete de lavarropas de carga frontal: caja hueca con la boca redonda, panel de control, cajón de jabón y patas.",
+   "equipos": "lavarropas lavasecarropas lavadora secarropas",
+   "ajuste": "libre",
+   "caja": [
+    60,
+    86.5,
+    60.1
+   ]
+  },
+  "carcasa@microondas": {
+   "familia": "carcasas",
+   "descripcion": "Gabinete de microondas: caja con la cavidad abierta adelante, columna de control, plato giratorio, rejillas y patas.",
+   "equipos": "microondas",
+   "ajuste": "libre",
+   "caja": [
+    48.06,
+    28.8,
+    37.6
+   ]
+  },
+  "placa_madre@celular": {
+   "familia": "computo",
+   "descripcion": "Placa madre de celular: la misma placa compacta en L.",
+   "equipos": "celular telefono smartphone movil",
+   "ajuste": "libre",
+   "caja": [
+    6,
+    0.204,
+    11.2
+   ]
+  },
+  "condensador@aletas": {
+   "familia": "frio_calor",
+   "descripcion": "Condensador de aletas (unidad exterior de aire): la forma del serpentín.",
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "libre",
+   "caja": [
+    45.056,
+    20.4,
+    3.4
+   ]
+  },
+  "condensador@electrolitico": {
+   "familia": "frio_calor",
+   "descripcion": "Condensador electrónico (capacitor): la forma del capacitor electrolítico.",
+   "equipos": "",
+   "ajuste": "redondo:xz",
+   "caja": [
+    1.605,
+    2.93,
+    1.6
+   ]
+  },
+  "evaporador@aletas": {
+   "familia": "frio_calor",
+   "descripcion": "Evaporador de aletas (heladera no frost, aire split): la forma del serpentín.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    45.056,
+    20.4,
+    3.4
+   ]
+  },
+  "turbina": {
+   "familia": "movimiento",
+   "descripcion": "Turbina tangencial (unidad interior de aire split): la misma jaula larga de álabes.",
+   "equipos": "aire split acondicionado climatizador",
+   "ajuste": "tramo:x:redondo",
+   "caja": [
+    65.7,
+    9,
+    9
+   ]
+  },
+  "estante": {
+   "familia": "estructura",
+   "descripcion": "Estante de heladera: vidrio templado con perfil de plástico adelante y atrás.",
+   "equipos": "",
+   "ajuste": "libre",
+   "caja": [
+    55,
+    1.2,
+    35
+   ]
   }
  }
 }

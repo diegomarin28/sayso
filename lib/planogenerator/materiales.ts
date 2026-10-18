@@ -94,6 +94,11 @@ export const RECETAS_DETALLE = {
   plastico: { color: "#1b1d20", metalness: 0.1, roughness: 0.6 },
   conector: { color: "#e6e2d6", metalness: 0, roughness: 0.6 },
   vidrio: { color: "#07090d", metalness: 0.4, roughness: 0.06 },
+  /** Lo impreso de las etiquetas (renglones, código de barras, advertencia). */
+  tinta: { color: "#1d1f23", metalness: 0, roughness: 0.7 },
+  /** Elemento interior de una lente (reflejo azulado del antirreflejo). */
+  lente: { color: "#3a4f9a", metalness: 0.6, roughness: 0.1 },
+  plastico_claro: { color: "#c9cdd2", metalness: 0.05, roughness: 0.55 },
 } satisfies Record<string, Receta>;
 
 export function recetaPara(pieza: string): Receta {
