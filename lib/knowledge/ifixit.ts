@@ -58,11 +58,42 @@ async function pedir<T>(ruta: string, f: Fetch): Promise<T | null> {
 type Resultados = { results?: { title?: string; url?: string }[] };
 type Wiki = { title?: string; description?: string; guides?: { guideid?: number; title?: string; subject?: string; type?: string }[] };
 
+/** "(6.ª generación)", "(6th generation)", "6ª gen" → "6": iFixit nombra la generación con el número solo ("iPad Mini 6"). */
+const GENERACION = /\(?\s*(?:de\s+(?:la\s+)?)?(\d{1,2})\s*(?:\.?\s*[ªºa°]|st|nd|rd|th)?\.?\s*(?:generaci[oó]n|generation|gen)\b\.?\s*\)?/gi;
+/** Código de la etiqueta ("A2567", "SM-T500"): letras y 3 o más números. iFixit no los pone en el nombre. */
+const CODIGO_ETIQUETA = /\b[A-Z]{1,3}(?:-[A-Z]{0,2})?\d{3,}[A-Z0-9/-]*/g;
+
 /**
- * El equipo en iFixit, o `null` si no hay uno que sea ese modelo. Entre las candidatas, la que más
- * palabras comparte con lo dicho y menos agrega ("Galaxy S21" es el S21, no el S21 Ultra).
+ * Formas de nombrar el equipo, de la más fiel a la más corta: tal cual, con la generación como número, sin el
+ * código de la etiqueta y sin lo que va entre paréntesis ("(Wi-Fi)"). Una forma solo vale si le queda un
+ * número de modelo: "Epson L3250" sin su código sería "Epson", y eso no es un modelo.
+ */
+export function nombresParaIfixit(equipo: string): string[] {
+  const limpio = (t: string) => t.replace(/\s+/g, " ").trim();
+  const conGeneracion = limpio(equipo.replace(GENERACION, " $1 "));
+  const sinCodigo = limpio(conGeneracion.replace(CODIGO_ETIQUETA, " "));
+  const sinParentesis = limpio(sinCodigo.replace(/\([^)]*\)/g, " "));
+  const formas = [limpio(equipo), conGeneracion, sinCodigo, sinParentesis].filter((t, i) => i === 0 || codigos(t).length > 0);
+  return [...new Set(formas)];
+}
+
+/**
+ * El equipo en iFixit, o `null` si no hay uno que sea ese modelo: prueba cada forma del nombre
+ * (`nombresParaIfixit`) hasta encontrarlo.
  */
 export async function equipoIfixit(equipo: string, f: Fetch = fetch): Promise<EquipoIfixit | null> {
+  for (const nombre of nombresParaIfixit(equipo)) {
+    const e = await equipoExacto(nombre, f);
+    if (e) return e;
+  }
+  return null;
+}
+
+/**
+ * El equipo en iFixit con ese nombre, o `null`. Entre las candidatas, la que más palabras comparte con lo
+ * dicho y menos agrega ("Galaxy S21" es el S21, no el S21 Ultra).
+ */
+async function equipoExacto(equipo: string, f: Fetch): Promise<EquipoIfixit | null> {
   const dichas = palabras(equipo);
   const codigosDichos = codigos(equipo);
   if (!dichas.length) return null;

@@ -363,7 +363,8 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
   const ficha = fichaEjemplo;
 
   /** Bibliotecario que encuentra el PDF; lectura del manual y guía pública con las respuestas dadas. */
-  function claude(manual: unknown[], publica: unknown[][]) {
+  /** `usos`: el uso de cada vuelta de la guía pública (búsquedas y tokens), para los topes de #256. */
+  function claude(manual: unknown[], publica: unknown[][], usos: Record<string, unknown>[] = []) {
     const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
     const base = enviarFalso();
     let vuelta = 0;
@@ -372,8 +373,9 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
       if (String(p.system).includes("bibliotecario")) return base.enviar(p);
       if (p.tools?.length) {
         const r = publica[Math.min(vuelta, publica.length - 1)];
+        const uso = usos[vuelta];
         vuelta++;
-        return mensaje(r, vuelta < publica.length ? "pause_turn" : "end_turn");
+        return { ...mensaje(r, vuelta < publica.length ? "pause_turn" : "end_turn"), ...(uso ? { usage: uso } : {}) } as Anthropic.Message;
       }
       return mensaje(manual, "max_tokens");
     };
@@ -416,6 +418,41 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
     const c = claude([{ type: "text", text: "nada" }], [[{ type: "text", text: "PASO|1|Primero esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|2|Después esto.|ventilador|bajo" }]]);
     const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
     expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2]);
+  });
+
+  describe("topes de la guía pública (#256)", () => {
+    const tresVueltas = [[{ type: "text", text: "PASO|1|Primero esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|2|Después esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|3|Al final.|ventilador|bajo" }]];
+    const armar = (c: ReturnType<typeof claude>) =>
+      armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
+    /** Las vueltas de la guía pública (no la búsqueda del manual, que es del bibliotecario). */
+    const vueltasPublicas = (c: ReturnType<typeof claude>) => c.llamadas.filter((p) => p.tools?.length && !String(p.system).includes("bibliotecario"));
+
+    it("una sola búsqueda web por caso: el pedido la limita a 1", async () => {
+      const c = claude([{ type: "text", text: "nada" }], [tresVueltas[0]]);
+      await armar(c);
+      expect(vueltasPublicas(c)[0].tools?.find((t) => "name" in t && t.name === "web_search")).toMatchObject({ max_uses: 1 });
+    });
+
+    it("después de buscar, un pause_turn no paga otra vuelta (podría buscar de nuevo): se queda con lo que leyó", async () => {
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 20_000, output_tokens: 500, server_tool_use: { web_search_requests: 1 } }]);
+      const r = await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(1);
+      expect(r.pack.pasos.map((p) => p.orden)).toEqual([1]);
+    });
+
+    it("sin buscar todavía pero con el tope de gasto alcanzado (US$ 0,05), tampoco sigue", async () => {
+      // 120 mil tokens de entrada pasan la tarifa larga de Haiku: US$ 0,06 solo de entrada.
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 120_000, output_tokens: 1_000 }]);
+      await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(1);
+    });
+
+    it("sin buscar y barato, sigue como siempre", async () => {
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 5_000, output_tokens: 300 }, { input_tokens: 6_000, output_tokens: 300 }]);
+      const r = await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(3);
+      expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2, 3]);
+    });
   });
 
   it("acepta líneas con viñetas, numeración o negritas", () => {

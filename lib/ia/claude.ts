@@ -78,8 +78,13 @@ export const LIMITES = {
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
-  guiaPublica: { busquedas: 4, continuaciones: 3, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
-  chat: { maxTokensPack: 1500, /** Primera respuesta: la guía completa del síntoma (hasta 18 pasos explicados). */ maxTokensGuia: 6000, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,02–0,04 por pregunta). Prendida por decisión de Diego (#206). */ busquedaWeb: true, busquedasPorPregunta: 2 },
+  /**
+   * Guía pública por búsqueda web (sin manual ni iFixit): UNA búsqueda por caso, contando las continuaciones, y
+   * no se paga otra continuación si ya se gastó `maxUsd` (#256: el iPad mini 6 hizo 4 búsquedas y costó US$ 0,12;
+   * con buscar el manual, ~US$ 0,02, el caso queda debajo de US$ 0,10).
+   */
+  guiaPublica: { busquedas: 1, continuaciones: 3, maxUsd: 0.05, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
+  chat: { maxTokensPack: 1500, /** Primera respuesta: la guía completa del síntoma (hasta 18 pasos explicados). */ maxTokensGuia: 6000, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,01–0,02 por pregunta). Prendida por decisión de Diego (#206). */ busquedaWeb: true, /** Una búsqueda por pregunta (#256). */ busquedasPorPregunta: 1 },
 } as const;
 
 // ---------- Costo ----------

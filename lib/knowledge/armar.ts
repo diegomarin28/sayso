@@ -3,7 +3,7 @@ import { KnowledgePack, type Evento, type Ficha, type PasoReparacion } from "../
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { formasDePantallaDe } from "../planogenerator/plantillas/por-tipo";
 import { tiposParaPrompt } from "../planogenerator/tipos";
-import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
+import { calcularUso, enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
@@ -106,12 +106,18 @@ ${tiposParaPrompt()}
 <sintoma>${sintoma}</sintoma>`;
 }
 
-/** Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`). */
+/**
+ * Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`), pero
+ * nunca pasa de `LIMITES.guiaPublica.busquedas` en total (contando las continuaciones) ni paga otra
+ * continuación después de gastar `LIMITES.guiaPublica.maxUsd` (#256): se queda con lo que ya leyó.
+ */
 async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje, adjuntos: Anthropic.DocumentBlockParam[] = []): Promise<Lectura> {
   const tarea = tareaPack(equipo, sintoma, false, [], false, adjuntos.length > 0);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: [...adjuntos, { type: "text", text: tarea }] }];
   const bloques: Anthropic.TextBlock[] = [];
   let motivo: string | null = null;
+  let busquedas = 0;
+  let usd = 0;
   for (let i = 0; i <= LIMITES.guiaPublica.continuaciones; i++) {
     const r = await enviar(
       {
@@ -126,7 +132,15 @@ async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaj
     );
     bloques.push(...r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"));
     motivo = r.stop_reason;
+    const uso = calcularUso("bibliotecario: guía pública", MODELO_DE.guiaPublica, r.usage ?? {});
+    busquedas += uso.busquedas;
+    usd += uso.usd;
     if (r.stop_reason !== "pause_turn") break;
+    // Continuar podría buscar otra vez o pasar el tope de gasto: se queda con lo que ya hay.
+    if (busquedas >= LIMITES.guiaPublica.busquedas || usd >= LIMITES.guiaPublica.maxUsd) {
+      console.warn(`[knowledge] guía pública: no sigo (${busquedas} búsquedas, US$ ${usd.toFixed(4)})`);
+      break;
+    }
     messages.push({ role: "assistant", content: r.content });
   }
   return { bloques, motivo };
