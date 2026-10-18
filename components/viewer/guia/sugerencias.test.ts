@@ -16,4 +16,11 @@ describe("sugerencias: artículo y número", () => {
     expect(conArticulo("Disco SSD")).toEqual({ texto: "el disco SSD", plural: false });
     expect(conArticulo("Mouse").plural).toBe(false);
   });
+
+  it("femeninos que terminan en e (fuente, llave, base)", () => {
+    expect(conArticulo("Fuente de alimentación")).toEqual({ texto: "la fuente de alimentación", plural: false });
+    expect(conArticulo("Fuentes")).toEqual({ texto: "las fuentes", plural: true });
+    expect(conArticulo("Llave térmica").texto).toBe("la llave térmica");
+    expect(conArticulo("Motor").texto).toBe("el motor");
+  });
 });
