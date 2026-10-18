@@ -18,7 +18,11 @@ Opciones: `--base` (por defecto `http://localhost:3000`), `--tope` (USD, por def
   empezado termina (puede pasarse por lo que cueste ese paso). Lo que no corrió queda marcado.
 - **Costo:** sale de los eventos "costo" de cada ruta (y del `fin` del chat).
 - **Tabla final:** equipo, cómo lo identificó la recepción, manual y si es verificado, pasos,
-  origen del 3D (manual / estimada / plantilla), bloqueos, costo y tiempo.
+  origen del 3D (manual / estimada / plantilla), bloqueos, procedimientos, costo y tiempo.
+- **Procedimientos** (`procedimientos` en `casos.ts`, hoy el iPhone 13: abrir el celular, cambiar la
+  batería, cambiar el conector de carga): cada respuesta tiene que traer pasos (al menos
+  `MIN_PASOS_PROCEDIMIENTO` frases) y no limitarse a mandar al manual o a un técnico. La columna dice
+  cuántas cumplieron y cuáles no. Cada una es una consulta puntual del experto (~US$ 0,01 con Haiku).
 - Con la IA en pausa (freno de gasto, 503) también corta.
 - **Plano 3D: Sonnet vs Haiku** (por defecto; `--sin-comparar` lo saltea): después del plano de la
   app, el script corre el plano otra vez con cada modelo (en este proceso, con la clave de

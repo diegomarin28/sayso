@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo, planoEjemplo } from "../../shared";
-import { correrBateria, costoDe, tabla, tablaPlano, type ComparacionPlano, type EntradaPlano } from "./bateria";
-import { CASOS } from "./casos";
+import { correrBateria, costoDe, evaluarProcedimiento, tabla, tablaPlano, type ComparacionPlano, type EntradaPlano } from "./bateria";
+import { CASOS, CASOS_DEMO } from "./casos";
 
 const costo = (usd: number) => ({ tipo: "costo", datos: { usd } });
 const COSTOS = { entender: 0.001, knowledge: 0.2, plano: 0.02, chat: 0.05 };
@@ -54,7 +54,7 @@ describe("batería de pruebas (sin IA)", () => {
     expect(fila.usd).toBeCloseTo(porCaso);
     expect(r.totalUsd).toBeCloseTo(2 * porCaso);
     const t = tabla(r.filas, r.totalUsd);
-    expect(t).toContain("| Equipo | Identificado | Manual | Verificado | Pasos | Origen del 3D | Bloqueos | Costo | Tiempo | Nota |");
+    expect(t).toContain("| Equipo | Identificado | Manual | Verificado | Pasos | Origen del 3D | Bloqueos | Procedimientos | Costo | Tiempo | Nota |");
     expect(t).toContain("Notebook (HP 250 G9)");
   });
 
@@ -74,6 +74,27 @@ describe("batería de pruebas (sin IA)", () => {
     expect(r.filas[1].nota).toMatch(/corte antes de entender/);
     expect(r.filas[2].nota).toMatch(/no corrido/);
     expect(llamadas.filter((l) => l === "/api/intake/entender")).toHaveLength(1);
+  });
+
+  it("preguntas de procedimiento: cuenta las que traen pasos y marca las que solo mandan al manual", async () => {
+    const { f } = appFalsa();
+    const iphone = CASOS_DEMO.find((c) => c.id === "iphone-13")!;
+    const respuestas: Record<string, string[]> = {
+      "¿Cómo abro el celular?": ["Para eso consultá el manual de Apple en support.apple.com/repair o un técnico."],
+      "¿Cómo cambio la batería?": ["Apagalo.", "Calentá el borde.", "Levantá la pantalla con la ventosa.", "Desconectá la batería."],
+      "¿Cómo cambio el conector de carga?": ["El manual oficial no incluye este procedimiento. Te paso los pasos de una guía pública de iFixit, que no es del fabricante.", "Sacá la pantalla.", "Desatornillá el soporte.", "Sacá el conector."],
+    };
+    const conRespuestas = (async (url: string | URL, init?: RequestInit) => {
+      const cuerpo = init?.body ? JSON.parse(String(init.body)) : {};
+      const dichos = String(url).endsWith("/api/chat") ? respuestas[cuerpo.pregunta] : undefined;
+      if (!dichos) return f(url, init);
+      const lineas = [...dichos.map((dice, i) => ({ tipo: "paso", coreografia: { paso: i + 1, dice, acciones: [], riesgo: "bajo" } })), { tipo: "fin", pasos: dichos.length }];
+      return new Response(lineas.map((l) => JSON.stringify(l)).join("\n"));
+    }) as typeof fetch;
+    const r = await correrBateria([iphone], { base: "http://app", topeUsd: 1, fetch: conRespuestas });
+    expect(r.filas[0].procedimientos).toBe("2/3 con pasos · NO: ¿Cómo abro el celular?");
+    expect(tabla(r.filas, r.totalUsd)).toContain("2/3 con pasos");
+    expect(evaluarProcedimiento(["Consultá el manual.", "Andá a support.apple.com."])).toEqual({ pasos: 0, ok: false });
   });
 
   it("si una pregunta peligrosa no se bloquea, la tabla lo dice", async () => {
