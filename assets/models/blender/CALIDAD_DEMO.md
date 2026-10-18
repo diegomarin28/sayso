@@ -125,3 +125,22 @@ Galería de prueba `/lab/campus`, con `NEXT_PUBLIC_DATOS=fixture`. Se comprobó 
 ![Reloj de pared](renders/calidad/visor-reloj-pared.png)
 
 ![Reloj inteligente](renders/calidad/visor-smartwatch.png)
+
+## Celular: las piezas de la guía (después de la prueba real)
+
+En la prueba real del iPhone las capas no se leían: la pantalla se veía como una placa negra igual a las demás, y el puerto de carga y el parlante eran manchas. Por tipo (sirven para cualquier celular, y la pantalla también para tablet y cámara):
+
+- **Pantalla:** vista desde adentro, como se la ve con el celular abierto por atrás. El vidrio va abajo, y arriba quedan la chapa metálica, la lámina de grafito y el flex de cobre que sale por el borde y termina en su conector.
+- **Parlante:** módulo con rejilla ranurada, boca de salida, contactos de resorte y orejas para atornillar.
+- **Puerto de carga (USB-C y Lightning):** con su tramo de flex hacia adentro, para que se lea como "el puerto de carga" aunque se vea chico. El esqueleto del celular y el de la tablet le dan su lugar real (1,5 × 1,78 cm, con la boca en el borde de abajo).
+- **Batería, placa, cámaras, tornillo, bandeja SIM, marco y tapa:** sin cambios; ya se leían bien.
+
+Antes (GLB publicados por #164) y después, mismo estudio:
+
+![Antes](renders/calidad/celular-guia-antes.jpg)
+
+![Después](renders/calidad/celular-guia-despues.jpg)
+
+En el visor, tamaño iPhone: abierto (antes y después) y despiezado (antes y después):
+
+![Visor](renders/calidad/celular-guia-visor.jpg)
