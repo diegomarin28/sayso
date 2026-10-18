@@ -199,3 +199,90 @@ export function fuenteConRetomar(base: FuenteChat, pregunta: string, eventos: Ev
     })();
   };
 }
+
+/**
+ * La pieza candidata a cambiar según la guía guardada: la primera pieza del último paso que
+ * existe en el plano (la que se trabajó al final). Null si la guía no nombra ninguna.
+ */
+export function piezaCandidata(pack: KnowledgePack, plano: PlanoDePiezas): string | null {
+  const enPlano = new Set(plano.piezas.map((p) => p.pieza));
+  const pasos = [...pack.pasos].sort((a, b) => b.orden - a.orden);
+  for (const p of pasos) {
+    const pieza = p.piezas.find((x) => enPlano.has(x));
+    if (pieza) return pieza;
+  }
+  return null;
+}
+
+/**
+ * Los pasos con que termina la guía, para que "Siguiente" llegue hasta el final: probar el equipo
+ * (si anda, se terminó) y, si sigue igual, la pieza a cambiar (abre "Ver dónde comprar"). Si el
+ * experto ya dijo qué cambiar, solo queda probar.
+ */
+export function pasosDeCierre(
+  pack: KnowledgePack,
+  plano: PlanoDePiezas,
+  desde: number,
+  yaDijoCambiar: boolean,
+): Coreografia[] {
+  const probar = Coreografia.parse({
+    paso: desde,
+    dice: "Ahora volvé a armar todo como estaba, prendé el equipo y probalo. Si ya anda bien, quedó resuelto: tocá Terminar.",
+    acciones: [{ t: "restaurar" }],
+    riesgo: "bajo",
+  });
+  const pieza = yaDijoCambiar ? null : piezaCandidata(pack, plano);
+  if (!pieza) return [probar];
+  const nombre = pack.piezas.find((p) => p.id === pieza)?.nombre ?? pieza;
+  return [
+    probar,
+    Coreografia.parse({
+      paso: desde + 1,
+      dice: `Si sigue igual, lo más probable es que haya que cambiar esta pieza: ${nombre.toLowerCase()}. Te muestro dónde comprarla.`,
+      acciones: [
+        { t: "restaurar" },
+        { t: "camara", objetivo: pieza, zoom: 1.4 },
+        { t: "resaltar", pieza },
+      ],
+      riesgo: "bajo",
+      cambiar: pieza,
+    }),
+  ];
+}
+
+/**
+ * Fuente que, a la respuesta de `pregunta` (la guía del síntoma), le suma los pasos de cierre
+ * antes del "fin". Si la respuesta se bloqueó por seguridad, no suma nada.
+ */
+export function fuenteConCierre(
+  base: FuenteChat,
+  pregunta: string,
+  pack: KnowledgePack,
+  plano: PlanoDePiezas,
+): FuenteChat {
+  return (pedido, senal) => {
+    if (pedido.pregunta !== pregunta) return base(pedido, senal);
+    return (async function* () {
+      let ultimo = 0;
+      let bloqueada = false;
+      let cambiar = false;
+      for await (const e of base(pedido, senal)) {
+        if (e.tipo === "paso") {
+          ultimo = Math.max(ultimo, e.coreografia.paso);
+          cambiar ||= !!e.coreografia.cambiar;
+        }
+        if (e.tipo === "bloqueo") bloqueada = true;
+        if (e.tipo === "fin" && !bloqueada && ultimo > 0) {
+          const extra = pasosDeCierre(pack, plano, ultimo + 1, cambiar);
+          for (const c of extra) {
+            if (senal.aborted) return;
+            yield { tipo: "paso", coreografia: c } satisfies EventoChat;
+          }
+          yield { ...e, pasos: (e.pasos ?? ultimo) + extra.length };
+          continue;
+        }
+        yield e;
+      }
+    })();
+  };
+}

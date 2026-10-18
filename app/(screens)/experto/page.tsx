@@ -9,8 +9,14 @@ import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
-import { fuenteConRetomar, PanelCierre, pasosAlRetomar, preguntaAlRetomar } from "./cierre";
+import { Detener, Encabezado, FlechaAtras, Microfono, Papelera } from "../_ui/experto";
+import {
+  fuenteConCierre,
+  fuenteConRetomar,
+  PanelCierre,
+  pasosAlRetomar,
+  preguntaAlRetomar,
+} from "./cierre";
 import { Repuestos } from "./repuestos";
 
 /**
@@ -54,7 +60,12 @@ export default function Experto() {
       const pasos = pasosAlRetomar(preparado.pack, plano.plano, cierre.pieza);
       return { pregunta, fuente: fuenteConRetomar(base, pregunta, pasos) };
     }
-    return { pregunta: guiaIniciada ? undefined : caso?.sintoma, fuente: base };
+    const pregunta = guiaIniciada ? undefined : caso?.sintoma;
+    // La guía del síntoma termina con probar el equipo y, si sigue igual, la pieza a cambiar:
+    // "Siguiente" llega hasta que se resuelve o no quedan pasos.
+    if (caso && preparado && plano)
+      return { pregunta, fuente: fuenteConCierre(base, caso.sintoma, preparado.pack, plano.plano) };
+    return { pregunta, fuente: base };
   });
   const preguntaInicial = arranque.pregunta;
   useEffect(() => {
@@ -80,8 +91,17 @@ export default function Experto() {
       <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:px-6 md:pt-6">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <Encabezado paso={5} alVolver={() => router.push("/preparando")} />
+            <Encabezado paso={5} />
           </div>
+          {/* Acá "Atrás" va al lado de "Terminar": debajo le sacaría lugar al 3D. */}
+          <button
+            type="button"
+            onClick={() => router.push("/preparando")}
+            aria-label="Atrás"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-borde bg-superficie text-texto transition active:scale-95"
+          >
+            <FlechaAtras size={20} />
+          </button>
           <button
             type="button"
             onClick={() => setCerrando(true)}

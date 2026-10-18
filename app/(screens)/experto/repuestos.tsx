@@ -65,9 +65,9 @@ export function Repuestos({
 
       {/* Aviso (no tapa el 3D mientras el experto explica): abre el panel con esa pieza primero. */}
       {avisar && (
-        <div className="aparece fixed inset-x-0 bottom-24 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl items-center gap-3 rounded-2xl border border-acento/60 bg-fondo/95 p-3 pl-4 shadow-2xl">
-          <p className="min-w-0 flex-1 text-sm">
-            Hay que cambiar <span className="font-semibold">{nombre(piezaACambiar).toLowerCase()}</span>
+        <div className="aparece fixed inset-x-0 bottom-24 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-acento/60 bg-fondo/95 p-3 pl-4 shadow-2xl">
+          <p className="min-w-[8rem] flex-1 text-sm">
+            Hay que cambiar: <span className="font-semibold">{nombre(piezaACambiar)}</span>
           </p>
           <button
             type="button"

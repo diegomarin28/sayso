@@ -3,14 +3,14 @@ import type { MetadataRoute } from "next";
 /** La app se instala en el celular ("Agregar a inicio") y se usa siempre en vertical. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Experto al lado",
-    short_name: "Experto",
-    description: "Guía de reparación con IA, voz y 3D",
+    name: "Sayso",
+    short_name: "Sayso",
+    description: "Contale qué se rompió. Te guío con el manual de tu equipo, en 3D.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#1c1f24",
-    theme_color: "#1c1f24",
+    background_color: "#0e1a24",
+    theme_color: "#0e1a24",
     lang: "es",
     icons: [
       { src: "/icono-192.png", sizes: "192x192", type: "image/png" },

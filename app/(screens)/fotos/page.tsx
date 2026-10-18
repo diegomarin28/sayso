@@ -11,6 +11,7 @@ import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
   BarraAccion,
   BotonPrincipal,
+  BotonSecundario,
   Camara,
   Check,
   DiceExperto,
@@ -27,6 +28,14 @@ const NOMBRE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
   interior: "Interior",
   puertos: "Puertos",
   otro: "Otra",
+};
+
+const DE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
+  frente: "del frente",
+  etiqueta: "de la etiqueta",
+  interior: "del interior",
+  puertos: "de los puertos",
+  otro: "que te pedí",
 };
 
 export default function CapturaGuiada() {
@@ -93,7 +102,12 @@ export default function CapturaGuiada() {
       agregarFoto(r.foto, imagen);
       agregarEventos(r.eventos);
       actualizar(i, { revisando: false, resultado: r.foto });
-      if (r.foto.aceptada) setTimeout(() => setActual(i + 1), 900);
+      // Sigue con la próxima foto pendiente (no vuelve a pedir las que ya se sacaron o se saltearon).
+      if (r.foto.aceptada)
+        setTimeout(
+          () => setCaptura((c) => ({ ...c, actual: siguientePendiente(c.tomas, i, c.pedidos?.length ?? 0) })),
+          900,
+        );
     } catch (e) {
       actualizar(i, { revisando: false, error: mensajeDeError(e) });
     }
@@ -105,17 +119,35 @@ export default function CapturaGuiada() {
     else router.push("/");
   }
 
+  /** Vuelve a una foto salteada para sacarla. */
+  function irA(i: number) {
+    actualizar(i, { salteada: false });
+    setActual(i);
+  }
+
   function saltar() {
     actualizar(actual, { salteada: true });
     setActual(actual + 1);
   }
+
+  // Sin fotos no se puede reconocer el equipo: hace falta la etiqueta o, al menos, el frente.
+  // (Si los pedidos no traen ninguna de las dos, alcanza con cualquier foto aceptada.)
+  const claves = (pedidos ?? []).flatMap((p, i) => (p.tipo === "etiqueta" || p.tipo === "frente" ? [i] : []));
+  const sirve = (i: number) => !!tomas[i]?.resultado?.aceptada;
+  const conEtiqueta = (pedidos ?? []).some((p, i) => p.tipo === "etiqueta" && sirve(i));
+  const alcanza = claves.length ? claves.some(sirve) : (pedidos ?? []).some((_, i) => sirve(i));
+  const aSacar = claves.length ? claves : (pedidos ?? []).map((_, i) => i);
 
   const dice = errorPedidos
     ? errorPedidos
     : !pedidos
       ? "Preparo la lista de fotos…"
       : terminado
-        ? "Listo, ya tengo lo que necesito. Vamos a leer la chapa."
+        ? !alcanza
+          ? "Sin fotos no puedo reconocer tu equipo. Necesito al menos la de la etiqueta o la del frente."
+          : conEtiqueta
+            ? "Listo, ya tengo lo que necesito. Vamos a leer la etiqueta."
+            : "No tengo la etiqueta, pero con lo que sacaste intento reconocer tu equipo."
         : toma.revisando
           ? "Dejame ver si se entiende…"
           : toma.error
@@ -158,7 +190,7 @@ export default function CapturaGuiada() {
             return (
               <li
                 key={`${p.tipo}-${i}`}
-                className={`relative flex h-16 flex-1 items-end overflow-hidden rounded-xl border p-2 text-xs font-medium ${
+                className={`relative flex h-16 flex-1 items-center justify-center overflow-hidden rounded-xl border p-2 text-center text-xs font-medium ${
                   i === actual ? "border-acento" : "border-borde"
                 } ${t?.salteada ? "border-dashed opacity-50" : ""}`}
               >
@@ -223,7 +255,13 @@ export default function CapturaGuiada() {
             <Esquinas
               color={aceptada ? "var(--confirmado)" : rechazada ? "var(--peligro)" : "var(--acento)"}
             />
-            {toma.revisando && <div className="linea-escaneo" />}
+            {/* Carga de "revisar la foto": una rejilla y un cuadro de enfoque que salta por la foto. */}
+            {toma.revisando && (
+              <div className="pointer-events-none absolute inset-0 bg-black/25" aria-hidden>
+                <div className="rejilla-foto" />
+                <div className="foco-foto" />
+              </div>
+            )}
             {aceptada && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <span className="rounded-full bg-confirmado p-4 text-black">
@@ -282,15 +320,36 @@ export default function CapturaGuiada() {
         </>
       )}
 
-      {terminado && (
+      {terminado && alcanza && (
         <BarraAccion>
           <BotonPrincipal onClick={() => router.push("/ficha")}>
-            Leer la chapa <Flecha />
+            {conEtiqueta ? "Leer la etiqueta" : "Reconocer el equipo"} <Flecha />
           </BotonPrincipal>
+        </BarraAccion>
+      )}
+      {terminado && !alcanza && (
+        <BarraAccion>
+          {aSacar.map((i, n) =>
+            n === 0 ? (
+              <BotonPrincipal key={i} onClick={() => irA(i)}>
+                <Camara size={20} /> Sacar la foto {DE_TIPO[pedidos![i].tipo]}
+              </BotonPrincipal>
+            ) : (
+              <BotonSecundario key={i} onClick={() => irA(i)}>
+                Sacar la foto {DE_TIPO[pedidos![i].tipo]}
+              </BotonSecundario>
+            ),
+          )}
         </BarraAccion>
       )}
     </Pantalla>
   );
+}
+
+/** La próxima foto después de `i` que no está sacada ni salteada (o el final). */
+function siguientePendiente(tomas: Record<number, Toma>, i: number, total: number): number {
+  for (let j = i + 1; j < total; j++) if (!tomas[j]?.resultado?.aceptada && !tomas[j]?.salteada) return j;
+  return total;
 }
 
 /** Esquinas de visor de cámara. */

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo, planoEjemplo } from "../../../shared";
 import { guardarLocal, leerCaso, listarCasos } from "../_datos/mis-casos";
-import { fuenteConRetomar, pasosAlRetomar, preguntaAlRetomar } from "./cierre";
+import type { EventoChat, FuenteChat } from "../../../components/viewer";
+import type { Coreografia } from "../../../shared";
+import { fuenteConCierre, fuenteConRetomar, pasosAlRetomar, pasosDeCierre, piezaCandidata, preguntaAlRetomar } from "./cierre";
 
 const pieza = knowledgePackEjemplo.pasos.find((p) => p.piezas.length)!.piezas[0];
 
@@ -73,5 +75,58 @@ describe("mis casos (en este dispositivo)", () => {
   it("descarta lo que no valida en vez de romper", () => {
     guardarLocal({ caso: { ...casoEjemplo, id: "tres", clase: "heladera" as never } });
     expect(leerCaso("tres")).toBeNull();
+  });
+});
+
+describe("cierre de la guía: Siguiente llega hasta el final", () => {
+  const pedido = (pregunta: string) => ({ pregunta }) as Parameters<FuenteChat>[0];
+  const leer = async (f: FuenteChat, pregunta: string) => {
+    const r: EventoChat[] = [];
+    for await (const e of f(pedido(pregunta), new AbortController().signal)) r.push(e);
+    return r;
+  };
+  const respuesta = (eventos: EventoChat[]): FuenteChat => async function* () {
+    yield* eventos;
+  };
+  const paso = (n: number, extra: Partial<Coreografia> = {}): EventoChat => ({
+    tipo: "paso",
+    coreografia: { paso: n, dice: `Paso ${n}`, acciones: [], riesgo: "bajo", ...extra },
+  });
+
+  it("la pieza candidata es la del último paso que está en el plano", () => {
+    const ultimo = [...knowledgePackEjemplo.pasos].sort((a, b) => b.orden - a.orden)[0];
+    expect(piezaCandidata(knowledgePackEjemplo, planoEjemplo)).toBe(ultimo.piezas[0]);
+  });
+
+  it("a la guía del síntoma le suma probar y, si sigue igual, la pieza a cambiar", async () => {
+    const base = respuesta([paso(1), paso(2), { tipo: "fin", pasos: 2 }]);
+    const r = await leer(fuenteConCierre(base, "sintoma", knowledgePackEjemplo, planoEjemplo), "sintoma");
+    const pasos = r.flatMap((e) => (e.tipo === "paso" ? [e.coreografia] : []));
+    expect(pasos.map((c) => c.paso)).toEqual([1, 2, 3, 4]);
+    expect(pasos[2].dice).toMatch(/probalo/);
+    expect(pasos[3].cambiar).toBe(piezaCandidata(knowledgePackEjemplo, planoEjemplo));
+    expect(r.at(-1)).toEqual({ tipo: "fin", pasos: 4 });
+  });
+
+  it("si el experto ya dijo qué cambiar, solo suma probar", async () => {
+    const base = respuesta([paso(1, { cambiar: "ventilador" }), { tipo: "fin", pasos: 1 }]);
+    const r = await leer(fuenteConCierre(base, "s", knowledgePackEjemplo, planoEjemplo), "s");
+    expect(r.filter((e) => e.tipo === "paso")).toHaveLength(2);
+  });
+
+  it("no toca otras preguntas ni una respuesta bloqueada", async () => {
+    const base = respuesta([paso(1), { tipo: "fin", pasos: 1 }]);
+    expect(await leer(fuenteConCierre(base, "s", knowledgePackEjemplo, planoEjemplo), "otra")).toHaveLength(2);
+    const bloqueo = respuesta([
+      { tipo: "bloqueo", clases: [], coreografia: { paso: 1, dice: "Acá frenamos.", acciones: [], riesgo: "alto" } },
+      { tipo: "fin", pasos: 1 },
+    ]);
+    expect(await leer(fuenteConCierre(bloqueo, "s", knowledgePackEjemplo, planoEjemplo), "s")).toHaveLength(2);
+  });
+
+  it("sin piezas en el plano no inventa qué cambiar", () => {
+    const r = pasosDeCierre(knowledgePackEjemplo, { ...planoEjemplo, piezas: [] }, 3, false);
+    expect(r).toHaveLength(1);
+    expect(r[0].cambiar).toBeUndefined();
   });
 });
