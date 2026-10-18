@@ -63,6 +63,8 @@ type Flujo = {
   setUltimaCompra: (c: { pieza: string; url: string } | null) => void;
   /** Carga un caso de "Mis casos" tal como quedó, sin volver a llamar a la IA. */
   retomar: (c: CasoGuardado) => void;
+  /** Deja todo en cero para empezar otro problema (el anterior ya quedó en "Mis casos"). */
+  reiniciar: () => void;
 };
 
 const Contexto = createContext<Flujo | null>(null);
@@ -168,6 +170,21 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         },
         ultimaCompra,
         setUltimaCompra,
+        reiniciar: () => {
+          setCaso(null);
+          setTipoEquipo(null);
+          setFotos([]);
+          setImagenes({});
+          setFicha(null);
+          setEventos([]);
+          setPreparado(null);
+          setPlano(null);
+          setCaptura(CAPTURA_VACIA);
+          setGuiaIniciada(false);
+          setCierre(null);
+          setUltimaCompra(null);
+          ultimo.current = { caso: null, preparado: null, plano: null };
+        },
         retomar: (g) => {
           setCaso(g.caso);
           setTipoEquipo(g.tipoEquipo);

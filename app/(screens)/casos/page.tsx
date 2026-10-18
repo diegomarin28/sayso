@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos, TEXTO_ESTADO, type CasoGuardado } from "../_datos/mis-casos";
 import { useFlujo } from "../_estado/flujo";
 import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla } from "../_ui/experto";
@@ -20,7 +20,12 @@ const ESTILO_ESTADO: Record<keyof typeof TEXTO_ESTADO, string> = {
 
 export default function MisCasos() {
   const router = useRouter();
-  const { retomar } = useFlujo();
+  const { retomar, cierre, reiniciar } = useFlujo();
+  // Si se llega acá después de "Terminar", el caso cerrado ya está guardado: se limpia el flujo
+  // para que "Inicio" arranque un problema nuevo, sin arrastrar el anterior.
+  useEffect(() => {
+    if (cierre) reiniciar();
+  }, [cierre, reiniciar]);
   // localStorage solo existe en el navegador: en el servidor la lista sale vacía y no hay desajuste.
   const firma = useSyncExternalStore(sinSuscripcion, firmaCasos, () => "[]");
   const casos = useMemo(() => (firma === "[]" ? [] : listarCasos()), [firma]);

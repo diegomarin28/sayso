@@ -102,6 +102,18 @@ export function Pantalla({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Franja de acciones pegada abajo: el botón principal se ve siempre, sin hacer scroll y sin
+ * quedar tapado por la barra de Safari ni el borde del iPhone (safe-area). Va al final de <Pantalla>.
+ */
+export function BarraAccion({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col gap-3 bg-gradient-to-t from-fondo from-75% to-fondo/0 px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
+      {children}
+    </div>
+  );
+}
+
 /** Botón principal, pensado para el pulgar: ancho completo y abajo. */
 export function BotonPrincipal({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
