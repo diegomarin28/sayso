@@ -24,9 +24,9 @@ Cada ítem tiene dueño. Al arreglarlo, marcá [x] y poné el PR.
 - [ ] A8. TV con guía floja (2 pasos genéricos): buscar manual de la serie/línea o guías del fabricante antes de caer en lo genérico.
 
 ## Diego (carril B: 3D y guía)
-- [ ] B1. TV se ve como una línea: TV/monitor/heladera/aire/lavarropas/microondas van parados y de frente.
-- [ ] B2. iPhone demasiado ancho: revisar proporciones/medidas del celular.
-- [ ] B3. El 3D arranca "abierto" (rayos X). Tiene que arrancar cerrado (carcasa opaca) y abrirse cuando la guía lo indica.
-- [ ] B4. Etiqueta de la pieza: se corta en el borde y se buguea al girar el modelo.
+- [x] B1. TV se ve como una línea: TV/monitor/heladera/aire/lavarropas/microondas van parados y de frente. (#88; los planos viejos de la caché se paran al leerlos: #93)
+- [x] B2. iPhone demasiado ancho: revisar proporciones/medidas del celular. (#93: carcasa del tipo —marco de 0,8 cm, no el chasis de notebook de 1,6— y la vista general entra entera en vertical)
+- [x] B3. El 3D arranca "abierto" (rayos X). Tiene que arrancar cerrado (carcasa opaca) y abrirse cuando la guía lo indica. (#93)
+- [x] B4. Etiqueta de la pieza: se corta en el borde y se buguea al girar el modelo. (#93)
 - [x] B5. Controles de la guía: pausar, paso anterior, paso siguiente; que no avance solo si no lo estoy mirando (opción de avanzar manual). — PR #90
 - [x] B6. Resaltar mejor la pieza que se nombra (ej. batería) sin tener que escribir. — PR #90
