@@ -411,16 +411,15 @@ export const planoAuriculares: PlanoDePiezas = {
 };
 
 /**
- * Reloj inteligente de pantalla CUADRADA, acostado, con la pantalla hacia arriba y la correa. La caja y la
- * pantalla de reloj de la biblioteca son redondas: hasta que haya formas cuadradas (#247), usan formas de
- * rectángulo redondeado que ya existen (`formaBiblioteca`): el marco y la pantalla de celular, estirados.
+ * Reloj inteligente de pantalla CUADRADA, acostado, con la pantalla hacia arriba y la correa. La caja, la
+ * pantalla y el dorso usan las formas cuadradas de reloj de la biblioteca (`formaBiblioteca`, #247).
  */
 export const planoReloj: PlanoDePiezas = {
   modelo: "Reloj inteligente genérico (ejemplo)",
   unidades: "cm",
   piezas: [
-    { ...pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]), formaBiblioteca: "marco" },
-    { ...pieza("pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0], "caja", "caja_reloj"), formaBiblioteca: "pantalla" },
+    { ...pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]), formaBiblioteca: "caja_reloj@cuadrada" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0], "caja", "caja_reloj"), formaBiblioteca: "pantalla@reloj_cuadrada" },
     ...hijos("caja_reloj", [
       ["placa", [3.4, 0.2, 3.6], [0, 1.15, 0]],
       ["bateria", [3, 0.4, 2.8], [0, 0.85, 0.3]],
@@ -430,20 +429,20 @@ export const planoReloj: PlanoDePiezas = {
       ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
       ["corona_reloj", [1.2, 0.7, 0.7], [2.7, 1.1, -0.6]],
       ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
-    ]),
+    ]).map((p) => (p.pieza === "tapa_reloj" ? { ...p, formaBiblioteca: "tapa_reloj@cuadrada" } : p)),
   ],
 };
 
 /**
  * Reloj de pantalla REDONDA (el mismo tipo, otra forma de pantalla: dato del pack, `formaPantalla`): caja y
- * pantalla circulares, con las formas de reloj de la biblioteca (que son redondas).
+ * pantalla circulares, con las formas redondas de reloj de la biblioteca (#247).
  */
 export const planoRelojRedondo: PlanoDePiezas = {
   modelo: "Reloj inteligente redondo genérico (ejemplo)",
   unidades: "cm",
   piezas: [
-    pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"),
-    pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"),
+    { ...pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"), formaBiblioteca: "caja_reloj@redonda" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"), formaBiblioteca: "pantalla@reloj_redonda" },
     ...hijos("caja_reloj", [
       ["placa", [3.2, 0.2, 3.2], [0, 1.15, 0]],
       ["bateria", [2.8, 0.4, 2.6], [0, 0.85, 0.2]],

@@ -43,14 +43,14 @@ describe("forma de la pantalla del reloj (dato del pack, por tipo)", () => {
       const redondo = (await generarPlano({ casoId: "c", knowledgePack: pack("redonda"), tipoEquipo: "reloj inteligente" }, ia)).plano;
       const cuadrado = (await generarPlano({ casoId: "c", knowledgePack: pack("cuadrada"), tipoEquipo: "reloj inteligente" }, ia)).plano;
       expect(() => PlanoDePiezas.parse(redondo)).not.toThrow();
-      // Redondo: las formas de reloj de la biblioteca (que son redondas), con planta circular.
-      expect(pieza(redondo, "pantalla").formaBiblioteca).toBeUndefined();
-      expect(raiz(redondo).formaBiblioteca).toBeUndefined();
+      // Redondo: las formas redondas de reloj de la biblioteca, con planta circular.
+      expect(pieza(redondo, "pantalla").formaBiblioteca).toBe("pantalla@reloj_redonda");
+      expect(raiz(redondo).formaBiblioteca).toBe("caja_reloj@redonda");
       const [rx, , rz] = pieza(redondo, "pantalla").dim;
       expect(rz / rx).toBeLessThan(1.15);
-      // Cuadrado: formas de rectángulo redondeado (el marco y la pantalla de celular), no las de reloj.
-      expect(pieza(cuadrado, "pantalla").formaBiblioteca).toBe("pantalla");
-      expect(raiz(cuadrado).formaBiblioteca).toBe("marco");
+      // Cuadrado: las formas cuadradas de reloj (#247), no las de celular.
+      expect(pieza(cuadrado, "pantalla").formaBiblioteca).toBe("pantalla@reloj_cuadrada");
+      expect(raiz(cuadrado).formaBiblioteca).toBe("caja_reloj@cuadrada");
       const [cx, , cz] = pieza(cuadrado, "pantalla").dim;
       expect(cz / cx).toBeGreaterThan(1.1);
       // Con el dato, la forma no queda estimada.
@@ -60,7 +60,7 @@ describe("forma de la pantalla del reloj (dato del pack, por tipo)", () => {
 
   it("sin el dato: la forma más común del tipo (cuadrada), con la caja y la pantalla estimadas y un aviso", async () => {
     const r = await generarPlano({ casoId: "c", knowledgePack: pack(), tipoEquipo: "reloj inteligente" }, iaQueFalla);
-    expect(pieza(r.plano, "pantalla").formaBiblioteca).toBe("pantalla"); // la cuadrada
+    expect(pieza(r.plano, "pantalla").formaBiblioteca).toBe("pantalla@reloj_cuadrada");
     expect(pieza(r.plano, "pantalla").origen).toBe("estimada");
     expect(raiz(r.plano).origen).toBe("estimada");
     expect(pieza(r.plano, "bateria").origen).toBe("plantilla"); // lo demás no cambia
@@ -81,7 +81,7 @@ describe("modeloPara respeta la forma que eligió el generador", () => {
     const carpeta = "public/models/piezas/";
     const indice = IndicePiezas.parse(JSON.parse(readFileSync(carpeta + "indice.json", "utf8")));
     biblioteca = new Map();
-    for (const archivo of new Set(["pantalla@reloj", "esfera_reloj", "tapa_reloj", "caja_reloj"].map((t) => indice.familias[indice.tipos[t].familia]))) {
+    for (const archivo of new Set(["pantalla@reloj", "esfera_reloj", "tapa_reloj", "caja_reloj", "caja_reloj@cuadrada", "pantalla@reloj_redonda"].map((t) => indice.familias[indice.tipos[t].familia]))) {
       const datos = readFileSync(carpeta + archivo);
       const escena = (await cargadorGlb().parseAsync(datos.buffer.slice(datos.byteOffset, datos.byteOffset + datos.byteLength), "")).scene;
       for (const [n, m] of bibliotecaDesdeEscena(escena)) biblioteca.set(n, m);
@@ -92,6 +92,32 @@ describe("modeloPara respeta la forma que eligió el generador", () => {
     expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj", "esfera_reloj")).toBe(biblioteca.get("esfera_reloj"));
     expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj")).toBe(biblioteca.get("pantalla@reloj"));
     expect(modeloPara("pantalla_reloj", biblioteca, [4, 0.2, 4.8], "reloj", "no_existe")).toBe(biblioteca.get("pantalla@reloj"));
+  });
+});
+
+describe("#234: cada forma de reloj usa sus piezas de la biblioteca (2 variantes)", () => {
+  let biblioteca: BibliotecaPiezas;
+  beforeAll(async () => {
+    const carpeta = "public/models/piezas/";
+    const indice = IndicePiezas.parse(JSON.parse(readFileSync(carpeta + "indice.json", "utf8")));
+    biblioteca = new Map();
+    for (const archivo of new Set(Object.values(indice.tipos).map((t) => indice.familias[t.familia]))) {
+      const datos = readFileSync(carpeta + archivo);
+      const escena = (await cargadorGlb().parseAsync(datos.buffer.slice(datos.byteOffset, datos.byteOffset + datos.byteLength), "")).scene;
+      for (const [n, m] of bibliotecaDesdeEscena(escena)) biblioteca.set(n, m);
+    }
+  });
+
+  it.each([
+    ["cuadrada", { caja_reloj: "caja_reloj@cuadrada", pantalla: "pantalla@reloj_cuadrada", tapa_reloj: "tapa_reloj@cuadrada" }],
+    ["redonda", { caja_reloj: "caja_reloj@redonda", pantalla: "pantalla@reloj_redonda", tapa_reloj: "tapa_reloj" }],
+  ] as const)("reloj de pantalla %s", async (forma, esperadas) => {
+    const r = await generarPlano({ casoId: "c", knowledgePack: pack(forma), tipoEquipo: "reloj inteligente" }, iaQueFalla);
+    for (const [id, nombre] of Object.entries(esperadas)) {
+      const p = pieza(r.plano, id);
+      expect(biblioteca.has(nombre), nombre).toBe(true);
+      expect(modeloPara(p.pieza, biblioteca, p.dim, "reloj inteligente", p.formaBiblioteca), id).toBe(biblioteca.get(nombre));
+    }
   });
 });
 
