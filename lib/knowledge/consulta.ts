@@ -1,11 +1,11 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { subirArchivo, type LlamarIA, type SubirArchivo } from "../ia/claude";
-import { descargarPdf, type Fetch, type Pdf } from "../knowledge/descargar";
-import { nombreExtracto, prepararExtracto } from "../knowledge/extracto";
-import { buscarGuiaIfixit, manualWebDeIfixit } from "../knowledge/ifixit";
-import { bloqueManual } from "../knowledge/lector";
-import { esSoloGuia, type RegistroManual, type RepoManuales } from "../knowledge/manuales";
-import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "../knowledge/manualweb";
+import { descargarPdf, type Fetch, type Pdf } from "./descargar";
+import { nombreExtracto, prepararExtracto } from "./extracto";
+import { buscarGuiaIfixit, manualWebDeIfixit } from "./ifixit";
+import { bloqueManual } from "./lector";
+import { esSoloGuia, type RegistroManual, type RepoManuales } from "./manuales";
+import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb, type PaginaWeb } from "./manualweb";
 
 /**
  * Consulta puntual del experto ("¿cómo cambio el conector de carga?"): si el knowledge pack no alcanza,
@@ -61,19 +61,28 @@ export function olvidarConsultas() {
   fuentes.clear();
 }
 
-/** Fuente del manual oficial enfocada en la pregunta, o null si no se pudo bajar o leer. */
-export async function fuenteDelManual(r: RegistroManual, equipo: string, pregunta: string, deps: DepsConsulta = {}): Promise<FuenteConsulta | null> {
+/**
+ * Fuente del manual oficial enfocada en la pregunta (o en una parte del procedimiento que falta), o null si no se
+ * pudo bajar o leer. `previo`: el PDF o el índice web que ya se bajaron (al armar la guía), para no volver a bajarlos.
+ */
+export async function fuenteDelManual(
+  r: Pick<RegistroManual, "url" | "titulo">,
+  equipo: string,
+  pregunta: string,
+  deps: DepsConsulta = {},
+  previo: { pdf?: Pdf; indice?: PaginaWeb } = {},
+): Promise<FuenteConsulta | null> {
   const clave = claveDe(r.url, pregunta);
   const guardada = fuentes.get(clave);
   if (guardada) return guardada;
-  const pdf = pdfs.get(r.url) ?? (await descargarPdf(r.url, deps.fetch));
+  const pdf = previo.pdf ?? pdfs.get(r.url) ?? (previo.indice ? null : await descargarPdf(r.url, deps.fetch));
   if (pdf) {
     recordar(pdfs, r.url, pdf, MAX_EN_MEMORIA.pdfs);
     const e = await prepararExtracto(new Uint8Array(pdf.datos), equipo, pregunta, [], deps.llamar, "pregunta");
     const fileId = await (deps.subir ?? subirArchivo)(Buffer.from(e.datos), nombreExtracto(e.paginas));
     return recordar(fuentes, clave, { tipo: "pdf", titulo: r.titulo, url: r.url, fileId, paginas: e.paginas, oficial: true }, MAX_EN_MEMORIA.fuentes);
   }
-  const indice = await leerPaginaWeb(r.url, deps.fetch);
+  const indice = previo.indice ?? (await leerPaginaWeb(r.url, deps.fetch));
   if (!pareceIndice(indice)) return null;
   const secciones = await elegirSecciones(indice, equipo, pregunta, deps.llamar, "pregunta");
   const manual = await armarManualWeb(indice, secciones, deps.fetch);

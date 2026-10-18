@@ -7,7 +7,7 @@ import { LIMITES, type LlamarIA, type PedidoIA, type StreamIA } from "../ia/clau
 const LIMITES_CHAT = LIMITES.chat as { busquedaWeb: boolean };
 import { repoEnMemoria } from "../knowledge/manuales";
 import { evaluarPedido } from "../safety/riesgos";
-import { manualGuardado, olvidarConsultas } from "./consulta";
+import { manualGuardado, olvidarConsultas } from "../knowledge/consulta";
 import { conversar, pideProcedimiento, type EventoChat } from "./conversar";
 
 /**

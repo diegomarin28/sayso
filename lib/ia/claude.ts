@@ -66,7 +66,14 @@ export const LIMITES = {
   /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
   extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400, maxMarcadoresLeidos: 3000, /** Datos de trazo desde los que una página sin imágenes cuenta como dibujo. */ minDatosDibujo: 20000 },
   /** Pasos de la guía del síntoma: chequeos sin abrir + desarme y reparación + armado y prueba. */
-  pack: { maxPasos: 18 },
+  pack: {
+    maxPasos: 18,
+    /** Lo que la fuente no trae (líneas FALTA) se busca una vez en el mismo manual y, si no, en iFixit. */
+    completarFaltantes: true,
+    /** Cuántas partes que faltan se piden juntas, y cuántos pasos se pueden sumar por encima de maxPasos. */
+    maxFaltantes: 3,
+    maxPasosCompletados: 8,
+  },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },

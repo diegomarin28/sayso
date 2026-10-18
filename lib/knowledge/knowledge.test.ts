@@ -569,3 +569,17 @@ describe("guía completa del síntoma: tres partes", () => {
     expect(c.faltantes).toEqual([{ procedimiento: "cómo abrir el equipo y sacar la pantalla", despuesDe: 1 }]);
   });
 });
+
+describe("bibliotecario: manual de usuario oficial (#237) y sin marcas en el prompt", () => {
+  it("si no hay de servicio, acepta el de usuario oficial; el prompt no nombra fabricantes", async () => {
+    let sistema = "";
+    const enviar: EnviarMensaje = async (p) => {
+      sistema = String(p.system);
+      return mensaje([{ type: "text", text: '{"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null}' }]);
+    };
+    await buscarManual({ marca: "EJ", modelo: "NB-15", clase: "otro" }, { enviar, fetch: nada });
+    expect(sistema).toMatch(/aceptá el manual de USUARIO oficial del fabricante/);
+    expect(sistema).toMatch(/Un manual de servicio siempre va antes que uno de usuario/);
+    expect(sistema).not.toMatch(/\b(Lenovo|Dell|HP|Apple|Samsung|LG|Epson|Sony)\b/);
+  });
+});
