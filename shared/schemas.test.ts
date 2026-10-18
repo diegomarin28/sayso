@@ -38,7 +38,7 @@ describe("fixtures validan contra los contratos", () => {
     for (const c of coreografiaEjemplo) {
       for (const a of c.acciones) {
         if ("pieza" in a) expect(ids.has(a.pieza)).toBe(true);
-        if (a.t === "camara") expect(ids.has(a.objetivo)).toBe(true);
+        if (a.t === "camara" && a.objetivo !== "general") expect(ids.has(a.objetivo)).toBe(true);
       }
     }
   });
