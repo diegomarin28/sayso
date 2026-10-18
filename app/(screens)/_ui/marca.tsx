@@ -68,7 +68,7 @@ export function Simbolo({ estado = "quieto", tam = 44 }: { estado?: EstadoMarca;
         <polygon points={rect(TAPA, 5, 5, 3, -9)} stroke="var(--marca)" strokeWidth="1.6" strokeLinejoin="round" />
       </g>
       {/* placa */}
-      <g>
+      <g className="marca-capa-medio">
         <polygon points={canto(PLACA, ANCHO - 2, LARGO - 2, 1.5)} fill="var(--marca)" fillOpacity="0.45" />
         <polygon points={rect(PLACA, ANCHO - 2, LARGO - 2)} {...capa} />
         <polygon points={rect(PLACA, 5, 6, -1.5, -4)} fill="var(--marca)" />

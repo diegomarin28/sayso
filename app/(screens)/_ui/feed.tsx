@@ -15,13 +15,11 @@ const NOMBRE_AGENTE: Record<Evento["agente"], string> = {
 };
 
 /**
- * Tokens y costos son para el equipo, no para la persona: en producción no se muestran (siguen en
- * el registro interno y en Supabase). En desarrollo sí, para medir.
+ * Tokens y costos (créditos de IA) son para el equipo, no para la persona: nunca se muestran en la
+ * app, tampoco en desarrollo. Siguen en el registro interno y en Supabase para medir.
  */
-export const MOSTRAR_COSTOS = process.env.NODE_ENV !== "production";
-
-export function eventosVisibles(eventos: Evento[], mostrarCostos = MOSTRAR_COSTOS): Evento[] {
-  return mostrarCostos ? eventos : eventos.filter((e) => e.tipo !== "costo");
+export function eventosVisibles(eventos: Evento[]): Evento[] {
+  return eventos.filter((e) => e.tipo !== "costo");
 }
 
 export function FeedActividad({ eventos, max = 6 }: { eventos: Evento[]; max?: number }) {
