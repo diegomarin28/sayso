@@ -1,5 +1,27 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+// Fuentes guardadas en el repo (app/fuentes): el build no depende de internet (Wi-Fi del evento).
+// Títulos con carácter técnico, texto muy legible en el celular y los datos en monoespaciada.
+const titulo = localFont({
+  src: "./fuentes/space-grotesk-latin-wght-normal.woff2",
+  variable: "--fuente-titulo",
+  weight: "300 700",
+  display: "swap",
+});
+const texto = localFont({
+  src: "./fuentes/inter-latin-wght-normal.woff2",
+  variable: "--fuente-texto",
+  weight: "100 900",
+  display: "swap",
+});
+const datos = localFont({
+  src: "./fuentes/jetbrains-mono-latin-wght-normal.woff2",
+  variable: "--fuente-datos",
+  weight: "100 800",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Sayso",
@@ -13,10 +35,9 @@ export const viewport: Viewport = {
   viewportFit: "cover", // usa toda la pantalla; los márgenes respetan el notch (safe-area)
 };
 
-// Sin fuentes remotas a propósito: el build no debe depender de internet (Wi-Fi del evento).
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className="h-full antialiased">
+    <html lang="es" className={`${titulo.variable} ${texto.variable} ${datos.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {children}
         {/* Es una app vertical: si el celular se gira, se pide volver a ponerlo derecho

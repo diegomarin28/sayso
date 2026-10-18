@@ -37,8 +37,10 @@
   --color-escena: var(--escena);
   --color-dato: var(--dato);
   --color-nebulosa: var(--nebulosa);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* Las fuentes las carga app/layout.tsx (archivos en app/fuentes). */
+  --font-sans: var(--fuente-texto), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--fuente-datos), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-titulo: var(--fuente-titulo), var(--fuente-texto), ui-sans-serif, system-ui, sans-serif;
 }
 
 /*
