@@ -6,6 +6,7 @@ import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
+import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
   BarraAccion,
@@ -231,6 +232,9 @@ export default function CapturaGuiada() {
               </div>
             )}
           </label>
+
+          {/* Carga de "revisar la foto": la línea que escanea y una línea de lo que mira. */}
+          {toma.revisando && <LineaPensando lineas={LINEAS.foto} className="-mt-4" />}
 
           {/* Foto rechazada (o que no se pudo revisar): qué está mal, qué sacar y cómo reintentar. */}
           {(rechazada || toma.error) && !toma.revisando && (

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos } from "./_datos/mis-casos";
+import { LineaPensando, LINEAS } from "./_ui/linea-pensando";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
 import { useFlujo } from "./_estado/flujo";
@@ -15,7 +16,10 @@ import {
   DiceExperto,
   Encabezado,
   Flecha,
+  Detener,
   Microfono,
+  Orbe,
+  Papelera,
   Pantalla,
 } from "./_ui/experto";
 
@@ -65,17 +69,23 @@ export default function QueSeRompio() {
   const firma = useSyncExternalStore(sinSuscripcion, firmaCasos, () => "[]");
   const cantidadCasos = useMemo(() => (firma === "[]" ? 0 : listarCasos().length), [firma]);
 
-  const dictado = useDictado((frase) => setTexto((t) => (t.trim() ? `${t.trim()} ${frase}` : frase)));
+  const sumar = (t: string, frase: string) => (t.trim() ? `${t.trim()} ${frase}` : frase);
+  const dictado = useDictado((dicho) => setTexto((t) => sumar(t, dicho)));
 
   async function enviar() {
     desbloquearAudio(); // la respuesta se dice en voz alta cuando llega (iPhone pide un toque)
-    dictado.detener();
-    if (!texto.trim()) return;
+    // Si estaba grabando, "Seguir" usa también lo que dijo (incluida la frase a medias).
+    const aEnviar = dictado.escuchando && dictado.texto ? sumar(texto, dictado.texto) : texto;
+    if (dictado.escuchando) {
+      dictado.descartar(); // ya se sumó acá; no entregarlo dos veces
+      setTexto(aEnviar);
+    }
+    if (!aEnviar.trim()) return;
     setRespondio(true);
     setPensando(true);
     setError(null);
     try {
-      const r = await entenderSintoma(texto);
+      const r = await entenderSintoma(aEnviar);
       setEntendido(r.caso);
       setTipo(r.tipoEquipo ?? null);
       setTipoDeLaIA(r.tipoEquipo ?? null);
@@ -130,13 +140,21 @@ export default function QueSeRompio() {
 
       <DiceExperto texto={dice} />
 
+      {/* Carga de "entender": orbe grande y una línea de lo que está haciendo. */}
+      {pensando && (
+        <div className="aparece flex flex-col items-center gap-4 py-2">
+          <Orbe estado="pensando" tam={96} />
+          <LineaPensando lineas={LINEAS.entender} className="w-full text-center" />
+        </div>
+      )}
+
       {!entendido ? (
         <>
           <div className="flex flex-1 flex-col gap-4">
             <div className="relative">
               <textarea
                 autoFocus
-                value={dictado.parcial ? `${texto} ${dictado.parcial}`.trim() : texto}
+                value={dictado.escuchando && dictado.texto ? sumar(texto, dictado.texto) : texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -147,24 +165,42 @@ export default function QueSeRompio() {
                 disabled={pensando}
                 rows={3}
                 placeholder="Ej.: mi notebook se apaga sola a los diez minutos…"
-                className="w-full resize-none rounded-2xl border border-borde bg-superficie p-4 pr-16 text-lg placeholder:text-texto-suave/60 focus:border-acento focus:outline-none"
+                className="w-full resize-none rounded-2xl border border-borde bg-superficie p-4 pr-16 pb-16 text-lg placeholder:text-texto-suave/60 focus:border-acento focus:outline-none"
               />
-              <button
-                type="button"
-                onClick={dictado.alternar}
-                disabled={pensando || dictado.conectando}
-                aria-pressed={dictado.escuchando}
-                aria-label={dictado.escuchando ? "Dejar de escuchar" : "Decirlo con la voz"}
-                className={`absolute right-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-40 ${
-                  dictado.escuchando ? "animate-pulse bg-peligro text-white" : "bg-acento text-black"
-                }`}
-              >
-                <Microfono />
-              </button>
+              {dictado.escuchando ? (
+                <div className="absolute right-3 bottom-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={dictado.descartar}
+                    aria-label="Descartar lo grabado"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-borde bg-fondo text-texto-suave transition active:scale-95"
+                  >
+                    <Papelera />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dictado.terminar}
+                    aria-label="Terminar de grabar"
+                    className="flex h-11 w-11 animate-pulse items-center justify-center rounded-full bg-peligro text-white transition active:scale-95"
+                  >
+                    <Detener />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={dictado.empezar}
+                  disabled={pensando || dictado.conectando}
+                  aria-label="Decirlo con la voz"
+                  className="absolute right-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-full bg-acento text-black transition active:scale-95 disabled:opacity-40"
+                >
+                  <Microfono />
+                </button>
+              )}
             </div>
             {(dictado.escuchando || dictado.error) && (
               <p className={`text-sm ${dictado.error ? "text-probable" : "text-texto-suave"}`}>
-                {dictado.error ?? "Te escucho… Cuando termines, tocá el micrófono o “Seguir”."}
+                {dictado.error ?? "Te escucho… Tocá ■ para terminar o la papelera para descartar."}
               </p>
             )}
             <div className="flex flex-wrap gap-2">

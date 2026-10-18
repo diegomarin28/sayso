@@ -192,6 +192,34 @@ export function Microfono({ size = 22 }: { size?: number }) {
   );
 }
 
+/** ■ Terminar de grabar (conserva lo dicho). */
+export function Detener({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+/** Descartar lo grabado. */
+export function Papelera({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
 export function Check({ size = 20 }: { size?: number }) {
   return (
     <svg
