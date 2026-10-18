@@ -120,7 +120,7 @@ export function GuiaExperto({
       actual.current?.abort();
       const ctl = new AbortController();
       actual.current = ctl;
-      const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia };
+      const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
       historial.current = [...historial.current, { rol: "persona", texto: limpia }];
       setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
       setPasos([]);
@@ -155,7 +155,7 @@ export function GuiaExperto({
       });
       if (dicho) historial.current = [...historial.current, dicho];
     },
-    [casoId, pack, plano, idsPlano, manualFileId, fuente, decir, onCambiarPieza],
+    [casoId, pack, plano, idsPlano, manualFileId, tipoEquipo, fuente, decir, onCambiarPieza],
   );
 
   // Arranque automático y cancelación al salir de la pantalla.

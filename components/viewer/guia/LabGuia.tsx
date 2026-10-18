@@ -38,6 +38,7 @@ export function LabGuia() {
         casoId="caso-demo-1"
         pack={knowledgePackEjemplo}
         plano={planoNotebookBase}
+        tipoEquipo="notebook"
         origenPlano={origen}
         preguntaInicial="Se apaga sola a los diez minutos y el ventilador suena muy fuerte."
         imagenPagina={paginaDeEjemplo}
