@@ -205,8 +205,9 @@ export default function FichaDelEquipo() {
             {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
               <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
             ))}
+            {/* El equipo que entendió la recepción (#290); la clase interna ("otro") solo si no hay. */}
             <p className="mb-3 font-mono text-xs tracking-[0.3em] text-texto-suave uppercase">
-              {ficha.clase}
+              {tipoEquipo?.trim() && tipoEquipo.trim().toLowerCase() !== "equipo" ? tipoEquipo.trim() : ficha.clase}
             </p>
             <dl className="flex flex-col gap-2">
               {CAMPOS.map(({ clave, etiqueta, ejemplo }) => {
