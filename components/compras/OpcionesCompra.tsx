@@ -15,7 +15,7 @@ export type { FuenteCompras, RespuestaCompras } from "./fuente";
 export { fuenteApi } from "./fuente";
 
 export type OpcionesCompraProps = PedidoCompra & {
-  /** Por defecto espera el toque en "Buscar repuesto" (cada búsqueda cuesta). */
+  /** Por defecto espera el toque en "Ver dónde comprar esta pieza" (cada búsqueda cuesta). */
   buscarAlMontar?: boolean;
   onEvento?: (e: Evento) => void;
   /** Para /lab y tests: de dónde salen las opciones (por defecto, /api/compras). */
@@ -80,7 +80,7 @@ export function VistaCompras({
         </p>
       </header>
 
-      {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Buscar repuesto</BotonBuscar>}
+      {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Ver dónde comprar esta pieza</BotonBuscar>}
 
       {estado.t === "buscando" && (
         <p role="status" className="animate-pulse text-sm text-texto-suave">
@@ -121,7 +121,7 @@ function BotonBuscar({ onClick, secundario = false, children }: { onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className={`h-12 w-full rounded-2xl px-4 font-semibold transition active:scale-95 ${
+      className={`min-h-12 w-full rounded-2xl px-4 py-2 font-semibold leading-tight transition active:scale-95 ${
         secundario ? "border border-borde text-texto" : "bg-acento text-black"
       }`}
     >
