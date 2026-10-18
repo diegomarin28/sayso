@@ -132,6 +132,8 @@ export default function Experto() {
         manualFileId={preparado.manualFileId}
         // "Ver en el manual": la página citada en grande (las claves llegan como texto en el JSON).
         imagenPagina={(p) => preparado.imagenesPaginas?.[p] ?? null}
+        // "Ver la foto del paso": la foto de la guía (iFixit) que cita el paso, por su URL (#176).
+        fotoDePaso={(url) => preparado.fotosPasos?.[url] ?? null}
         // El experto arranca solo, con lo que la persona contó en la pantalla 1.
         preguntaInicial={preguntaInicial}
         decir={decir}

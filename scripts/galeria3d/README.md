@@ -17,7 +17,7 @@ npx tsx scripts/galeria3d/galeria.ts --casos mis-casos.json --campus [--sin-ejem
 Los planos sueltos (`--casos`, `--campus`) se abren en `/lab/visor?plano=guardado`, que lee `{ plano, tipoEquipo }`
 del localStorage (`components/viewer/lab-guardado.ts`): así el 3D elige las variantes con el tipo de equipo, como en la app.
 
-- Usa Chrome sin ventana (`CHROME` cambia la ruta; por defecto la de macOS) con GPU por software.
+- Usa el chromium sin ventana de la caché de Playwright (`chromium_headless_shell-N`, el más nuevo; ver `navegador.ts`) con GPU por software. **Nunca el Chrome del sistema:** cada vez que se abre deja una copia de ~700 MB en `/private/var/folders` y llenó el disco. Si la caché no lo tiene, la galería falla en vez de usar Chrome; `CHROME=<ruta>` la cambia solo a propósito. Si se corta la corrida (Ctrl+C), cierra el navegador y borra su perfil.
 - Avisos automáticos por captura (`analisis.ts`, con tests): **vacío** (no se dibujó o quedó fuera de cámara),
   **chico** (ocupa menos de un tercio de ancho y de alto) y **cortado** (toca dos bordes opuestos). El fondo es
   el color de la esquina; la sombra de contacto no cuenta. Antes de capturar se oculta lo que el visor pone encima (botones, chips, etiquetas, el medidor de fps).

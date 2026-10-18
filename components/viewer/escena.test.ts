@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
+import { planoCelular, planoHeladera, planoTablet, planoTelevisor } from "../../lib/planogenerator/plantillas/equipos";
+import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, RELLENO, animar, intensidadRelleno, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
+import { conDesarme } from "./guia/desarme";
 
 const ctx = { casoId: "t" };
 const preparar = () => {
@@ -232,7 +233,7 @@ describe("escena: cerrado / abierto", () => {
     (escena.nodos.get(id)!.principal.material as THREE.MeshStandardMaterial).opacity;
 
   it("tapas, puertas y carcasas son cubiertas; la raíz que no es carcasa, no", () => {
-    expect(prepararEscena(planoNotebookBase).cubiertas).toEqual({ tapa_inferior: "tapa" });
+    expect(prepararEscena(planoNotebookBase).cubiertas).toEqual({ tapa_inferior: "tapa", carcasa_pantalla: "tapa" });
   });
 
   it("la tapa (translúcida en su receta) se ve opaca cerrada y translúcida al abrir", () => {
@@ -245,6 +246,24 @@ describe("escena: cerrado / abierto", () => {
     animar(escena, abierto, 5001);
     animar(escena, abierto, 10000);
     expect(opacidadDe(escena, "tapa_inferior")).toBeLessThan(0.5);
+  });
+
+  // Se arman desde atrás: lo de adentro queda del lado de la tapa y la carcasa (con su placa al medio) en el
+  // de la pantalla. Abierto por la pantalla, sin nada resaltado, la carcasa taparía todo.
+  it.each([
+    ["celular", planoCelular, "Sacá la tapa trasera.", "Despegá la pantalla."],
+    ["tablet", planoTablet, "Sacá la tapa trasera.", "Despegá la pantalla de a poco."],
+  ])("%s: abierto por la pantalla, la carcasa se ve translúcida; por la tapa, opaca", (_, plano, porTapa, porPantalla) => {
+    const abrir = (dice: string) => {
+      const escena = prepararEscena(plano);
+      const inicio = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);
+      const e = con(inicio, ...conDesarme({ paso: 1, dice, acciones: [], riesgo: "bajo" }, plano).acciones);
+      animar(escena, e, 0);
+      animar(escena, e, 5000);
+      return opacidadDe(escena, "marco");
+    };
+    expect(abrir(porPantalla)).toBeLessThan(0.5);
+    expect(abrir(porTapa)).toBeCloseTo(1, 3);
   });
 });
 
@@ -369,5 +388,108 @@ describe("separarEtiquetas (#179: varias piezas resaltadas a la vez)", () => {
     expect(separarEtiquetas([r(10, 300), r(250, 300)], lienzo)).toEqual([r(10, 300), r(250, 300)]);
     const [, b] = separarEtiquetas([r(20, 110), r(20, 112)], lienzo, 100);
     expect(b.y).toBeGreaterThanOrEqual(110 + 36);
+  });
+});
+
+describe("resaltado de una pieza grande (#231: no rellenar todo de celeste)", () => {
+  const mat = (escena: ReturnType<typeof prepararEscena>, id: string) => escena.nodos.get(id)!.principal.material as THREE.MeshStandardMaterial;
+  const borde = (escena: ReturnType<typeof prepararEscena>, id: string) => escena.nodos.get(id)!.mallas[0].borde.material;
+  const resaltar = (plano: Parameters<typeof prepararEscena>[0], pieza: string) => {
+    const escena = prepararEscena(plano);
+    const e = con(estadoInicial(escena.nodos.keys()), { t: "resaltar", pieza });
+    animar(escena, e, 0);
+    animar(escena, e, 5000);
+    return escena;
+  };
+
+  // Dos variantes por tipo: el panel frontal de una tablet y la tapa trasera de un celular.
+  for (const [nombre, plano, grande, adentro] of [
+    ["tablet: panel frontal", planoTablet, "pantalla", "bateria"],
+    ["celular: tapa trasera", planoCelular, "tapa_trasera", "bateria"],
+  ] as const) {
+    it(`${nombre}: translúcida con contorno de color, y lo de adentro sigue a la vista`, () => {
+      const escena = resaltar(plano, grande);
+      expect(escena.nodos.get(grande)!.grande).toBe(true);
+      expect(mat(escena, grande).opacity).toBeCloseTo(OPACIDAD_GRANDE_ACTIVA, 2);
+      expect(mat(escena, grande).transparent).toBe(true);
+      expect(borde(escena, grande).color.getHexString()).toBe(new THREE.Color(COLOR_ACTIVO).getHexString());
+      expect(borde(escena, grande).opacity).toBeCloseTo(1, 2);
+      // La batería (adentro) no pasa a fantasma: queda como estaba.
+      const original = prepararEscena(plano);
+      expect(mat(escena, adentro).opacity).toBeCloseTo(mat(original, adentro).opacity, 3);
+      expect(mat(escena, adentro).color.getHexString()).toBe(mat(original, adentro).color.getHexString());
+    });
+  }
+
+  // Dos variantes: el panel frontal (tapado por la tapa trasera) y la tapa trasera (tapada por el panel).
+  for (const [plano, grande, otra] of [
+    [planoTablet, "pantalla", "tapa_trasera"],
+    [planoCelular, "tapa_trasera", "pantalla"],
+  ] as const) {
+    it(`resaltado ${grande}, la otra pieza grande (${otra}) pasa a fantasma: no la tapa`, () => {
+      const escena = resaltar(plano, grande);
+      expect(escena.nodos.get(otra)!.grande).toBe(true);
+      expect(mat(escena, otra).opacity).toBeLessThan(0.6);
+    });
+  }
+
+  // #188: la carcasa raíz es madre de todo; su pantalla (grande) no la tapa, lo de adentro (chico) sigue igual.
+  for (const [plano, raiz, pantalla, adentro] of [
+    [planoCelular, "marco", "pantalla", "bateria"],
+    [planoTelevisor, "carcasa_televisor", "pantalla_panel", "placa_control"],
+  ] as const) {
+    it(`resaltada la carcasa (${raiz}), su hija grande (${pantalla}) pasa a fantasma y ${adentro} no`, () => {
+      const escena = resaltar(plano, raiz);
+      expect(escena.nodos.get(pantalla)!.ancestros).toContain(raiz);
+      expect(mat(escena, pantalla).opacity).toBeLessThan(0.6);
+      expect(mat(escena, adentro).opacity).toBeCloseTo(mat(prepararEscena(plano), adentro).opacity, 3);
+    });
+  }
+
+  it("una pieza chica (la batería) sigue sólida y lo demás pasa a fantasma, como antes", () => {
+    const escena = resaltar(planoTablet, "bateria");
+    expect(escena.nodos.get("bateria")!.grande).toBe(false);
+    expect(mat(escena, "bateria").opacity).toBeCloseTo(1, 3);
+    expect(mat(escena, "placa_madre").opacity).toBeLessThan(0.6);
+  });
+});
+
+describe("notebook abierta (#232): se da vuelta el equipo, no la cámara", () => {
+  const camara = new THREE.PerspectiveCamera(35, 390 / 844);
+  const tam = { width: 390, height: 844 };
+
+  it("arranca dada vuelta (mirada por el teclado) y la cámara sigue arriba y adelante", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    expect(escena.vuelta).toBeDefined();
+    expect(escena.raiz.rotation.z).toBeCloseTo(Math.PI);
+    const e = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo");
+    expect(e.posicion.y).toBeGreaterThan(e.objetivo.y);
+    expect(e.posicion.z).toBeGreaterThan(e.objetivo.z);
+  });
+
+  it("encuadra con la tapa de pantalla abierta (no la caja cerrada) y vuelve a girar al sacar la tapa inferior", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    const inicio = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);
+    const girados = { carcasa_pantalla: inicio.piezas.carcasa_pantalla.rot };
+    const cerrada = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo");
+    const abierta = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo", {}, girados);
+    // Abierta, la pantalla sube: el centro de lo que se encuadra queda más arriba.
+    expect(abierta.objetivo.y).toBeGreaterThan(cerrada.objetivo.y + 3);
+    const volteada = aplicarAccion(inicio, { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 }, { casoId: "c" }).estado;
+    animar(escena, volteada, 0);
+    animar(escena, volteada, 5000);
+    expect(escena.raiz.rotation.z).toBeCloseTo(0);
+  });
+});
+
+describe("escena: luz de relleno desde la cámara", () => {
+  it("apenas un toque mirando desde arriba y más cuanto más abajo, sin pasarse del máximo", () => {
+    expect(intensidadRelleno(1)).toBeCloseTo(RELLENO.minimo);
+    expect(intensidadRelleno(0.6)).toBeCloseTo(RELLENO.minimo);
+    expect(intensidadRelleno(0)).toBeGreaterThan(intensidadRelleno(0.6));
+    expect(intensidadRelleno(-0.5)).toBeCloseTo(RELLENO.maximo);
+    expect(intensidadRelleno(-1)).toBeCloseTo(RELLENO.maximo);
+    // Suave: siempre menos que la luz de arriba (1,4), para no quemar lo claro.
+    expect(RELLENO.maximo).toBeLessThan(1.4);
   });
 });

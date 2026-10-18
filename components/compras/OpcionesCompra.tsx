@@ -17,6 +17,8 @@ export { fuenteApi } from "./fuente";
 export type OpcionesCompraProps = PedidoCompra & {
   /** Por defecto espera el toque en "Ver dónde comprar esta pieza" (cada búsqueda cuesta). */
   buscarAlMontar?: boolean;
+  /** false si la pantalla ya muestra la pieza (nombre y N.º de parte) arriba: sin encabezado propio (#208). */
+  mostrarPieza?: boolean;
   onEvento?: (e: Evento) => void;
   /** Para /lab y tests: de dónde salen las opciones (por defecto, /api/compras). */
   fuente?: FuenteCompras;
@@ -25,6 +27,7 @@ export type OpcionesCompraProps = PedidoCompra & {
 
 export function OpcionesCompra({
   buscarAlMontar = false,
+  mostrarPieza = true,
   onEvento,
   fuente = fuenteApi,
   className = "",
@@ -53,18 +56,20 @@ export function OpcionesCompra({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <VistaCompras estado={estado} pedido={pedido} onBuscar={() => void buscar()} className={className} />;
+  return <VistaCompras estado={estado} pedido={pedido} mostrarPieza={mostrarPieza} onBuscar={() => void buscar()} className={className} />;
 }
 
 /** Lo que se ve en cada estado. Sin estado propio: se prueba renderizándola (components/compras/compras.test.tsx). */
 export function VistaCompras({
   estado,
   pedido,
+  mostrarPieza = true,
   onBuscar,
   className = "",
 }: {
   estado: EstadoCompras;
   pedido: Pick<PedidoCompra, "pieza" | "nombre" | "numeroParte" | "modelo" | "marca">;
+  mostrarPieza?: boolean;
   onBuscar: () => void;
   className?: string;
 }) {
@@ -72,13 +77,16 @@ export function VistaCompras({
   const equipo = [pedido.marca, pedido.modelo].filter(Boolean).join(" ");
   return (
     <section className={`flex min-w-0 flex-col gap-3 text-texto ${className}`} aria-live="polite" aria-busy={estado.t === "buscando"}>
-      <header>
-        <h2 className="text-lg font-semibold">Dónde comprar el repuesto</h2>
-        <p className="text-sm break-words text-texto-suave">
-          {nombre}
-          {pedido.numeroParte ? ` · N.º de parte ${pedido.numeroParte}` : ""}
-        </p>
-      </header>
+      {/* Dentro del panel de repuestos la pieza ya tiene su título arriba: acá no se repite nada (#208). */}
+      {mostrarPieza && (
+        <header>
+          <h2 className="text-lg font-semibold">Dónde comprar el repuesto</h2>
+          <p className="text-sm break-words text-texto-suave">
+            {nombre}
+            {pedido.numeroParte ? ` · N.º de parte ${pedido.numeroParte}` : ""}
+          </p>
+        </header>
+      )}
 
       {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Ver dónde comprar esta pieza</BotonBuscar>}
 

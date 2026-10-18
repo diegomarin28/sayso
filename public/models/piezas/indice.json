@@ -6,10 +6,16 @@
   "frio_calor": "frio_calor.glb",
   "estructura": "estructura.glb",
   "carcasas": "carcasas.glb",
+  "contornos_demo": "contornos_demo.glb",
   "dispositivos": "dispositivos.glb",
   "cotidianos": "cotidianos.glb",
+  "relojes_demo": "relojes_demo.glb",
   "facultad": "facultad.glb",
-  "campus": "campus.glb"
+  "campus": "campus.glb",
+  "tablet_demo": "tablet_demo.glb",
+  "notebook_demo": "notebook_demo.glb",
+  "alineacion_demo": "alineacion_demo.glb",
+  "impresoras_demo": "impresoras_demo.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -329,6 +335,72 @@
     4.4,
     0.8,
     5.5
+   ]
+  },
+  "caja_reloj@redonda": {
+   "familia": "relojes_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja circular hueca de reloj; bisel, anclajes de correa, puerto de corona separado.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj@cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja cuadrada redondeada hueca de smartwatch, 4,4 × 5,2 cm, con anclajes.",
+   "caja": [
+    4.4,
+    1.1,
+    5.35
+   ]
+  },
+  "pantalla@reloj_redonda": {
+   "familia": "relojes_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Pantalla circular con bisel fino y vidrio, sin esfera ni agujas analógicas.",
+   "caja": [
+    4.2,
+    0.223,
+    4.2
+   ]
+  },
+  "pantalla@reloj_cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Pantalla cuadrada redondeada, vidrio y bisel independiente de la caja.",
+   "caja": [
+    4.15,
+    0.229,
+    4.95
+   ]
+  },
+  "tapa_reloj@cuadrada": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Dorso cuadrado redondeado con ventana para el sensor óptico y cuatro tornillos.",
+   "caja": [
+    4.2,
+    0.155,
+    5
+   ]
+  },
+  "base_carga_magnetica@reloj": {
+   "familia": "relojes_demo",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Base de carga magnética circular con aro de alineación y salida del cable.",
+   "caja": [
+    3.6,
+    0.57,
+    5.35
    ]
   },
   "correa_reloj": {
@@ -859,6 +931,50 @@
     3.245
    ]
   },
+  "carcasa_contorno@tablet": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    17.544,
+    0.7885,
+    25.044
+   ]
+  },
+  "panel_contorno@tablet": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    17.38,
+    0.23,
+    24.88
+   ]
+  },
+  "carcasa_contorno@tv": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    100.24,
+    60.24,
+    8.21
+   ]
+  },
+  "panel_contorno@tv": {
+   "familia": "contornos_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Borde perimetral continuo con abertura central real; permite contorno sin cubrir el interior.",
+   "caja": [
+    99.2,
+    59.2,
+    0.875
+   ]
+  },
   "parlante": {
    "familia": "electronica",
    "descripcion": "Caja de parlante con rejilla, membrana y orejas con gomas.",
@@ -1312,13 +1428,13 @@
   },
   "carcasa@televisor": {
    "familia": "carcasas",
-   "descripcion": "Carcasa de televisor: marco frontal con la pantalla (vidrio oscuro: así el TV cerrado, de frente, se reconoce como un TV y no como una chapa), tapa trasera con la joroba, rejillas, zona de puertos y patas.",
+   "descripcion": "Carcasa de televisor, de frente se reconoce como un TV (por tipo, sin marca ni modelo): pantalla de vidrio oscuro dentro de un bisel fino con filete metálico, mentón abajo con una placa lisa y el LED de encendido, y pie de dos patas en \"V\" plateadas. Atrás: la joroba, rejillas y zona de puertos.",
    "equipos": "televisor tv monitor",
    "ajuste": "libre",
    "caja": [
     100,
-    66,
-    6.06
+    66.2685,
+    6.12
    ]
   },
   "carcasa@lavarropas": {
@@ -2573,6 +2689,864 @@
     7.5859,
     0.2,
     12.5
+   ]
+  },
+  "marco@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Marco perimetral hueco de tablet, perfil fino y aberturas de carga y botones.",
+   "caja": [
+    17.5,
+    0.75,
+    25.04
+   ]
+  },
+  "tapa_trasera@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Carcasa trasera desmontable: placa fina con labio perimetral y abertura de cámara.",
+   "caja": [
+    17.45,
+    0.27,
+    24.95
+   ]
+  },
+  "pantalla@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Frente completo de tablet con vidrio, bisel continuo y cámara frontal; cara activa +Y GLB.",
+   "caja": [
+    17.3,
+    0.197,
+    24.8
+   ]
+  },
+  "bateria@tablet": {
+   "familia": "tablet_demo",
+   "ajuste": "libre",
+   "equipos": "tablet tableta ipad",
+   "descripcion": "Batería plana de dos celdas pouch, lengüetas de adhesivo y flex; independiente del panel.",
+   "caja": [
+    13.4,
+    0.3925,
+    17.8
+   ]
+  },
+  "pantalla@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Panel de notebook separado de la tapa, cara activa hacia -Z de Blender (interior al cerrar).",
+   "caja": [
+    29.7,
+    0.11,
+    19.6
+   ]
+  },
+  "teclado@bandeja_notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Bandeja de teclado independiente de sus teclas; no duplica las teclas al seleccionarlas.",
+   "caja": [
+    27.5,
+    0.1,
+    11.8
+   ]
+  },
+  "base@notebook_abierta": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Cuba inferior hueca de notebook, piso fino y paredes continuas, sin bloque sólido interior.",
+   "caja": [
+    32,
+    1.425,
+    23
+   ]
+  },
+  "carcasa_superior@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Palmrest con borde y aberturas reales para teclado y trackpad; malla independiente.",
+   "caja": [
+    32,
+    0.1725,
+    23
+   ]
+  },
+  "carcasa_pantalla@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tapa de pantalla, bisel y dos bisagras en Y=+10,5 de Blender. Centro geométrico; giro en la bisagra mediante pivote del plano.",
+   "caja": [
+    31,
+    0.76,
+    21.38
+   ]
+  },
+  "tecla_individual@x": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla X separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@6": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 6 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f9": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F9 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@u": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla U separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@9": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 9 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@3": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 3 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f10": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F10 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@abajo": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ABAJO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@enter": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ENTER separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@z": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Z separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@a": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla A separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f11": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F11 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@2": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 2 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@e": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla E separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@m": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla M separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@n": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla N separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@alt": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ALT separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@w": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla W separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@r": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla R separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@8": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 8 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@p": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla P separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@o": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla O separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f6": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F6 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@7": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 7 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@0": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 0 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@caps": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla CAPS separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@k": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla K separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@ctrl": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla CTRL separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@s": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla S separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@der": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla DER separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@izq": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla IZQ separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@b": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla B separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f3": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F3 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f12": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F12 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f4": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F4 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@tab": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla TAB separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f1": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F1 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@5": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 5 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f8": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F8 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@espacio": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ESPACIO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    8,
+    0.18,
+    1.45
+   ]
+  },
+  "tecla_individual@1": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 1 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@esc": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ESC separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@g": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla G separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@retroceso": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla RETROCESO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@l": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla L separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@t": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla T separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f5": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F5 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@h": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla H separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@q": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Q separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@d": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla D separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@v": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla V separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@i": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla I separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@c": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla C separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f2": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F2 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f7": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F7 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@j": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla J separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@4": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 4 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@shift": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla SHIFT separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@y": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Y separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "carcasa_televisor": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Carcasa de televisor, de frente se reconoce como un TV (por tipo, sin marca ni modelo): pantalla de vidrio oscuro dentro de un bisel fino con filete metálico, mentón abajo con una placa lisa y el LED de encendido, y pie de dos patas en \"V\" plateadas. Atrás: la joroba, rejillas y zona de puertos.",
+   "caja": [
+    100,
+    66.2685,
+    6.12
+   ]
+  },
+  "pantalla_panel": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv monitor",
+   "descripcion": "Panel de televisor o monitor: vidrio con marco metálico fino; atrás, chapa con nervios y tornillos, placa T-con con sus cables planos, las placas de los drivers arriba con sus flex y la etiqueta.",
+   "caja": [
+    100,
+    58,
+    2.3049
+   ]
+  },
+  "placa_carga": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Placa de celular (o placa hija de notebook): PCB en L, blindajes metálicos, conectores board-to-board, componentes chicos y agujeros de montaje.",
+   "caja": [
+    6,
+    0.215,
+    11.2
+   ]
+  },
+  "placa@televisor": {
+   "familia": "alineacion_demo",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Placa principal de audio/video: SoC, memorias, blindaje de sintonizador y puertos de señal. Genérica para distintas marcas, no de un televisor exacto.",
+   "caja": [
+    16,
+    1.16,
+    10.25
+   ]
+  },
+  "bandeja_papel@laser": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser",
+   "descripcion": "Cassette extraíble de papel: piso, paredes, guías laterales y asa frontal.",
+   "caja": [
+    33,
+    4.7,
+    30.55
+   ]
+  },
+  "bandeja_papel@tinta": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora tinta inkjet",
+   "descripcion": "Bandeja abierta para alimentación de tinta: papel, guías ajustables y extensión.",
+   "caja": [
+    30,
+    1.8,
+    20.5
+   ]
+  },
+  "placa@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Placa digital de control: procesador, memoria, USB, flex y agujeros de montaje.",
+   "caja": [
+    12,
+    1.21,
+    9.25
+   ]
+  },
+  "fuente@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "libre",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Fuente conmutada: PCB, transformador aislado, capacitores, disipador y conectores.",
+   "caja": [
+    12,
+    2.575,
+    7
+   ]
+  },
+  "ventilador_fuente@impresora": {
+   "familia": "impresoras_demo",
+   "ajuste": "redondo:xz",
+   "equipos": "impresora laser tinta inkjet",
+   "descripcion": "Ventilador axial de impresora: marco cuadrado, aspas, motor y fijaciones.",
+   "caja": [
+    6,
+    1.6,
+    6
    ]
   }
  }

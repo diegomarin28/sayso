@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
-import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto } from "../../shared";
+import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
 import { evaluarRiesgo } from "../safety/riesgos";
 import { normalizar } from "../intake/chapa";
 
@@ -13,6 +13,7 @@ import { normalizar } from "../intake/chapa";
  *   ADVERTENCIA|Desconectá la batería antes de tocar la placa.
  *   VISTA|explosionada|Vista explosionada general con la lista de piezas
  *   VISTA|interior|Equipo dado vuelta sin la tapa inferior
+ *   FORMA|redonda
  *
  * Las citas NO las escribe el modelo: las pone la API (`citations`) con el texto
  * literal del PDF y su página. Por eso un paso con cita de página es VERIFICADO.
@@ -79,6 +80,9 @@ export type ClaseVista = "explosionada" | "interior";
  */
 export type Vistas = Record<ClaseVista, number | null>;
 
+/** Un tramo del procedimiento que la fuente no trae (línea FALTA): el código lo busca y completa la guía. */
+export type Faltante = { procedimiento: string; /** Cuántos PASO había antes de la línea: ahí va lo que se complete. */ despuesDe: number };
+
 export type Contenido = {
   piezas: Pieza[];
   pasos: PasoReparacion[];
@@ -86,7 +90,18 @@ export type Contenido = {
   advertencias: string[];
   vistas: Vistas;
   descartadas: string[];
+  faltantes: Faltante[];
+  /** Forma de la pantalla del modelo (línea FORMA), para los tipos que tienen más de una (#246). */
+  formaPantalla?: NonNullable<KnowledgePack["formaPantalla"]>;
 };
+
+/** "FORMA|redonda" o "FORMA|cuadrada" (tolera mayúsculas, "circular" y "rectangular"). */
+function formaDe(campo: string | undefined): Contenido["formaPantalla"] {
+  const c = normalizar(campo ?? "");
+  if (/^(REDOND|CIRCUL)/.test(c)) return "redonda";
+  if (/^(CUADRAD|RECTANG)/.test(c)) return "cuadrada";
+  return undefined;
+}
 
 /** "VISTA|explosionada|…" o "VISTA|interior|…" (tolera mayúsculas y tildes). */
 function claseVista(campo: string | undefined): ClaseVista | null {
@@ -117,7 +132,7 @@ function esIngles(fragmento: string): boolean {
 
 export function enCastellano(texto: string): string {
   // Cortes posibles: negritas, fin de frase, dos puntos, punto y coma, o una palabra pegada a otra en mayúscula.
-  const marcado = texto.replace(/\*\*/g, "\u0000").replace(/([.:;!?])(?:\s+|(?=[A-ZÁÉÍÓÚÑ¿¡]))/g, "$1\u0000").replace(/([a-záéíóúñ])([A-Z][a-z])/g, "$1\u0000$2");
+  const marcado = texto.replace(/\*\*/g, "\u0000").replace(/([.:;!?])(?:\s+|(?=[A-ZÁÉÍÓÚÑ¿¡]))/g, "$1\u0000").replace(/(^|[^A-Za-zÁÉÍÓÚÑáéíóúñ])([a-záéíóúñ]{3,})([A-Z][a-z])/g, "$1$2\u0000$3");
   const partes = marcado.split("\u0000");
   const primeraInglesa = partes.findIndex((p, i) => i > 0 && esIngles(p));
   const queda = (primeraInglesa === -1 ? partes : partes.slice(0, primeraInglesa)).join(" ");
@@ -136,6 +151,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
     advertencias: [],
     vistas: { explosionada: null, interior: null },
     descartadas: [],
+    faltantes: [],
   };
   const idsPiezas = new Set<string>();
 
@@ -196,6 +212,14 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       const pagina = l.citas.find((c) => c.type === "page_location");
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
       else r.descartadas.push(l.texto);
+    } else if (tipo === "FORMA") {
+      // La primera que se entiende; una forma que no es ninguna de las dos se descarta.
+      const forma = formaDe(campos[1]);
+      if (forma && !r.formaPantalla) r.formaPantalla = forma;
+      else r.descartadas.push(l.texto);
+    } else if (tipo === "FALTA" && campos[1]) {
+      const procedimiento = enCastellano(campos.slice(1).join(" ")) || campos.slice(1).join(" ");
+      r.faltantes.push({ procedimiento: procedimiento.slice(0, 200), despuesDe: r.pasos.length });
     } else if (tipo === "ADVERTENCIA" && campos[1]) {
       const aviso = enCastellano(campos.slice(1).join(" | "));
       if (aviso && !NOTA_DE_FUENTES.test(aviso)) r.advertencias.push(aviso);

@@ -1,0 +1,45 @@
+{
+  "tablet": {
+    "nuevas": [
+      "marco@tablet",
+      "tapa_trasera@tablet",
+      "pantalla@tablet",
+      "bateria@tablet"
+    ],
+    "reutilizadas": [
+      "placa",
+      "camara",
+      "tornillo"
+    ],
+    "variantes": [
+      {
+        "escala": 1,
+        "ancho_cm": 17.5,
+        "largo_cm": 25
+      },
+      {
+        "escala": 1.22,
+        "ancho_cm": 21.35,
+        "largo_cm": 30.5
+      }
+    ],
+    "ejes_glb": {
+      "frente": "Y positivo",
+      "ancho": "X",
+      "largo": "Z"
+    },
+    "ids_del_plano": [
+      "marco",
+      "tapa_trasera",
+      "pantalla",
+      "bateria",
+      "placa",
+      "camara",
+      "tornillo_1",
+      "tornillo_2",
+      "tornillo_3",
+      "tornillo_4"
+    ],
+    "integracion_pendiente": "#233: apertura y cámara del visor/generador, sin código en este PR"
+  }
+}

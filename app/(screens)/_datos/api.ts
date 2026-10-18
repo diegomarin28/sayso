@@ -90,6 +90,10 @@ const RespEntender = conEventos({
   caso: Caso,
   /** Lo que contó la persona es de riesgo alto (gas, batería hinchada...): mostrar antes de seguir. */
   bloqueo: z.object({ clases: z.array(z.string()), derivacion: z.string().optional() }).optional(),
+  /** false: no se entendió qué equipo es o qué le pasa; la pantalla vuelve a preguntar (#260). */
+  claro: z.boolean().optional(),
+  /** Pregunta corta para pedir lo que falta (solo si `claro` es false). */
+  repregunta: z.string().optional(),
 });
 export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 
@@ -97,9 +101,11 @@ export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 export async function entenderSintoma(texto: string): Promise<z.infer<typeof RespEntender>> {
   if (USAR_FIXTURE) {
     await esperar(1800); // lo suficiente para ver la carga de "entender"
-    const { clase, tipoEquipo } = entenderSimulado(texto);
+    const { clase, tipoEquipo, claro, repregunta } = entenderSimulado(texto);
     return RespEntender.parse({
       tipoEquipo,
+      claro,
+      ...(repregunta ? { repregunta } : {}),
       caso: {
         id: crypto.randomUUID(),
         clase,
@@ -135,6 +141,8 @@ export async function evaluarFoto(
   tipo: PedidoDeFoto["tipo"],
   imagen: ImagenB64,
   intento: number,
+  /** Lo que se le pidió a la persona: el validador juzga contra esto (#229). */
+  instruccion?: string,
 ): Promise<z.infer<typeof RespCalidad>> {
   if (USAR_FIXTURE) {
     // La primera foto de la etiqueta sale "movida", como en el fixture.
@@ -150,7 +158,7 @@ export async function evaluarFoto(
       },
     });
   }
-  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen }, RespCalidad);
+  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen, ...(instruccion ? { instruccion } : {}) }, RespCalidad);
 }
 
 /**
@@ -234,6 +242,8 @@ const RespKnowledge = conEventos({
   paginaVistaInterior: z.number().nullable().default(null),
   /** Página del manual → URL del PNG (vista interior y páginas citadas; nunca fotos de la persona). */
   imagenesPaginas: z.record(z.string(), z.string()).default({}),
+  /** URL del paso de la guía → foto (guías con fotos, ej. iFixit): "Ver la foto del paso" (#176). */
+  fotosPasos: z.record(z.string(), z.string()).default({}),
   vistaInterior: z
     .object({ url: z.string(), pagina: z.number(), estado: z.enum(["VERIFICADO", "NO_VERIFICADO"]) })
     .nullable()
@@ -301,6 +311,8 @@ export function generarPlano(
         manualUrl: preparado.manualUrl,
         paginasVistaExplosionada: preparado.paginasVistaExplosionada,
         paginaVistaInterior: preparado.paginaVistaInterior,
+        // Sin manual, el 3D ubica las piezas mirando las fotos de la guía con el equipo abierto (#235).
+        fotosPasos: Object.keys(preparado.fotosPasos ?? {}).length ? preparado.fotosPasos : undefined,
       },
       RespPlano,
     ),

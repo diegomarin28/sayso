@@ -1,4 +1,5 @@
-import type { OrigenDato3D, PiezaPlano, PlanoDePiezas } from "../../shared";
+import { vistaEnImagen, type OrigenDato3D, type PiezaPlano, type PlanoDePiezas } from "../../shared";
+import { ES_TAPA_DE_PANTALLA } from "../../lib/planogenerator/cubiertas";
 
 /**
  * Cuánto se puede confiar en cada ubicación del 3D (ver `OrigenDato3D` en shared/).
@@ -9,17 +10,20 @@ import type { OrigenDato3D, PiezaPlano, PlanoDePiezas } from "../../shared";
 /**
  * Las piezas genéricas: las que el esqueleto del tipo suma y el pack del caso no nombra (origen "plantilla" y
  * fuera del pack, ver `seguirPlantilla`). El visor las pinta en gris. Sin pack (lab), ninguna.
+ * La tapa de pantalla de una notebook y su panel no (`conTapaDePantalla`): no son una pieza de adentro que el
+ * manual no nombró, son lo que la hace reconocible; en gris, la pantalla no se leía como pantalla.
  */
 export function piezasGenericas(plano: PlanoDePiezas, piezasDelPack?: ReadonlyArray<{ id: string }>): Set<string> {
   if (!piezasDelPack?.length) return new Set();
   const delPack = new Set(piezasDelPack.map((p) => p.id));
-  return new Set(plano.piezas.filter((p) => p.origen === "plantilla" && !delPack.has(p.pieza)).map((p) => p.pieza));
+  const deLaTapaDePantalla = (p: PiezaPlano) => ES_TAPA_DE_PANTALLA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.padre ?? "");
+  return new Set(plano.piezas.filter((p) => p.origen === "plantilla" && !delPack.has(p.pieza) && !deLaTapaDePantalla(p)).map((p) => p.pieza));
 }
 
 export type ResumenOrigen = Record<OrigenDato3D | "sinDato", number> & { medidasEstimadas: boolean };
 
 export function resumenOrigen(plano: PlanoDePiezas): ResumenOrigen {
-  const r: ResumenOrigen = { manual: 0, estimada: 0, plantilla: 0, sinDato: 0, medidasEstimadas: false };
+  const r: ResumenOrigen = { manual: 0, foto: 0, estimada: 0, plantilla: 0, sinDato: 0, medidasEstimadas: false };
   for (const p of plano.piezas) r[p.origen ?? "sinDato"]++;
   r.medidasEstimadas = !plano.medidas || plano.medidas.ancho !== "manual" || plano.medidas.prof !== "manual";
   return r;
@@ -27,15 +31,16 @@ export function resumenOrigen(plano: PlanoDePiezas): ResumenOrigen {
 
 /** Todas las piezas y las medidas salen del manual. */
 export function todoDelManual(r: ResumenOrigen): boolean {
-  return r.manual > 0 && r.estimada + r.plantilla + r.sinDato === 0 && !r.medidasEstimadas;
+  return r.manual > 0 && r.foto + r.estimada + r.plantilla + r.sinDato === 0 && !r.medidasEstimadas;
 }
 
-/** Ej. "3 del manual · 2 estimadas · 1 genérica". */
+/** Ej. "3 del manual · 2 con fotos · 2 estimadas · 1 genérica". */
 export function textoResumen(r: ResumenOrigen): string {
   if (todoDelManual(r)) return "Todo ubicado con el manual";
-  if (r.manual + r.estimada + r.plantilla === 0) return "Ubicaciones sin verificar";
+  if (r.manual + r.foto + r.estimada + r.plantilla === 0) return "Ubicaciones sin verificar";
   const partes = [
     r.manual && `${r.manual} del manual`,
+    r.foto && `${r.foto} con fotos del interior`,
     r.estimada && `${r.estimada} ${r.estimada === 1 ? "estimada" : "estimadas"}`,
     r.plantilla && `${r.plantilla} ${r.plantilla === 1 ? "genérica" : "genéricas"}`,
     r.sinDato && `${r.sinDato} sin verificar`,
@@ -43,11 +48,31 @@ export function textoResumen(r: ResumenOrigen): string {
   return partes.join(" · ");
 }
 
-const NOMBRE: Record<OrigenDato3D, string> = { manual: "Manual", estimada: "Estimada", plantilla: "Genérica" };
+const NOMBRE: Record<OrigenDato3D, string> = { manual: "Manual", foto: "Foto del interior", estimada: "Estimada", plantilla: "Genérica" };
 
-/** Ej. "Manual · HMM p. 54", "Estimada · p. 12", "Genérica", "Sin verificar". */
+/**
+ * Lo que dice la etiqueta de una pieza en el 3D, debajo del nombre: solo si la ubicación sale del manual
+ * ("Manual · HMM p. 54") o de una foto del interior ("Foto del interior · ifixit.com"); si es estimada o genérica, nada (#209: "sin verificar" se repetía hasta 5 veces
+ * por pantalla). Esa incertidumbre se dice una vez: el punto y el panel del ícono del 3D (`textoResumen`)
+ * y el contorno punteado de cada pieza.
+ */
+export function textoEtiquetaPieza(p: Pick<PiezaPlano, "origen" | "cita">): string | null {
+  return vistaEnImagen(p.origen) ? textoOrigenPieza(p) : null;
+}
+
+/** Ej. "Manual · HMM p. 54", "Foto del interior · ifixit.com", "Estimada · p. 12", "Genérica", "Sin verificar". */
 export function textoOrigenPieza(p: Pick<PiezaPlano, "origen" | "cita">): string {
   if (!p.origen) return "Sin verificar";
+  if (p.origen === "foto") return p.cita?.url ? `${NOMBRE.foto} · ${dominio(p.cita.url)}` : NOMBRE.foto;
   const donde = p.cita?.pagina ? `${p.origen === "manual" ? `${p.cita.doc} ` : ""}p. ${p.cita.pagina}` : "";
   return donde ? `${NOMBRE[p.origen]} · ${donde}` : NOMBRE[p.origen];
+}
+
+/** "www.ifixit.com/Guide/…" → "ifixit.com". */
+function dominio(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }

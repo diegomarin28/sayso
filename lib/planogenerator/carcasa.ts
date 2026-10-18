@@ -1,5 +1,5 @@
-import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
-import { ES_TAPA } from "./cubiertas";
+import { vistaEnImagen, type PiezaPlano, type PlanoDePiezas, type Vec3 } from "../../shared";
+import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
 import { pararPlano } from "./orientacion";
 import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
 
@@ -87,7 +87,14 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
   if (!notebook) {
     const grosor = Math.max(espesor, techo() - piso);
     piezas = piezas.map((p) => {
-      if (p.pieza === "base") return { ...p, pieza: id, pos: [p.pos[0], piso + grosor / 2, p.pos[2]] as Vec3, dim: [p.dim[0], grosor, p.dim[2]] as Vec3 };
+      if (p.pieza === "base")
+        return {
+          ...p,
+          pieza: id,
+          pos: [p.pos[0], piso + grosor / 2, p.pos[2]] as Vec3,
+          dim: [p.dim[0], grosor, p.dim[2]] as Vec3,
+          ...(raizTipo.formaBiblioteca ? { formaBiblioteca: raizTipo.formaBiblioteca } : {}),
+        };
       return p.padre === "base" ? { ...p, padre: id } : p;
     });
   }
@@ -101,7 +108,9 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
  * la guía la saca. Va sobre el plano ya terminado (último paso de `terminarPlano`), así envuelve las piezas
  * donde quedaron, al generar, al leer de la caché y con el esqueleto solo:
  * - una tapa que envuelve al equipo (consola, router: sin carcasa propia) envuelve todo lo que hay;
- * - una chapa fina (la trasera del celular, la inferior de la notebook) va arriba de todo, del tamaño de la carcasa.
+ * - una chapa fina (la trasera del celular, la inferior de la notebook) va del lado donde la pone el esqueleto,
+ *   del tamaño de la carcasa: arriba de todo en un celular o una notebook (se los mira por atrás), abajo de todo
+ *   en un reloj (el dorso; arriba se ve la pantalla, que dice si es cuadrado o redondo).
  */
 export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): PlanoDePiezas {
   const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => ES_TAPA.test(p.pieza));
@@ -113,7 +122,13 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   const piezas = plano.piezas;
   const piso = Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2));
   const techo = Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));
-  const base = { pieza: nombre, forma: tapa.forma, padre: raiz.pieza, origen: "plantilla" as const };
+  const base = {
+    pieza: nombre,
+    forma: tapa.forma,
+    padre: raiz.pieza,
+    origen: "plantilla" as const,
+    ...(tapa.formaBiblioteca ? { formaBiblioteca: tapa.formaBiblioteca } : {}),
+  };
 
   if (envuelve(tapa, plantilla.plano)) {
     const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
@@ -125,11 +140,48 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   const raizTipo = plantilla.plano.piezas.find((p) => !p.padre) ?? plantilla.plano.piezas[0];
   const escala = [raiz.dim[0] / raizTipo.dim[0], 1, raiz.dim[2] / raizTipo.dim[2]];
   const alto = tapa.dim[1];
+  const abajo = tapa.pos[1] < raizTipo.pos[1];
   const nueva: PiezaPlano = {
     ...base,
     dim: [tapa.dim[0] * escala[0], alto, tapa.dim[2] * escala[2]],
-    pos: [raiz.pos[0], techo + alto / 2, raiz.pos[2]],
+    pos: [raiz.pos[0], abajo ? piso - alto / 2 : techo + alto / 2, raiz.pos[2]],
     pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
   };
   return { ...plano, piezas: [...piezas, nueva] };
+}
+
+/**
+ * La tapa de pantalla de una notebook (#232), si el tipo la tiene y el plano no: cerrada sobre la cara del
+ * teclado, del ancho y lo hondo de la carcasa, con la bisagra atrás; el visor la abre cuando mira por ese lado
+ * (`Lados.bisagra`). Con su panel: la pantalla que nombra el pack (si no salió de una página del manual) va
+ * adentro de la tapa. Como `conTapa`, sobre el plano terminado: al generar, al leer de la caché y con el
+ * esqueleto solo. Por TIPO, nunca por modelo.
+ */
+export function conTapaDePantalla(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): PlanoDePiezas {
+  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => ES_TAPA_DE_PANTALLA.test(p.pieza));
+  const raiz = plano.piezas.find((p) => !p.padre);
+  const raizTipo = plantilla.plano.piezas.find((p) => !p.padre);
+  if (!tapa || !raiz || !raizTipo || plano.piezas.some((p) => ES_TAPA_DE_PANTALLA.test(p.pieza))) return plano;
+  const hijos = plantilla.plano.piezas.filter((p) => p.padre === tapa.pieza);
+  const delPack = new Map(plano.piezas.map((p) => [p.pieza, p]));
+  const queda = (id: string) => vistaEnImagen(delPack.get(id)?.origen);
+  // Pegada a la cara de ese lado del equipo, como en el esqueleto (las teclas sobresalen de la carcasa).
+  const abajo = tapa.pos[1] < raizTipo.pos[1];
+  const cara = (piezas: PiezaPlano[]) =>
+    abajo ? Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2)) : Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));
+  const deLaTapa = new Set([tapa.pieza, ...hijos.map((p) => p.pieza)]);
+  const dy = cara(plano.piezas.filter((p) => !deLaTapa.has(p.pieza) || queda(p.pieza))) - cara(plantilla.plano.piezas.filter((p) => !deLaTapa.has(p.pieza)));
+  const escala = [raiz.dim[0] / raizTipo.dim[0], 1, raiz.dim[2] / raizTipo.dim[2]];
+  const lugar = (t: PiezaPlano): PiezaPlano => ({
+    ...(delPack.get(t.pieza) ?? {}),
+    ...t,
+    pos: t.pos.map((v, i) => +(i === 1 ? v + dy : raiz.pos[i] + (v - raizTipo.pos[i]) * escala[i]).toFixed(3)) as Vec3,
+    dim: t.dim.map((v, i) => +(v * escala[i]).toFixed(3)) as Vec3,
+    pivote: t.pivote.map((v, i) => +(v * escala[i]).toFixed(3)) as Vec3,
+    padre: t.padre === raizTipo.pieza ? raiz.pieza : t.padre,
+    origen: "plantilla",
+  });
+  const nuevas = [tapa, ...hijos.filter((h) => !queda(h.pieza))].map(lugar);
+  const reemplazadas = new Set(nuevas.map((p) => p.pieza));
+  return { ...plano, piezas: [...plano.piezas.filter((p) => !reemplazadas.has(p.pieza)), ...nuevas] };
 }

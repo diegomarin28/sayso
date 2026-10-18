@@ -65,13 +65,26 @@ export const LIMITES = {
   manualWeb: { timeoutMs: 30_000, maxBytesHtml: 2_000_000, minSecciones: 8, maxSecciones: 8, maxCaracteresSeccion: 20_000 },
   /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
   extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400, maxMarcadoresLeidos: 3000, /** Datos de trazo desde los que una página sin imágenes cuenta como dibujo. */ minDatosDibujo: 20000 },
-  pack: { maxPasos: 12 },
+  /** Pasos de la guía del síntoma: chequeos sin abrir + desarme y reparación + armado y prueba. */
+  pack: {
+    maxPasos: 18,
+    /** Lo que la fuente no trae (líneas FALTA) se busca una vez en el mismo manual y, si no, en iFixit. */
+    completarFaltantes: true,
+    /** Cuántas partes que faltan se piden juntas, y cuántos pasos se pueden sumar por encima de maxPasos. */
+    maxFaltantes: 3,
+    maxPasosCompletados: 8,
+  },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
-  guiaPublica: { busquedas: 4, continuaciones: 3, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
-  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,02–0,04 por pregunta). Apagada hasta que la apruebe Diego. */ busquedaWeb: false, busquedasPorPregunta: 2 },
+  /**
+   * Guía pública por búsqueda web (sin manual ni iFixit): UNA búsqueda por caso, contando las continuaciones, y
+   * no se paga otra continuación si ya se gastó `maxUsd` (#256: el iPad mini 6 hizo 4 búsquedas y costó US$ 0,12;
+   * con buscar el manual, ~US$ 0,02, el caso queda debajo de US$ 0,10).
+   */
+  guiaPublica: { busquedas: 1, continuaciones: 3, maxUsd: 0.05, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
+  chat: { maxTokensPack: 1500, /** Primera respuesta: la guía completa del síntoma (hasta 18 pasos explicados). */ maxTokensGuia: 6000, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,01–0,02 por pregunta). Prendida por decisión de Diego (#206). */ busquedaWeb: true, /** Una búsqueda por pregunta (#256). */ busquedasPorPregunta: 1 },
 } as const;
 
 // ---------- Costo ----------

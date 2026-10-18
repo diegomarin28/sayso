@@ -1,0 +1,39 @@
+{
+  "familia": "alineacion_demo",
+  "por_tipo": {
+    "celular": {
+      "camara_trasera": "camara@modulo",
+      "camara_frontal": "camara",
+      "placa_carga": "placa_carga",
+      "bateria": "bateria@celular",
+      "placa_madre": "placa_madre@celular",
+      "pantalla": "pantalla",
+      "marco": "marco",
+      "tapa_trasera": "tapa_trasera",
+      "conector_carga": "conector@usb_c"
+    },
+    "televisor": {
+      "carcasa_televisor": "carcasa_televisor",
+      "pantalla_panel": "pantalla_panel",
+      "placa_control": "placa@televisor",
+      "fuente": "fuente",
+      "retroiluminacion": "retroiluminacion",
+      "tira_led": "tira_led",
+      "parlante": "parlante",
+      "placa_tcon": "placa_tcon",
+      "soporte": "soporte_monitor"
+    }
+  },
+  "variantes": {
+    "celular": [
+      1,
+      1.12
+    ],
+    "televisor_pulgadas": [
+      46,
+      32
+    ]
+  },
+  "pendiente_visor": "Asignar formaBiblioteca placa@televisor a placa_control de TV. Agregar al plano T-con, soporte y tornillos si faltan; los assets ya existen. No seleccionar por marca o modelo.",
+  "nota": "conector@usb_c es ejemplo; conector@lightning se reutiliza si el pack indica Lightning. No imponer USB-C a todos los celulares."
+}

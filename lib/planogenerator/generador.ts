@@ -17,10 +17,12 @@ import {
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
-import { ajustarPlanoAlTipo, conTapa, FACTOR_ALTO_DUDOSO } from "./carcasa";
+import { ajustarPlanoAlTipo, conTapa, conTapaDePantalla, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import {
   caraTipica,
   elegirPlantilla,
+  conRaizDeLaForma,
+  marcarFormaEstimada,
   planoDesdePlantillaDeTipo,
   proporcionDeLaCara,
   propuestaDePlantillaDeTipo,
@@ -29,8 +31,11 @@ import {
 import type { ManualRecortado } from "./recorte";
 import { palabras } from "./biblioteca";
 import { ES_TAPA } from "./cubiertas";
-import { acotarMedidas, seguirPlantilla } from "./seguir-plantilla";
+import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
+import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
+import { ubicarTeclas } from "./teclas";
+import { sinPisarLoVisto } from "./lugar-libre";
 
 /**
  * B4 — Generador del plano 3D desde el manual.
@@ -73,6 +78,8 @@ export const PropuestaPlano = z.object({
   base_prof_cm: z.number().nullable(),
   /** De dónde salen las medidas. Sin dato se toman como estimadas (ver medidas.ts). */
   medidas_fuente: z.enum(["manual", "estimada"]).nullable().optional(),
+  /** Con fotos del interior: por dónde se abrió el equipo en las fotos ("frente": sin la pantalla; "atras": sin la tapa). */
+  vista_fotos: z.enum(["frente", "atras"]).nullable().optional(),
   piezas: z.array(PiezaPropuesta),
 });
 export type PropuestaPlano = z.infer<typeof PropuestaPlano>;
@@ -115,6 +122,11 @@ export type EntradaGenerador = {
   imagenes?: ImagenEntrada[];
   /** Número de página de cada imagen (para que la IA cite). */
   paginas?: number[];
+  /**
+   * Las `imagenes` no son del manual: son fotos públicas del interior de este modelo (#235, ver `fotos.ts`).
+   * `urls[i]` es la página de donde salió la imagen i + 1. Lo que la IA ve en ellas queda con origen "foto".
+   */
+  fotos?: FuenteFotos;
   /**
    * El manual completo ya subido a la Files API (lo devuelve /api/knowledge). La IA lo lee
    * directo: no hace falta renderizar páginas. Las páginas de la vista explosionada las
@@ -172,7 +184,9 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     .filter((p) => !ES_ESTRUCTURA.has(p.id))
     .map((p) => `- ${p.id}: ${p.nombre}. Ubicación según el manual: ${p.ubicacion}.${p.etiquetaManual ? ` N.º en el diagrama: ${p.etiquetaManual}.` : ""}`)
     .join("\n");
-  const paginas = entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
+  const paginas = entrada.fotos
+    ? `Las imágenes NO son del manual: son ${entrada.imagenes?.length ?? 0} fotos del interior de este modelo, numeradas desde 1. En "pagina" poné el número de la foto donde ves la pieza (null si no la ves). Las fotos no dan medidas: "medidas_fuente" va "estimada". Ubicá las piezas con el equipo derecho (la parte de arriba del equipo arriba) aunque la foto esté girada. No ubiques la carcasa, el marco, la pantalla ni las tapas (en las fotos están corridas o a medio sacar): de eso se encarga el sistema. En "vista_fotos" decí por dónde está abierto el equipo en las fotos: "frente" si se sacó la pantalla o el frente, "atras" si se sacó la tapa trasera o inferior.`
+    : entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
   const { recorte } = entrada;
   const manual = recorte ? undefined : entrada.manual;
   const guiaManual = recorte
@@ -214,7 +228,8 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
       };
       // Un modelo pedido a mano (batería) se mide solo; si no, el barato escala al más capaz si hace falta.
       if (entrada.modelo) propuesta = await pedirJson(PropuestaPlano, pedido, llamar);
-      else ({ resultado: propuesta, escalada } = await pedirJsonConEscalada(PropuestaPlano, pedido, llamar, (p) => revisarPropuesta(p, kp, camino)));
+      // Con fotos no se escala: una foto muestra parte del equipo, el modelo más capaz no vería más.
+      else ({ resultado: propuesta, escalada } = await pedirJsonConEscalada(PropuestaPlano, pedido, llamar, (p) => (entrada.fotos ? null : revisarPropuesta(p, kp, camino))));
     }
     const modeloFinal = escalada ? ESCALADA.hacia : modelo;
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
@@ -222,10 +237,16 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // como planta y después parado (ver carcasa.ts).
     const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
     const avisosCara: string[] = [];
+    if (entrada.fotos) {
+      // La envoltura (pantalla, marco, tapas) no sale de las fotos: la pone el esqueleto del tipo, en su cara.
+      propuesta = { ...propuesta, piezas: propuesta.piezas.filter((p) => !ENVOLTURA_EN_FOTOS.test(p.pieza)) };
+      if (tipo) propuesta = delLadoDeLaPlanta(propuesta, tipo, avisosCara);
+    }
     // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
-    const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
+    const visto = entrada.fotos ? conOrigenFoto(armado.plano, entrada.fotos) : armado.plano;
+    const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(visto, tipo) : visto, kp, tipo);
     const avisoEscalada = escalada ? [`El cartógrafo pasó a ${modeloFinal} porque ${TEXTO_ESCALADA[escalada]}.`] : [];
     const avisos = [...avisoEscalada, ...avisosCara, ...armado.avisos, ...sueltas.avisos];
     return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo: modeloFinal, escalada, propuesta };
@@ -306,6 +327,23 @@ export function conAltoDeLaCara(propuesta: PropuestaPlano, plantilla: PlantillaD
       : `${alto} cm no puede ser el alto de ${plantilla.nombre} de ${ancho} cm de ancho (parece la profundidad): se estima en ${nuevo} cm.`,
   );
   return { ...propuesta, base_prof_cm: nuevo, medidas_fuente: "estimada" };
+}
+
+/**
+ * La planta del plano se mira desde arriba (+y). En los equipos acostados con la tapa arriba (celular, tablet,
+ * notebook dada vuelta) eso es mirarlos por atrás; con la tapa abajo (reloj), por el frente. Si las fotos
+ * muestran el equipo abierto por el otro lado (un iPad se abre por la pantalla), izquierda y derecha están
+ * espejadas: se da vuelta x. Por el tipo (dónde pone la tapa su esqueleto), nunca por el modelo.
+ */
+export function delLadoDeLaPlanta(propuesta: PropuestaPlano, tipo: PlantillaDeEquipo, avisos: string[]): PropuestaPlano {
+  if (tipo.parado || !propuesta.vista_fotos) return propuesta;
+  const raiz = tipo.plano.piezas.find((p) => !p.padre);
+  const tapa = tipo.plano.piezas.find((p) => ES_TAPA.test(p.pieza));
+  if (!raiz || !tapa) return propuesta;
+  const planta = tapa.pos[1] > raiz.pos[1] ? "atras" : "frente";
+  if (propuesta.vista_fotos === planta) return propuesta;
+  avisos.push(`Las fotos muestran el equipo abierto por ${propuesta.vista_fotos === "frente" ? "el frente" : "atrás"}: se espejan para ubicar las piezas.`);
+  return { ...propuesta, piezas: propuesta.piezas.map((p) => ({ ...p, x: -p.x })) };
 }
 
 /** La primera hoja del recorte es la vista interior; las demás, vistas explosionadas (ver `paginasRecorte`). */
@@ -507,20 +545,49 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
 
 /**
  * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
+ * 0. lo que un esqueleto anterior sumó y el tipo de hoy no tiene se saca (`sinEsqueletoAjeno`: planos de la caché);
+ * 0b. si el tipo tiene varias formas de pantalla, la caja toma la forma de hoy (`conRaizDeLaForma`: planos de la caché);
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
+ * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
+ * 2c. lo que no se vio no queda encima de lo que se vio en el manual o en una foto: va al lugar libre más cercano (`sinPisarLoVisto`);
  * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
- * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado.
+ * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado; y la tapa de pantalla de una notebook (`conTapaDePantalla`);
+ * 5. si el tipo tiene varias formas de pantalla y el pack no trajo la suya, la común queda estimada (`marcarFormaEstimada`).
  * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
-  const seguido = tipo ? seguirPlantilla(plano, ids, tipo) : { plano, avisos: [] };
+  const limpio = tipo ? sinEsqueletoAjeno(conRaizDeLaForma(plano, tipo), ids, tipo) : { plano, avisos: [] };
+  const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
+  const teclas = ubicarTeclas(acotado.plano, ids);
+  const libre = sinPisarLoVisto(teclas.plano);
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
-  const sueltas = sumarSueltas(acotado.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  return { plano: tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
+  const sueltas = sumarSueltas(libre.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
+  const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
+  return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...libre.avisos, ...sueltas.avisos, ...forma.avisos] };
+}
+
+/** De dónde salieron las fotos del interior (#235): un nombre para la cita y la página de cada foto. */
+export type FuenteFotos = { doc: string; urls: string[] };
+
+/**
+ * Lo que la IA vio en una foto (no en el manual) queda con origen "foto" y la URL de la página en la cita; las
+ * medidas no salen de una foto, así que la carcasa y sus medidas quedan estimadas.
+ */
+export function conOrigenFoto(plano: PlanoDePiezas, fotos: FuenteFotos): PlanoDePiezas {
+  return {
+    ...plano,
+    ...(plano.medidas ? { medidas: { ancho: "estimada" as const, prof: "estimada" as const } } : {}),
+    piezas: plano.piezas.map((p): PiezaPlano => {
+      if (!p.padre) return p.origen === "manual" ? { ...p, origen: "estimada" } : p;
+      if (p.origen !== "manual") return p;
+      const url = p.cita?.pagina ? fotos.urls[p.cita.pagina - 1] : undefined;
+      return { ...p, origen: "foto", cita: { doc: fotos.doc, ...(url ? { url } : {}), estado: "NO_VERIFICABLE" } };
+    }),
+  };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */

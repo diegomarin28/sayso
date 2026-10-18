@@ -13,12 +13,23 @@ import type { Coreografia, Riesgo } from "../../shared";
 /** Cómo se alimenta el equipo: decide qué patrones aplican y qué aviso se da. */
 export type Alimentacion = "bateria" | "red" | "desconocida";
 
+/**
+ * Tipos que deciden aunque nombren otro equipo: el cargador "de celular" va a 220 V (y tiene capacitores);
+ * el joystick "de PlayStation" y la consola portátil, a batería; el control remoto "de la tele", a pilas.
+ */
+const PRIMERO: [RegExp, Alimentacion][] = [
+  [/\b(cargador|fuente de alimentacion|transformador|adaptador de corriente)\b/, "red"],
+  [/\b(joystick|gamepad|dualsense|dualshock|joy-?con|(mando|control|joystick) de (la )?(play|playstation|xbox|consola|nintendo))\b/, "bateria"],
+  [/\b(consola portatil|nintendo switch|steam deck)\b/, "bateria"],
+  // Pilas comunes: ni batería de litio ni 220 V.
+  [/\bcontrol remoto\b/, "desconocida"],
+];
 /** Tipos de equipo que funcionan a batería (la carga es por un cargador aparte). */
 const A_BATERIA =
-  /\b(celular|telefono|smartphone|iphone|android|tablet|ipad|notebook|laptop|portatil|macbook|chromebook|netbook|smartwatch|reloj inteligente|auriculares?|airpods|parlante (bluetooth|portatil)|kindle|e-?reader|consola portatil)\b/;
+  /\b(celular|telefono|smartphone|iphone|android|tablet|tableta|ipad|notebook|laptop|portatil|macbook|chromebook|netbook|smartwatch|reloj inteligente|auricular(es)?|airpods|earbuds|parlante (bluetooth|portatil|inalambrico)|kindle|e-?reader|bateria externa|power ?bank|camara (de accion|deportiva)|gopro|afeitadora|maquina de afeitar|maquinita|rasuradora|trimmer|cepillo (de dientes )?electrico|aspiradora (robot|inalambrica)|robot aspirador[a]?)\b/;
 /** Tipos de equipo que se enchufan a la red (220 V). */
 const A_RED =
-  /\b(heladera|freezer|refrigerador|nevera|lavarropas|lavadora|lavavajillas|secarropas|aire|split|acondicionado|microondas|horno|cocina electrica|tv|televisor|tele|smart tv|monitor|pc de escritorio|computadora de escritorio|impresora|cafetera|licuadora|ventilador de pie|estufa|caloventor|termotanque|calefon electrico|plancha|secador|equipo de musica)\b/;
+  /\b(heladera|freezer|refrigerador|nevera|lavarropas|lavarropa|lavasecarropas|lavadora|lavavajillas|secarropas|aire|split|acondicionado|microondas|horno|cocina electrica|tv|televisor|tele|smart tv|monitor|pc de escritorio|computadora de escritorio|impresora|cafetera|licuadora|ventilador de pie|estufa|caloventor|termotanque|calefon electrico|plancha|planchita|alisadora|buclera|secador|equipo de musica|router|modem|consola|playstation|xbox|freidora|air fryer|tostadora|pava electrica)\b/;
 
 /**
  * Alimentación a partir del tipo de equipo de la recepción (ej. "heladera no frost") o, si no
@@ -28,6 +39,8 @@ export function alimentacionDe(equipo?: string | null, texto = ""): Alimentacion
   for (const t of [equipo ?? "", texto]) {
     const n = normalizar(t);
     if (!n.trim()) continue;
+    const primero = PRIMERO.find(([re]) => re.test(n));
+    if (primero) return primero[1];
     const bateria = A_BATERIA.test(n);
     const red = A_RED.test(n);
     if (bateria !== red) return bateria ? "bateria" : "red";
@@ -142,12 +155,28 @@ export function normalizar(texto: string): string {
 /** "no abras la batería" o "nunca pinches la batería" es una advertencia, no un pedido. */
 const NEGACION = /\b(no|nunca|jamas|evita|evitar|sin)\b[^.;,]{0,12}$/;
 
+/**
+ * Precaución de la IA, no un pedido: "Si la batería está hinchada, no la uses" o "revisá si la batería está
+ * hinchada; si lo está, tomá precauciones". Las tres cosas a la vez: el riesgo está dentro de un "si…", hay una
+ * indicación que protege y no hay ninguna acción peligrosa. Si falta una, se bloquea como siempre.
+ */
+const CONDICIONAL = /\bsi\b/;
+const PROTEGE = /\b(no (la|lo|las|los) (uses|toques|cargues|uses mas|enchufes)|no se vuelve a usar|deja(la|lo)? de usar|precaucion|cuidado|reemplaz\w*|autorizad\w*|tecnico)/;
+const ACCION_PELIGROSA =
+  /\b(pinch|perfor|cort|romp|aplast|dobl|calent|sold|desinfl|puente|descarg|presion|palanc|cuchill|destornill)\w*|\b(abr|sac|quit|extra|despeg)(a|ar|i|ir|e|er)?(la|las|lo|los)\b|\babr\w* (la |las )?(bateria|celdas?|fuente|capacitor)/;
+
+/** `inicio` y `fin`: lo que encontró el patrón; el "si" tiene que estar ahí o hasta 30 letras antes. */
+function esPrecaucion(texto: string, inicio: number, fin: number): boolean {
+  return CONDICIONAL.test(texto.slice(Math.max(0, inicio - 30), fin)) && PROTEGE.test(texto) && !ACCION_PELIGROSA.test(texto);
+}
+
 function coincide(texto: string, patron: RegExp, ignorarNegadas: boolean): boolean {
   const re = new RegExp(patron.source, patron.flags.includes("g") ? patron.flags : patron.flags + "g");
   for (const m of texto.matchAll(re)) {
     if (!ignorarNegadas) return true;
     const antes = texto.slice(Math.max(0, m.index - 20), m.index);
-    if (!NEGACION.test(antes)) return true;
+    // Solo en texto de la IA: lo negado ("no abras la batería") y las precauciones no son pedidos.
+    if (!NEGACION.test(antes) && !esPrecaucion(texto, m.index, m.index + m[0].length)) return true;
   }
   return false;
 }

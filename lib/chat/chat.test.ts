@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { Coreografia, knowledgePackEjemplo } from "../../shared";
-import type { EnviarMensaje, StreamIA } from "../ia/claude";
+import { LIMITES, type EnviarMensaje, type StreamIA } from "../ia/claude";
 import { leerManual } from "../knowledge/lector";
 import { conversar, type EventoChat } from "./conversar";
 import { parsearMarca, Segmentador } from "./segmentos";
@@ -267,18 +267,41 @@ describe("tipo de equipo en la seguridad del chat (#112)", () => {
   });
 });
 
-describe("guía del síntoma explicada (#160)", () => {
-  it("la primera respuesta pide 4 a 8 pasos explicados; las de seguimiento no", async () => {
-    const sistemas: string[] = [];
+describe("primera respuesta: la guía completa del síntoma", () => {
+  it("pide TODOS los pasos del pack, por partes y con lugar de sobra; las de seguimiento siguen cortas", async () => {
+    const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
     const stream: StreamIA = async function* (p) {
-      sistemas.push(JSON.stringify(p.system));
+      pedidos.push(p);
       yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Ok. " } } as Anthropic.RawMessageStreamEvent;
     };
     const base5 = { casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null };
     await todos(conversar({ ...base5, pregunta: "No enciende" }, stream));
     await todos(conversar({ ...base5, historial: [{ rol: "experto", texto: "Revisá el cargador." }], pregunta: "¿Y si no anda?" }, stream));
-    expect(sistemas[0]).toMatch(/de 4 a 8 pasos/);
-    expect(sistemas[0]).toMatch(/qué vas a ver o escuchar/);
-    expect(sistemas[1]).not.toMatch(/de 4 a 8 pasos/);
+    const [primera, seguimiento] = pedidos.map((p) => JSON.stringify(p.system));
+    expect(primera).toMatch(/Recorré TODOS los pasos del knowledge pack, en orden, sin saltear, resumir ni juntar pasos/);
+    expect(primera).toMatch(/descartar problemas que no son del equipo, sin abrirlo/);
+    expect(primera).toMatch(/toca abrirlo/);
+    expect(primera).toMatch(/cerrarlo y probarlo/);
+    expect(primera).not.toMatch(/de 4 a 8 pasos/);
+    // Solo pide el manual si el pack no tiene ningún paso (si no, recorre el pack).
+    expect(primera).toMatch(/no tiene NINGÚN paso/);
+    expect(seguimiento).not.toMatch(/Recorré TODOS los pasos/);
+    expect(seguimiento).toMatch(/NO alcanza para responder bien/);
+    expect(pedidos[0].max_tokens).toBe(LIMITES.chat.maxTokensGuia);
+    expect(pedidos[1].max_tokens).toBe(LIMITES.chat.maxTokensPack);
+  });
+
+  it("recorre un pack largo entero: ninguna frase se corta en la primera respuesta", async () => {
+    const pasos = Array.from({ length: 18 }, (_, i) => `[[paso:${(i % knowledgePackEjemplo.pasos.length) + 1}]] Paso ${i + 1} explicado con lo que vas a ver. `);
+    const ev = await todos(conversar({ casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null, pregunta: "No enciende" }, streamFalso(pasos)));
+    expect(ev.filter((e) => e.tipo === "paso")).toHaveLength(18);
+  });
+});
+
+describe("¿primera respuesta o pregunta suelta?", () => {
+  it("el síntoma de la recepción no es una pregunta; una pregunta sin historial sí", async () => {
+    const { esPregunta } = await import("./conversar");
+    for (const s of ["Se apaga sola a los diez minutos.", "Cuando se enciende, la pantalla parpadea.", "Está muy caliente y hace ruido.", "Hay manchas en las hojas.", "Escucha un zumbido."]) expect(esPregunta(s)).toBe(false);
+    for (const p of ["¿Dónde está el SSD?", "dónde está el ssd", "Cómo cambio la batería", "Qué es la chapa", "Puedo usar otro cargador"]) expect(esPregunta(p)).toBe(true);
   });
 });

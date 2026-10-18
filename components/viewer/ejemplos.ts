@@ -6,7 +6,10 @@ import type { Coreografia, PlanoDePiezas } from "../../shared";
  * están las coreografías de ejemplo.
  */
 import {
+  conRaizVisible,
   planoAuriculares,
+  planoAuricularesVincha,
+  raizVisibleVincha,
   planoCargador,
   planoControlRemoto,
   planoPowerBank,
@@ -18,6 +21,7 @@ import {
   planoMouse,
   planoParlanteBluetooth,
   planoReloj,
+  planoRelojRedondo,
   planoTablet,
   planoTeclado,
   planoAire,
@@ -35,6 +39,7 @@ import {
   planoTelevisor,
 } from "../../lib/planogenerator/plantillas/equipos";
 import { planoNotebookBase } from "../../lib/planogenerator/plantillas/notebook";
+import { PLANTILLAS_POR_TIPO } from "../../lib/planogenerator/plantillas/por-tipo";
 
 export {
   planoAuriculares,
@@ -172,11 +177,48 @@ export const coreografiaNotebook: Coreografia[] = [
   ]),
 ];
 
+const sinOpcionales = (plano: PlanoDePiezas, tipo: string): PlanoDePiezas => {
+  const opcionales = PLANTILLAS_POR_TIPO.find((p) => p.id === tipo)?.opcionales ?? [];
+  return { ...plano, piezas: plano.piezas.filter((p) => !opcionales.includes(p.pieza)) };
+};
+
+/**
+ * Tablet en la mano (la pantalla hacia la cámara): se abre por adelante. Los pasos solo dicen qué hacer; el
+ * desarme en vivo (`conDesarme`) despega la pantalla y desvanece los tornillos, como en la guía (#233).
+ */
+export const coreografiaTablet: Coreografia[] = [
+  paso(1, "Despegá la pantalla con la púa, de a poco, empezando por un costado.", [
+    { t: "camara", objetivo: "pantalla", zoom: 1.1 },
+    { t: "resaltar", pieza: "pantalla" },
+  ]),
+  paso(2, "Adentro, la batería ocupa casi todo: está pegada, no la dobles.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.2 },
+    { t: "resaltar", pieza: "bateria" },
+  ]),
+  paso(3, "Abajo está el conector de carga.", [
+    { t: "camara", objetivo: "conector_carga", zoom: 1.5 },
+    { t: "resaltar", pieza: "conector_carga" },
+  ]),
+];
+
+/**
+ * El mismo celular abierto por adelante (como los que se abren despegando la pantalla): el paso no resalta
+ * nada, así que lo de adentro se ve porque la carcasa se vuelve translúcida (no por los rayos X).
+ */
+export const coreografiaCelularPorPantalla: Coreografia[] = [
+  paso(1, "Despegá la pantalla con calor y una púa, de a poco.", [{ t: "camara", objetivo: "general" }]),
+  paso(2, "Adentro, la batería ocupa el medio: está pegada, no la dobles.", [
+    { t: "camara", objetivo: "bateria", zoom: 1.2 },
+    { t: "resaltar", pieza: "bateria" },
+  ]),
+];
+
 /** Ejemplos del lab, con el tipo de equipo que diría la recepción y, si hay, una coreografía. */
 export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string; coreografia?: Coreografia[] }> = {
   heladera: { plano: planoHeladera, tipoEquipo: "heladera", coreografia: coreografiaHeladera },
   aire: { plano: planoAire, tipoEquipo: "aire acondicionado split" },
   celular: { plano: planoCelular, tipoEquipo: "celular", coreografia: coreografiaCelular },
+  celular_por_pantalla: { plano: planoCelular, tipoEquipo: "celular", coreografia: coreografiaCelularPorPantalla },
   televisor: { plano: planoTelevisor, tipoEquipo: "televisor", coreografia: coreografiaTelevisor },
   notebook: { plano: planoNotebookBase, tipoEquipo: "notebook", coreografia: coreografiaNotebook },
   lavarropas: { plano: planoLavarropas, tipoEquipo: "lavarropas" },
@@ -185,12 +227,15 @@ export const EJEMPLOS: Record<string, { plano: PlanoDePiezas; tipoEquipo: string
   secador: { plano: planoSecador, tipoEquipo: "secador de pelo" },
   impresora: { plano: planoImpresora, tipoEquipo: "impresora" },
   impresora_laser: { plano: planoImpresoraLaser, tipoEquipo: "impresora láser", coreografia: coreografiaImpresoraLaser },
-  consola: { plano: planoConsola, tipoEquipo: "consola de videojuegos" },
+  // Como la arma la app con un pack que no nombra el mando: sin las piezas opcionales (los joysticks al costado).
+  consola: { plano: sinOpcionales(planoConsola, "consola"), tipoEquipo: "consola de videojuegos" },
   router: { plano: planoRouter, tipoEquipo: "router" },
   cafetera: { plano: planoCafetera, tipoEquipo: "cafetera" },
-  tablet: { plano: planoTablet, tipoEquipo: "tablet" },
+  tablet: { plano: planoTablet, tipoEquipo: "tablet", coreografia: coreografiaTablet },
   auriculares: { plano: planoAuriculares, tipoEquipo: "auriculares" },
+  auriculares_vincha: { plano: conRaizVisible(planoAuricularesVincha, raizVisibleVincha), tipoEquipo: "auriculares de vincha" },
   reloj: { plano: planoReloj, tipoEquipo: "reloj inteligente" },
+  reloj_redondo: { plano: planoRelojRedondo, tipoEquipo: "reloj inteligente" },
   mouse: { plano: planoMouse, tipoEquipo: "mouse" },
   teclado: { plano: planoTeclado, tipoEquipo: "teclado" },
   joystick: { plano: planoMando, tipoEquipo: "joystick" },

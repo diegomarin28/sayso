@@ -4,7 +4,7 @@
  * - Antes de prender efectos se mira qué soporta el WebGL del equipo: el bloom y la luz de
  *   entorno necesitan buffers de color flotante; en celulares, sin multisampling (en iOS el
  *   posprocesado con multisampling se come la memoria del lienzo y se pierde el contexto).
- * - Al arrancar, un vigía mira la imagen (una grilla de puntos) unos segundos. Si queda negra o plana (solo
+ * - Al arrancar, un vigía mira la imagen (filas y columnas enteras, `lineasVigia`) unos segundos. Si queda negra o plana (solo
  *   el color de fondo: `esPlana`), se apaga
  *   lo que puede fallar (primero los efectos, después la luz de entorno); si igual sigue negro,
  *   el visor muestra un aviso en vez del lienzo vacío.
@@ -63,23 +63,30 @@ export function soporteDe(gl: WebGLRenderingContext | WebGL2RenderingContext, ma
   };
 }
 
+/** Un tramo de la imagen que lee el vigía (coordenadas de `readPixels`: esquina inferior izquierda, ancho y alto). */
+export type TramoVigia = { x: number; y: number; ancho: number; alto: number };
+
 /**
- * Dónde mira el vigía: una grilla de `n`×`n` cuadrados de `lado` px repartidos por la imagen (no solo
- * el centro: un televisor de frente tiene en el centro su pantalla apagada, que es negra de verdad).
- * Devuelve la esquina inferior izquierda de cada cuadrado (coordenadas de `readPixels`).
+ * Dónde mira el vigía: `n` filas y `n` columnas enteras de 1 px, repartidas por la imagen. No puntos
+ * sueltos: un televisor o un monitor de frente es casi todo pantalla negra, y una grilla de puntos caía
+ * toda en el vidrio oscuro o en el fondo (#238: «No pude mostrar el 3D» en una TV). Una línea que cruza
+ * el equipo pasa siempre por algún borde de pieza, el bisel o el pie, que no son del color del fondo.
  */
-export function puntosVigia(ancho: number, alto: number, lado: number, n = 3): Array<[number, number]> {
-  const puntos: Array<[number, number]> = [];
-  for (let i = 0; i < n; i++)
-    for (let j = 0; j < n; j++) {
-      const cx = (ancho * (i + 1)) / (n + 1);
-      const cy = (alto * (j + 1)) / (n + 1);
-      puntos.push([
-        Math.min(Math.max(0, Math.floor(cx - lado / 2)), Math.max(0, ancho - lado)),
-        Math.min(Math.max(0, Math.floor(cy - lado / 2)), Math.max(0, alto - lado)),
-      ]);
-    }
-  return puntos;
+export function lineasVigia(ancho: number, alto: number, n = 9): TramoVigia[] {
+  const tramos: TramoVigia[] = [];
+  for (let i = 1; i <= n; i++) {
+    tramos.push({ x: 0, y: Math.min(alto - 1, Math.floor((alto * i) / (n + 1))), ancho, alto: 1 });
+    tramos.push({ x: Math.min(ancho - 1, Math.floor((ancho * i) / (n + 1))), y: 0, ancho: 1, alto });
+  }
+  return tramos.filter((t) => t.ancho > 0 && t.alto > 0);
+}
+
+/**
+ * La imagen está plana (el 3D no se dibujó o se rompió) si TODOS los tramos de `lineasVigia` son del color de
+ * `referencia` (una esquina: el fondo, o negro si se rompió todo). `leer` devuelve los RGBA de un tramo.
+ */
+export function imagenPlana(leer: (t: TramoVigia) => Uint8Array, ancho: number, alto: number, referencia: ArrayLike<number>, n = 9): boolean {
+  return lineasVigia(ancho, alto, n).every((t) => esPlana(leer(t), referencia));
 }
 
 /**

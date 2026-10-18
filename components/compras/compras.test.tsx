@@ -136,6 +136,17 @@ describe("<VistaCompras>", () => {
     expect(hrefSeguro("https://tienda.uy/x")).toBe("https://tienda.uy/x");
   });
 
+  it("dentro del panel de repuestos (la pieza ya está arriba) no repite ni el nombre ni el id (#208)", () => {
+    for (const pedido of [CONECTOR, BATERIA, { pieza: "tornillos_ventilador", modelo: "NB-15" }, { pieza: "base", nombre: "Carcasa inferior", modelo: "NB-15" }]) {
+      const h = renderToStaticMarkup(<VistaCompras estado={{ t: "inicio" }} pedido={pedido} mostrarPieza={false} onBuscar={() => {}} />);
+      expect(h).not.toContain("Dónde comprar el repuesto");
+      expect(h).toContain("Ver dónde comprar esta pieza");
+      expect(h).not.toContain(pedido.pieza);
+      if (pedido.nombre) expect(h).not.toContain(pedido.nombre);
+      expect(h).not.toContain("N.º de parte");
+    }
+  });
+
   it("el título dice el nombre de la pieza, no el id del pack", () => {
     const h = html({ t: "inicio" }, CONECTOR);
     expect(h).toContain("Conector Lightning de carga");
@@ -179,5 +190,20 @@ describe("<VistaCompras>", () => {
   it("antes de buscar, un botón; buscando, un aviso (cada búsqueda cuesta: no arranca sola)", () => {
     expect(html({ t: "inicio" })).toContain("Ver dónde comprar esta pieza");
     expect(html({ t: "buscando" })).toContain('aria-busy="true"');
+  });
+});
+
+describe("<Herramientas> (#230)", () => {
+  it("lista las herramientas de los pasos con qué es cada una y la búsqueda en Mercado Libre; sin herramientas, nada", async () => {
+    const { Herramientas } = await import("./Herramientas");
+    const h = renderToStaticMarkup(<Herramientas pasos={[{ texto: "Calentá el borde con el iOpener." }, { texto: "Pasá una púa por el borde." }]} />);
+    expect(h).toContain("Herramientas que necesitás");
+    expect(h).toContain("iOpener (bolsa térmica)");
+    expect(h).toContain("Es una bolsa con gel que se calienta en el microondas; sirve para ablandar el pegamento");
+    expect(h.match(/iOpener \(bolsa térmica\)/g)).toHaveLength(1); // el nombre una sola vez
+    expect(h).toContain('href="https://listado.mercadolibre.com.uy/iopener-bolsa-termica-reparacion-celular"');
+    expect(h).toContain("ferretería o en una casa de electrónica");
+    expect(h).not.toMatch(/<form|pagar ahora/i);
+    expect(renderToStaticMarkup(<Herramientas pasos={[{ texto: "Desenchufalo." }]} />)).toBe("");
   });
 });

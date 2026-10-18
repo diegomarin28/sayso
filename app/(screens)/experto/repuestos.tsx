@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
+import { Herramientas, OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
 import { piezasParaComprar } from "./piezas-compra";
@@ -174,6 +174,8 @@ export function Repuestos({
                 pieza={r.pieza}
                 // El nombre del pack ("Conector Lightning"): el título y la búsqueda lo usan, no el id (#195).
                 nombre={nombre(r.pieza)}
+                // El nombre y el N.º de parte ya están arriba: no se repiten debajo del título (#208).
+                mostrarPieza={false}
                 numeroParte={r.numeroParte}
                 modelo={modelo}
                 marca={ficha.marca.valor}
@@ -182,6 +184,8 @@ export function Repuestos({
               />
             </div>
           ))}
+          {/* Las herramientas que nombran los pasos, con qué es cada una y dónde conseguirla (#230). */}
+          <Herramientas pasos={pack.pasos} className="border-t border-borde pt-5" />
         </div>
       </div>
     </>

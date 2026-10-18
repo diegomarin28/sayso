@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { Coreografia, KnowledgePack } from "../../../shared";
 import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
 import type { EstadoControles } from "./reproducir";
@@ -19,6 +20,16 @@ export type MensajeChat = { rol: "persona"; texto: string; id: number } | { rol:
  * El texto, en 3 líneas con "ver más". Abajo, en una sola fila, los controles (con "Ver en el manual"
  * como ícono). Queda a la vista hasta el siguiente.
  */
+/** Cuántos puntos de paso entran junto al sello en un celular de 390 px. */
+const MAX_PUNTOS = 9;
+
+/** Los pasos que tienen punto: todos si entran; si no, una ventana de `max` que sigue al paso actual. */
+export function puntosVisibles(total: number, indice: number, max = MAX_PUNTOS): number[] {
+  const n = Math.min(total, max);
+  const desde = Math.min(Math.max(indice - Math.floor(n / 2), 0), total - n);
+  return Array.from({ length: n }, (_, i) => desde + i);
+}
+
 export function TarjetaPaso({
   c,
   indice,
@@ -57,7 +68,7 @@ export function TarjetaPaso({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <p className={`shrink-0 text-[11px] font-semibold tracking-widest uppercase ${bloqueo ? "text-peligro" : "text-acento"}`}>
             {bloqueo
               ? "Paso bloqueado"
@@ -70,8 +81,9 @@ export function TarjetaPaso({
         {total > 1 && (
           // El punto se ve chico, pero se toca en 44 px de alto: el botón es más grande que el punto.
           // En pantallas muy angostas (SE de 320 px) los puntos no entran con el sello: el título ya dice "Paso N de M".
-          <div className="-my-3.5 -mr-1 flex shrink items-center overflow-hidden max-[360px]:hidden" role="group" aria-label="Pasos">
-            {Array.from({ length: total }, (_, i) => (
+          // Con guías largas (30 o 40 pasos) se ve una ventana alrededor del paso actual: todos juntos tapaban el sello.
+          <div className="-my-3.5 -mr-1 flex min-w-0 items-center overflow-hidden max-[360px]:hidden" role="group" aria-label="Pasos">
+            {puntosVisibles(total, indice).map((i) => (
               <button
                 key={i}
                 type="button"
@@ -90,7 +102,16 @@ export function TarjetaPaso({
           </div>
         )}
       </div>
-      <p ref={medir} className={`mt-1 text-[15px] leading-snug font-medium ${entero ? "" : "line-clamp-3 [@media(max-height:600px)]:line-clamp-2"}`}>
+      {/* 3 líneas (2 en pantallas bajas) que se desvanecen abajo, sin "…": cortado justo después de un punto se
+          leía "...." (#231). El resto, con "ver más". */}
+      <p
+        ref={medir}
+        className={`mt-1 text-[15px] leading-snug font-medium ${
+          entero
+            ? ""
+            : `max-h-[4.125em] overflow-hidden [@media(max-height:600px)]:max-h-[2.75em] ${largo ? "[mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" : ""}`
+        }`}
+      >
         {c.dice.split(/\s+/).map((palabra, i) => (
           <Fragment key={i}>
             <span className="palabra" style={{ animationDelay: `${i * 40}ms` }}>
@@ -281,61 +302,132 @@ export function BotonIcono({ etiqueta, onClick, insignia, children }: { etiqueta
   );
 }
 
+/** La charla como texto, para copiarla o compartirla ("Vos: …" / "Experto: …", con la página citada). */
+export function chatComoTexto(mensajes: MensajeChat[]): string {
+  return mensajes
+    .map((m) => {
+      if (m.rol === "persona") return `Vos: ${m.texto}`;
+      const pagina = m.c.cita?.pagina ? ` (${m.c.cita.doc ?? "manual"}, p. ${m.c.cita.pagina})` : "";
+      return `Experto: ${m.c.dice}${pagina}`;
+    })
+    .join("\n\n");
+}
+
 /** "Conversación (n)": ícono con el número de preguntas en una insignia; abre la charla entera. */
 export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
   const [abierta, setAbierta] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  /** El modal sumó una entrada al historial: "atrás" la consume y cierra (no se va del experto). */
+  const conHistorial = useRef(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+
+  function abrir() {
+    setCopiado(false);
+    setAbierta(true);
+    window.history.pushState({ ...window.history.state, conversacion: true }, "");
+    conHistorial.current = true;
+  }
+  function cerrar() {
+    setAbierta(false);
+    if (conHistorial.current) {
+      conHistorial.current = false;
+      window.history.back(); // saca la entrada que sumó abrir()
+    }
+  }
+  useEffect(() => {
+    if (!abierta) return;
+    // Atrás (gesto o botón) y Escape cierran el modal.
+    const alVolver = () => {
+      conHistorial.current = false;
+      setAbierta(false);
+    };
+    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cerrar();
+    window.addEventListener("popstate", alVolver);
+    window.addEventListener("keydown", alTecla);
+    return () => {
+      window.removeEventListener("popstate", alVolver);
+      window.removeEventListener("keydown", alTecla);
+    };
+  }, [abierta]);
+
+  async function exportar() {
+    const texto = chatComoTexto(mensajes);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Conversación con el experto", text: texto });
+        return;
+      }
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+    } catch {
+      // Si la persona cancela la hoja de compartir, no pasa nada.
+    }
+  }
+
   if (!mensajes.length) return null;
   return (
     <>
-      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={() => setAbierta(true)} insignia={preguntas}>
+      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
         <Globo size={20} />
       </BotonIcono>
 
-      {abierta && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Conversación con el experto"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
-          onClick={() => setAbierta(false)}
-        >
+      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
+          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
+      {abierta &&
+        createPortal(
           <div
-            className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Conversación con el experto"
+            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
+            onClick={cerrar}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-borde px-5 py-4">
-              <p className="font-semibold">Conversación con el experto</p>
-              <button
-                type="button"
-                onClick={() => setAbierta(false)}
-                className="h-11 rounded-full border border-borde px-4 text-sm"
-              >
-                Cerrar
-              </button>
-            </div>
-            <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-              {mensajes.map((m) =>
-                m.rol === "persona" ? (
-                  <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
-                    {m.texto}
-                  </li>
-                ) : (
-                  <li
-                    key={m.id}
-                    className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
-                      m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
-                    }`}
+            <div
+              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-borde px-5 py-4">
+                <p className="min-w-0 font-semibold">Conversación con el experto</p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={exportar}
+                    className="h-11 rounded-full border border-borde px-4 text-sm"
                   >
-                    <p className="mb-1.5 leading-snug">{m.c.dice}</p>
-                    <EtiquetaCita c={m.c} />
-                  </li>
-                ),
-              )}
-            </ol>
-          </div>
-        </div>
-      )}
+                    {copiado ? "Copiado ✓" : "Compartir"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cerrar}
+                    className="h-11 rounded-full border border-borde px-4 text-sm"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+              <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                {mensajes.map((m) =>
+                  m.rol === "persona" ? (
+                    <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
+                      {m.texto}
+                    </li>
+                  ) : (
+                    <li
+                      key={m.id}
+                      className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
+                        m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
+                      }`}
+                    >
+                      <p className="mb-1.5 leading-snug">{m.c.dice}</p>
+                      <EtiquetaCita c={m.c} />
+                    </li>
+                  ),
+                )}
+              </ol>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

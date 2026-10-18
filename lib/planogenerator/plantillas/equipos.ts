@@ -1,4 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../../shared";
+import { tapaDePantalla } from "./notebook";
 
 /**
  * Plantillas genéricas POR TIPO de equipo: medidas típicas en cm, no de un modelo.
@@ -95,7 +96,8 @@ export const planoCelular: PlanoDePiezas = {
 /**
  * Notebook SIN ventilador y con la placa integrada (memoria y almacenamiento soldados): dada vuelta como la
  * genérica (la tapa de abajo arriba). Placa chica junto a la bisagra, batería de celdas pegadas que ocupa casi
- * todo, teclado y trackpad del otro lado, parlantes a los costados. No tiene ventilador, RAM ni SSD sueltos.
+ * todo, teclado y trackpad del otro lado (con la tapa de pantalla cerrada encima), parlantes a los costados.
+ * No tiene ventilador, RAM ni SSD sueltos.
  */
 export const planoNotebookSinVentilador: PlanoDePiezas = {
   modelo: "Notebook sin ventilador genérica (ejemplo del lab)",
@@ -105,14 +107,15 @@ export const planoNotebookSinVentilador: PlanoDePiezas = {
     ...hijos("base", [
       ["placa_madre", [18, 0.3, 6], [0, 0.7, -6.6]],
       ["bateria", [26, 0.6, 11], [0, 0.85, 3.6]],
-      ["teclado_notebook", [27, 0.3, 10], [0, 0.35, -4]],
-      ["trackpad", [12, 0.3, 7.5], [0, 0.35, 5.5]],
+      ["teclado_notebook", [27, 0.3, 10], [0, -0.7, -4]],
+      ["trackpad", [12, 0.3, 7.5], [0, -0.7, 5.5]],
       ["parlante_izquierdo", [2, 0.7, 8], [-13.6, 0.85, -1.5]],
       ["parlante_derecho", [2, 0.7, 8], [13.6, 0.85, -1.5]],
       ["conector_usb_c", [0.9, 0.35, 0.8], [-14.6, 0.75, -6.5]],
       ["cable_pantalla", [10, 0.1, 1], [0, 0.75, -10]],
       ["tapa_inferior", [30.4, 0.2, 21.2], [0, 1.45, 0]],
     ]),
+    ...tapaDePantalla([30.4, 21.2], -0.85),
   ],
 };
 
@@ -231,6 +234,8 @@ export const planoImpresora: PlanoDePiezas = {
       ["cartucho_tinta_negro", [4, 5.3, 3.6], [-8.5, 17.5, -5]],
       ["cartucho_tinta_color", [4, 5.3, 3.6], [-3.5, 17.5, -5]],
       ["rodillo_arrastre", [28, 2, 2], [0, 5, 2]],
+      // La de tinta también levanta la hoja de la bandeja con un rodillo de recogida (no es solo de las láser).
+      ["rodillo_recogida", [20, 1.6, 1.6], [0, 3.2, 7], "cilindro"],
       ["engranaje_arrastre", [0.7, 6, 6], [15, 5, 2]],
       ["motor_arrastre", [5, 4, 4], [18, 5, -4]],
       ["placa_control", [12, 1.5, 9], [10, 3, -14]],
@@ -269,16 +274,20 @@ export const planoImpresoraLaser: PlanoDePiezas = {
   ],
 };
 
-/** Consola de videojuegos sin carcasa (y un mando al lado): placa, blindaje, lectora, fuente y ventilador. */
-const placaConsola = pieza("placa_consola", [20, 1.2, 16.4], [-4, 0.6, 0]);
+/**
+ * Consola de videojuegos de mesa sin carcasa: placa, blindaje, lectora, fuente y ventilador. Todo arriba de la
+ * placa, que ocupa toda la planta (es la raíz: con ella se escala el esqueleto a la consola del plano; si algo
+ * quedara afuera, la consola se vería más ancha de lo que es). El mando no viene: es opcional (`OPCIONALES`).
+ */
+const placaConsola = pieza("placa_consola", [30, 1.2, 26], [0, 0.6, 0]);
 const cuerpoConsola = hijos("placa_consola", [
-  ["disipador", [8, 1, 8], [-6, 1.7, -1]],
-  ["blindaje_metalico", [22, 1.2, 20], [-4, 4, 0]],
-  ["unidad_optica", [14, 2.3, 14.7], [-4, 6.4, 0]],
-  ["fuente", [10, 3, 14], [13, 1.5, 0]],
-  ["ventilador", [8, 3, 8], [-17, 1.5, -5]],
-  ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -8.4]],
-  ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 8.4]],
+  ["disipador", [8, 1, 8], [-3, 1.7, 1]],
+  ["blindaje_metalico", [16, 1.2, 16], [-2, 4.4, 2]],
+  ["unidad_optica", [14, 2.3, 14.7], [-2, 6.2, 2]],
+  ["fuente", [8, 3, 14], [10, 2.7, 0]],
+  ["ventilador", [8, 2.4, 8], [-10, 2.4, -8]],
+  ["puerto_hdmi", [2, 0.8, 1.2], [2, 1.6, -12.4]],
+  ["conector_usb_a", [1.6, 0.75, 1.6], [-10, 1.6, 12.2]],
 ]);
 export const planoConsola: PlanoDePiezas = {
   modelo: "Consola genérica (ejemplo del lab)",
@@ -286,7 +295,7 @@ export const planoConsola: PlanoDePiezas = {
   piezas: [
     placaConsola,
     ...cuerpoConsola,
-    // Las piezas del mando van al costado, afuera de la tapa.
+    // Opcionales: solo si el pack nombra el mando (drift de un joystick). Van al costado, afuera de la tapa.
     ...hijos("placa_consola", [
       ["joystick_analogico_izquierdo", [2.5, 2.7, 2], [26, 1.4, 4]],
       ["joystick_analogico_derecho", [2.5, 2.7, 2], [33, 1.4, 6]],
@@ -345,6 +354,42 @@ export const planoCafetera: PlanoDePiezas = {
   ],
 };
 
+/**
+ * Auriculares de vincha (over-ear), acostados sobre la mesa y vistos desde arriba: las dos copas con sus
+ * almohadillas hacia abajo, unidas por la vincha atrás. Adentro de cada copa, el parlante (driver); la batería,
+ * la placa y el conector de carga en las copas. La raíz es la vincha: mide todo el equipo para escalar el
+ * esqueleto, pero se dibuja solo el arco de atrás (`raizVisibleVincha`, ver `raizVisible` en `por-tipo.ts`).
+ */
+export const planoAuricularesVincha: PlanoDePiezas = {
+  modelo: "Auriculares de vincha genéricos (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("diadema", [22, 4.5, 15.4], [0, 2.25, -1.85]),
+    ...hijos("diadema", [
+      ["deslizador_izquierdo", [1.4, 1, 6], [-8.6, 3.9, -5.6]],
+      ["deslizador_derecho", [1.4, 1, 6], [8.6, 3.9, -5.6]],
+      ["copa_izquierda", [7, 2.9, 8.6], [-7.5, 3.05, 1.5], "cilindro"],
+      ["copa_derecha", [7, 2.9, 8.6], [7.5, 3.05, 1.5], "cilindro"],
+      ["almohadilla_copa_izquierda", [6.8, 1.6, 8.4], [-7.5, 0.8, 1.5], "cilindro"],
+      ["almohadilla_copa_derecha", [6.8, 1.6, 8.4], [7.5, 0.8, 1.5], "cilindro"],
+      ["parlante_izquierdo", [4, 0.6, 4], [-7.5, 1.9, 1.5], "cilindro"],
+      ["parlante_derecho", [4, 0.6, 4], [7.5, 1.9, 1.5], "cilindro"],
+      ["bateria", [3.2, 0.8, 2.4], [7.5, 3.4, 1.2]],
+      ["placa", [4, 0.2, 3.4], [-7.5, 3.7, 1.5]],
+      ["conector_carga", [0.9, 0.35, 0.5], [7.5, 3.1, 5.6]],
+      ["boton_encendido", [0.5, 0.4, 0.8], [-10.9, 3.1, 2.5]],
+    ]),
+  ],
+};
+
+export const raizVisibleVincha: Pick<PiezaPlano, "pos" | "dim"> = { dim: [15, 1.2, 2.6], pos: [0, 3.9, -8.2] };
+
+/** El plano como se ve: la raíz con su lugar y medidas visibles (para mostrar el esqueleto solo, en el lab). */
+export const conRaizVisible = (plano: PlanoDePiezas, visible: Pick<PiezaPlano, "pos" | "dim">): PlanoDePiezas => ({
+  ...plano,
+  piezas: plano.piezas.map((p) => (p.padre ? p : { ...p, ...visible })),
+});
+
 // ---------- Cosas de todos los días (lo que más probablemente traiga alguien en la mano) ----------
 
 /** Auriculares inalámbricos con su estuche de carga (abierto, los dos auriculares adentro). */
@@ -368,21 +413,47 @@ export const planoAuriculares: PlanoDePiezas = {
   ],
 };
 
-/** Reloj inteligente acostado, con la pantalla hacia arriba y la correa. */
+/**
+ * Reloj inteligente de pantalla CUADRADA, acostado, con la pantalla hacia arriba y la correa. La caja, la
+ * pantalla y el dorso usan las formas cuadradas de reloj de la biblioteca (`formaBiblioteca`, #247).
+ */
 export const planoReloj: PlanoDePiezas = {
   modelo: "Reloj inteligente genérico (ejemplo)",
   unidades: "cm",
   piezas: [
-    pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]),
+    { ...pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]), formaBiblioteca: "caja_reloj@cuadrada" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0], "caja", "caja_reloj"), formaBiblioteca: "pantalla@reloj_cuadrada" },
     ...hijos("caja_reloj", [
-      ["pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0]],
       ["placa", [3.4, 0.2, 3.6], [0, 1.15, 0]],
       ["bateria", [3, 0.4, 2.8], [0, 0.85, 0.3]],
       ["motor_vibracion", [2.2, 0.3, 0.9], [0, 0.6, -1.7]],
       ["sensor_optico", [2.4, 0.4, 3], [0, 0.35, 0]],
       ["bobina_carga", [3.2, 0.2, 3.2], [0, 0.45, 0]],
-      ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
+      ["tapa_reloj", [4.2, 0.15, 5], [0, 0.075, 0]],
       ["corona_reloj", [1.2, 0.7, 0.7], [2.7, 1.1, -0.6]],
+      ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
+    ]).map((p) => (p.pieza === "tapa_reloj" ? { ...p, formaBiblioteca: "tapa_reloj@cuadrada" } : p)),
+  ],
+};
+
+/**
+ * Reloj de pantalla REDONDA (el mismo tipo, otra forma de pantalla: dato del pack, `formaPantalla`): caja y
+ * pantalla circulares, con las formas redondas de reloj de la biblioteca (#247).
+ */
+export const planoRelojRedondo: PlanoDePiezas = {
+  modelo: "Reloj inteligente redondo genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    { ...pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"), formaBiblioteca: "caja_reloj@redonda" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"), formaBiblioteca: "pantalla@reloj_redonda" },
+    ...hijos("caja_reloj", [
+      ["placa", [3.2, 0.2, 3.2], [0, 1.15, 0]],
+      ["bateria", [2.8, 0.4, 2.6], [0, 0.85, 0.2]],
+      ["motor_vibracion", [2, 0.3, 0.9], [0, 0.6, -1.5]],
+      ["sensor_optico", [2.4, 0.4, 2.4], [0, 0.35, 0]],
+      ["bobina_carga", [3.2, 0.2, 3.2], [0, 0.45, 0]],
+      ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
+      ["corona_reloj", [1.2, 0.7, 0.7], [2.8, 1.1, -0.4]],
       ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
     ]),
   ],

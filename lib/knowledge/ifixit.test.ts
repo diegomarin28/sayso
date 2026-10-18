@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarGuiaIfixit, equipoIfixit, fotosPorPaso, guiaIfixit, LICENCIA, manualWebDeIfixit, ordenarGuias, type GuiaEnLista } from "./ifixit";
+import { buscarGuiaIfixit, equipoIfixit, fotosPorPaso, guiaIfixit, LICENCIA, manualWebDeIfixit, nombresParaIfixit, ordenarGuias, type GuiaEnLista } from "./ifixit";
 
 /**
  * Una API de iFixit simulada (sin red): la búsqueda pide TODAS las palabras (en el título o la descripción),
@@ -23,6 +23,8 @@ const CATEGORIAS: Record<string, { description: string; guides: { guideid: numbe
     ],
   },
   "Tele 55C722": { description: "A 55 inch TV.", guides: [{ guideid: 30, title: "Tele 55C722 Screen Replacement", subject: "Screen", type: "replacement" }] },
+  "Tablo 6": { description: "The sixth generation Tablo.", guides: [{ guideid: 50, title: "Tablo 6 Battery Replacement", subject: "Battery", type: "replacement" }] },
+  "Tablo Air 4": { description: "Tablo Air, 4th generation.", guides: [{ guideid: 51, title: "Tablo Air 4 Battery Replacement", subject: "Battery", type: "replacement" }] },
   Mando: {
     description: "Game controller.",
     guides: [
@@ -100,6 +102,25 @@ describe("equipoIfixit: el equipo exacto, o nada", () => {
     }) as unknown as typeof fetch;
     expect(await equipoIfixit("Fono X21", caida)).toBeNull();
     expect(await buscarGuiaIfixit("Fono X21", "batería", caida)).toBeNull();
+  });
+});
+
+describe("tablets como las nombra la ficha (#256): la generación y el código de la etiqueta", () => {
+  it.each([
+    ["MarcaT Tablo (6.ª generación)", "Tablo 6"],
+    ["MarcaT Tablo (6th generation) T2567", "Tablo 6"],
+    ["MarcaT Tablo Air (4.ª generación) A2316", "Tablo Air 4"],
+    ["MarcaT Tablo Air 4 SM-T500", "Tablo Air 4"],
+  ])("«%s» → %s en iFixit (gratis, sin búsqueda web)", async (dicho, titulo) => {
+    expect((await equipoIfixit(dicho, api()))?.titulo).toBe(titulo);
+    expect((await buscarGuiaIfixit(dicho, "no prende", api()))?.id).toBeGreaterThan(0);
+  });
+
+  it("nombresParaIfixit: sacar el código solo si queda un número de modelo («Epson L3250» no queda en «Epson»)", () => {
+    expect(nombresParaIfixit("Apple iPad mini (6.ª generación) A2567")).toEqual(["Apple iPad mini (6.ª generación) A2567", "Apple iPad mini 6 A2567", "Apple iPad mini 6"]);
+    expect(nombresParaIfixit("Epson L3250")).toEqual(["Epson L3250"]);
+    expect(nombresParaIfixit("LG 43UQ7500PSF")).toEqual(["LG 43UQ7500PSF"]);
+    expect(nombresParaIfixit("Samsung RT38K5930S8")).toEqual(["Samsung RT38K5930S8"]);
   });
 });
 

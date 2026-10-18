@@ -6,6 +6,8 @@ import { cachePlanosEnMemoria, cubrePack, type CachePlanos, type PlanoGuardado }
 import { ajustarPlanoAlTipo } from "./carcasa";
 import { sumarDelManual } from "./completar";
 import { elegirPlantilla } from "./plantillas/por-tipo";
+import type { BuscarFotos } from "./fotos";
+import { fotosDeLaGuia, fotosDelInterior } from "./fotos-guia";
 import { ES_ESTRUCTURA, terminarPlano, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
 import { paginasRecorte, recortarManual } from "./recorte";
 
@@ -21,7 +23,8 @@ import { paginasRecorte, recortarManual } from "./recorte";
  * Para generarlo, si el bibliotecario encontró la vista interior, la IA lee solo esas páginas
  * (más la vista explosionada) en vez del manual entero. Si el recorte falla, lee el manual entero.
  */
-export type EntradaObtener = EntradaGenerador & { ficha?: Ficha; manualUrl?: string | null };
+/** `fotosPasos`: de /api/knowledge (URL del paso de la guía → foto). Sin manual, primero se miran esas fotos (#235). */
+export type EntradaObtener = EntradaGenerador & { ficha?: Ficha; manualUrl?: string | null; fotosPasos?: Record<string, string> };
 export type ResultadoObtener = Omit<ResultadoGenerador, "propuesta" | "camino" | "modelo"> &
   Partial<Pick<ResultadoGenerador, "camino" | "modelo">> & {
   desdeCache: boolean;
@@ -42,7 +45,7 @@ export function terminarGuardado(plano: PlanoDePiezas, kp: KnowledgePack, tipoEq
 
 export async function obtenerPlano(
   entrada: EntradaObtener,
-  deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch } = {},
+  deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch; buscarFotos?: BuscarFotos } = {},
 ): Promise<ResultadoObtener> {
   const cache = deps.cache ?? memoria;
   const marca = entrada.ficha?.marca.valor ?? null;
@@ -56,6 +59,10 @@ export async function obtenerPlano(
   let guardado: PlanoGuardado | null = null;
   if (clave) {
     guardado = await cache.get(clave);
+    // Un plano guardado sin nada visto (todo estimado, del texto) no tapa las fotos de la guía, que no cuestan
+    // nada: se rehace. Con la búsqueda web no (cada caso la volvería a pagar si no encuentra fotos).
+    const visto = guardado?.plano.piezas.some((p) => p.origen === "manual" || p.origen === "foto");
+    if (guardado && !visto && !entrada.manual && entrada.fotosPasos && fotosDelInterior(kp, entrada.fotosPasos).length) guardado = null;
     if (guardado && cubrePack(guardado, kp)) {
       const { plano, avisos } = terminar(guardado.plano);
       return { plano, avisos: [...guardado.avisos, ...avisos], origen: "ia", desdeCache: true, paginasLeidas: null };
@@ -80,7 +87,9 @@ export async function obtenerPlano(
   // es parte del prefijo de la caché de prompts.
   const titulo = entrada.manual?.titulo ?? kp.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
   const conTitulo = aGenerar.manual && titulo ? { ...aGenerar, manual: { ...aGenerar.manual, titulo } } : aGenerar;
-  const generado = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
+  const generado =
+    (!guardado && !recorte && !conManual && modelo ? await conFotos(conTitulo, { marca, modelo, clase: kp.clase }, deps) : null) ??
+    (await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar));
   const { camino, modelo: modeloIA } = generado;
   const paginasLeidas = recorte && generado.origen === "ia" ? recorte.paginas : null;
 
@@ -112,4 +121,26 @@ export async function obtenerPlano(
     });
   }
   return { plano, avisos, origen, camino, modelo: modeloIA, desdeCache: false, paginasLeidas };
+}
+
+/**
+ * Sin manual (ni recorte ni imágenes), antes de estimar: fotos públicas del interior de ese modelo (#235). Lo que
+ * la IA ve en ellas queda con origen "foto". Si no hay fotos, o falla cualquier cosa, o la IA no pudo con ellas,
+ * null: el plano se arma como siempre (estimado), nunca un error.
+ */
+async function conFotos(
+  entrada: EntradaObtener,
+  equipo: Parameters<BuscarFotos>[0],
+  deps: { llamar?: LlamarIA; enviar?: EnviarMensaje; buscarFotos?: BuscarFotos; descargar?: Fetch },
+): Promise<ResultadoGenerador | null> {
+  try {
+    // Primero las fotos de la guía que ya tenemos (gratis); si no hay, la búsqueda web.
+    const deLaGuia = entrada.fotosPasos ? await fotosDeLaGuia(entrada.knowledgePack, entrada.fotosPasos, deps.descargar) : null;
+    const fotos = deLaGuia ?? (deps.buscarFotos ? await deps.buscarFotos(equipo) : null);
+    if (!fotos?.imagenes.length) return null;
+    const r = await generarPlano({ ...entrada, imagenes: fotos.imagenes, paginas: undefined, fotos: fotos.fuente }, deps.llamar, deps.enviar);
+    return r.origen === "ia" ? { ...r, avisos: [`Sin vistas del manual: ubiqué las piezas con ${fotos.imagenes.length} fotos del interior (${fotos.fuente.doc}).`, ...r.avisos] } : null;
+  } catch {
+    return null;
+  }
 }

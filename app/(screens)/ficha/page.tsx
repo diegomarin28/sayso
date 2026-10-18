@@ -11,7 +11,7 @@ import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BarraAccion, BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la etiqueta, cada dato con su estado. */
 
@@ -26,9 +26,10 @@ const CAMPOS: { clave: ClaveCampo; etiqueta: string; ejemplo: string }[] = [
 
 /**
  * Lo que leyó la IA no queda confirmado hasta que la persona lo revisa (puede haber leído mal):
- * "confirmado" de la IA se muestra como "Leído" y cada dato pide "Correcto" o corregirlo.
+ * "confirmado" de la IA se muestra como "Leído": la persona lo confirma todo junto ("Confirmar
+ * todo", #228) y corrige con Editar solo el dato que esté mal (lo corregido queda confirmado).
  */
-const REVISADO = { texto: "Revisado por vos", clase: "text-confirmado border-confirmado/40 bg-confirmado/10" };
+const CORREGIDO = { texto: "Corregido por vos", clase: "text-confirmado border-confirmado/40 bg-confirmado/10" };
 
 const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
   confirmado: {
@@ -56,8 +57,6 @@ export default function FichaDelEquipo() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [faltaModelo, setFaltaModelo] = useState(false);
-  /** Los datos que la persona marcó como correctos (los que corrigió también cuentan como revisados). */
-  const [revisados, setRevisados] = useState<Set<ClaveCampo>>(new Set());
   // El 3D se empieza a bajar ya (#133): con el tipo de equipo alcanza para las formas.
   usePrecargaPiezas(tipoEquipo);
 
@@ -112,7 +111,8 @@ export default function FichaDelEquipo() {
     setError(null);
     // Confirmados = los que la persona marcó como correctos (lo corregido va en `correcciones`).
     const confirmados = CAMPOS.map((c) => c.clave).filter(
-      (c) => revisados.has(c) && !(c in correcciones) && ficha[c].valor,
+      // "Confirmar todo": lo que está a la vista y no corrigió (lo corregido va en `correcciones`).
+      (c) => !(c in correcciones) && ficha[c].valor,
     );
     try {
       const r = await confirmarFicha(ficha, confirmados, correcciones);
@@ -132,9 +132,6 @@ export default function FichaDelEquipo() {
     }
   }
 
-  const revisado = (c: ClaveCampo) => revisados.has(c) || c in correcciones;
-  /** Datos con valor que la persona todavía no revisó: hasta que no los revise, no se sigue. */
-  const sinRevisar = ficha ? CAMPOS.filter((c) => ficha[c.clave].valor && !revisado(c.clave)).length : 0;
   const sinModelo = !!ficha && !ficha.modelo.valor;
   /** De dónde salió lo leído: la etiqueta (o lo que se usó en su lugar) o la foto del equipo. */
   const deDonde = fotoEtiqueta ? "Esto leí en la etiqueta." : "No había etiqueta: esto saqué de la foto del equipo.";
@@ -146,8 +143,8 @@ export default function FichaDelEquipo() {
         ? fotoEtiqueta
           ? "Leyendo la etiqueta…"
           : "Mirando la foto del equipo…"
-        : sinRevisar > 0
-          ? `${deDonde} Revisá cada dato: puedo haber leído mal.`
+        : CAMPOS.some((c) => ficha[c.clave].valor && !(c.clave in correcciones))
+          ? `${deDonde} Revisalo: si algún dato está mal, tocalo y corregilo.`
           : `${deDonde} ¿Es tu equipo?`;
 
   return (
@@ -208,15 +205,16 @@ export default function FichaDelEquipo() {
             {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
               <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
             ))}
+            {/* El equipo que entendió la recepción (#290); la clase interna ("otro") solo si no hay. */}
             <p className="mb-3 font-mono text-xs tracking-[0.3em] text-texto-suave uppercase">
-              {ficha.clase}
+              {tipoEquipo?.trim() && tipoEquipo.trim().toLowerCase() !== "equipo" ? tipoEquipo.trim() : ficha.clase}
             </p>
             <dl className="flex flex-col gap-2">
               {CAMPOS.map(({ clave, etiqueta, ejemplo }) => {
                 const campo = ficha[clave];
                 const vacio = !campo.valor;
-                const ok = !vacio && revisado(clave);
-                const estilo = ok ? REVISADO : ESTILO_ESTADO[campo.estado];
+                const ok = !vacio && clave in correcciones;
+                const estilo = ok ? CORREGIDO : ESTILO_ESTADO[campo.estado];
                 return (
                   <div key={clave}>
                     <dt className="mb-1 flex items-center justify-between gap-2 text-xs text-texto-suave">
@@ -286,23 +284,11 @@ export default function FichaDelEquipo() {
                               "+ Completar"
                             ) : (
                               <>
-                                {/* Mientras falte revisarlo, solo el lápiz: deja lugar al dato y a "Correcto". */}
-                                <Lapiz /> {ok ? "Editar" : <span className="sr-only">Editar</span>}
+                                <Lapiz /> Editar
                               </>
                             )}
                           </span>
                         </button>
-                        {/* "Correcto": la persona confirma lo que leyó la IA (o lo corrige con Editar). */}
-                        {!vacio && !ok && (
-                          <button
-                            type="button"
-                            onClick={() => setRevisados((r) => new Set(r).add(clave))}
-                            aria-label={`${etiqueta} correcto`}
-                            className="flex min-h-12 shrink-0 items-center gap-1 rounded-xl border border-confirmado/60 bg-confirmado/15 px-2.5 text-sm font-semibold text-confirmado active:scale-95"
-                          >
-                            <Check size={16} /> Correcto
-                          </button>
-                        )}
                       </dd>
                     )}
                   </div>
@@ -316,12 +302,10 @@ export default function FichaDelEquipo() {
       {ficha && (
         <BarraAccion>
           <p className="text-center text-xs text-texto-suave">
-            {sinRevisar > 0
-              ? `Tocá «Correcto» en cada dato o corregilo (${sinRevisar} sin revisar).`
-              : "Lo que revisaste o escribiste queda como confirmado."}
+            Si un dato está mal, tocalo y corregilo. Lo que corregís queda confirmado.
           </p>
-          <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando || sinRevisar > 0}>
-            {enviando ? "Guardando…" : "Sí, es este"} <Flecha />
+          <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
+            {enviando ? "Guardando…" : "Confirmar todo"} <Flecha />
           </BotonPrincipal>
         </BarraAccion>
       )}

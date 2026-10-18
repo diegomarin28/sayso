@@ -170,6 +170,46 @@ describe("entender", () => {
   });
 });
 
+describe("entender: avisar cuando no entendió (#149)", () => {
+  it("un relato claro: claro y sin repregunta", async () => {
+    const r = await entender("mi heladera no enfría", falso({ clase: "otro", tipoEquipo: "heladera", sintoma: "No enfría.", confianza: "alta", claro: true, repregunta: "" }));
+    expect(r.claro).toBe(true);
+    expect(r.repregunta).toBeUndefined();
+  });
+
+  it("equipo claro con un síntoma sin sentido ('notebook dddd'): la IA dice que no está claro y qué preguntar", async () => {
+    const r = await entender(
+      "notebook dddd",
+      falso({ clase: "notebook", tipoEquipo: "notebook", sintoma: "dddd", confianza: "alta", claro: false, repregunta: "¿Qué le pasa a tu notebook?" }),
+    );
+    expect(r).toMatchObject({ claro: false, repregunta: "¿Qué le pasa a tu notebook?", tipoEquipo: "notebook" });
+  });
+
+  it("el código no confía en un 'claro' sin palabras de verdad ni equipo, y pone su propia pregunta", async () => {
+    const sinPalabras = await entender("dddd", falso({ clase: "notebook", tipoEquipo: "notebook", sintoma: "dddd", confianza: "alta", claro: true, repregunta: "" }));
+    expect(sinPalabras).toMatchObject({ claro: false, repregunta: "No te entendí bien. ¿Qué equipo es y qué le pasa?" });
+    const sinEquipo = await entender("no anda", falso({ clase: "otro", tipoEquipo: "equipo", sintoma: "No anda.", confianza: "media", claro: true, repregunta: "" }));
+    expect(sinEquipo.claro).toBe(false);
+  });
+
+  it("si la IA falla, no está claro (la pantalla vuelve a preguntar)", async () => {
+    const r = await entender("algo raro", falso("basura"));
+    expect(r.claro).toBe(false);
+    expect(r.repregunta).toBeTruthy();
+  });
+
+  it("un problema dicho con pocas palabras con un equipo sí es claro (el modelo viejo sin 'claro' también)", async () => {
+    const r = await entender("la tele no prende", falso({ clase: "otro", tipoEquipo: "televisor", sintoma: "No prende." }));
+    expect(r.claro).toBe(true);
+  });
+
+  it("una pregunta peligrosa se bloquea aunque no esté claro el resto", async () => {
+    const r = await entender("batería hinchada asdf", falso({ clase: "otro", tipoEquipo: "equipo", sintoma: "asdf", claro: false, repregunta: "¿Qué equipo es?" }));
+    expect(r.seguridad.bloqueado).toBe(true);
+    expect(r.claro).toBe(false);
+  });
+});
+
 describe("reconocer por foto", () => {
   it("lo que sale de la foto queda probable (fuente foto) y solo llena lo desconocido", async () => {
     const llamar = falso({ marca: "Samsung", modelo: "Galaxy A54", confianza: "media" });
@@ -208,5 +248,74 @@ describe("marca por el logo del frente (A2)", () => {
     const f = fichaConFoto(desdeEtiqueta, { marca: "TCL", modelo: null, confianza: "alta" });
     expect(f.marca).toEqual({ valor: "TCL", estado: "probable", fuente: "foto" });
     expect(f.modelo).toEqual({ valor: "55P635", estado: "probable", fuente: "chapa" });
+  });
+});
+
+describe("fotos por TIPO de equipo (#229), nunca por modelo: dos variantes de cada tipo", () => {
+  const pedidosIA = (...lista: Array<[PedidoDeFoto["tipo"], string]>) =>
+    falso({ pedidos: lista.map(([tipo, instruccion]) => ({ tipo, instruccion, advertencia: null })) });
+
+  it.each([["Apple Watch Series 7 (reloj inteligente)"], ["smartwatch Samsung Galaxy Watch 5"]])(
+    "reloj (%s): no pide «el puerto de carga»; pide la parte de atrás, que es donde se carga",
+    async (tipoEquipo) => {
+      const llamar = pedidosIA(["etiqueta", "Foto de la etiqueta."], ["puertos", "Sacá una foto del puerto de carga."], ["otro", "Foto del cargador conectado."]);
+      const { pedidos } = await decidirPedidos("otro", "no carga", llamar, tipoEquipo);
+      const textos = pedidos.map((p) => p.instruccion).join(" | ");
+      expect(textos).not.toMatch(/puerto/i);
+      expect(pedidos.filter((p) => /parte de atrás.*contactos de carga/.test(p.instruccion))).toHaveLength(1);
+      expect(pedidos.some((p) => p.tipo === "puertos")).toBe(false);
+    },
+  );
+
+  it.each([
+    ["tablet", "iPad 9.ª generación", "la tablet"],
+    ["tablet", "tablet Samsung Galaxy Tab A8", "la tablet"],
+    ["celular", "iPhone 11", "el celular"],
+    ["celular", "celular Motorola Moto G32", "el celular"],
+  ])("%s que no prende (%s): nada con el equipo prendido; la parte de atrás y el frente", async (_, tipoEquipo, equipo) => {
+    const llamar = pedidosIA(["etiqueta", "Andá a Ajustes > General > Información y sacale una captura."], ["otro", "Prendé el equipo y sacá una foto de la pantalla de inicio."]);
+    const { pedidos } = await decidirPedidos("otro", "no prende, la pantalla queda negra", llamar, tipoEquipo);
+    const textos = pedidos.map((p) => p.instruccion).join(" | ");
+    expect(textos).not.toMatch(/ajustes|informaci[oó]n|prend[eé] el|pantalla de inicio/i);
+    expect(pedidos[0]).toEqual({ tipo: "etiqueta", instruccion: `Dá vuelta ${equipo} y sacá una foto de cerca a la parte de atrás, donde está grabado o impreso el modelo o el número de serie.` });
+    expect(pedidos.some((p) => p.tipo === "frente")).toBe(true);
+  });
+
+  it.each([["notebook Lenovo IdeaPad 3"], ["laptop HP Pavilion 15"]])("notebook (%s) que sí prende: la lista de la IA no se toca", async (tipoEquipo) => {
+    const lista: Array<[PedidoDeFoto["tipo"], string]> = [["etiqueta", "Dá vuelta la notebook y sacale una foto a la etiqueta."], ["otro", "Sacá una foto de cerca a la tecla P."]];
+    const { pedidos } = await decidirPedidos("notebook", "la tecla P no anda", pedidosIA(...lista), tipoEquipo);
+    expect(pedidos.map((p) => [p.tipo, p.instruccion])).toEqual(lista);
+  });
+
+  it("el síntoma «no prende» se reconoce con o sin tildes y en sus formas comunes", async () => {
+    for (const sintoma of ["No enciende", "no me prende más", "no arranca", "no da señales", "está muerto"]) {
+      const { pedidos } = await decidirPedidos("otro", sintoma, pedidosIA(["etiqueta", "Mirá en Configuración > Acerca del teléfono."], ["frente", "Foto del frente."]), "celular");
+      expect(pedidos.map((p) => p.instruccion).join(" "), sintoma).not.toMatch(/configuraci/i);
+    }
+  });
+});
+
+describe("validador de fotos: juzga contra lo que se pidió (#229)", () => {
+  it.each([["Sacá una foto de cerca a la tecla P."], ["Sacá una foto de cerca al conector de carga."]])(
+    "le llega el pedido tal cual (%s) y acepta un detalle de cerca si se ve lo pedido",
+    async (instruccion) => {
+      let texto = "";
+      let system = "";
+      const llamar: LlamarIA = async (p) => {
+        texto = JSON.stringify(p.contenido);
+        system = p.system;
+        return JSON.stringify({ nitidez: 0.85, encuadreOk: true, muestraLoPedido: true, motivo: null, confianza: "alta" });
+      };
+      const { foto } = await evaluarFoto({ casoId: "c1", tipoPedido: "otro", instruccion, imagen }, llamar);
+      expect(texto).toContain(instruccion);
+      expect(texto).not.toContain("lo que se le pidió a la persona");
+      expect(system).toMatch(/de cerca.*no hace falta que se vea el equipo entero/);
+      expect(system).toMatch(/Nunca digas que no sabés qué se pidió/);
+      expect(foto.aceptada).toBe(true);
+    },
+  );
+
+  it("sin el pedido (versión vieja de la pantalla), sigue con la descripción del tipo de foto", () => {
+    expect(EntradaCalidad.parse({ casoId: "c", tipoPedido: "frente", imagen: { base64: "x", mediaType: "image/jpeg" } }).instruccion).toBeUndefined();
   });
 });

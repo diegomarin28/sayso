@@ -61,6 +61,8 @@ export default function QueSeRompio() {
   const [entendido, setEntendido] = useState<Caso | null>(caso);
   /** La IA no supo qué equipo es: se vuelve a preguntar en vez de adivinar. */
   const [noEntendi, setNoEntendi] = useState(false);
+  /** La pregunta para pedir lo que faltó (de la recepción, #260); si no viene, la general. */
+  const [repregunta, setRepregunta] = useState<string | null>(null);
   /** Qué equipo es en texto libre (lo dice la IA; si la persona elige otro, gana su elección). */
   const [tipo, setTipo] = useState<string | null>(tipoEquipo);
   const [tipoDeLaIA, setTipoDeLaIA] = useState<string | null>(tipoEquipo);
@@ -98,7 +100,9 @@ export default function QueSeRompio() {
     setNoEntendi(false);
     try {
       const r = await entenderSintoma(aEnviar);
-      if (sinEntender(r.caso.clase, r.tipoEquipo) && !r.bloqueo) {
+      // `claro` lo dice la recepción (también "notebook dddd"); sin el campo, se deduce del equipo.
+      if ((r.claro === false || sinEntender(r.caso.clase, r.tipoEquipo)) && !r.bloqueo) {
+        setRepregunta(r.repregunta?.trim() || null);
         setNoEntendi(true);
         return;
       }
@@ -152,7 +156,9 @@ export default function QueSeRompio() {
     : error
       ? error
       : noEntendi
-        ? NO_TE_ENTENDI
+        ? repregunta
+          ? `No te entendí bien. ${repregunta}`
+          : NO_TE_ENTENDI
         : bloqueo
           ? "Pará un momento. Esto puede ser peligroso."
           : entendido && sinElegir

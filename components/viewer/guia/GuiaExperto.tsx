@@ -7,6 +7,8 @@ import { BotonConversacion, BotonIcono, ControlesGuia, FilaSugerencias, pregunta
 import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
+import { pasosDelPack } from "./guia-del-pack";
+import { conDesarme } from "./desarme";
 import { conPiezaNombrada } from "./pieza-nombrada";
 import { datosTransparencia, DeDondeSale } from "./transparencia";
 import {
@@ -163,7 +165,8 @@ export function GuiaExperto({
           estado: (e, d) => (setEstado(e), setDetalle(d)),
           paso: (c, _bloqueo, i) => {
             pasoEnVisor.current = i;
-            setCoreografia(conPiezaNombrada(c, pack.piezas, idsPlano));
+            // #233: si el paso saca una tapa (o la pantalla de una tablet) o sus tornillos, el 3D lo desarma.
+            setCoreografia(conDesarme(conPiezaNombrada(c, pack.piezas, idsPlano), plano, pack.piezas));
             const pieza = piezaACambiar(c, plano);
             if (pieza) onCambiarPieza?.(pieza);
           },
@@ -198,6 +201,20 @@ export function GuiaExperto({
     },
     [casoId, pack, plano, manualFileId, tipoEquipo, fuente, reproducirRespuesta],
   );
+
+  /**
+   * Al abrir un caso guardado ("Mis casos") la guía no vuelve a preguntar (no gasta): se ofrece "Seguir con
+   * la guía" con los pasos guardados del pack, sin IA (#219). Quedan en el historial para lo que se pregunte después.
+   */
+  const pasosGuardados = useMemo(() => (preguntaInicial ? [] : pasosDelPack(pack, plano)), [preguntaInicial, pack, plano]);
+  const seguirGuardada = useCallback(async () => {
+    const pasos = pasosGuardados;
+    const dicho = await reproducirRespuesta(async function* () {
+      for (const c of pasos) yield { tipo: "paso", coreografia: c } satisfies EventoChat;
+      yield { tipo: "fin", pasos: pasos.length } satisfies EventoChat;
+    });
+    if (dicho) historial.current = [...historial.current, dicho];
+  }, [pasosGuardados, reproducirRespuesta]);
 
   /** Retoma la guía guardada en el paso donde quedó (sin IA: los pasos ya llegaron). */
   const seguirGuia = useCallback(() => {
@@ -305,6 +322,19 @@ export function GuiaExperto({
               <p className="self-start rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
                 Esquema genérico, no es tu modelo exacto
               </p>
+            )}
+            {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void seguirGuardada()}
+                className="pointer-events-auto flex min-h-11 items-center gap-2 self-stretch rounded-2xl border border-acento/60 bg-fondo/90 px-4 py-2.5 text-left text-texto shadow-xl backdrop-blur-md active:scale-[0.99]"
+              >
+                <Siguiente size={20} className="shrink-0 text-acento" />
+                <span className="flex flex-col leading-tight">
+                  <span className="font-semibold">Seguir con la guía · {pasosGuardados.length} {pasosGuardados.length === 1 ? "paso" : "pasos"}</span>
+                  <span className="text-xs text-texto-suave">Los pasos que ya armamos para tu caso, sin volver a preguntar</span>
+                </span>
+              </button>
             )}
             {pasoActual && (
               <TarjetaPaso

@@ -22,6 +22,8 @@ import {
   animar,
   continuarAnimacion,
   encuadre,
+  intensidadRelleno,
+  RELLENO,
   colocarEtiqueta,
   LINEA_ETIQUETA,
   liberar,
@@ -38,15 +40,14 @@ import {
   usarColorActivo,
 } from "./escena";
 import { Cubo } from "./guia/iconos";
-import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
+import { piezasGenericas, resumenOrigen, textoEtiquetaPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import {
   bajarCalidad,
   bajarRendimiento,
   calidadInicial,
   dprPara,
-  esPlana,
-  puntosVigia,
+  imagenPlana,
   RENDIMIENTO_PLENO,
   soporteDe,
   Vigia,
@@ -300,10 +301,6 @@ type Falla = "sin_webgl" | "contexto" | "negro" | "error";
 
 /** Si iOS pierde el contexto y no lo devuelve en este plazo, se arma un lienzo nuevo. */
 const ESPERA_CONTEXTO_MS = 2500;
-/** Lado de cada cuadrado de la imagen que mira el vigía (px del lienzo; ver `puntosVigia`). */
-const LADO_VIGIA = 16;
-/** El vigía mira una grilla de 5×5: un equipo con huecos (una impresora sin carcasa) igual cae en algún punto. */
-const PUNTOS_VIGIA = 5;
 
 const TEXTO_FALLA: Record<Falla, string> = {
   sin_webgl: "Este navegador no puede mostrar el 3D. La guía sigue funcionando por voz y texto.",
@@ -362,12 +359,11 @@ class Resguardo extends Component<{ children: ReactNode; onError: (e: unknown) =
 }
 
 /**
- * Mira la imagen (una grilla de puntos, ver `puntosVigia`) los primeros segundos (ver `Vigia`). Corre después de los efectos
+ * Mira la imagen (filas y columnas enteras, ver `lineasVigia`) los primeros segundos (ver `Vigia`). Corre después de los efectos
  * (prioridad 2); con prioridad > 0 R3F deja de dibujar solo, así que sin efectos dibuja él.
  */
 function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolean; onNegro: () => void; onListo: () => void }) {
   const vigia = useRef(new Vigia());
-  const pixeles = useMemo(() => new Uint8Array(4 * LADO_VIGIA * LADO_VIGIA), []);
   const esquina = useMemo(() => new Uint8Array(4), []);
   const avisado = useRef(false);
   useFrame(({ gl, scene, camera }) => {
@@ -383,13 +379,19 @@ function VigiaNegro({ renderizaSolo, onNegro, onListo }: { renderizaSolo: boolea
     if (avisado.current) return;
     gl.setRenderTarget(null);
     const ctx = gl.getContext();
-    // Falla solo si TODA la grilla es del color de la esquina (el fondo, o negro si se rompió todo):
-    // un objeto oscuro en el centro no es una falla.
+    // Falla solo si TODAS las líneas son del color de la esquina (el fondo, o negro si se rompió todo):
+    // un objeto oscuro (la pantalla de una TV de frente) no es una falla: sus bordes no son del fondo.
     ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, esquina);
-    const negro = puntosVigia(ctx.drawingBufferWidth, ctx.drawingBufferHeight, LADO_VIGIA, PUNTOS_VIGIA).every(([x, y]) => {
-      ctx.readPixels(x, y, LADO_VIGIA, LADO_VIGIA, ctx.RGBA, ctx.UNSIGNED_BYTE, pixeles);
-      return esPlana(pixeles, esquina);
-    });
+    const negro = imagenPlana(
+      (t) => {
+        const px = new Uint8Array(4 * t.ancho * t.alto);
+        ctx.readPixels(t.x, t.y, t.ancho, t.alto, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
+        return px;
+      },
+      ctx.drawingBufferWidth,
+      ctx.drawingBufferHeight,
+      esquina,
+    );
     if (v.registrar(negro) === "negro") {
       avisado.current = true;
       onNegro();
@@ -415,8 +417,25 @@ function LuzDeEstudio({ entorno }: { entorno: boolean }) {
       )}
       <ambientLight intensity={0.15} />
       <directionalLight position={[25, 40, 30]} intensity={1.4} />
+      <RellenoDeCamara />
     </>
   );
+}
+
+/** Luz suave desde la cámara (ver `intensidadRelleno`): lo que se mira desde abajo no queda negro. */
+function RellenoDeCamara() {
+  const luz = useRef<THREE.DirectionalLight>(null);
+  const adelante = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const l = luz.current;
+    if (!l) return;
+    camera.getWorldDirection(adelante);
+    l.position.copy(camera.position);
+    l.target.position.copy(camera.position).add(adelante);
+    l.target.updateMatrixWorld();
+    l.intensity = intensidadRelleno(-adelante.y);
+  });
+  return <directionalLight ref={luz} intensity={RELLENO.minimo} />;
 }
 
 type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
@@ -438,7 +457,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     () => prepararEscenaSegura(plano, biblioteca, tipoEquipo, new Set(claveGenericas ? claveGenericas.split(",") : [])),
     [plano, biblioteca, tipoEquipo, claveGenericas],
   );
-  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
   const onPasoRef = useRef(onPaso);
@@ -460,7 +479,10 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     acciones.current.mirar = (objetivo, zoom, animado) => {
       const c = controles.current;
       if (!c) return;
-      const e = encuadre(escena, objetivo, zoom, camara, tam, estado.current.despiece, reservado.current);
+      const { despiece, lado, piezas } = estado.current;
+      const corridas = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.desp.some((v) => v !== 0)).map(([id, p]) => [id, p.desp]));
+      const girados = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.rot.some((v) => v !== 0)).map(([id, p]) => [id, p.rot]));
+      const e = encuadre(escena, objetivo, zoom, camara, tam, despiece, reservado.current, lado, corridas, girados);
       void c.setLookAt(e.posicion.x, e.posicion.y, e.posicion.z, e.objetivo.x, e.objetivo.y, e.objetivo.z, animado);
       // Corre la vista para que la pieza quede en el centro de lo que no tapa la frase.
       void c.setFocalOffset(0, e.focal, 0, animado);
@@ -485,7 +507,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const avisosDados = useRef(new Set<string>());
   useEffect(() => {
     if (!soloPiezas.current) {
-      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
       avisosDados.current = new Set();
     }
     for (const aviso of escena.avisos) {
@@ -528,12 +550,15 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     actualizar(soloVuelveAGeneral(paso.coreografia) ? cerrar(inicio) : inicio);
     const timers = paso.coreografia.acciones.map((accion, i) =>
       setTimeout(() => {
+        const antes = estado.current;
         const r = aplicarAccion(estado.current, accion, { casoId });
         actualizar(r.estado);
         if (r.evento) onEventoRef.current?.(r.evento);
         // La cámara va a la pieza del plano (la guía pudo nombrarla de otra forma: ver `resolverPieza`).
         else if (accion.t === "camara") acciones.current.mirar(r.estado.camara.objetivo, accion.zoom ?? 1, true);
         else if (accion.t === "restaurar") acciones.current.mirar(OBJETIVO_GENERAL, 1, true);
+        // Se sacó una tapa (o se despegó la pantalla): la cámara va al equipo abierto, del lado de la tapa (#233).
+        else if (r.estado.lado !== antes.lado || r.estado.camara !== antes.camara) acciones.current.mirar(r.estado.camara.objetivo, r.estado.camara.zoom, true);
       }, i * ESPACIO_ENTRE_ACCIONES_MS),
     );
     return () => timers.forEach(clearTimeout);
@@ -572,7 +597,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
             animable={a}
             nombre={kp?.nombre}
             numeroKp={kp?.etiquetaManual}
-            origen={textoOrigenPieza(delPlano.get(id) ?? {})}
+            origen={textoEtiquetaPieza(delPlano.get(id) ?? {})}
             reservado={reservado}
             id={id}
             registro={etiquetas}
@@ -628,8 +653,8 @@ type EtiquetaProps = {
   animable: NodoAnimable;
   nombre?: string;
   numeroKp?: string;
-  /** De dónde sale la ubicación (ej. "Manual · HMM p. 54", "Estimada", "Genérica"). */
-  origen: string;
+  /** Si la ubicación sale del manual, de dónde (ej. "Manual · HMM p. 54"); si no, null: solo el nombre (#209). */
+  origen: string | null;
   /** Px de arriba del lienzo tapados por la frase: la etiqueta nunca se mete ahí. */
   reservado: { current: number };
   id: string;
@@ -727,7 +752,7 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
           )}
           <span className={`flex flex-col leading-tight ${numero ? "" : "pl-1"}`}>
             <span>{nombre ?? nombreLegible(datos.pieza)}</span>
-            <span className="text-[10px] font-normal text-texto-suave">{origen}</span>
+            {origen && <span className="text-[10px] font-normal text-texto-suave">{origen}</span>}
           </span>
         </div>
       </div>

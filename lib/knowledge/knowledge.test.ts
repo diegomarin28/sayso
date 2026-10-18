@@ -363,7 +363,8 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
   const ficha = fichaEjemplo;
 
   /** Bibliotecario que encuentra el PDF; lectura del manual y guía pública con las respuestas dadas. */
-  function claude(manual: unknown[], publica: unknown[][]) {
+  /** `usos`: el uso de cada vuelta de la guía pública (búsquedas y tokens), para los topes de #256. */
+  function claude(manual: unknown[], publica: unknown[][], usos: Record<string, unknown>[] = []) {
     const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
     const base = enviarFalso();
     let vuelta = 0;
@@ -372,8 +373,9 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
       if (String(p.system).includes("bibliotecario")) return base.enviar(p);
       if (p.tools?.length) {
         const r = publica[Math.min(vuelta, publica.length - 1)];
+        const uso = usos[vuelta];
         vuelta++;
-        return mensaje(r, vuelta < publica.length ? "pause_turn" : "end_turn");
+        return { ...mensaje(r, vuelta < publica.length ? "pause_turn" : "end_turn"), ...(uso ? { usage: uso } : {}) } as Anthropic.Message;
       }
       return mensaje(manual, "max_tokens");
     };
@@ -416,6 +418,41 @@ describe("armarKnowledgePack sin pasos (nunca 502, nunca repaga)", () => {
     const c = claude([{ type: "text", text: "nada" }], [[{ type: "text", text: "PASO|1|Primero esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|2|Después esto.|ventilador|bajo" }]]);
     const r = await armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
     expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2]);
+  });
+
+  describe("topes de la guía pública (#256)", () => {
+    const tresVueltas = [[{ type: "text", text: "PASO|1|Primero esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|2|Después esto.|ventilador|bajo\n" }], [{ type: "text", text: "PASO|3|Al final.|ventilador|bajo" }]];
+    const armar = (c: ReturnType<typeof claude>) =>
+      armarKnowledgePack({ ficha, sintoma: "ruido" }, { enviar: c.enviar, fetch: pdfOk, subir, manuales: repoEnMemoria(), cache: { get: async () => undefined, set: async () => {} } });
+    /** Las vueltas de la guía pública (no la búsqueda del manual, que es del bibliotecario). */
+    const vueltasPublicas = (c: ReturnType<typeof claude>) => c.llamadas.filter((p) => p.tools?.length && !String(p.system).includes("bibliotecario"));
+
+    it("una sola búsqueda web por caso: el pedido la limita a 1", async () => {
+      const c = claude([{ type: "text", text: "nada" }], [tresVueltas[0]]);
+      await armar(c);
+      expect(vueltasPublicas(c)[0].tools?.find((t) => "name" in t && t.name === "web_search")).toMatchObject({ max_uses: 1 });
+    });
+
+    it("después de buscar, un pause_turn no paga otra vuelta (podría buscar de nuevo): se queda con lo que leyó", async () => {
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 20_000, output_tokens: 500, server_tool_use: { web_search_requests: 1 } }]);
+      const r = await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(1);
+      expect(r.pack.pasos.map((p) => p.orden)).toEqual([1]);
+    });
+
+    it("sin buscar todavía pero con el tope de gasto alcanzado (US$ 0,05), tampoco sigue", async () => {
+      // 120 mil tokens de entrada pasan la tarifa larga de Haiku: US$ 0,06 solo de entrada.
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 120_000, output_tokens: 1_000 }]);
+      await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(1);
+    });
+
+    it("sin buscar y barato, sigue como siempre", async () => {
+      const c = claude([{ type: "text", text: "nada" }], tresVueltas, [{ input_tokens: 5_000, output_tokens: 300 }, { input_tokens: 6_000, output_tokens: 300 }]);
+      const r = await armar(c);
+      expect(vueltasPublicas(c)).toHaveLength(3);
+      expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2, 3]);
+    });
   });
 
   it("acepta líneas con viñetas, numeración o negritas", () => {
@@ -535,5 +572,51 @@ describe("caché del manual y de la guía pública (#140)", () => {
     expect(r2.pack.verificado).toBe(false);
     expect(r2.pack.pasos[0].cita).toMatchObject({ estado: "NO_VERIFICABLE", url: fuente });
     expect(r2.pack.fuentes).toEqual([{ doc: fuente, url: fuente }]);
+  });
+});
+
+describe("guía completa del síntoma: tres partes", () => {
+  it("la tarea pide chequeos sin abrir, desarme completo y armado con prueba; sin mandar al manual", async () => {
+    const f = enviarFalso();
+    await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache: { get: async () => undefined, set: async () => {} }, subir: async () => "f", manuales: repoEnMemoria() });
+    const t = tarea(f.de("pack")[0]);
+    expect(t).toMatch(/TRES PARTES/);
+    expect(t).toMatch(/1\. Chequeos sin abrir \(3 a 6 pasos\): primero descartá lo que NO es una falla de hardware/);
+    expect(t).toMatch(/2\. Desarme y reparación: .* el procedimiento COMPLETO sin saltear nada/);
+    expect(t).toMatch(/3\. Armado y prueba/);
+    expect(t).toMatch(/Máximo 18 pasos entre las tres partes/);
+    // Los chequeos de software pueden no estar en el manual: van sin cita (sin verificar), no se inventan datos.
+    expect(t).toMatch(/Los chequeos sin abrir de la parte 1 que el manual no trae pueden ser los habituales/);
+    // Lo que la fuente no trae va en FALTA, nunca "el manual no lo detalla" ni "consultá…".
+    expect(t).toMatch(/FALTA\|parte del procedimiento que el manual no trae/);
+    expect(t).toMatch(/NO escribas que falta, que el manual no lo detalla ni que hay que consultar/);
+    expect(t).toMatch(/Lo de riesgo alto va al FINAL de la parte 2/);
+  });
+
+  it("una línea FALTA no es un paso: queda anotada con su lugar (y llega al feed)", async () => {
+    const c = parsearContenido(
+      lineasConCitas([
+        { text: "PASO|1|Reiniciá el equipo manteniendo el botón 10 segundos.|base|bajo\n" },
+        { text: "FALTA|cómo abrir el equipo y sacar la pantalla\n" },
+        { text: "PASO|2|Desconectá la batería.|bateria|medio" },
+      ]),
+      "HMM",
+    );
+    expect(c.pasos.map((p) => p.orden)).toEqual([1, 2]);
+    expect(c.faltantes).toEqual([{ procedimiento: "cómo abrir el equipo y sacar la pantalla", despuesDe: 1 }]);
+  });
+});
+
+describe("bibliotecario: manual de usuario oficial (#237) y sin marcas en el prompt", () => {
+  it("si no hay de servicio, acepta el de usuario oficial; el prompt no nombra fabricantes", async () => {
+    let sistema = "";
+    const enviar: EnviarMensaje = async (p) => {
+      sistema = String(p.system);
+      return mensaje([{ type: "text", text: '{"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null}' }]);
+    };
+    await buscarManual({ marca: "EJ", modelo: "NB-15", clase: "otro" }, { enviar, fetch: nada });
+    expect(sistema).toMatch(/aceptá el manual de USUARIO oficial del fabricante/);
+    expect(sistema).toMatch(/Un manual de servicio siempre va antes que uno de usuario/);
+    expect(sistema).not.toMatch(/\b(Lenovo|Dell|HP|Apple|Samsung|LG|Epson|Sony)\b/);
   });
 });

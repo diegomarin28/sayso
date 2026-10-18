@@ -12,12 +12,15 @@ import {
   planoPlanchita,
   planoPowerBank,
   planoAuriculares,
+  planoAuricularesVincha,
+  raizVisibleVincha,
   planoCargador,
   planoControlRemoto,
   planoMando,
   planoMouse,
   planoParlanteBluetooth,
   planoReloj,
+  planoRelojRedondo,
   planoTablet,
   planoTeclado,
   planoCafetera,
@@ -41,6 +44,9 @@ import {
  * `clase`: la clase del knowledge pack que le corresponde. `cara`: las piezas que hacen reconocible al equipo
  * (la pantalla de un TV, las puertas de una heladera): están siempre, aunque el pack no las nombre.
  * `parado`: el equipo se usa parado (TV, heladera…): su cara grande va de frente a la cámara, no acostada.
+ * `opcionales`: piezas del esqueleto que el equipo puede no tener (los joysticks junto a una consola): van solo
+ * si el pack las nombra, nunca como genéricas. `raizVisible`: si la raíz mide todo el equipo para escalar pero
+ * es una pieza más chica (la vincha de unos auriculares), su lugar y medidas en el esqueleto.
  */
 export type PlantillaDeEquipo = {
   id: string;
@@ -51,6 +57,19 @@ export type PlantillaDeEquipo = {
   cara: string[];
   clase?: ClaseEquipo;
   parado?: boolean;
+  opcionales: string[];
+  raizVisible?: Pick<PiezaPlano, "pos" | "dim">;
+  /** Si el tipo tiene más de una forma de pantalla (reloj cuadrado o redondo): un plano por forma y la más común. */
+  formas?: FormasDePantalla;
+};
+
+export type FormaPantalla = NonNullable<KnowledgePack["formaPantalla"]>;
+/** `piezas`: las del esqueleto que llevan la forma (la caja y la pantalla del reloj). */
+export type FormasDePantalla = { comun: FormaPantalla; planos: Record<FormaPantalla, PlanoDePiezas>; piezas: string[] };
+
+/** Tipos con más de una forma de pantalla (dato del pack `formaPantalla`). La común es la de más uso en el tipo. */
+const FORMAS: Record<string, FormasDePantalla> = {
+  reloj: { comun: "cuadrada", planos: { cuadrada: planoReloj, redonda: planoRelojRedondo }, piezas: ["caja_reloj", "pantalla_reloj"] },
 };
 
 /** La cara de cada tipo (ver `cara`): sin la pantalla, un TV visto de frente es la retroiluminación. */
@@ -64,6 +83,16 @@ const CARA: Record<string, string[]> = {
   tablet: ["pantalla"],
 };
 
+/** Ver `opcionales`: una PS4 no trae joysticks; si el pack los nombra (un mando con drift), van al costado. */
+const OPCIONALES: Record<string, string[]> = {
+  consola: ["joystick_analogico_izquierdo", "joystick_analogico_derecho", "boton_gatillo_izquierdo", "boton_gatillo_derecho"],
+};
+
+/** Ver `raizVisible`: de la vincha se ve el arco de atrás, no una placa del tamaño de los auriculares. */
+const RAIZ_VISIBLE: Record<string, Pick<PiezaPlano, "pos" | "dim">> = {
+  auriculares_vincha: raizVisibleVincha,
+};
+
 const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false, pistas = ""): PlantillaDeEquipo => ({
   id,
   nombre,
@@ -71,12 +100,51 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
   equipos: palabras(equipos),
   pistas: palabras(pistas),
   cara: CARA[id] ?? [],
+  opcionales: OPCIONALES[id] ?? [],
+  ...(RAIZ_VISIBLE[id] ? { raizVisible: RAIZ_VISIBLE[id] } : {}),
+  ...(FORMAS[id] ? { formas: FORMAS[id] } : {}),
   ...(clase ? { clase } : {}),
   ...(parado ? { parado } : {}),
 });
 
 /** Lo que hace falta del pack para elegir la plantilla: su clase y los ids de sus piezas. */
-export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string };
+export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string; formaPantalla?: FormaPantalla };
+
+/**
+ * La plantilla con el plano de la forma de pantalla del pack (un reloj redondo usa el esqueleto redondo).
+ * Sin dato, la forma más común del tipo: queda estimada (ver `formaEstimada`).
+ */
+export function conFormaDePantalla(p: PlantillaDeEquipo, formaPantalla?: FormaPantalla): PlantillaDeEquipo {
+  return p.formas ? { ...p, plano: p.formas.planos[formaPantalla ?? p.formas.comun] } : p;
+}
+
+/**
+ * La caja (la raíz) con la forma de pantalla de hoy. Un plano de la caché se armó con otra forma (antes de que
+ * el pack trajera `formaPantalla`, o con la común): un reloj redondo seguía con la caja cuadrada. Si la caja no
+ * salió de una página del manual, toma la forma y las medidas del esqueleto; lo demás lo acomoda `seguirPlantilla`.
+ */
+export function conRaizDeLaForma(plano: PlanoDePiezas, p: PlantillaDeEquipo | undefined): PlanoDePiezas {
+  const raizT = p?.formas && p.plano.piezas.find((x) => !x.padre);
+  const raiz = plano.piezas.find((x) => !x.padre);
+  if (!raizT || !raiz || raiz.origen === "manual" || raiz.formaBiblioteca === raizT.formaBiblioteca) return plano;
+  const nueva = { ...raiz, dim: raizT.dim, origen: "plantilla" as const, ...(raizT.formaBiblioteca ? { formaBiblioteca: raizT.formaBiblioteca } : {}) };
+  return { ...plano, piezas: plano.piezas.map((x) => (x === raiz ? nueva : x)) };
+}
+
+/**
+ * Si el pack no trajo la forma de la pantalla y el tipo tiene varias, el 3D usó la más común: sus piezas
+ * (la raíz y las del mismo tipo que las de la forma, con el id que tengan en el plano) pasan a "estimada"
+ * y se avisa. Si la trajo, o el tipo tiene una sola forma, el plano no cambia.
+ */
+export function marcarFormaEstimada(plano: PlanoDePiezas, p: PlantillaDeEquipo | undefined, kp: { formaPantalla?: FormaPantalla }): { plano: PlanoDePiezas; avisos: string[] } {
+  if (!p?.formas || kp.formaPantalla) return { plano, avisos: [] };
+  const tipos = new Set(p.formas.piezas.map((id) => tipoDe(id) ?? id));
+  const deLaForma = (x: PiezaPlano) => !x.padre || tipos.has(tipoDe(x.pieza) ?? x.pieza);
+  return {
+    plano: { ...plano, piezas: plano.piezas.map((x) => (deLaForma(x) && x.origen !== "manual" ? { ...x, origen: "estimada" as const } : x)) },
+    avisos: [`La forma de la pantalla no vino en el pack: se usa la más común de ${p.nombre} (${p.formas.comun}), estimada.`],
+  };
+}
 
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
@@ -91,7 +159,7 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("microondas", "microondas", planoMicroondas, "microondas", undefined, true),
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador"),
-  t("impresora", "impresora", planoImpresora, "impresora"),
+  t("impresora", "impresora", planoImpresora, "impresora", undefined, false, "tinta inkjet deskjet ecotank pixma chorro"),
   // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: empatan y
   // desempatan las piezas del pack (tóner → láser); sin piezas que decidan, la de arriba.
   t("impresora_laser", "impresora láser", planoImpresoraLaser, "impresora laser toner", undefined, false, "laserjet"),
@@ -100,7 +168,9 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("cafetera", "cafetera", planoCafetera, "cafetera espresso"),
   // Lo que más probablemente traiga alguien en la mano.
   t("tablet", "tablet", planoTablet, "tablet tableta ipad tab kindle"),
-  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifono headphones headset cascos vincha"),
+  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifono", undefined, false, "tws inalambricos estuche"),
+  // "Auriculares" nombra a los dos: desempatan el modelo y las piezas del pack (copa, almohadilla de oreja → vincha).
+  t("auriculares_vincha", "auriculares de vincha", planoAuricularesVincha, "auriculares auricular vincha headphones headset cascos diadema", undefined, false, "over"),
   t("reloj", "reloj inteligente", planoReloj, "reloj smartwatch watch pulsera band", undefined, false, "garmin fitbit amazfit"),
   t("mouse", "mouse", planoMouse, "mouse raton"),
   t("teclado", "teclado", planoTeclado, "teclado keyboard"),
@@ -138,7 +208,18 @@ const MIN_DISTINTIVAS = 2;
  */
 export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
   const elegida = elegirPorTipo(kp, tipoEquipo);
-  return elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
+  const especial = elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
+  // Con el plano de la forma de pantalla del pack (dato del pack; sin dato, la más común del tipo).
+  return especial && conFormaDePantalla(especial, kp.formaPantalla);
+}
+
+/**
+ * Las formas de pantalla posibles del tipo de equipo (texto libre, ej. "reloj inteligente"): así el
+ * bibliotecario pide `formaPantalla` solo para los tipos que tienen más de una. Vacío si tiene una sola.
+ */
+export function formasDePantallaDe(tipoEquipo: string): FormaPantalla[] {
+  const formas = elegirPorTipo({ clase: "otro", piezas: [] }, tipoEquipo)?.formas;
+  return formas ? (Object.keys(formas.planos) as FormaPantalla[]) : [];
 }
 
 /**
@@ -179,8 +260,9 @@ function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEqui
     // Empate de verdad (misma palabra, mismo peso: "impresora" nombra a la de tinta y a la láser): desempatan
     // las piezas del pack. Gana la que tiene en el pack más tipos de pieza que las otras empatadas no tienen
     // (tóner o fusora → láser; cabezal o cartucho de tinta → tinta). Sin piezas que decidan, la primera de la lista.
+    // Antes que las piezas, el modelo del pack ("Epson EcoTank L3250" → tinta), con las mismas palabras y pistas.
     const empatadas = candidatas.filter((c) => c.n === porNombre!.n && c.primera === porNombre!.primera).map((c) => c.p);
-    return empatadas.length > 1 ? (porPiezasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
+    return empatadas.length > 1 ? (porModelo(empatadas, kp.modelo) ?? porPiezasPropias(empatadas, kp) ?? porPalabrasPropias(empatadas, kp) ?? porNombre.p) : porNombre.p;
   }
   const porClase = PLANTILLAS_POR_TIPO.find((p) => p.clase && p.clase === kp.clase);
   if (porClase) return porClase;
@@ -194,17 +276,48 @@ function elegirPorTipo(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEqui
   return mejor?.p;
 }
 
-/** Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras. */
+/** Entre plantillas empatadas por nombre, la única que el modelo del pack nombra más que las otras. */
+function porModelo(empatadas: PlantillaDeEquipo[], modelo?: string): PlantillaDeEquipo | undefined {
+  if (!modelo) return undefined;
+  const delModelo = palabras(modelo);
+  const puntos = empatadas.map((p) => delModelo.reduce((n, d) => n + (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0), 0));
+  const max = Math.max(...puntos);
+  return max > 0 && puntos.filter((n) => n === max).length === 1 ? empatadas[puntos.indexOf(max)] : undefined;
+}
+
+const CARCASA = /^carcasa(_|$)/;
+
+/**
+ * Entre plantillas empatadas por nombre, la que tiene en el pack más tipos de pieza que no tienen las otras.
+ * Una pieza sin forma en la biblioteca cuenta por su primera palabra ("copa_izquierda" → copa).
+ */
 function porPiezasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): PlantillaDeEquipo | undefined {
-  const tipos = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => tipoDe(x.pieza)).filter((x): x is string => !!x));
-  const delPack = new Set(kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x));
+  const tipoORaiz = (id: string) => tipoDe(id) ?? id.split("_")[0];
+  const tipos = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => tipoORaiz(x.pieza)));
+  const delPack = new Set(kp.piezas.map((p) => tipoORaiz(p.id)));
   let mejor: { p: PlantillaDeEquipo; n: number } | undefined;
   for (const p of empatadas) {
     const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...tipos(q)]));
-    const n = [...tipos(p)].filter((x) => !otras.has(x) && delPack.has(x)).length;
+    // La carcasa la tiene cualquier variante (en unos de vincha es la copa): no desempata.
+    const n = [...tipos(p)].filter((x) => !otras.has(x) && !CARCASA.test(x) && delPack.has(x)).length;
     if (n > 0 && (!mejor || n > mejor.n)) mejor = { p, n };
   }
   return mejor?.p;
+}
+
+/**
+ * Si las piezas no deciden: la única que tiene en el pack más palabras que son la primera de alguna de sus
+ * piezas y de ninguna de las otras ("tornillo_copa" → copa → vincha; "contacto_carga" → contacto → in-ear).
+ */
+function porPalabrasPropias(empatadas: PlantillaDeEquipo[], kp: PackParaElegir): PlantillaDeEquipo | undefined {
+  const primeras = (p: PlantillaDeEquipo) => new Set(p.plano.piezas.map((x) => x.pieza.split("_")[0]).filter((w) => !CARCASA.test(w)));
+  const delPack = new Set(kp.piezas.flatMap((p) => p.id.split("_")));
+  const puntos = empatadas.map((p) => {
+    const otras = new Set(empatadas.filter((q) => q !== p).flatMap((q) => [...primeras(q)]));
+    return [...primeras(p)].filter((w) => !otras.has(w) && delPack.has(w)).length;
+  });
+  const max = Math.max(...puntos);
+  return max > 0 && puntos.filter((n) => n === max).length === 1 ? empatadas[puntos.indexOf(max)] : undefined;
 }
 
 /**
@@ -226,8 +339,12 @@ const EQUIVALENTES: string[][] = [
   ["placa_madre", "placa_logica", "placa_principal", "placa_base", "placa_control", "motherboard", "logic_board"],
   ["parlante", "altavoz", "speaker", "loudspeaker"],
   ["conector_carga", "puerto_carga", "puerto_usb", "conector_usb", "conector_lightning"],
+  // Auriculares de vincha: la almohadilla de la copa es la de la oreja.
+  ["almohadilla_copa", "almohadilla_oreja"],
 ];
 const grupoDe = (id: string) => EQUIVALENTES.find((g) => g.some((n) => id === n || id.startsWith(`${n}_`)));
+/** "izquierd" o "derech" si el id dice de qué lado va ("copa_derecha", "almohadilla_oreja_izquierda"). */
+export const lado = (id: string) => id.match(/_(izquierd|derech)[oa]?(_|$)/)?.[1];
 
 /** ¿Dos ids nombran la misma pieza? (`placa_logica` y `placa_madre`: sí; `placa_madre` y `placa_carga`: no). */
 export function equivalentes(a: string, b: string): boolean {
@@ -253,7 +370,9 @@ export function emparejar(ids: string[], plantilla: PlantillaDeEquipo): { usadas
   const sinLugar: string[] = [];
   const porTipo = pendientes.filter((id) => {
     const grupo = grupoDe(id);
-    const equivalente = grupo && libres().find((p) => grupoDe(p.pieza) === grupo);
+    // Del mismo lado si el id lo dice ("almohadilla_oreja_derecha" → la de la copa derecha).
+    const delGrupo = grupo ? libres().filter((p) => grupoDe(p.pieza) === grupo) : [];
+    const equivalente = delGrupo.find((p) => lado(p.pieza) === lado(id)) ?? delGrupo[0];
     if (equivalente) usadas.set(equivalente.pieza, id);
     return !equivalente;
   });
@@ -296,6 +415,7 @@ export function planoDesdePlantillaDeTipo(kp: KnowledgePack, plantilla: Plantill
         pivote: [...p.pivote],
         ...(padre ? { padre } : {}),
         ...(numero ? { etiquetaManual: numero } : {}),
+        ...(p.formaBiblioteca ? { formaBiblioteca: p.formaBiblioteca } : {}),
         origen: "plantilla" as const,
       };
     });

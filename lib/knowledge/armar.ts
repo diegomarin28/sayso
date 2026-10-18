@@ -1,18 +1,20 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { KnowledgePack, type Evento, type Ficha } from "../../shared";
+import { KnowledgePack, type Evento, type Ficha, type PasoReparacion } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
+import { formasDePantallaDe } from "../planogenerator/plantillas/por-tipo";
 import { tiposParaPrompt } from "../planogenerator/tipos";
-import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
+import { calcularUso, enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
-import { descargarPdf, type Fetch } from "./descargar";
+import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, urlsDeFuente, type FuenteConsulta } from "./consulta";
+import { descargarPdf, type Fetch, type Pdf } from "./descargar";
 import { nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, prepararExtracto, type Extracto } from "./extracto";
 import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
 import { atribucion, buscarGuiaIfixit, fotosPorPaso, guiaIfixit, manualWebDeIfixit, type GuiaIfixit } from "./ifixit";
 import { bloqueManual, leerDocumentos, leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
-import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
+import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb, type PaginaWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, esSoloGuia, repoManuales, vistasDe, type RepoManuales } from "./manuales";
 import { combinar, instruccionesVistas, SIN_VISTAS } from "./vistas";
@@ -63,41 +65,59 @@ const IDS_PLANTILLA = planoNotebookBase.piezas.map((p) => p.pieza);
 /** `publicasAdjuntas`: sin manual, pero con las páginas de una guía pública ya guardadas (van adjuntas, sin búsqueda web). */
 function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[], publicasAdjuntas = false, manualAdjunto = false): string {
   const fuente = conManual ? "el manual" : "las fuentes";
+  // Solo para los tipos con más de una forma de pantalla (un reloj cuadrado o redondo): el 3D dibuja esa forma.
+  const formas = formasDePantallaDe(equipo);
+  const forma = formas.length
+    ? `FORMA|${formas.join(" o ")}: la forma de la pantalla de este modelo, según ${fuente} (fotos, dibujos o medidas). Una sola línea; si no se sabe, no la escribas.\n`
+    : "";
   const publicas = publicasAdjuntas ? "las guías públicas adjuntas (no son del fabricante)" : "fuentes públicas de la web (buscá con la herramienta)";
   const origen = conManual
-    ? "el manual de servicio adjunto"
+    ? "el manual oficial adjunto"
     : manualAdjunto
       ? `${publicas} y el manual oficial adjunto (que no trae el diagnóstico de este síntoma). Si un paso o una pieza está en el manual oficial, citá el manual`
       : publicas;
-  return `Prepará una guía de reparación casera a partir de ${origen}.
+  return `Prepará una guía de reparación casera con ${origen}.
 Escribí SOLO líneas con este formato exacto, una por renglón, sin títulos ni markdown:
 PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la vista explosionada (o vacío)
 PASO|orden|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
 REPUESTO|id de pieza|número de parte tal cual figura en ${fuente}
 ADVERTENCIA|aviso de seguridad del equipo (nada sobre las fuentes o el manual)
-${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Reglas:
+FALTA|parte del procedimiento que ${fuente} no trae (ej. cómo abrir el equipo y sacar la pantalla)
+${forma}${vistas.length ? `${instruccionesVistas(vistas)}\n` : ""}Los PASO forman la guía completa, en TRES PARTES y en este orden (numerados seguidos):
+1. Chequeos sin abrir (3 a 6 pasos): primero descartá lo que NO es una falla de hardware y lo que se revisa con el equipo cerrado, según el tipo de equipo y el síntoma: apagar del todo y reiniciar, configuración y ajustes, actualizar el sistema o el firmware, modo seguro o restablecer (avisando qué se pierde), las pruebas de diagnóstico del fabricante, cables, cargador, enchufe, pilas o accesorios, limpieza por fuera. Cada chequeo dice cómo se hace y qué cambia si ese era el problema.
+2. Desarme y reparación: si después de los chequeos sigue igual, el procedimiento COMPLETO sin saltear nada: preparar (herramientas, apagar, desenchufar o descargar la batería), abrir el equipo, sacar cada pieza que haya que sacar antes para llegar, y revisar, limpiar o cambiar la pieza del síntoma.
+3. Armado y prueba: volver a armar en orden inverso (cables, tornillos, adhesivos), la prueba final y qué quiere decir si sigue igual.
+Reglas:
 - Ids de pieza en minúsculas con guion bajo, que EMPIECEN con el tipo de pieza (así el 3D sabe dibujarla), por ejemplo ventilador_evaporador o carcasa_heladera. En una notebook, si la pieza coincide, usá estos ids tal cual: ${IDS_PLANTILLA.join(", ")}.
 - Tipos de pieza que el 3D sabe dibujar:
 ${tiposParaPrompt()}
-- Incluí las piezas que se mencionan en los pasos, y los pasos para diagnosticar o resolver el síntoma (máximo ${LIMITES.pack.maxPasos}).
-- Cada PIEZA, PASO y REPUESTO tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala.
-- NUNCA inventes números de parte, piezas ni pasos que no estén en ${fuente}.
+- Incluí las piezas que se mencionan en los pasos. Máximo ${LIMITES.pack.maxPasos} pasos entre las tres partes: si no alcanzan, juntá en un paso acciones chicas seguidas sobre la misma pieza, pero nunca saltees una pieza que haya que sacar.
+- Si ${fuente} no trae una parte del procedimiento, NO escribas que falta, que el manual no lo detalla ni que hay que consultar el manual, una web o un servicio técnico: escribí una línea FALTA con esa parte y seguí con lo que sí está.
+- Cada PIEZA, REPUESTO y cada PASO de las partes 2 y 3 tiene que salir de ${conManual ? "una página del manual" : "una fuente"}: citala. Los chequeos sin abrir de la parte 1 que ${fuente} no trae pueden ser los habituales para este tipo de equipo y este síntoma: van sin cita (se muestran sin verificar), nunca con datos inventados de este modelo.
+- NUNCA inventes números de parte, piezas ni pasos de desarme que no estén en ${fuente}.
 - Todo lo que se le dice a la persona (nombre y ubicación de la PIEZA, PASO, ADVERTENCIA) va en castellano rioplatense: traducí, nunca copies frases del manual en inglés ni las pegues al final (el original ya queda en la cita), y sin negritas ni markdown.
-- Sin manual oficial, igual armá pasos CONCRETOS para el síntoma (no consejos genéricos): primero lo que se revisa sin abrir (cables, control, fuente o fusible externo, pruebas de diagnóstico del fabricante) y después, si hace falta, cómo abrir y qué pieza revisar.
-- Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: si hay que abrirlo, el PASO 1 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
+- Sin manual oficial, igual armá pasos CONCRETOS para el síntoma, no consejos genéricos.
+- Los pasos arrancan con el equipo CERRADO, como lo tiene la persona: el primer paso de la parte 2 es cómo abrirlo según ${fuente} (herramientas, tornillos, calor, ventosa, etc.).
 - Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
+- Lo de riesgo alto va al FINAL de la parte 2, después de todo lo que se puede hacer sin riesgo: en ese paso la guía se corta y se deriva a un técnico. Una precaución ("si la batería está hinchada, no la uses") no es un paso de riesgo alto.
 
 <equipo>${equipo}</equipo>
 <sintoma>${sintoma}</sintoma>`;
 }
 
-/** Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`). */
+/**
+ * Guía pública (sin manual): búsqueda web. Sigue si la búsqueda queda a mitad de camino (`pause_turn`), pero
+ * nunca pasa de `LIMITES.guiaPublica.busquedas` en total (contando las continuaciones) ni paga otra
+ * continuación después de gastar `LIMITES.guiaPublica.maxUsd` (#256): se queda con lo que ya leyó.
+ */
 async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaje, adjuntos: Anthropic.DocumentBlockParam[] = []): Promise<Lectura> {
   const tarea = tareaPack(equipo, sintoma, false, [], false, adjuntos.length > 0);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: [...adjuntos, { type: "text", text: tarea }] }];
   const bloques: Anthropic.TextBlock[] = [];
   let motivo: string | null = null;
+  let busquedas = 0;
+  let usd = 0;
   for (let i = 0; i <= LIMITES.guiaPublica.continuaciones; i++) {
     const r = await enviar(
       {
@@ -112,7 +132,15 @@ async function guiaPublica(equipo: string, sintoma: string, enviar: EnviarMensaj
     );
     bloques.push(...r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"));
     motivo = r.stop_reason;
+    const uso = calcularUso("bibliotecario: guía pública", MODELO_DE.guiaPublica, r.usage ?? {});
+    busquedas += uso.busquedas;
+    usd += uso.usd;
     if (r.stop_reason !== "pause_turn") break;
+    // Continuar podría buscar otra vez o pasar el tope de gasto: se queda con lo que ya hay.
+    if (busquedas >= LIMITES.guiaPublica.busquedas || usd >= LIMITES.guiaPublica.maxUsd) {
+      console.warn(`[knowledge] guía pública: no sigo (${busquedas} búsquedas, US$ ${usd.toFixed(4)})`);
+      break;
+    }
     messages.push({ role: "assistant", content: r.content });
   }
   return { bloques, motivo };
@@ -202,7 +230,7 @@ export async function armarKnowledgePack(
   const nombreEquipo = `${ficha.marca.valor ?? ""} ${modelo}`.trim();
   /** Para la IA: marca y modelo más el tipo de equipo, si se sabe. */
   const equipoDescrito = tipoEquipo ? `${nombreEquipo} (${tipoEquipo})` : nombreEquipo;
-  eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
+  eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual oficial de ${nombreEquipo}.`));
 
   // 1. Caché de manuales (Supabase): si ya lo encontramos antes, se reusa con sus vistas (la URL la verificó
   //    el código al encontrarla; "verificado" es de las citas). Una fila "solo guía" guarda fuentes públicas.
@@ -309,8 +337,8 @@ export async function armarKnowledgePack(
     try {
       [lectura, contenido] = (await leer()) ?? [null, null];
       // Escalada (una sola vez): si el modelo barato no sacó ningún paso del manual, lo relee el más capaz.
-      if (contenido && contenido.pasos.length === 0 && puedeEscalar(MODELO_DE.lectura)) {
-        eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no dio pasos: la repito con un modelo más capaz."));
+      if (contenido && !pasosDelManual(contenido) && puedeEscalar(MODELO_DE.lectura)) {
+        eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no sacó pasos citados del manual: la repito con un modelo más capaz."));
         [lectura, contenido] = (await leer({ modelo: ESCALADA.hacia, motivo: "sin_pasos" })) ?? [lectura, contenido];
       }
     } catch (e) {
@@ -318,7 +346,7 @@ export async function armarKnowledgePack(
       huboFalla = true;
       console.error("[knowledge] falló la lectura del manual:", (e as Error).message);
     }
-    if (!contenido || contenido.pasos.length === 0) {
+    if (!contenido || !pasosDelManual(contenido)) {
       eventos.push(
         evento(casoId, "bibliotecario", "lectura_sin_pasos", "El manual no me dio pasos que pueda usar; armo una guía pública (NO VERIFICADO).", {
           ...(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }),
@@ -327,7 +355,7 @@ export async function armarKnowledgePack(
       console.warn("[knowledge] lectura sin pasos:", JSON.stringify(lectura && contenido ? diagnostico(lectura, contenido) : { error: true }));
     }
   }
-  const conManual = fuenteManual !== null && contenido !== null && contenido.pasos.length > 0;
+  const conManual = fuenteManual !== null && contenido !== null && pasosDelManual(contenido);
   let fuentesPublicas: string[] = [];
   let fotosPasos: Record<string, string> = {};
   /** Fuentes del pack sin manual cuando el código las conoce (ej. la guía de iFixit, con su atribución). */
@@ -431,6 +459,28 @@ export async function armarKnowledgePack(
     }
   }
   if (!contenido || !lectura) throw new Error("inalcanzable");
+  // Lo que la fuente no trajo (líneas FALTA, ej. "cómo abrir el equipo"): el código busca esa parte, una sola vez,
+  // en el mismo manual (páginas o secciones elegidas para eso) y, si no está, en iFixit. Los pasos van donde faltaban.
+  if (LIMITES.pack.completarFaltantes && contenido.faltantes.length && contenido.pasos.length) {
+    try {
+      const manualConocido = encontrado
+        ? { url: encontrado.url, titulo: encontrado.titulo, ...(encontrado.formato === "pdf" ? { pdf: encontrado.pdf } : { indice: encontrado.indice }) }
+        : null;
+      const r = await completarFaltantes(contenido, { equipo: equipoDescrito, nombreEquipo, sintoma, tipo: tipoEquipo ?? ficha.clase, enviar, deps, manual: manualConocido });
+      if (r) {
+        contenido = r.contenido;
+        eventos.push(
+          evento(casoId, "bibliotecario", "guia_completada", `Completé la guía con ${r.agregados} pasos ${r.fuente}: ${r.procedimiento}.`, {
+            agregados: r.agregados,
+            oficial: r.oficial,
+          }),
+        );
+      }
+    } catch (e) {
+      if (e instanceof IAEnPausa) throw e;
+      console.error("[knowledge] no pude completar la guía:", (e as Error).message);
+    }
+  }
   // Las páginas solo tienen sentido con lo que se leyó del PDF del manual.
   // Si la lectura no marcó alguna vista, queda la que eligió el bibliotecario al armar el extracto.
   const elegidas: Vistas = {
@@ -461,6 +511,7 @@ export async function armarKnowledgePack(
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,
     repuestos: contenido.repuestos,
+    ...(contenido.formaPantalla ? { formaPantalla: contenido.formaPantalla } : {}),
   });
   // Sin pasos igual se sigue: la persona llega al 3D (plantilla) con la guía marcada NO VERIFICADO.
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
@@ -469,6 +520,8 @@ export async function armarKnowledgePack(
       ? evento(casoId, "bibliotecario", "pack_armado", `Armé la guía: ${pack.piezas.length} piezas y ${pack.pasos.length} pasos (${verificados} con cita verificada).`, {
           descartadas: contenido.descartadas.length,
           verificado: pack.verificado,
+          // Partes del procedimiento que la fuente no trae (líneas FALTA): el experto las busca si se las piden.
+          ...(contenido.faltantes.length ? { faltantes: contenido.faltantes.map((f) => f.procedimiento) } : {}),
         })
       : evento(casoId, "bibliotecario", "guia_vacia", "No conseguí pasos para este equipo: te muestro el esquema genérico (NO VERIFICADO).", diagnostico(lectura, contenido)),
   );
@@ -519,6 +572,96 @@ export async function armarKnowledgePack(
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
+}
+
+/**
+ * Mete los pasos que faltaban donde estaba la línea FALTA y renumera todo. Si se pasa del máximo, se acortan los
+ * pasos nuevos: nunca se corta el final de la guía (armado y prueba).
+ */
+export function insertarPasos(pasos: PasoReparacion[], despuesDe: number, nuevos: PasoReparacion[], max: number): PasoReparacion[] {
+  const ordenados = [...pasos].sort((a, b) => a.orden - b.orden);
+  const lugar = Math.max(0, Math.min(despuesDe, ordenados.length));
+  const entran = [...nuevos].sort((a, b) => a.orden - b.orden).slice(0, Math.max(0, max - ordenados.length));
+  return [...ordenados.slice(0, lugar), ...entran, ...ordenados.slice(lugar)].map((p, i) => ({ ...p, orden: i + 1, id: `paso-${i + 1}` }));
+}
+
+/** Tarea para completar solo la parte que faltaba (mismo formato de líneas que la guía). */
+function tareaCompletar(equipo: string, sintoma: string, procedimiento: string, ids: string[]): string {
+  return `A una guía de reparación casera le falta esta parte del procedimiento: <falta>${procedimiento}</falta>
+Con la fuente adjunta, escribí SOLO esa parte, completa y en orden, con líneas con este formato exacto, una por renglón, sin títulos ni markdown:
+PASO|orden (empezando en 1)|instrucción para una persona sin experiencia, en 1 a 3 frases: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien|ids de piezas separados por coma|riesgo (bajo, medio o alto)
+PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la vista explosionada (o vacío)
+Reglas:
+- Cada PASO sale de la fuente adjunta: citala. Nunca inventes pasos, piezas ni números de parte.
+- Si la fuente no trae esa parte, no escribas nada.
+- Piezas que ya tiene la guía (usá estos ids si es la misma pieza): ${ids.join(", ") || "ninguna"}. Una PIEZA nueva: id en minúsculas con guion bajo que EMPIECE con el tipo de pieza.
+- Todo en castellano rioplatense: traducí, nunca copies frases en inglés, sin negritas ni markdown.
+- Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto.
+
+<equipo>${equipo}</equipo>
+<sintoma>${sintoma}</sintoma>`;
+}
+
+type ContextoCompletar = {
+  equipo: string;
+  nombreEquipo: string;
+  sintoma: string;
+  tipo: string;
+  enviar: EnviarMensaje;
+  deps: Deps;
+  /** El manual que ya se encontró (con el PDF o el índice web en memoria), o null si no hay. */
+  manual: { url: string; titulo: string; pdf?: Pdf; indice?: PaginaWeb } | null;
+};
+
+/** Busca lo que faltaba (primero en el manual, después en iFixit) y lo inserta. Null si ninguna fuente lo trae. */
+async function completarFaltantes(
+  c: Contenido,
+  ctx: ContextoCompletar,
+): Promise<{ contenido: Contenido; fuente: string; oficial: boolean; procedimiento: string; agregados: number } | null> {
+  const procedimiento = [...new Set(c.faltantes.map((f) => f.procedimiento))].slice(0, LIMITES.pack.maxFaltantes).join("; ");
+  const despuesDe = c.faltantes[0].despuesDe;
+  const depsFuente = { llamar: ctx.deps.llamar, fetch: ctx.deps.fetch, subir: ctx.deps.subir };
+  const fuentes: Array<() => Promise<FuenteConsulta | null>> = [
+    ...(ctx.manual ? [() => fuenteDelManual(ctx.manual!, ctx.equipo, procedimiento, depsFuente, { pdf: ctx.manual!.pdf, indice: ctx.manual!.indice })] : []),
+    () => fuenteIfixit(ctx.nombreEquipo, procedimiento, ctx.deps.fetch),
+  ];
+  for (const obtener of fuentes) {
+    const f = await obtener().catch((e: unknown) => {
+      if (e instanceof IAEnPausa) throw e;
+      return null;
+    });
+    if (!f) continue;
+    const tarea = tareaCompletar(ctx.equipo, ctx.sintoma, procedimiento, c.piezas.map((p) => p.id));
+    const l = await leerDocumentos(bloquesDeFuente(f), tarea, LIMITES.lectura.maxTokensPack, ctx.enviar, "bibliotecario: completar la guía");
+    const leido = parsearContenido(lineasConCitas(l.bloques), f.titulo, urlsDeFuente(f), ctx.tipo, f.oficial);
+    const nuevo = f.tipo === "pdf" ? aPaginasDelManual(leido, f.paginas) : leido;
+    if (!nuevo.pasos.length) continue;
+    const max = LIMITES.pack.maxPasos + LIMITES.pack.maxPasosCompletados;
+    const pasos = insertarPasos(c.pasos, despuesDe, nuevo.pasos, max);
+    return {
+      contenido: {
+        ...c,
+        pasos,
+        piezas: [...c.piezas, ...nuevo.piezas.filter((p) => !c.piezas.some((x) => x.id === p.id))],
+        advertencias: [...c.advertencias, ...nuevo.advertencias.filter((a) => !c.advertencias.includes(a))],
+        faltantes: [],
+      },
+      fuente: f.oficial ? "del manual" : "de una guía pública de iFixit",
+      oficial: f.oficial,
+      procedimiento,
+      agregados: pasos.length - c.pasos.length,
+    };
+  }
+  return null;
+}
+
+/**
+ * ¿La lectura sacó del manual al menos un paso citado? Los chequeos sin abrir de la parte 1 pueden ir sin cita
+ * (los habituales del tipo de equipo): solo con eso no hay guía del manual, y se sigue con iFixit o la guía
+ * pública (con el manual adjunto, así lo que sí está en el manual sale VERIFICADO).
+ */
+function pasosDelManual(c: Contenido): boolean {
+  return c.pasos.some((p) => p.cita?.estado === "VERIFICADO");
 }
 
 /** Id de una guía de iFixit por su URL (ej. https://www.ifixit.com/Guide/Algo/1234), o null. */
