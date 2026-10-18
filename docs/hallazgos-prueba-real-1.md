@@ -80,7 +80,7 @@ Los 4 equipos de la demo (`CASOS_DEMO` en `scripts/bateria/casos.ts`): TV TCL 55
 
 ### Lo que falló y qué se hizo
 - [x] E1. (A) El precalentado no evitaba volver a buscar el manual: solo se reusaba si el pack quedaba verificado, y la guía pública no se guardaba. — issue #140, PR #153
-- [ ] E2. (A) La HP tiene Repair Manual pero no se ubicó ninguna vista (interior ni explosionada), así que el 3D no tiene piezas con origen "manual". — issue #141
+- [x] E2. (A) La HP tiene Repair Manual pero no se ubicó ninguna vista (interior ni explosionada), así que el 3D no tiene piezas con origen "manual". — issue #141 — resuelto en #166 (falta volver a medir el 3D: #177)
 - [x] E3. (B) El plano guardado no se reusaba con otro síntoma: Sonnet otra vez en los 4 equipos. Ahora se reusa: sin manual se completa sin IA; con manual, la IA busca solo lo que falta. — issue #142, PR #144
 - [x] E4. (B) La batería no mandaba el tipo de equipo a knowledge, plano y chat (la app sí): el ensayo no probó la plantilla ni los avisos por tipo. — PR #139
 - [x] E5. (B) En `CASOS_DEMO` la HP figuraba como "impresora" (sin tóner en el 3D); ahora es "impresora láser". Además, "impresora" sola desempata por las piezas del pack (tóner → láser). — PR #147, issue #148, PR #155
