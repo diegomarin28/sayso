@@ -125,6 +125,47 @@ describe("lo que traiga el jurado en la mano", () => {
     expect(elegirPlantilla(pack("otro", []), dicho)?.id).toBe(id);
   });
 
+  // Prueba a ciegas: como lo diría alguien del jurado o como lo resume la recepción (lib/intake/entender.ts).
+  it.each([
+    ["los auriculares de mi hija", "auriculares"],
+    ["Galaxy Buds 2", "auriculares"],
+    ["vincha bluetooth JBL Tune 510BT", "auriculares"],
+    ["cascos gamer HyperX", "auriculares"],
+    ["un joystick de la Play", "mando"],
+    ["el control de la Play 4", "mando"],
+    ["un Joy-Con de la Switch", "mando"],
+    ["el control de la tele", "control_remoto"],
+    ["el control del aire", "control_remoto"],
+    ["mando a distancia", "control_remoto"],
+    ["un smartwatch Xiaomi", "reloj"],
+    ["Mi Band 7", "reloj"],
+    ["Galaxy Watch 5", "reloj"],
+    ["ratón gamer Razer", "mouse"],
+    ["Magic Keyboard", "teclado"],
+    ["un parlantito bluetooth", "parlante"],
+    ["Echo Dot de Alexa", "parlante"],
+    ["fuente de la notebook", "cargador"],
+    ["el cargador de la notebook", "cargador"],
+    ["una tablet Samsung Galaxy Tab A8", "tablet"],
+    ["Lenovo Tab M10", "tablet"],
+    ["Kindle", "tablet"],
+    ["Samsung Galaxy A54", "celular"],
+    ["Motorola Moto G32", "celular"],
+    ["un Xiaomi Redmi Note 12", "celular"],
+    ["la Play 4", "consola"],
+    ["Nintendo Switch", "consola"],
+    ["smart tv", "televisor"],
+    ["secadora de ropa", "lavarropas"],
+  ])("a ciegas: %s → %s", (dicho, id) => {
+    expect(elegirPlantilla(pack("otro", []), dicho)?.id).toBe(id);
+  });
+
+  it("sin el nombre del aparato ni una plantilla parecida, no adivina: decide el pack", () => {
+    for (const dicho of ["planchita de pelo", "afeitadora Philips", "cepillo de dientes eléctrico", "Chromecast", "calculadora Casio", "cámara de fotos Canon", "GoPro Hero 9", "pendrive", "power bank"]) {
+      expect(elegirPlantilla(pack("otro", []), dicho)?.id, dicho).toBeUndefined();
+    }
+  });
+
   it("también se reconoce por las piezas del pack (sin que la recepción diga qué es)", () => {
     expect(elegirPlantilla(pack("otro", ["sensor_mouse", "rueda_scroll", "microswitch_izquierdo"]))?.id).toBe("mouse");
     expect(elegirPlantilla(pack("otro", ["estuche_auriculares", "almohadilla_silicona"]))?.id).toBe("auriculares");

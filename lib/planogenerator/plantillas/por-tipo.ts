@@ -29,44 +29,47 @@ import {
 
 /**
  * Plantilla genérica POR TIPO de equipo: la red de seguridad cuando la IA no puede ubicar las piezas.
- * `equipos`: palabras con que la recepción nombra ese equipo; `clase`: la clase del knowledge pack que le corresponde.
+ * `equipos`: palabras con que la recepción nombra ese equipo; `pistas`: marcas, líneas o contexto que valen medio
+ * (`galaxy` es un celular salvo que diga `tab`; `tele` en "control de la tele" es un control remoto);
+ * `clase`: la clase del knowledge pack que le corresponde.
  * `parado`: el equipo se usa parado (TV, heladera…): su cara grande va de frente a la cámara, no acostada.
  */
-export type PlantillaDeEquipo = { id: string; nombre: string; plano: PlanoDePiezas; equipos: string[]; clase?: ClaseEquipo; parado?: boolean };
+export type PlantillaDeEquipo = { id: string; nombre: string; plano: PlanoDePiezas; equipos: string[]; pistas: string[]; clase?: ClaseEquipo; parado?: boolean };
 
-const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false): PlantillaDeEquipo => ({
+const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false, pistas = ""): PlantillaDeEquipo => ({
   id,
   nombre,
   plano,
   equipos: palabras(equipos),
+  pistas: palabras(pistas),
   ...(clase ? { clase } : {}),
   ...(parado ? { parado } : {}),
 });
 
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
-  t("celular", "celular", planoCelular, "celular telefono smartphone movil iphone"),
+  t("celular", "celular", planoCelular, "celular telefono smartphone movil iphone", undefined, false, "galaxy moto motorola redmi pixel"),
   t("heladera", "heladera", planoHeladera, "heladera refrigerador freezer congelador nevera", undefined, true),
   t("aire", "aire split", planoAire, "aire split acondicionado climatizador", "split", true),
-  t("televisor", "televisor", planoTelevisor, "televisor tele tv smart monitor", undefined, true),
-  t("lavarropas", "lavarropas", planoLavarropas, "lavarropas lavarropa lavadora lavasecarropas", "lavarropas", true),
+  t("televisor", "televisor", planoTelevisor, "televisor tele tv monitor", undefined, true),
+  t("lavarropas", "lavarropas", planoLavarropas, "lavarropas lavarropa lavadora lavasecarropas secadora", "lavarropas", true),
   t("microondas", "microondas", planoMicroondas, "microondas", undefined, true),
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
-  t("secador", "secador de pelo", planoSecador, "secador pelo"),
+  t("secador", "secador de pelo", planoSecador, "secador"),
   t("impresora", "impresora", planoImpresora, "impresora"),
-  t("consola", "consola", planoConsola, "consola playstation xbox nintendo videojuegos"),
+  t("consola", "consola", planoConsola, "consola playstation play xbox nintendo switch videojuegos"),
   t("router", "router", planoRouter, "router modem"),
   t("cafetera", "cafetera", planoCafetera, "cafetera espresso"),
   // Lo que más probablemente traiga alguien en la mano.
-  t("tablet", "tablet", planoTablet, "tablet tableta ipad"),
-  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifonos"),
-  t("reloj", "reloj inteligente", planoReloj, "reloj smartwatch watch"),
+  t("tablet", "tablet", planoTablet, "tablet tableta ipad tab kindle"),
+  t("auriculares", "auriculares", planoAuriculares, "auriculares auricular airpods earbuds buds audifono headphones headset cascos vincha"),
+  t("reloj", "reloj inteligente", planoReloj, "reloj smartwatch watch pulsera band", undefined, false, "garmin fitbit amazfit"),
   t("mouse", "mouse", planoMouse, "mouse raton"),
   t("teclado", "teclado", planoTeclado, "teclado keyboard"),
-  t("mando", "joystick", planoMando, "joystick mando gamepad control dualshock dualsense playstation xbox"),
-  t("parlante", "parlante bluetooth", planoParlanteBluetooth, "parlante bluetooth altavoz jbl"),
-  t("cargador", "cargador", planoCargador, "cargador adaptador"),
-  t("control_remoto", "control remoto", planoControlRemoto, "control remoto"),
+  t("mando", "joystick", planoMando, "joystick mando gamepad control dualshock dualsense joy", undefined, false, "playstation play xbox switch"),
+  t("parlante", "parlante bluetooth", planoParlanteBluetooth, "parlant altavoz", undefined, false, "bluetooth jbl echo alexa"),
+  t("cargador", "cargador", planoCargador, "cargador adaptador fuente"),
+  t("control_remoto", "control remoto", planoControlRemoto, "control remoto mando", undefined, false, "tele tv televisor aire distancia"),
 ];
 
 const NOMBRES_DE_TIPO = TIPOS_DE_PIEZA.map((x) => x.tipo);
@@ -91,15 +94,16 @@ const MIN_DISTINTIVAS = 2;
  * freezer es una heladera). Sin señal suficiente, `undefined`: el que llama usa la caja genérica.
  */
 export function elegirPlantilla(kp: KnowledgePack, tipoEquipo?: string): PlantillaDeEquipo | undefined {
-  // Por nombre: la que más palabras comparte con lo que dijo la recepción ("control remoto" no es un
-  // joystick; "control de PlayStation", sí). Empate: la nombrada primero ("cargador de celular" es un
-  // cargador: en español el sustantivo va adelante); si no, la primera de la lista.
+  // Por nombre: la que más palabras comparte con lo que dijo la recepción, las pistas valen medio
+  // ("control remoto" no es un joystick; "control de PlayStation", sí). Empate: la nombrada primero
+  // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, la primera de la lista.
   const dichas = tipoEquipo ? palabras(tipoEquipo) : [];
   let porNombre: { p: PlantillaDeEquipo; n: number; primera: number } | undefined;
   for (const p of PLANTILLAS_POR_TIPO) {
-    const posiciones = dichas.flatMap((d, i) => (p.equipos.some((e) => nombra(d, e)) ? [i] : []));
+    const peso = (d: string) => (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0);
+    const posiciones = dichas.flatMap((d, i) => (peso(d) ? [i] : []));
     if (!posiciones.length) continue;
-    const cand = { p, n: posiciones.length, primera: posiciones[0] };
+    const cand = { p, n: dichas.reduce((n, d) => n + peso(d), 0), primera: posiciones[0] };
     if (!porNombre || cand.n > porNombre.n || (cand.n === porNombre.n && cand.primera < porNombre.primera)) porNombre = cand;
   }
   if (porNombre) return porNombre.p;
@@ -115,12 +119,6 @@ export function elegirPlantilla(kp: KnowledgePack, tipoEquipo?: string): Plantil
   return mejor?.p;
 }
 
-/**
- * Sin IA, con la plantilla del tipo de equipo: la pieza raíz (carcasa o placa principal) y, para
- * cada pieza del knowledge pack, la de la plantilla con el mismo id o, si no, del mismo tipo (con
- * el id del pack, así la guía la puede nombrar). Todo con origen "plantilla": ni las ubicaciones
- * ni las medidas vienen del manual. Lo que no tiene lugar en la plantilla no aparece (queda en `avisos`).
- */
 /**
  * Qué pieza de la plantilla le toca a cada id del pack: primero los ids iguales, después del mismo
  * tipo de pieza (`placa_principal` del pack ↔ `placa_control` de la plantilla). Cada pieza de la
@@ -145,6 +143,12 @@ export function emparejar(ids: string[], plantilla: PlantillaDeEquipo): { usadas
   return { usadas, sinLugar };
 }
 
+/**
+ * Sin IA, con la plantilla del tipo de equipo: la pieza raíz (carcasa o placa principal) y, para
+ * cada pieza del knowledge pack, la de la plantilla con el mismo id o, si no, del mismo tipo (con
+ * el id del pack, así la guía la puede nombrar). Todo con origen "plantilla": ni las ubicaciones
+ * ni las medidas vienen del manual. Lo que no tiene lugar en la plantilla no aparece (queda en `avisos`).
+ */
 export function planoDesdePlantillaDeTipo(kp: KnowledgePack, plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
   const piezas = plantilla.plano.piezas;
   const raiz = piezas.find((p) => !p.padre) ?? piezas[0];
