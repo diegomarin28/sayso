@@ -34,6 +34,7 @@ import { ES_TAPA } from "./cubiertas";
 import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
 import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
+import { aplicarRasgos3D } from "./variantes-pack";
 import { ubicarTeclas } from "./teclas";
 import { sinPisarLoVisto } from "./lugar-libre";
 
@@ -567,7 +568,7 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(libre.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
   const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
-  return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...libre.avisos, ...sueltas.avisos, ...forma.avisos] };
+  return { plano: aplicarRasgos3D(forma.plano, kp, tipo?.id), avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...libre.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 
 /** De dónde salieron las fotos del interior (#235): un nombre para la cita y la página de cada foto. */

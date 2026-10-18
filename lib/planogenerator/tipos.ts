@@ -25,5 +25,5 @@ export const TIPOS_DE_PIEZA: TipoDePieza[] = (() => {
 
 /** Una línea por tipo, para pegar en un prompt: "ventilador: Ventilador centrífugo… (variantes: axial, tangencial)". */
 export function tiposParaPrompt(): string {
-  return TIPOS_DE_PIEZA.map((t) => `${t.tipo}: ${t.descripcion}${t.variantes.length ? ` (variantes: ${t.variantes.join(", ")})` : ""}`).join("\n");
+  return TIPOS_DE_PIEZA.filter((t) => !t.tipo.endsWith("_dato")).map((t) => `${t.tipo}: ${t.descripcion}${t.variantes.length ? ` (variantes: ${t.variantes.join(", ")})` : ""}`).join("\n");
 }

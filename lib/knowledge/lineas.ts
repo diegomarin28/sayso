@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
-import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
+import { Rasgos3D, Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
 import { evaluarRiesgo } from "../safety/riesgos";
 import { normalizar } from "../intake/chapa";
 
@@ -84,6 +84,7 @@ export type Vistas = Record<ClaseVista, number | null>;
 export type Faltante = { procedimiento: string; /** Cuántos PASO había antes de la línea: ahí va lo que se complete. */ despuesDe: number };
 
 export type Contenido = {
+  rasgos3D?: KnowledgePack["rasgos3D"];
   piezas: Pieza[];
   pasos: PasoReparacion[];
   repuestos: z.infer<typeof Repuesto>[];
@@ -212,6 +213,16 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       const pagina = l.citas.find((c) => c.type === "page_location");
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
       else r.descartadas.push(l.texto);
+    } else if (tipo === "RASGO" && campos.length === 4) {
+      const [, equipo, campo, texto] = campos;
+      const valor = /^(si|sí|true)$/.test(texto.toLowerCase()) ? true : /^(no|false)$/.test(texto.toLowerCase()) ? false : /^[123]$/.test(texto) ? Number(texto) : texto;
+      const validado = Rasgos3D.safeParse({ [equipo]: { [campo]: valor } });
+      const entrada = validado.success ? (validado.data as Record<string, Record<string, unknown>>)[equipo] : undefined;
+      if (entrada && Object.hasOwn(entrada, campo)) {
+        const anteriores = (r.rasgos3D as Record<string, Record<string, unknown>> | undefined)?.[equipo] ?? {};
+        if (!Object.hasOwn(anteriores, campo)) r.rasgos3D = { ...r.rasgos3D, [equipo]: { ...anteriores, ...entrada } };
+        else r.descartadas.push(l.texto);
+      } else r.descartadas.push(l.texto);
     } else if (tipo === "FORMA") {
       // La primera que se entiende; una forma que no es ninguna de las dos se descarta.
       const forma = formaDe(campos[1]);
