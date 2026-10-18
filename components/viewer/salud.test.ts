@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { planoNotebookBase, type BibliotecaPiezas } from "../../lib/planogenerator";
 import { prepararEscena, prepararEscenaSegura } from "./escena";
-import { bajarCalidad, bajarRendimiento, calidadInicial, dprPara, esNegro, puntosVigia, RENDIMIENTO_PLENO, Vigia, type SoporteGL } from "./salud";
+import { bajarCalidad, bajarRendimiento, calidadInicial, dprPara, esPlana, puntosVigia, RENDIMIENTO_PLENO, Vigia, type SoporteGL } from "./salud";
 
 const iphone: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 4, tactil: true };
 const mac: SoporteGL = { webgl2: true, colorFlotante: true, maxMuestras: 8, tactil: false };
@@ -45,11 +45,20 @@ describe("bajarCalidad", () => {
   });
 });
 
-describe("esNegro", () => {
+describe("esPlana (el vigía compara con el color de una esquina)", () => {
   const px = (...rgba: number[]) => new Uint8Array(rgba);
-  it("todo negro (o casi) es negro; un solo píxel con color no", () => {
-    expect(esNegro(px(0, 0, 0, 255, 3, 5, 2, 255))).toBe(true);
-    expect(esNegro(px(0, 0, 0, 255, 0, 40, 0, 255))).toBe(false);
+  it("todo negro (o casi) es plana; un solo píxel con color no", () => {
+    expect(esPlana(px(0, 0, 0, 255, 3, 5, 2, 255), [0, 0, 0])).toBe(true);
+    expect(esPlana(px(0, 0, 0, 255, 0, 40, 0, 255), [0, 0, 0])).toBe(false);
+  });
+
+  it("con fondo de color (--escena): solo el fondo es plana, una pieza encima no", () => {
+    const fondo = [28, 31, 36];
+    expect(esPlana(px(28, 31, 36, 255, 30, 29, 38, 255), fondo)).toBe(true);
+    expect(esPlana(px(28, 31, 36, 255, 200, 205, 210, 255), fondo)).toBe(false);
+    // Negro sobre fondo de color: no es "plana" contra el fondo; la esquina también sale negra y ahí sí.
+    expect(esPlana(px(0, 0, 0, 255), fondo)).toBe(false);
+    expect(esPlana(px(0, 0, 0, 255), [0, 0, 0, 255])).toBe(true);
   });
 });
 

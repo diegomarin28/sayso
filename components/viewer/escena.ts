@@ -2,15 +2,16 @@ import * as THREE from "three";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
 import { desplazamientoDespiece, type Cubiertas, type EstadoEscena } from "./reproductor";
+import { ACTIVO_RESPALDO } from "./tema";
 import { crearTween, seguir, type Tween } from "./tween";
 
 /**
  * Escena del visor en estilo "ilustración técnica": bordes visibles, modo rayos X
- * (lo que no es del paso queda gris translúcido, la pieza activa sólida y naranja)
+ * (lo que no es del paso queda gris translúcido, la pieza activa sólida y del color de resaltado)
  * y transiciones con easing. Sin React: lo usa Visor.tsx en cada cuadro.
  */
 
-export const COLOR_ACTIVO = "#E8590C";
+export const COLOR_ACTIVO = ACTIVO_RESPALDO;
 const ACTIVO = new THREE.Color(COLOR_ACTIVO);
 const FANTASMA = new THREE.Color("#7d8894");
 const OPACIDAD_FANTASMA = 0.1;
@@ -24,8 +25,19 @@ const OPACIDAD_INCIERTA_ACTIVA = 0.8;
 const TRAZO_PUNTEADO = 0.08;
 const BORDE = new THREE.Color("#cfd8e2");
 const BORDE_FANTASMA = new THREE.Color("#a9bacb");
-const BORDE_ACTIVO = new THREE.Color("#4a1803");
+/** El borde de la pieza activa: el color de resaltado a un tercio del brillo (0,08 en espacio lineal ≈ 0,32 a la vista). */
+const OSCURO_BORDE_ACTIVO = 0.08;
+const BORDE_ACTIVO = ACTIVO.clone().multiplyScalar(OSCURO_BORDE_ACTIVO);
 const ANGULO_BORDES = 30; // grados: solo aristas marcadas, no las de superficies curvas
+
+/**
+ * Color de resaltado (tema.ts lo lee de las variables CSS). Se llama antes de preparar la escena:
+ * las mallas preparadas antes conservan el brillo del color anterior.
+ */
+export function usarColorActivo(color: string) {
+  ACTIVO.set(color);
+  BORDE_ACTIVO.copy(ACTIVO).multiplyScalar(OSCURO_BORDE_ACTIVO);
+}
 
 const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
 const ESCALON_DESPIECE_MS = 70;
