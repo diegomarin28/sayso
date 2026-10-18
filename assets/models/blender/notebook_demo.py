@@ -62,7 +62,7 @@ def bandeja():
 
 def tecla(nombre, ancho=1.55):
     """Tecla individual con leyenda legible; se publica con nombre propio, incluido tecla_p."""
-    id = 'tecla@' + nombre
+    id = 'tecla_individual@' + nombre
     def crear():
         CORE['COLORES']['cuerpo.' + id] = ('#202731', 0.05, 0.55)
         prisma(redondeado(ancho, 1.45, 0.16, 4), 0.18, (0, 0, 0), bisel=0.03)
@@ -107,8 +107,8 @@ M = {}
 for escala in (1, 1.14):
     # Giro -110° de Blender sobre x: panel interior hacia la persona, borde trasero en +Y.
     ang = math.radians(-110)
-    centro = [0, (10.5 - 10.5 * math.cos(ang)) * escala, (1 - 10.5 * math.sin(ang)) * escala]
-    panel = [0, centro[1] + 0.3 * math.sin(ang) * escala, centro[2] - 0.3 * math.cos(ang) * escala]
+    centro = [0, (10.5 - 10.31 * math.cos(ang)) * escala, (1 - 10.31 * math.sin(ang)) * escala]
+    panel = [0, centro[1] + (-0.19 * math.cos(ang) + 0.3 * math.sin(ang)) * escala, centro[2] + (-0.19 * math.sin(ang) - 0.3 * math.cos(ang)) * escala]
     M[f'notebook_abierta_{escala}'] = [
         {'tipo': 'base@notebook_abierta', 'pos': [0, 0, 0], 'escala': escala},
         {'tipo': 'carcasa_superior@notebook', 'pos': [0, 0, 0.68 * escala], 'escala': escala},
