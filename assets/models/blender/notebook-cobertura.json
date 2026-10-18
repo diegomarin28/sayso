@@ -1,0 +1,108 @@
+{
+  "notebook": {
+    "nuevas": [
+      "base@notebook_abierta",
+      "carcasa_superior@notebook",
+      "carcasa_pantalla@notebook",
+      "pantalla@notebook",
+      "teclado@bandeja_notebook",
+      "tecla_individual@1",
+      "tecla_individual@2",
+      "tecla_individual@3",
+      "tecla_individual@4",
+      "tecla_individual@5",
+      "tecla_individual@6",
+      "tecla_individual@7",
+      "tecla_individual@8",
+      "tecla_individual@9",
+      "tecla_individual@0",
+      "tecla_individual@q",
+      "tecla_individual@w",
+      "tecla_individual@e",
+      "tecla_individual@r",
+      "tecla_individual@t",
+      "tecla_individual@y",
+      "tecla_individual@u",
+      "tecla_individual@i",
+      "tecla_individual@o",
+      "tecla_individual@p",
+      "tecla_individual@a",
+      "tecla_individual@s",
+      "tecla_individual@d",
+      "tecla_individual@f",
+      "tecla_individual@g",
+      "tecla_individual@h",
+      "tecla_individual@j",
+      "tecla_individual@k",
+      "tecla_individual@l",
+      "tecla_individual@z",
+      "tecla_individual@x",
+      "tecla_individual@c",
+      "tecla_individual@v",
+      "tecla_individual@b",
+      "tecla_individual@n",
+      "tecla_individual@m",
+      "tecla_individual@espacio",
+      "tecla_individual@enter",
+      "tecla_individual@shift",
+      "tecla_individual@retroceso",
+      "tecla_individual@esc",
+      "tecla_individual@f1",
+      "tecla_individual@f2",
+      "tecla_individual@f3",
+      "tecla_individual@f4",
+      "tecla_individual@f5",
+      "tecla_individual@f6",
+      "tecla_individual@f7",
+      "tecla_individual@f8",
+      "tecla_individual@f9",
+      "tecla_individual@f10",
+      "tecla_individual@f11",
+      "tecla_individual@f12",
+      "tecla_individual@tab",
+      "tecla_individual@caps",
+      "tecla_individual@ctrl",
+      "tecla_individual@alt",
+      "tecla_individual@izq",
+      "tecla_individual@abajo",
+      "tecla_individual@der"
+    ],
+    "reutilizadas": [
+      "trackpad",
+      "bateria",
+      "placa_madre",
+      "bisagra"
+    ],
+    "variantes": [
+      {
+        "ancho_cm": 32,
+        "escala": 1
+      },
+      {
+        "ancho_cm": 36.48,
+        "escala": 1.14
+      }
+    ],
+    "apertura_grados": 110,
+    "convencion": "GLB Y arriba; teclado hacia +Y; borde trasero -Z. Tapa cerrada con panel hacia -Y; giro x=-110 para abrir. Pivote de bisagra se configura en el plano; los GLB permanecen centrados.",
+    "tecla_individual@p": {
+      "fila_qwerty": 0,
+      "columna": 9,
+      "pos_blender_cm": [
+        8.775,
+        4.55,
+        0.74
+      ]
+    },
+    "integracion_pendiente": "#232 y #259; visor/generador en otro chat",
+    "pivote_bisagra_glb_cm": [
+      0,
+      0,
+      -10.31
+    ],
+    "pieza_p_guia": {
+      "id": "tecla_p",
+      "formaBiblioteca": "tecla_individual@p"
+    }
+  }
+}

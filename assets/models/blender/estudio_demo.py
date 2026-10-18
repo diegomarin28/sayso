@@ -46,7 +46,7 @@ def ejecutar(familia, definiciones, montajes, reutilizadas=()):
         renderizar(args.renders, vacios, montajes)
 
 
-def renderizar(carpeta, vacios, montajes):
+def renderizar(carpeta, vacios, montajes, solo_montajes=False):
     """Mismo estudio para las piezas y los montajes, no modifica las mallas exportadas."""
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
@@ -80,7 +80,7 @@ def renderizar(carpeta, vacios, montajes):
         if o.type == 'FONT':
             o.hide_render = True
     modelos = {v.name: v for v in vacios}
-    piezas_sueltas = {v.name: [{'tipo': v.name, 'pos': [0, 0, 0]}] for v in vacios}
+    piezas_sueltas = {} if solo_montajes else {v.name: [{'tipo': v.name, 'pos': [0, 0, 0]}] for v in vacios}
     for nombre, piezas in {**piezas_sueltas, **montajes}.items():
         for v in vacios:
             for c in v.children:
@@ -99,7 +99,7 @@ def renderizar(carpeta, vacios, montajes):
                 copia.parent = None
                 copia.hide_render = False
                 escena.collection.objects.link(copia)
-                copia.matrix_world = CORE['Matrix'].Translation(pos) @ rot @ CORE['Matrix'].Scale(escala, 4) @ CORE['Matrix'].Translation(-centro)
+                copia.matrix_world = CORE['Matrix'].Translation(pos) @ rot @ CORE['Matrix'].Scale(escala, 4) @ CORE['Matrix'].Translation(-centro) @ obj.matrix_world
                 copias.append(copia)
         bpy.context.view_layer.update()
         pts = [o.matrix_world @ Vector(p) for o in copias for p in o.bound_box]

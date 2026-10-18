@@ -10,7 +10,8 @@
   "cotidianos": "cotidianos.glb",
   "facultad": "facultad.glb",
   "campus": "campus.glb",
-  "tablet_demo": "tablet_demo.glb"
+  "tablet_demo": "tablet_demo.glb",
+  "notebook_demo": "notebook_demo.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -2618,6 +2619,721 @@
     13.4,
     0.3925,
     17.8
+   ]
+  },
+  "pantalla@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Panel de notebook separado de la tapa, cara activa hacia -Z de Blender (interior al cerrar).",
+   "caja": [
+    29.7,
+    0.11,
+    19.6
+   ]
+  },
+  "teclado@bandeja_notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Bandeja de teclado independiente de sus teclas; no duplica las teclas al seleccionarlas.",
+   "caja": [
+    27.5,
+    0.1,
+    11.8
+   ]
+  },
+  "base@notebook_abierta": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Cuba inferior hueca de notebook, piso fino y paredes continuas, sin bloque sólido interior.",
+   "caja": [
+    32,
+    1.425,
+    23
+   ]
+  },
+  "carcasa_superior@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Palmrest con borde y aberturas reales para teclado y trackpad; malla independiente.",
+   "caja": [
+    32,
+    0.1725,
+    23
+   ]
+  },
+  "carcasa_pantalla@notebook": {
+   "familia": "notebook_demo",
+   "ajuste": "libre",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tapa de pantalla, bisel y dos bisagras en Y=+10,5 de Blender. Centro geométrico; giro en la bisagra mediante pivote del plano.",
+   "caja": [
+    31,
+    0.76,
+    21.38
+   ]
+  },
+  "tecla_individual@x": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla X separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@6": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 6 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f9": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F9 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@u": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla U separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@9": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 9 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@3": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 3 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f10": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F10 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@abajo": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ABAJO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@enter": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ENTER separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@z": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Z separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@a": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla A separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f11": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F11 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@2": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 2 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@e": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla E separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@m": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla M separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@n": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla N separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@alt": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ALT separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@w": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla W separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@r": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla R separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@8": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 8 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@p": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla P separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@o": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla O separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f6": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F6 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@7": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 7 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@0": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 0 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@caps": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla CAPS separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@k": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla K separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@ctrl": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla CTRL separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@s": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla S separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@der": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla DER separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@izq": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla IZQ separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@b": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla B separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f3": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F3 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f12": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F12 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f4": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F4 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@tab": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla TAB separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f1": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F1 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@5": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 5 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f8": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F8 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@espacio": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ESPACIO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    8,
+    0.18,
+    1.45
+   ]
+  },
+  "tecla_individual@1": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 1 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@esc": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla ESC separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@g": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla G separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@retroceso": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla RETROCESO separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@l": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla L separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@t": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla T separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f5": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F5 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@h": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla H separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@q": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Q separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@d": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla D separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@v": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla V separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@i": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla I separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@c": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla C separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f2": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F2 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@f7": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla F7 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.35,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@j": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla J separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@4": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla 4 separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@shift": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla SHIFT separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    2.6,
+    0.194,
+    1.45
+   ]
+  },
+  "tecla_individual@y": {
+   "familia": "notebook_demo",
+   "ajuste": "proporcional",
+   "equipos": "notebook laptop portatil ultrabook",
+   "descripcion": "Tecla Y separada y nombrada; distribución QWERTY genérica.",
+   "caja": [
+    1.55,
+    0.194,
+    1.45
    ]
   }
  }
