@@ -8,7 +8,8 @@
   "carcasas": "carcasas.glb",
   "dispositivos": "dispositivos.glb",
   "cotidianos": "cotidianos.glb",
-  "facultad": "facultad.glb"
+  "facultad": "facultad.glb",
+  "campus": "campus.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -689,7 +690,7 @@
    "ajuste": "libre",
    "caja": [
     26.7,
-    0.724,
+    0.734,
     7.345
    ]
   },
@@ -722,7 +723,7 @@
    "ajuste": "libre",
    "caja": [
     7.2,
-    0.361,
+    0.374,
     15.6
    ]
   },
@@ -733,7 +734,7 @@
    "ajuste": "libre",
    "caja": [
     5.8,
-    0.459,
+    0.49,
     9.925
    ]
   },
@@ -755,8 +756,8 @@
    "ajuste": "proporcional",
    "caja": [
     2.7,
-    0.68,
-    2.7
+    0.723,
+    3.675
    ]
   },
   "marco": {
@@ -788,7 +789,7 @@
    "ajuste": "libre",
    "caja": [
     6,
-    0.204,
+    0.215,
     11.2
    ]
   },
@@ -1360,7 +1361,7 @@
    "ajuste": "libre",
    "caja": [
     6,
-    0.204,
+    0.215,
     11.2
    ]
   },
@@ -1888,7 +1889,7 @@
    "ajuste": "proporcional",
    "caja": [
     24.5,
-    0.47,
+    0.482,
     14.1
    ]
   },
@@ -2341,6 +2342,237 @@
     2,
     3.8,
     1.4
+   ]
+  },
+  "canilla": {
+   "familia": "campus",
+   "descripcion": "Cuerpo genérico de canilla monocomando: base, cuerpo, pico curvo y alojamiento de cartucho. No identifica una marca ni el circuito de agua.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano",
+   "ajuste": "proporcional",
+   "caja": [
+    6.6,
+    13.1879,
+    15.6
+   ]
+  },
+  "manija_canilla": {
+   "familia": "campus",
+   "descripcion": "Manija de monocomando separada: copa inferior y palanca. No asigna sentido de apertura ni temperatura.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano",
+   "ajuste": "proporcional",
+   "caja": [
+    5.4,
+    2.2,
+    9.7
+   ]
+  },
+  "cartucho_canilla": {
+   "familia": "campus",
+   "descripcion": "Cartucho cerámico de mezcladora: cuerpo cilíndrico, vástago y juntas. Sin diámetro, caudal ni compatibilidad.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano",
+   "ajuste": "redondo:xz",
+   "caja": [
+    3.8,
+    6.45,
+    3.8
+   ]
+  },
+  "aireador_canilla": {
+   "familia": "campus",
+   "descripcion": "Aireador desmontable: aro, junta y rejilla cruzada; sin rosca o caudal especificados.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano",
+   "ajuste": "redondo:xz",
+   "caja": [
+    2.8,
+    1.175,
+    2.8
+   ]
+  },
+  "valvula_cierre": {
+   "familia": "campus",
+   "descripcion": "Llave de paso manual en escuadra: cuerpo, dos racores y mando. Distinta de una electroválvula; sin conexión funcional.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano lavatorio lavabo pileta desague sifon bano cisterna mochila inodoro descarga bano",
+   "ajuste": "proporcional",
+   "caja": [
+    3.5,
+    6,
+    5.1
+   ]
+  },
+  "flexible_agua": {
+   "familia": "campus",
+   "descripcion": "Flexible de alimentación de agua: manguera en curva con dos tuercas. No indica presión, rosca o montaje.",
+   "equipos": "canilla grifo lavabo lavatorio mezcladora bano lavatorio lavabo pileta desague sifon bano cisterna mochila inodoro descarga bano",
+   "ajuste": "proporcional",
+   "caja": [
+    15.4722,
+    9.7393,
+    1.7
+   ]
+  },
+  "desague_lavatorio": {
+   "familia": "campus",
+   "descripcion": "Desagüe de lavatorio: brida, cuello, junta y tuerca. Sin dimensiones ni compatibilidad de instalación.",
+   "equipos": "lavatorio lavabo pileta desague sifon bano",
+   "ajuste": "redondo:xz",
+   "caja": [
+    6.4,
+    7.25,
+    6.4
+   ]
+  },
+  "sifon_lavatorio": {
+   "familia": "campus",
+   "descripcion": "Sifón tipo botella: vaso, cuello de entrada, salida lateral y tapa inferior. Esquema exterior, sin instrucciones de apertura.",
+   "equipos": "lavatorio lavabo pileta desague sifon bano",
+   "ajuste": "proporcional",
+   "caja": [
+    6.8,
+    11.8,
+    12.4
+   ]
+  },
+  "pulsador_descarga": {
+   "familia": "campus",
+   "descripcion": "Pulsador doble de cisterna: aro, dos sectores y varillas. No representa una marca ni un volumen de descarga.",
+   "equipos": "cisterna mochila inodoro descarga bano",
+   "ajuste": "redondo:xz",
+   "caja": [
+    6.4,
+    6.855,
+    6.4
+   ]
+  },
+  "flotante_cisterna": {
+   "familia": "campus",
+   "descripcion": "Válvula de llenado con flotante de copa y poste vertical; mecanismo genérico exterior, sin regulación indicada.",
+   "equipos": "cisterna mochila inodoro descarga bano",
+   "ajuste": "proporcional",
+   "caja": [
+    7.35,
+    19.05,
+    6
+   ]
+  },
+  "valvula_descarga": {
+   "familia": "campus",
+   "descripcion": "Mecanismo de descarga de cisterna: torre, aro de asiento y sello inferior. No especifica montaje ni compatibilidad.",
+   "equipos": "cisterna mochila inodoro descarga bano",
+   "ajuste": "proporcional",
+   "caja": [
+    8,
+    17.75,
+    8
+   ]
+  },
+  "carcasa_reloj_pared": {
+   "familia": "campus",
+   "descripcion": "Caja de reloj de pared: aro frontal, tapa trasera, apoyos y abertura para mecanismo. Esfera, agujas y pila reutilizan sus tipos existentes.",
+   "equipos": "reloj_pared reloj pared analogico aula",
+   "ajuste": "redondo:xz",
+   "caja": [
+    30,
+    3.15,
+    30
+   ]
+  },
+  "mecanismo_reloj_pared": {
+   "familia": "campus",
+   "descripcion": "Movimiento genérico de cuarzo de reloj de pared: caja, eje de agujas y alojamiento vacío para una AA. Sin engranajes calibrados.",
+   "equipos": "reloj_pared reloj pared analogico aula",
+   "ajuste": "proporcional",
+   "caja": [
+    5.7,
+    4.2,
+    6.65
+   ]
+  },
+  "placa_pared": {
+   "familia": "campus",
+   "descripcion": "Marco de módulo de pared con ventana central y dos tornillos; para toma, interruptor o red, sin declarar norma.",
+   "equipos": "pared toma enchufe interruptor red aula",
+   "ajuste": "libre",
+   "caja": [
+    8,
+    0.7,
+    12
+   ]
+  },
+  "bombilla_led": {
+   "familia": "campus",
+   "descripcion": "Bombilla LED genérica: difusor, cuerpo de disipación y base roscada ilustrativa. Sin potencia, tensión o norma de rosca.",
+   "equipos": "luminaria lampara iluminacion aula led",
+   "ajuste": "redondo:xz",
+   "caja": [
+    6,
+    10.05,
+    6
+   ]
+  },
+  "difusor_luminaria": {
+   "familia": "campus",
+   "descripcion": "Difusor rectangular de luminaria de aula con marco y pestañas. La fuente y las tiras LED se reutilizan por nombre.",
+   "equipos": "luminaria lampara iluminacion aula led",
+   "ajuste": "libre",
+   "caja": [
+    61,
+    1,
+    32.25
+   ]
+  },
+  "carcasa_calculadora": {
+   "familia": "campus",
+   "descripcion": "Carcasa genérica de calculadora con ventana LCD y alojamiento de teclado. Sin marca ni distribución de un modelo.",
+   "equipos": "calculadora calculadora_cientifica bolsillo aula",
+   "ajuste": "libre",
+   "caja": [
+    8,
+    1.2,
+    15
+   ]
+  },
+  "teclado_calculadora": {
+   "familia": "campus",
+   "descripcion": "Matriz de botones de calculadora con membrana inferior, sin leyendas ni funciones asignadas.",
+   "equipos": "calculadora calculadora_cientifica bolsillo aula",
+   "ajuste": "libre",
+   "caja": [
+    6.5,
+    0.6,
+    8.5
+   ]
+  },
+  "pantalla@segmentos": {
+   "familia": "campus",
+   "descripcion": "Módulo LCD rectangular de calculadora con marco y banda de contacto. Sin cifras, mediciones o funciones de un equipo real.",
+   "equipos": "calculadora calculadora_cientifica bolsillo aula",
+   "ajuste": "libre",
+   "caja": [
+    6.5,
+    0.355,
+    3.275
+   ]
+  },
+  "carcasa_proyector": {
+   "familia": "campus",
+   "descripcion": "Gabinete genérico de proyector de aula: abertura de lente, ventilaciones, patas y tapa superior. Lente, placa, luz y ventilador se reutilizan.",
+   "equipos": "proyector datashow aula",
+   "ajuste": "proporcional",
+   "caja": [
+    28,
+    9.65,
+    22
+   ]
+  },
+  "agujas_reloj@pared": {
+   "familia": "campus",
+   "descripcion": "Agujas delgadas de reloj de pared: mayor longitud respecto del eje que las de pulsera. Forma genérica, sin hora o precisión asignada.",
+   "equipos": "reloj_pared reloj pared analogico aula",
+   "ajuste": "proporcional",
+   "caja": [
+    7.5859,
+    0.2,
+    12.5
    ]
   }
  }

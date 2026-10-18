@@ -103,6 +103,7 @@ COLORES = {
     "tinta": ("#1d1f23", 0.0, 0.7),
     "lente": ("#3a4f9a", 0.6, 0.1),
     "plastico_claro": ("#c9cdd2", 0.05, 0.55),
+    "optica": ("#294f68", 0.25, 0.18),
 }
 
 
@@ -367,7 +368,12 @@ def ventilador():
     cilindro(0.55, 0.012, (0, CY, 0.696), "etiqueta", seg=40)
     for i in range(23):
         a = 2 * math.pi * i / 23
-        caja((1.45, 0.045, 0.6), (math.cos(a) * 1.62, CY + math.sin(a) * 1.62, 0.39), "aspas", rot_z=a + 0.45)
+        borde = [(r * math.cos(a + giro), CY + r * math.sin(a + giro))
+                 for r, giro in [(0.82, 0), (1.2, 0.12), (1.7, 0.32), (2.2, 0.5)]]
+        borde += [(r * math.cos(a + giro + 0.025), CY + r * math.sin(a + giro + 0.025))
+                  for r, giro in [(2.2, 0.5), (1.7, 0.32), (1.2, 0.12), (0.82, 0)]]
+        prisma(borde, 0.6, (0, 0, 0.39), "aspas")
+    tubo([(-1.1, 1.3, 0.65), (-1.6, 2, 0.65), (-2.2, 2.3, 0.65)], 0.04, "cobre", seg=6)
     for x, y in [(-R - 0.1, CY - 0.6), (R + 0.1, CY - 0.6), (R + 0.05, 2.0)]:
         oreja = cilindro(0.38, 0.06, (x, y, H - 0.03), "metal", seg=24)
         restar(oreja, cilindro(0.15, 1.0, (x, y, H), mat=None, seg=16))
@@ -536,6 +542,14 @@ def bateria():
             x, y = sx * 12.95, -0.45 + sy * 2.4
             oreja = caja((0.8, 0.8, 0.05), (x, y, 0.06), "metal", bisel=0.05)
             restar(oreja, cilindro(0.17, 0.5, (x, y, 0.06), mat=None, seg=16))
+    # Serigrafía abstracta, sin capacidad, marca ni valores inventados.
+    for x in (-8.6, 8.6):
+        caja((4, 2.4, 0.01), (x, -0.45, 0.755), "etiqueta")
+    for x in (-8.6, 0, 8.6):
+        for i in range(5):
+            caja((2.8 if i else 3.1, 0.07, 0.008), (x, -1.1 + i * 0.3, 0.765), "chip")
+        caja((7.8, 0.16, 0.025), (x, -3.2, 0.74), "goma")
+        caja((0.8, 0.5, 0.04), (x, 2.65, 0.3), "cobre")
     return armar("bateria", EQUIPOS_NOTEBOOK)
 
 
@@ -707,6 +721,10 @@ def pantalla():
     cilindro(0.17, 0.012, (0, D / 2 - 0.65, 0.355), "goma", seg=24)
     aro = cilindro(0.21, 0.008, (0, D / 2 - 0.65, 0.354), "metal", seg=24)
     restar(aro, cilindro(0.17, 0.1, (0, D / 2 - 0.65, 0.354), mat=None, seg=24))
+    # Receptor frontal y puntos de anclaje: sin contenido de pantalla ficticio.
+    caja((0.85, 0.08, 0.012), (0, D / 2 - 0.3, 0.36), "metal", bisel=0.03)
+    for x in (-0.3, -0.15, 0, 0.15, 0.3):
+        caja((0.06, 0.06, 0.008), (x, D / 2 - 0.3, 0.37), "goma")
     return armar("pantalla")
 
 
@@ -734,6 +752,11 @@ def placa_compacta():
             continue  # el hueco de la L (ahí va la cámara)
         w = azar.uniform(0.08, 0.22)
         caja((w, w * 0.55, 0.04), (x, y, 0.1), azar.choice(["metal", "chip", "conector"]))
+    for x, y in ((-2.3, 1.6), (2.3, 4.7), (-2.2, -2.8)):
+        for k in range(5):
+            caja((0.06, 0.23, 0.008), (x - 0.3 + k * 0.15, y, 0.195), "contactos")
+    for y in (-2.2, -1.9, -1.6):
+        caja((2.2, 0.04, 0.01), (0.4, y, 0.21), "ranura")
     return armar("placa")
 
 
@@ -763,6 +786,9 @@ def bateria_celular():
     caja((0.65, 0.25, 0.006), (2.5, D / 2 + 0.3, 0.383), "contactos")
     for x in (-1.6, 1.6):
         caja((0.7, 0.9, 0.01), (x, -D / 2 - 0.3, 0.005), "goma")
+    for i in range(7):
+        caja((3.4 if i < 2 else 2.6, 0.06, 0.01), (0, -1.4 + i * 0.35, 0.485), "chip")
+    caja((4.7, 0.14, 0.025), (0, -3.8, 0.46), "goma")
     return armar("bateria@celular", EQUIPOS_CELULAR)
 
 
@@ -772,6 +798,10 @@ def camara():
     cilindro(0.34, 0.2, (0, 0, 0.52), "metal", seg=32, bisel=0.02)
     lente(0, 0, 0.62, 0.3)
     caja((0.5, 0.45, 0.02), (0, -0.67, 0.03), "plastico")
+    cilindro(0.19, 0.018, (0, 0, 0.643), "optica", seg=24)
+    cilindro(0.075, 0.006, (0, 0, 0.656), "vidrio", seg=20)
+    for x in (-0.16, 0, 0.16):
+        caja((0.08, 0.2, 0.01), (x, -0.75, 0.045), "contactos")
     return armar("camara")
 
 
@@ -782,6 +812,12 @@ def camara_modulo():
         cilindro(r + 0.1, 0.5, (x, y, 0.35), seg=32, bisel=0.03)
         lente(x, y, 0.6, r)
     cilindro(0.18, 0.06, (0.65, -0.65, 0.13), "etiqueta", seg=24)
+    for (x, y), r in [((-0.65, 0.65), 0.5), ((-0.65, -0.65), 0.5), ((0.65, 0.65), 0.38)]:
+        cilindro(r * 0.67, 0.015, (x, y, 0.706), "optica", seg=24)
+        cilindro(r * 0.24, 0.008, (x, y, 0.719), "vidrio", seg=16)
+    caja((1, 1, 0.02), (0, -1.8, 0.08), "cobre")
+    for x in (-0.35, -0.12, 0.12, 0.35):
+        caja((0.1, 0.25, 0.01), (x, -2.2, 0.1), "contactos")
     return armar("camara@modulo", EQUIPOS_CELULAR)
 
 
@@ -995,6 +1031,13 @@ def pantalla_panel():
         caja((1.2, 0.1, 0.5), (x, yb + 0.1, H - 1.9), "chip")
     tubo([(10.5, yb + 0.5, 6.0), (16.0, yb + 0.7, 8.0), (22.0, yb + 0.7, 12.0)], 0.35, "plastico", seg=10)
     etiqueta_impresa(30.0, yb + 0.2, 14.0, 12.0, 6.0, plano="xz")
+    for x in (-W * 0.3, W * 0.3):
+        for z in (H * 0.25, H * 0.75):
+            oreja = caja((3, 0.45, 3), (x, yb + 0.3, z), "metal", bisel=0.15)
+            restar(oreja, cilindro(0.4, 1.5, (x, yb + 0.3, z), mat=None, seg=12, eje="y"))
+    for x in (-8, 8):
+        caja((3, 0.08, 3), (x, yb + 0.7, 10), "cobre")
+        caja((3, 0.25, 0.6), (x, yb + 0.8, 8.6), "conector")
     return armar("pantalla@panel", EQUIPOS_TV)
 
 
@@ -1119,6 +1162,14 @@ def tambor():
         girar(brazo, (0, -a, 0))
     cilindro(3.0, 1.6, (0, P / 2 + 1.2, R), "metal", seg=24, eje="y")
     cilindro(1.2, 5.0, (0, P / 2 + 3.5, R), "metal", seg=20, eje="y")
+    # El reverso interior de las perforaciones también se ve desde la boca.
+    for j, y in enumerate((-P / 2 + 3.5, -P / 2 + 6.5, -1.5, 1.5, P / 2 - 6.5, P / 2 - 3.5)):
+        for k in range(24):
+            a = 2 * math.pi * k / 24 + j * 0.13
+            punto = cilindro(0.35, 0.06, (math.cos(a) * (R - 0.31), y, R + math.sin(a) * (R - 0.31)), "ranura", seg=6)
+            girar(punto, (0, math.pi / 2 - a, 0))
+    aro_interior = cilindro(R - 0.5, 0.5, (0, -P / 2 + 1.5, R), "metal", seg=48, eje="y")
+    restar(aro_interior, cilindro(R - 1, 1, (0, -P / 2 + 1.5, R), mat=None, seg=48, eje="y"))
     return armar("tambor")
 
 
@@ -1146,6 +1197,10 @@ def compresor():
     caja((4.0, 2.4, 3.6), (0, -R - 0.6, z0 + H * 0.45), "plastico", bisel=0.2)
     caja((1.2, 0.3, 1.2), (1.0, -R - 1.85, z0 + H * 0.3), "conector", bisel=0.05)
     tubo([(1.0, -R - 2.0, z0 + H * 0.3), (1.6, -R - 3.4, z0 + H * 0.2), (2.6, -R - 4.4, z0 + 1.2)], 0.25, "plastico", seg=10)
+    for z in (zt * 0.38, zt * 0.48, zt * 0.58):
+        caja((2.6, 0.04, 0.12), (0, -R - 1.82, z), "ranura")
+    for x in (-1.3, 1.3):
+        cilindro(0.12, 0.1, (x, -R - 1.86, z0 + H * 0.58), "metal", seg=12, eje="y")
     return armar("compresor")
 
 
@@ -1612,6 +1667,83 @@ FAMILIAS = {
 AJUSTES = {
     # Impresora láser.
     "rodillo": "tramo:x:redondo",
+    "unidad_laser": "libre",
+    "puerta@impresora": "libre",
+    "carcasa@impresora": "libre",
+    "agujas_reloj@pared": "proporcional",
+    # Cobertura completa: incluso los tipos libres y alias son explícitos.
+    "base": "libre",
+    "tapa_inferior": "libre",
+    "ram": "libre",
+    "ssd": "libre",
+    "wifi": "libre",
+    "disco_duro": "libre",
+    "soporte": "libre",
+    "marco": "libre",
+    "tapa_trasera": "libre",
+    "placa@control": "libre",
+    "capacitor@motor": "redondo:xz",
+    "panel": "libre",
+    "parlante": "libre",
+    "parlante@celular": "libre",
+    "conector@usb_c": "proporcional",
+    "conector@terminal": "proporcional",
+    "correa": "libre",
+    "condensador": "libre",
+    "filtro": "libre",
+    "cable@redondo": "tramo:x",
+    "puerta": "libre",
+    "bandeja": "libre",
+    "bandeja@goteo": "libre",
+    "bandeja@estante": "libre",
+    "carcasa@heladera": "libre",
+    "carcasa@split": "libre",
+    "carcasa@televisor": "libre",
+    "carcasa@lavarropas": "libre",
+    "carcasa@microondas": "libre",
+    "placa_madre@celular": "libre",
+    "condensador@aletas": "libre",
+    "condensador@electrolitico": "redondo:xz",
+    "evaporador@aletas": "libre",
+    "turbina": "tramo:x:redondo",
+    "estante": "libre",
+
+    # Objetos cotidianos del campus.
+    "canilla": "proporcional",
+    "manija_canilla": "proporcional",
+    "cartucho_canilla": "redondo:xz",
+    "aireador_canilla": "redondo:xz",
+    "valvula_cierre": "proporcional",
+    "flexible_agua": "proporcional",
+    "desague_lavatorio": "redondo:xz",
+    "sifon_lavatorio": "proporcional",
+    "pulsador_descarga": "redondo:xz",
+    "flotante_cisterna": "proporcional",
+    "valvula_descarga": "proporcional",
+    "carcasa_reloj_pared": "redondo:xz",
+    "mecanismo_reloj_pared": "proporcional",
+    "placa_pared": "libre",
+    "bombilla_led": "redondo:xz",
+    "difusor_luminaria": "libre",
+    "carcasa_calculadora": "libre",
+    "teclado_calculadora": "libre",
+    "pantalla@segmentos": "libre",
+    "carcasa_proyector": "proporcional",
+
+
+    # Reglas explícitas de las piezas revisadas para la demo.
+    "bateria": "libre",
+    "bateria@celular": "libre",
+    "placa_madre": "libre",
+    "placa": "libre",
+    "pantalla": "libre",
+    "pantalla@panel": "libre",
+    "camara@modulo": "proporcional",
+    "retroiluminacion": "libre",
+    "serpentin": "libre",
+    "evaporador": "libre",
+    "fuente": "libre",
+
     # Familia facultad: formas nuevas, ejes del GLB.
     "bateria@celdas_pegadas": "proporcional",
     "placa_logica_integrada": "libre",
