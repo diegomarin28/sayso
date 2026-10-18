@@ -35,11 +35,24 @@ describe("lib/voice/elevenlabs", () => {
     await hablarStream("hola");
     const cuerpo = JSON.parse(fetch.mock.calls[0][1].body);
     expect(cuerpo).toMatchObject({ text: "hola", model_id: "eleven_flash_v2_5", language_code: "es" });
+    expect(cuerpo.voice_settings.speed).toBe(1.15);
   });
 
   it("si ElevenLabs falla, error 502 para que el navegador use su voz", async () => {
     vi.stubEnv("ELEVENLABS_API_KEY", "k");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("cuota", { status: 429 })));
     await expect(hablarStream("hola")).rejects.toMatchObject({ status: 502 });
+  });
+
+  it("la velocidad se puede ajustar con ELEVENLABS_VELOCIDAD, dentro de lo que acepta ElevenLabs", async () => {
+    vi.stubEnv("ELEVENLABS_API_KEY", "k");
+    const fetch = vi.fn().mockResolvedValue(new Response("mp3"));
+    vi.stubGlobal("fetch", fetch);
+    vi.stubEnv("ELEVENLABS_VELOCIDAD", "1.2");
+    await hablarStream("hola");
+    expect(JSON.parse(fetch.mock.calls[0][1].body).voice_settings.speed).toBe(1.2);
+    vi.stubEnv("ELEVENLABS_VELOCIDAD", "3");
+    await hablarStream("hola");
+    expect(JSON.parse(fetch.mock.calls[1][1].body).voice_settings.speed).toBe(1.15);
   });
 });
