@@ -1,4 +1,4 @@
-import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import { vistaEnImagen, type PiezaPlano, type PlanoDePiezas, type Vec3 } from "../../shared";
 
 /**
  * Suma a un plano guardado las piezas que la IA ubicó en una página del manual en un plano nuevo
@@ -12,7 +12,7 @@ export function sumarDelManual(guardado: PlanoDePiezas, nuevo: PlanoDePiezas, id
   const raiz = guardado.piezas.find((p) => !p.padre);
   const raizN = nuevo.piezas.find((p) => !p.padre);
   const pedidas = new Set(ids);
-  const delManual = nuevo.piezas.filter((p) => p !== raizN && pedidas.has(p.pieza) && p.origen === "manual");
+  const delManual = nuevo.piezas.filter((p) => p !== raizN && pedidas.has(p.pieza) && vistaEnImagen(p.origen));
   if (!raiz || !raizN || !delManual.length) return { plano: guardado, sumadas: [] };
 
   const escala = raizN.dim.map((v, i) => raiz.dim[i] / Math.max(v, 1e-6));

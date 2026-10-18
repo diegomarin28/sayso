@@ -5,6 +5,7 @@ import { supabaseServidor } from "../../../lib/supabase/cliente";
 import { cachePlanosSupabase } from "../../../lib/planogenerator/cache";
 import { MAX_IMAGENES_PLANO } from "../../../lib/planogenerator/generador";
 import { obtenerPlano } from "../../../lib/planogenerator/obtener";
+import { buscarFotosInterior } from "../../../lib/planogenerator/fotos";
 
 /** Dueño: Diego (carril B). Leer el manual completo puede tardar ~1 minuto; con la vista interior, solo esas páginas. */
 export const maxDuration = 300;
@@ -48,15 +49,19 @@ export function POST(req: Request) {
           ? { fileId: e.manualFileId, paginasVistaExplosionada: e.paginasVistaExplosionada, paginaVistaInterior: e.paginaVistaInterior }
           : undefined,
       },
-      db ? { cache: cachePlanosSupabase(db) } : {},
+      // Sin manual con vistas, antes de estimar se buscan fotos del interior de ese modelo (#235).
+      { ...(db ? { cache: cachePlanosSupabase(db) } : {}), buscarFotos: (equipo) => buscarFotosInterior(equipo) },
     );
-    const leido = r.paginasLeidas
+    const conFotos = r.plano.piezas.some((p) => p.origen === "foto");
+    const leido = conFotos
+      ? "fotos del interior de este modelo"
+      : r.paginasLeidas
       ? `${r.paginasLeidas.length === 1 ? "la página" : "las páginas"} ${r.paginasLeidas.join(", ")} del manual`
       : "el manual";
     // Un plano mixto no se anuncia como leído entero del manual.
     const cuantas = (o: string) => r.plano.piezas.filter((p) => p.origen === o).length;
     const desglose = r.plano.piezas.some((p) => p.origen)
-      ? `: ${cuantas("manual")} del manual, ${cuantas("estimada")} estimadas, ${cuantas("plantilla")} genéricas`
+      ? `: ${cuantas("manual")} del manual, ${cuantas("foto")} con fotos del interior, ${cuantas("estimada")} estimadas, ${cuantas("plantilla")} genéricas`
       : "";
     const mensaje = r.desdeCache
       ? `Reusé el plano 3D de este modelo (${r.plano.piezas.length} piezas${desglose}).`

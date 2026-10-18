@@ -6,6 +6,7 @@ import { cachePlanosEnMemoria, cubrePack, type CachePlanos, type PlanoGuardado }
 import { ajustarPlanoAlTipo } from "./carcasa";
 import { sumarDelManual } from "./completar";
 import { elegirPlantilla } from "./plantillas/por-tipo";
+import type { BuscarFotos } from "./fotos";
 import { ES_ESTRUCTURA, terminarPlano, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
 import { paginasRecorte, recortarManual } from "./recorte";
 
@@ -42,7 +43,7 @@ export function terminarGuardado(plano: PlanoDePiezas, kp: KnowledgePack, tipoEq
 
 export async function obtenerPlano(
   entrada: EntradaObtener,
-  deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch } = {},
+  deps: { cache?: CachePlanos; llamar?: LlamarIA; enviar?: EnviarMensaje; descargar?: Fetch; buscarFotos?: BuscarFotos } = {},
 ): Promise<ResultadoObtener> {
   const cache = deps.cache ?? memoria;
   const marca = entrada.ficha?.marca.valor ?? null;
@@ -80,7 +81,9 @@ export async function obtenerPlano(
   // es parte del prefijo de la caché de prompts.
   const titulo = entrada.manual?.titulo ?? kp.fuentes.find((f) => f.url && f.url === entrada.manualUrl)?.doc;
   const conTitulo = aGenerar.manual && titulo ? { ...aGenerar, manual: { ...aGenerar.manual, titulo } } : aGenerar;
-  const generado = await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar);
+  const generado =
+    (!guardado && !recorte && !conManual && modelo ? await conFotos(conTitulo, { marca, modelo, clase: kp.clase }, deps) : null) ??
+    (await generarPlano(recorte ? { ...conTitulo, recorte } : conTitulo, deps.llamar, deps.enviar));
   const { camino, modelo: modeloIA } = generado;
   const paginasLeidas = recorte && generado.origen === "ia" ? recorte.paginas : null;
 
@@ -112,4 +115,25 @@ export async function obtenerPlano(
     });
   }
   return { plano, avisos, origen, camino, modelo: modeloIA, desdeCache: false, paginasLeidas };
+}
+
+/**
+ * Sin manual (ni recorte ni imágenes), antes de estimar: fotos públicas del interior de ese modelo (#235). Lo que
+ * la IA ve en ellas queda con origen "foto". Si no hay fotos, o falla cualquier cosa, o la IA no pudo con ellas,
+ * null: el plano se arma como siempre (estimado), nunca un error.
+ */
+async function conFotos(
+  entrada: EntradaObtener,
+  equipo: Parameters<BuscarFotos>[0],
+  deps: { llamar?: LlamarIA; enviar?: EnviarMensaje; buscarFotos?: BuscarFotos },
+): Promise<ResultadoGenerador | null> {
+  if (!deps.buscarFotos) return null;
+  try {
+    const fotos = await deps.buscarFotos(equipo);
+    if (!fotos?.imagenes.length) return null;
+    const r = await generarPlano({ ...entrada, imagenes: fotos.imagenes, paginas: undefined, fotos: fotos.fuente }, deps.llamar, deps.enviar);
+    return r.origen === "ia" ? { ...r, avisos: [`Sin vistas del manual: ubiqué las piezas con ${fotos.imagenes.length} fotos del interior (${fotos.fuente.doc}).`, ...r.avisos] } : null;
+  } catch {
+    return null;
+  }
 }

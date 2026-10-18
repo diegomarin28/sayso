@@ -144,10 +144,14 @@ export const FormaPieza = z.enum(["caja", "cilindro", "extrusion"]);
 
 /**
  * De dónde sale un dato del plano 3D: "manual" = la IA lo vio en una página del manual (con cita);
- * "estimada" = lo dedujo sin página o con poca confianza; "plantilla" = valor genérico.
+ * "foto" = la IA lo vio en una foto pública del interior de ese modelo (sin manual con vistas, #235; la cita
+ * lleva la URL de la página); "estimada" = lo dedujo sin página o con poca confianza; "plantilla" = valor genérico.
  */
-export const OrigenDato3D = z.enum(["manual", "estimada", "plantilla"]);
+export const OrigenDato3D = z.enum(["manual", "foto", "estimada", "plantilla"]);
 export type OrigenDato3D = z.infer<typeof OrigenDato3D>;
+
+/** La ubicación se vio en una imagen (una página del manual o una foto del interior): el esqueleto no la mueve. */
+export const vistaEnImagen = (origen?: OrigenDato3D) => origen === "manual" || origen === "foto";
 
 export const PiezaPlano = z.object({
   pieza: z.string(), // id de Pieza

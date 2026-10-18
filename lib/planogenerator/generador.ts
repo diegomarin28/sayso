@@ -119,6 +119,11 @@ export type EntradaGenerador = {
   /** Número de página de cada imagen (para que la IA cite). */
   paginas?: number[];
   /**
+   * Las `imagenes` no son del manual: son fotos públicas del interior de este modelo (#235, ver `fotos.ts`).
+   * `urls[i]` es la página de donde salió la imagen i + 1. Lo que la IA ve en ellas queda con origen "foto".
+   */
+  fotos?: FuenteFotos;
+  /**
    * El manual completo ya subido a la Files API (lo devuelve /api/knowledge). La IA lo lee
    * directo: no hace falta renderizar páginas. Las páginas de la vista explosionada las
    * encontró el bibliotecario; las vistas interiores las busca la IA.
@@ -175,7 +180,9 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     .filter((p) => !ES_ESTRUCTURA.has(p.id))
     .map((p) => `- ${p.id}: ${p.nombre}. Ubicación según el manual: ${p.ubicacion}.${p.etiquetaManual ? ` N.º en el diagrama: ${p.etiquetaManual}.` : ""}`)
     .join("\n");
-  const paginas = entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
+  const paginas = entrada.fotos
+    ? `Las imágenes NO son del manual: son ${entrada.imagenes?.length ?? 0} fotos del interior de este modelo, numeradas desde 1. En "pagina" poné el número de la foto donde ves la pieza (null si no la ves). Las fotos no dan medidas: "medidas_fuente" va "estimada".`
+    : entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
   const { recorte } = entrada;
   const manual = recorte ? undefined : entrada.manual;
   const guiaManual = recorte
@@ -217,7 +224,8 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
       };
       // Un modelo pedido a mano (batería) se mide solo; si no, el barato escala al más capaz si hace falta.
       if (entrada.modelo) propuesta = await pedirJson(PropuestaPlano, pedido, llamar);
-      else ({ resultado: propuesta, escalada } = await pedirJsonConEscalada(PropuestaPlano, pedido, llamar, (p) => revisarPropuesta(p, kp, camino)));
+      // Con fotos no se escala: una foto muestra parte del equipo, el modelo más capaz no vería más.
+      else ({ resultado: propuesta, escalada } = await pedirJsonConEscalada(PropuestaPlano, pedido, llamar, (p) => (entrada.fotos ? null : revisarPropuesta(p, kp, camino))));
     }
     const modeloFinal = escalada ? ESCALADA.hacia : modelo;
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
@@ -228,7 +236,8 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
-    const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano, kp, tipo);
+    const visto = entrada.fotos ? conOrigenFoto(armado.plano, entrada.fotos) : armado.plano;
+    const sueltas = terminarPlano(tipo ? ajustarPlanoAlTipo(visto, tipo) : visto, kp, tipo);
     const avisoEscalada = escalada ? [`El cartógrafo pasó a ${modeloFinal} porque ${TEXTO_ESCALADA[escalada]}.`] : [];
     const avisos = [...avisoEscalada, ...avisosCara, ...armado.avisos, ...sueltas.avisos];
     return { plano: sueltas.plano, avisos, origen: "ia", camino, modelo: modeloFinal, escalada, propuesta };
@@ -531,6 +540,26 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   const sueltas = sumarSueltas(teclas.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
   const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
   return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...sueltas.avisos, ...forma.avisos] };
+}
+
+/** De dónde salieron las fotos del interior (#235): un nombre para la cita y la página de cada foto. */
+export type FuenteFotos = { doc: string; urls: string[] };
+
+/**
+ * Lo que la IA vio en una foto (no en el manual) queda con origen "foto" y la URL de la página en la cita; las
+ * medidas no salen de una foto, así que la carcasa y sus medidas quedan estimadas.
+ */
+export function conOrigenFoto(plano: PlanoDePiezas, fotos: FuenteFotos): PlanoDePiezas {
+  return {
+    ...plano,
+    ...(plano.medidas ? { medidas: { ancho: "estimada" as const, prof: "estimada" as const } } : {}),
+    piezas: plano.piezas.map((p): PiezaPlano => {
+      if (!p.padre) return p.origen === "manual" ? { ...p, origen: "estimada" } : p;
+      if (p.origen !== "manual") return p;
+      const url = p.cita?.pagina ? fotos.urls[p.cita.pagina - 1] : undefined;
+      return { ...p, origen: "foto", cita: { doc: fotos.doc, ...(url ? { url } : {}), estado: "NO_VERIFICABLE" } };
+    }),
+  };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */
