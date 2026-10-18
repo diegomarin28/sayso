@@ -80,3 +80,35 @@ export function Libro(p: PropsIcono) {
     </Icono>
   );
 }
+
+export function Pausa(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M9 5v14M15 5v14" />
+    </Icono>
+  );
+}
+
+export function Reproducir(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M7 4.5v15l12-7.5z" />
+    </Icono>
+  );
+}
+
+export function Anterior(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M15 5l-7 7 7 7" />
+    </Icono>
+  );
+}
+
+export function Siguiente(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M9 5l7 7-7 7" />
+    </Icono>
+  );
+}

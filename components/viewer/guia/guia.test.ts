@@ -58,17 +58,11 @@ describe("reproducir", () => {
       m,
       new AbortController().signal,
     );
-    expect(log).toEqual([
-      "estado:pensando",
-      "estado:hablando",
-      "paso:1",
-      "decir:Este es el",
-      "estado:buscando:Dejame buscarlo…",
-      "estado:hablando",
-      "paso:2",
-      "decir:Aflojá los",
-      "estado:esperando",
-    ]);
+    // Cada paso se muestra y se dice antes del siguiente (la respuesta se lee entera: "buscando"
+    // solo aparece si hay que esperar un paso que todavía no llegó).
+    expect(log.filter((l) => /^(paso|decir)/.test(l))).toEqual(["paso:1", "decir:Este es el", "paso:2", "decir:Aflojá los"]);
+    expect(log[0]).toBe("estado:pensando");
+    expect(log.at(-1)).toBe("estado:esperando");
     expect(dicho).toEqual({ rol: "experto", texto: `${coreografiaEjemplo[0].dice} ${coreografiaEjemplo[1].dice}` });
   });
 

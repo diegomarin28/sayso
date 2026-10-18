@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type { Coreografia, KnowledgePack } from "../../../shared";
-import { Libro } from "./iconos";
+import { Anterior, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
+import type { EstadoControles } from "./reproducir";
 
 /**
  * Partes visuales de la guía (pantallas 5 y 6), para que se entienda el paso a paso y la charla:
@@ -20,15 +21,18 @@ export function TarjetaPaso({
   completa,
   onElegir,
   onVerManual,
+  controles,
 }: {
   c: Coreografia;
   indice: number;
   total: number;
-  /** Ya llegaron todos los pasos de la respuesta: se puede volver a ver cualquiera. */
+  /** Ya llegaron todos los pasos de la respuesta (el título dice "de N"). Cada punto es un paso recibido: se puede tocar. */
   completa: boolean;
   onElegir: (i: number) => void;
   /** Si está, el paso cita una página que tiene imagen: botón "Ver en el manual". */
   onVerManual?: () => void;
+  /** Botones de la guía (anterior, pausa, siguiente): ver `ControlesGuia`. */
+  controles?: ReactNode;
 }) {
   const bloqueo = c.riesgo === "alto";
   return (
@@ -52,13 +56,10 @@ export function TarjetaPaso({
               <button
                 key={i}
                 type="button"
-                disabled={!completa}
                 onClick={() => onElegir(i)}
                 aria-label={`Ver el paso ${i + 1}`}
                 aria-current={i === indice}
-                className={`h-2.5 rounded-full transition-all ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/40"} ${
-                  completa ? "cursor-pointer hover:bg-texto-suave" : ""
-                }`}
+                className={`h-2.5 cursor-pointer rounded-full transition-all hover:bg-texto-suave ${i === indice ? "w-6 bg-acento" : "w-2.5 bg-texto-suave/40"}`}
               />
             ))}
             {!completa && <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-texto-suave/40" aria-hidden />}
@@ -86,6 +87,65 @@ export function TarjetaPaso({
           </button>
         )}
       </div>
+      {controles}
+    </div>
+  );
+}
+
+/**
+ * B5: controles de la guía. Por defecto no avanza solo: "Siguiente" se resalta cuando la guía
+ * terminó de decir el paso y espera. "Automático" la hace seguir sola. Pausar corta la voz.
+ */
+export function ControlesGuia({
+  c,
+  onAnterior,
+  onPausar,
+  onSeguir,
+  onSiguiente,
+  onModo,
+}: {
+  c: EstadoControles;
+  onAnterior: () => void;
+  onPausar: () => void;
+  onSeguir: () => void;
+  onSiguiente: () => void;
+  onModo: (auto: boolean) => void;
+}) {
+  const boton = "flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30";
+  const auto = c.modo === "auto";
+  return (
+    <div className="mt-3 flex items-center gap-2" role="group" aria-label="Controles de la guía">
+      <button type="button" onClick={onAnterior} disabled={!c.hayAnterior} aria-label="Paso anterior" className={`${boton} border-borde bg-superficie text-texto`}>
+        <Anterior size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={c.pausado ? onSeguir : onPausar}
+        aria-label={c.pausado ? "Seguir" : "Pausar"}
+        className={`${boton} border-borde bg-superficie text-texto`}
+      >
+        {c.pausado ? <Reproducir size={18} /> : <Pausa size={18} />}
+        <span className="max-[400px]:hidden">{c.pausado ? "Seguir" : "Pausar"}</span>
+      </button>
+      <button
+        type="button"
+        onClick={onSiguiente}
+        disabled={!c.haySiguiente}
+        aria-label="Paso siguiente"
+        className={`${boton} flex-1 ${c.esperando && !c.pausado ? "border-acento bg-acento text-black" : "border-borde bg-superficie text-texto"}`}
+      >
+        Siguiente <Siguiente size={18} />
+      </button>
+      <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs text-texto-suave select-none">
+        <input type="checkbox" checked={auto} onChange={(e) => onModo(e.target.checked)} className="peer sr-only" />
+        <span
+          aria-hidden
+          className={`relative h-5 w-9 rounded-full transition ${auto ? "bg-acento" : "bg-texto-suave/40"} peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-acento`}
+        >
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${auto ? "left-[18px]" : "left-0.5"}`} />
+        </span>
+        Automático
+      </label>
     </div>
   );
 }
