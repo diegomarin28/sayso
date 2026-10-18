@@ -14,8 +14,16 @@ const NOMBRE_AGENTE: Record<Evento["agente"], string> = {
   compras: "Compras",
 };
 
+/**
+ * Lo que ve la persona. Los eventos de costo (tokens y USD de cada paso) quedan en el registro interno
+ * (Supabase, consola) y solo se muestran en desarrollo.
+ */
+export function eventosVisibles(eventos: Evento[], entorno = process.env.NODE_ENV): Evento[] {
+  return entorno === "production" ? eventos.filter((e) => e.tipo !== "costo") : eventos;
+}
+
 export function FeedActividad({ eventos, max = 6 }: { eventos: Evento[]; max?: number }) {
-  const ultimos = eventos.slice(-max);
+  const ultimos = eventosVisibles(eventos).slice(-max);
   if (ultimos.length === 0) return null;
   return (
     <ol aria-label="Actividad" className="flex flex-col gap-2.5">

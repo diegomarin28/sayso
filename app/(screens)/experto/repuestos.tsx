@@ -4,11 +4,13 @@ import { useState } from "react";
 import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
+import { piezasParaComprar } from "./piezas-compra";
 
 /**
- * Pantalla 6 — repuestos. Botón "Repuestos" con los del manual (los que tienen número de parte
- * citado) y, cuando el experto dice que una pieza hay que cambiarla (`piezaACambiar`, de
- * onCambiarPieza de <GuiaExperto>), un aviso que abre el panel con esa pieza primero.
+ * Pantalla 6 — repuestos. Botón "Comprar" (siempre con texto, también en celulares angostos) con las
+ * piezas para comprar (`piezasParaComprar`: si el manual no trae números de parte, se busca por modelo)
+ * y, cuando el experto dice que una pieza hay que cambiarla (`piezaACambiar`, de onCambiarPieza de
+ * <GuiaExperto>), un aviso que abre el panel con esa pieza primero.
  * Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar: cada
  * búsqueda cuesta. Nunca se compra ni se paga por la persona.
  */
@@ -17,8 +19,6 @@ import { USAR_FIXTURE } from "../_datos/api";
 const fuenteApagada: FuenteCompras = async () => {
   throw new Error("Modo de prueba: la búsqueda de repuestos está apagada.");
 };
-
-type Item = { pieza: string; numeroParte: string | null; pagina?: number };
 
 export function Repuestos({
   pack,
@@ -42,17 +42,7 @@ export function Repuestos({
   const [avisoCerrado, setAvisoCerrado] = useState<string | null>(null);
   const modelo = ficha.modelo.valor;
 
-  const items: Item[] = pack.repuestos.map((r) => ({
-    pieza: r.pieza,
-    numeroParte: r.numeroParte,
-    pagina: r.cita.pagina,
-  }));
-  // La pieza a cambiar va primero; si el manual no le da número de parte, se busca por modelo.
-  if (piezaACambiar) {
-    const i = items.findIndex((r) => r.pieza === piezaACambiar);
-    const [elegida] = i >= 0 ? items.splice(i, 1) : [{ pieza: piezaACambiar, numeroParte: null }];
-    items.unshift(elegida);
-  }
+  const items = piezasParaComprar(pack, piezaACambiar);
   if (items.length === 0 || !modelo) return null;
 
   const nombre = (id: string) => pack.piezas.find((p) => p.id === id)?.nombre ?? id;
@@ -63,10 +53,11 @@ export function Repuestos({
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-borde bg-superficie px-4 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
+        aria-label="Ver dónde comprar los repuestos"
+        className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie px-3 text-sm font-medium text-texto transition hover:border-texto-suave active:scale-95"
       >
-        <span className="max-[400px]:sr-only">Repuestos</span>
-        <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
+        <Carrito />
+        Comprar
       </button>
 
       {/* Aviso (no tapa el 3D mientras el experto explica): abre el panel con esa pieza primero. */}
@@ -106,10 +97,14 @@ export function Repuestos({
           className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col gap-6 overflow-y-auto rounded-t-3xl border border-borde bg-fondo px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-2xl md:rounded-3xl md:pb-6"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-texto-suave">
-              Repuestos de tu {[ficha.marca.valor, modelo].filter(Boolean).join(" ")}, según el manual
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-lg font-semibold">Dónde comprar repuestos</p>
+              <p className="text-sm text-texto-suave">
+                Para tu {[ficha.marca.valor, modelo].filter(Boolean).join(" ")}. Tocá «Ver dónde comprar esta pieza»: busco
+                publicaciones en Mercado Libre y en tiendas que envían a Uruguay. La compra la hacés vos, en la tienda.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -141,7 +136,7 @@ export function Repuestos({
                 <p className="font-mono text-xs text-texto-suave">
                   {r.numeroParte
                     ? `N.º de parte ${r.numeroParte}${r.pagina ? ` · pág. ${r.pagina} del manual` : ""}`
-                    : "Sin número de parte en el manual: se busca por modelo"}
+                    : `Sin número de parte en el manual: se busca por el modelo (${modelo})`}
                 </p>
               </div>
               <OpcionesCompra
@@ -153,11 +148,22 @@ export function Repuestos({
                 marca={ficha.marca.valor}
                 onEvento={onEvento}
                 fuente={USAR_FIXTURE ? fuenteApagada : undefined}
+                sinEncabezado
               />
             </div>
           ))}
         </div>
       </div>
     </>
+  );
+}
+
+function Carrito() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="20" r="1.5" />
+      <circle cx="18" cy="20" r="1.5" />
+      <path d="M2 3h3l2.6 12.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.5L22 7H6" />
+    </svg>
   );
 }

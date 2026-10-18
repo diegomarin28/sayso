@@ -15,8 +15,10 @@ export type { FuenteCompras, RespuestaCompras } from "./fuente";
 export { fuenteApi } from "./fuente";
 
 export type OpcionesCompraProps = PedidoCompra & {
-  /** Por defecto espera el toque en "Buscar repuesto" (cada búsqueda cuesta). */
+  /** Por defecto espera el toque en "Ver dónde comprar esta pieza" (cada búsqueda cuesta). */
   buscarAlMontar?: boolean;
+  /** Sin el título "Dónde comprar el repuesto" (ej. en una lista que ya nombra la pieza). */
+  sinEncabezado?: boolean;
   onEvento?: (e: Evento) => void;
   /** Para /lab y tests: de dónde salen las opciones (por defecto, /api/compras). */
   fuente?: FuenteCompras;
@@ -28,6 +30,7 @@ export function OpcionesCompra({
   onEvento,
   fuente = fuenteApi,
   className = "",
+  sinEncabezado = false,
   ...pedido
 }: OpcionesCompraProps) {
   const [estado, setEstado] = useState<EstadoCompras>({ t: buscarAlMontar ? "buscando" : "inicio" });
@@ -53,7 +56,16 @@ export function OpcionesCompra({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <VistaCompras estado={estado} pieza={pieza} numeroParte={numeroParte} onBuscar={() => void buscar()} className={className} />;
+  return (
+    <VistaCompras
+      estado={estado}
+      pieza={pieza}
+      numeroParte={numeroParte}
+      onBuscar={() => void buscar()}
+      className={className}
+      sinEncabezado={sinEncabezado}
+    />
+  );
 }
 
 /** Lo que se ve en cada estado. Sin estado propio: se prueba renderizándola (components/compras/compras.test.tsx). */
@@ -63,24 +75,28 @@ export function VistaCompras({
   numeroParte,
   onBuscar,
   className = "",
+  sinEncabezado = false,
 }: {
   estado: EstadoCompras;
   pieza: string;
   numeroParte?: string | null;
   onBuscar: () => void;
   className?: string;
+  sinEncabezado?: boolean;
 }) {
   return (
     <section className={`flex min-w-0 flex-col gap-3 text-texto ${className}`} aria-live="polite" aria-busy={estado.t === "buscando"}>
-      <header>
-        <h2 className="text-lg font-semibold">Dónde comprar el repuesto</h2>
-        <p className="text-sm break-words text-texto-suave">
-          {pieza}
-          {numeroParte ? ` · N.º de parte ${numeroParte}` : ""}
-        </p>
-      </header>
+      {!sinEncabezado && (
+        <header>
+          <h2 className="text-lg font-semibold">Dónde comprar el repuesto</h2>
+          <p className="text-sm break-words text-texto-suave">
+            {pieza}
+            {numeroParte ? ` · N.º de parte ${numeroParte}` : ""}
+          </p>
+        </header>
+      )}
 
-      {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Buscar repuesto</BotonBuscar>}
+      {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Ver dónde comprar esta pieza</BotonBuscar>}
 
       {estado.t === "buscando" && (
         <p role="status" className="animate-pulse text-sm text-texto-suave">
