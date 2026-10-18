@@ -21,7 +21,13 @@ import { avisos, leerPng, medir, type Aviso } from "./analisis";
 import { equiposDeCasos, type Equipo } from "./equipos";
 import { navegadorDeLaGaleria } from "./navegador";
 
-const ESPERA_CARGA_MS = 9000;
+/**
+ * Cuánto se espera a que el visor tenga las piezas reales, como mucho (antes eran 9 s fijos por equipo). Se
+ * corta antes, apenas están (`esperarPiezas`); el visor mismo pasa a primitivas a los 4 s (`ESPERA_MAXIMA_MS`).
+ */
+const TOPE_CARGA_MS = 4000;
+/** Cada cuánto se mira si el lienzo dejó de cambiar. */
+const PASO_CARGA_MS = 250;
 const ESPERA_DESPIECE_MS = 4500;
 /** Un comando al navegador que no responde en este tiempo corta la corrida (antes quedaba colgada con Chrome abierto). */
 const PLAZO_COMANDO_MS = 60_000;
@@ -84,8 +90,18 @@ async function main() {
     let n = 0;
     const pendientes = new Map<number, (r: Record<string, unknown>) => void>();
     let consola: string[] = [];
+    // Lo que el visor está bajando de la biblioteca (el índice y los GLB; true = GLB): `esperarPiezas` espera a que
+    // haya bajado algún GLB y no quede nada en camino (entre el índice y los GLB, la lista queda vacía un instante).
+    const bajando = new Map<string, boolean>();
+    let glbBajado = false;
     ws.onmessage = (m) => {
       const d = JSON.parse(String(m.data));
+      const pieza = d.method === "Network.requestWillBeSent" && /\/models\/piezas\/.*\.(glb|json)(\?|$)/.exec(d.params.request.url);
+      if (pieza) bajando.set(d.params.requestId, pieza[1] === "glb");
+      if ((d.method === "Network.loadingFinished" || d.method === "Network.loadingFailed") && bajando.has(d.params.requestId)) {
+        if (bajando.get(d.params.requestId) && d.method === "Network.loadingFinished") glbBajado = true;
+        bajando.delete(d.params.requestId);
+      }
       if (d.id && pendientes.has(d.id)) {
         pendientes.get(d.id)!(d.result ?? {});
         pendientes.delete(d.id);
@@ -106,14 +122,15 @@ async function main() {
     const evaluar = async (expr: string) => ((await cmd("Runtime.evaluate", { expression: expr, returnByValue: true })).result as { value: unknown }).value;
     await cmd("Runtime.enable");
     await cmd("Page.enable");
+    await cmd("Network.enable");
     await cmd("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 
     /**
-     * Captura solo el lienzo del 3D, la guarda y la mide. Antes oculta lo que el visor pone encima
-     * ("Vista isométrica", el origen de las ubicaciones, las etiquetas, el medidor de fps del lab): no es el equipo.
+     * El rectángulo del lienzo del 3D, con lo que el visor pone encima oculto ("Vista isométrica", el origen de
+     * las ubicaciones, las etiquetas, el medidor de fps del lab): no es el equipo.
      */
-    const capturar = async (archivo: string): Promise<Aviso[]> => {
-      const r = (await evaluar(`(() => {
+    const lienzo = async () =>
+      (await evaluar(`(() => {
         const lienzo = document.querySelector("canvas");
         if (!lienzo) return null;
         const c = lienzo.getBoundingClientRect();
@@ -124,6 +141,10 @@ async function main() {
         }
         return [c.x, c.y, c.width, c.height];
       })()`)) as number[] | null;
+
+    /** Captura solo el lienzo del 3D, la guarda y la mide. */
+    const capturar = async (archivo: string): Promise<Aviso[]> => {
+      const r = await lienzo();
       if (!r) return ["vacio"];
       const [x, y, width, height] = r;
       const { data } = (await cmd("Page.captureScreenshot", { format: "png", clip: { x, y, width, height, scale: 1 } })) as { data: string };
@@ -132,23 +153,47 @@ async function main() {
       return avisos(medir(leerPng(png)));
     };
 
+    /**
+     * Espera a que el visor tenga las piezas reales, mirándolo desde afuera (sin tocar el visor): bajó lo que pidió
+     * de la biblioteca (algún GLB y nada en camino) y el lienzo dejó de cambiar (la escena armada, la cámara quieta). Con tope
+     * `TOPE_CARGA_MS`. Devuelve en cuánto quedó lista, o "tope".
+     */
+    const esperarPiezas = async (desde: number): Promise<string> => {
+      let antes = "";
+      while (Date.now() - desde < TOPE_CARGA_MS) {
+        await esperar(PASO_CARGA_MS);
+        if (!glbBajado || bajando.size) continue;
+        const r = await lienzo();
+        if (!r) continue;
+        const { data } = (await cmd("Page.captureScreenshot", { format: "png", clip: { x: r[0], y: r[1], width: r[2], height: r[3], scale: 0.25 } })) as { data: string };
+        if (Date.now() - desde >= TOPE_CARGA_MS) break;
+        if (data === antes) return `${((Date.now() - desde) / 1000).toFixed(1)} s`;
+        antes = data;
+      }
+      return "tope";
+    };
+
     const filas: Fila[] = [];
     await cmd("Page.navigate", { url: `${base}/lab/visor` }); // el localStorage es por origen
     await esperar(1500);
     for (const { id, plano, tipoEquipo } of equipos) {
       consola = [];
+      glbBajado = false;
+      bajando.clear();
       if (plano) await evaluar(`localStorage.setItem(${JSON.stringify(CLAVE_PLANO_GUARDADO)}, ${JSON.stringify(JSON.stringify({ plano, tipoEquipo }))})`);
+      // Sin caché: cada equipo baja lo suyo, como la primera vez (si no, el índice ya estaría y no se esperaría nada).
+      await cmd("Network.clearBrowserCache");
       await cmd("Page.navigate", { url: `${base}/lab/visor?plano=${plano ? "guardado" : encodeURIComponent(id)}` });
       // El lienzo arranca en 300 × 150 hasta que toma el tamaño del visor; recién ahí corre la espera.
       for (let i = 0; i < 60 && !(await evaluar(`(document.querySelector("canvas")?.getBoundingClientRect().height ?? 0) > 200`)); i++) await esperar(250);
-      await esperar(ESPERA_CARGA_MS);
+      const listo = await esperarPiezas(Date.now());
       const cerrado = await capturar(`${id}-cerrado.png`);
       await evaluar(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Despiezar")?.click()`);
       await esperar(ESPERA_DESPIECE_MS);
       const despiezado = await capturar(`${id}-despiezado.png`);
       filas.push({ id, cerrado, despiezado, consola: [...new Set(consola)] });
       const marca = (a: Aviso[]) => (a.length ? a.join(", ") : "ok");
-      console.log(`${id.padEnd(16)} cerrado: ${marca(cerrado).padEnd(14)} despiezado: ${marca(despiezado).padEnd(14)} ${consola.length ? "consola: " + consola.length : ""}`);
+      console.log(`${id.padEnd(16)} listo: ${listo.padEnd(6)} cerrado: ${marca(cerrado).padEnd(14)} despiezado: ${marca(despiezado).padEnd(14)} ${consola.length ? "consola: " + consola.length : ""}`);
     }
     ws.close();
     writeFileSync(join(salida, "index.html"), hoja(filas));
