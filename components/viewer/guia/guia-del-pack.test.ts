@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { knowledgePackEjemplo, planoEjemplo, type KnowledgePack, type PlanoDePiezas } from "../../../shared";
 import { evaluarPedido } from "../../../lib/safety/riesgos";
-import { guiaDelPack, MAX_PASOS_GUIA } from "./guia-del-pack";
+import { guiaDelPack, MAX_PASOS_GUIA, pasosDelPack } from "./guia-del-pack";
 
 const resaltadas = (acciones: { t: string; pieza?: string }[]) => acciones.flatMap((a) => (a.t === "resaltar" ? [a.pieza] : []));
 /** Un plano con esas piezas (para equipos que no son la notebook del fixture). */
@@ -118,5 +118,36 @@ describe("guiaDelPack: el paso a paso de la guía simulada, con el pack (#161, s
 
   it("sin pasos en el pack no inventa una guía", () => {
     expect(guiaDelPack({ ...knowledgePackEjemplo, pasos: [] }, planoEjemplo)).toEqual([]);
+  });
+});
+
+describe("pasosDelPack: «Seguir con la guía» al abrir desde Mis casos (#219, sin IA)", () => {
+  it("los pasos guardados tal cual, con su cita (el sello de siempre) y sus piezas del plano resaltadas; no suma nada", () => {
+    const g = pasosDelPack(knowledgePackEjemplo, planoEjemplo);
+    expect(g.map((c) => c.dice)).toEqual(knowledgePackEjemplo.pasos.map((p) => p.texto));
+    expect(g.map((c) => c.paso)).toEqual(knowledgePackEjemplo.pasos.map((_, i) => i + 1));
+    expect(g.map((c) => c.cita)).toEqual(knowledgePackEjemplo.pasos.map((p) => p.cita));
+    const ultimo = knowledgePackEjemplo.pasos.at(-1)!;
+    const enPlano = ultimo.piezas.filter((id) => planoEjemplo.piezas.some((p) => p.pieza === id));
+    expect(resaltadas(g.at(-1)!.acciones)).toEqual(enPlano);
+  });
+
+  it("frena en un paso de riesgo alto y ordena por `orden` (otra variante: un TV)", () => {
+    const tv: KnowledgePack = {
+      ...knowledgePackEjemplo,
+      pasos: [
+        { id: "b", orden: 2, texto: "Si la luz se apaga sola, puede ser la fuente: no la toques enchufada.", piezas: [], riesgo: "alto" },
+        { id: "a", orden: 1, texto: "Desenchufá el TV y esperá un minuto.", piezas: ["fuente_alimentacion_tv"], riesgo: "bajo" },
+        { id: "c", orden: 3, texto: "Revisá las tiras LED.", piezas: [], riesgo: "medio" },
+      ],
+    };
+    const g = pasosDelPack(tv, planoCon("fuente_alimentacion_tv"));
+    expect(g.map((c) => c.riesgo)).toEqual(["bajo", "alto"]);
+    expect(g[0].dice).toBe("Desenchufá el TV y esperá un minuto.");
+    expect(g[1].dice).toMatch(/^Acá frenamos/);
+  });
+
+  it("sin pasos en el pack, no hay nada que ofrecer", () => {
+    expect(pasosDelPack({ ...knowledgePackEjemplo, pasos: [] }, planoEjemplo)).toEqual([]);
   });
 });
