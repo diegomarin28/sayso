@@ -1,4 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
+import { ES_TAPA } from "./cubiertas";
 import { pararPlano } from "./orientacion";
 import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
 
@@ -102,12 +103,13 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
  * - una tapa que envuelve al equipo (consola, router: sin carcasa propia) envuelve todo lo que hay;
  * - una chapa fina (la trasera del celular, la inferior de la notebook) va arriba de todo, del tamaño de la carcasa.
  */
-export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo, ids: string[] = []): PlanoDePiezas {
-  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => p.pieza.startsWith("tapa"));
+export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): PlanoDePiezas {
+  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => ES_TAPA.test(p.pieza));
   const raiz = plano.piezas.find((p) => !p.padre);
-  if (!tapa || !raiz || plano.piezas.some((p) => p.pieza.startsWith("tapa"))) return plano;
-  // Si el pack la nombra (la guía la va a sacar), con ese id.
-  const nombre = ids.find((id) => id.startsWith("tapa")) ?? tapa.pieza;
+  if (!tapa || !raiz || plano.piezas.some((p) => p.padre && ES_TAPA.test(p.pieza))) return plano;
+  // Con el id del esqueleto (así tiene su forma en la biblioteca), aunque el pack la llame "cubierta_trasera"
+  // o "carcasa_inferior": el visor entiende que la guía habla de la tapa (`resolverPieza`).
+  const nombre = tapa.pieza;
   const piezas = plano.piezas;
   const piso = Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2));
   const techo = Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));

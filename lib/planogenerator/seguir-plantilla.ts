@@ -1,10 +1,10 @@
 import indice from "../../public/models/piezas/indice.json";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
+import { ES_TAPA } from "./cubiertas";
 import { emparejar, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
-const ES_TAPA = /^tapa/;
 const NOMBRES = Object.keys(INDICE.tipos);
 
 /**

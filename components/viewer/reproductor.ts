@@ -1,4 +1,5 @@
 import type { Accion, Coreografia, Evento, Vec3 } from "../../shared";
+import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
 
 /**
  * Lógica pura del reproductor de coreografía: recibe acciones validadas por Zod
@@ -53,16 +54,44 @@ export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {
 const EJE = { x: 0, y: 1, z: 2 } as const;
 
 /** Aplica una acción. Si nombra una pieza que no existe, no cambia nada y devuelve un evento. */
+/** Para comparar ids: sin mayúsculas, tildes ni espacios ("Batería principal" ~ "bateria_principal"). */
+const comparable = (id: string) => id.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+
+/**
+ * La pieza del plano a la que se refiere la guía cuando no usa el id exacto (la IA escribe "bateria" y el
+ * plano tiene "bateria_iphone13", o al revés): igual sin mayúsculas ni tildes; si no, la única del plano
+ * que empieza con lo nombrado; si no, la más larga del plano con la que empieza lo nombrado; y una tapa
+ * con el nombre del manual ("cubierta_trasera", "carcasa_inferior") es la tapa del plano, si hay una sola.
+ * Si hay dudas (dos candidatas), ninguna: mejor no mover nada que mover la pieza equivocada.
+ */
+export function resolverPieza(nombrada: string, ids: Iterable<string>): string | undefined {
+  const lista = [...ids];
+  if (lista.includes(nombrada)) return nombrada;
+  const n = comparable(nombrada);
+  const iguales = lista.filter((id) => comparable(id) === n);
+  if (iguales.length === 1) return iguales[0];
+  const empiezan = lista.filter((id) => comparable(id).startsWith(`${n}_`));
+  if (empiezan.length === 1) return empiezan[0];
+  const prefijos = lista.filter((id) => n.startsWith(`${comparable(id)}_`)).sort((a, b) => b.length - a.length);
+  if (prefijos.length && (prefijos.length === 1 || prefijos[0].length > prefijos[1].length)) return prefijos[0];
+  const tapas = ES_TAPA.test(n) ? lista.filter((id) => ES_TAPA.test(comparable(id))) : [];
+  return tapas.length === 1 ? tapas[0] : undefined;
+}
+
 export function aplicarAccion(
   estado: EstadoEscena,
-  accion: Accion,
+  original: Accion,
   ctx: ContextoEventos,
 ): { estado: EstadoEscena; evento?: Evento } {
-  const pieza = "pieza" in accion ? accion.pieza : accion.t === "camara" ? accion.objetivo : undefined;
-  const esGeneral = accion.t === "camara" && pieza === OBJETIVO_GENERAL;
-  if (pieza !== undefined && !esGeneral && !(pieza in estado.piezas)) {
-    return { estado, evento: eventoPiezaDesconocida(pieza, accion, ctx) };
+  const nombrada = "pieza" in original ? original.pieza : original.t === "camara" ? original.objetivo : undefined;
+  const esGeneral = original.t === "camara" && nombrada === OBJETIVO_GENERAL;
+  const pieza = nombrada === undefined || esGeneral ? nombrada : resolverPieza(nombrada, Object.keys(estado.piezas));
+  if (nombrada !== undefined && pieza === undefined) {
+    return { estado, evento: eventoPiezaDesconocida(nombrada, original, ctx) };
   }
+  // Con el id del plano (si la guía lo nombró de otra forma).
+  const accion: Accion =
+    pieza === nombrada || pieza === undefined ? original : "pieza" in original ? { ...original, pieza } : original.t === "camara" ? { ...original, objetivo: pieza } : original;
 
   const piezas = { ...estado.piezas };
   const cambiar = (id: string, f: (p: EstadoPieza) => EstadoPieza) => (piezas[id] = f(piezas[id]));

@@ -502,7 +502,8 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
         const r = aplicarAccion(estado.current, accion, { casoId });
         actualizar(r.estado);
         if (r.evento) onEventoRef.current?.(r.evento);
-        else if (accion.t === "camara") acciones.current.mirar(accion.objetivo, accion.zoom ?? 1, true);
+        // La cámara va a la pieza del plano (la guía pudo nombrarla de otra forma: ver `resolverPieza`).
+        else if (accion.t === "camara") acciones.current.mirar(r.estado.camara.objetivo, accion.zoom ?? 1, true);
         else if (accion.t === "restaurar") acciones.current.mirar(OBJETIVO_GENERAL, 1, true);
       }, i * ESPACIO_ENTRE_ACCIONES_MS),
     );
