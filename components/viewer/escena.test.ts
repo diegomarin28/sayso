@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, usarColorActivo } from "./escena";
+import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, usarColorActivo } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -270,5 +270,34 @@ describe("escena: vista general en el celular", () => {
         const p = new THREE.Vector3(x, caja.max.y, z).project(camara);
         expect(Math.abs(p.x)).toBeLessThanOrEqual(1);
       }
+  });
+});
+
+describe("separarEtiquetas (#179: varias piezas resaltadas a la vez)", () => {
+  const lienzo = { width: 390, height: 600 };
+  const r = (x: number, y: number, ancho = 120, alto = 36) => ({ x, y, ancho, alto });
+  const sePisan = (a: ReturnType<typeof r>, b: ReturnType<typeof r>) => a.x < b.x + b.ancho && b.x < a.x + a.ancho && a.y < b.y + b.alto && b.y < a.y + a.alto;
+
+  it("dos etiquetas encimadas: la segunda se corre lo mínimo y ya no se pisan", () => {
+    const [a, b] = separarEtiquetas([r(20, 300), r(30, 310)], lienzo);
+    expect(a).toEqual(r(20, 300));
+    expect(b.x).toBe(30);
+    expect(sePisan(a, b)).toBe(false);
+    expect(Math.abs(b.y - 310)).toBeLessThanOrEqual(36 + 4 + 10);
+  });
+
+  it("tres juntas (como disipador, placa madre y ventilador): ninguna se pisa y todas quedan adentro", () => {
+    const res = separarEtiquetas([r(20, 300), r(25, 305), r(30, 298)], lienzo, 100);
+    for (let i = 0; i < res.length; i++) {
+      for (let j = i + 1; j < res.length; j++) expect(sePisan(res[i], res[j])).toBe(false);
+      expect(res[i].y).toBeGreaterThanOrEqual(100);
+      expect(res[i].y + res[i].alto).toBeLessThanOrEqual(lienzo.height);
+    }
+  });
+
+  it("si no se tocan no se mueven, y nunca se meten en la franja reservada de arriba", () => {
+    expect(separarEtiquetas([r(10, 300), r(250, 300)], lienzo)).toEqual([r(10, 300), r(250, 300)]);
+    const [, b] = separarEtiquetas([r(20, 110), r(20, 112)], lienzo, 100);
+    expect(b.y).toBeGreaterThanOrEqual(110 + 36);
   });
 });

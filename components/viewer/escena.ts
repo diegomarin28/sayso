@@ -489,3 +489,32 @@ export function ladoEtiqueta(
     h: sobraDerecha >= 0 || sobraDerecha >= sobraIzquierda ? "derecha" : "izquierda",
   };
 }
+
+/** Recuadro de una etiqueta en px del lienzo. */
+export type RectEtiqueta = { x: number; y: number; ancho: number; alto: number };
+/** Separación mínima entre dos etiquetas (px). */
+const SEPARACION_ETIQUETAS = 4;
+
+/**
+ * Varias piezas resaltadas a la vez: que sus etiquetas no se pisen (#179). En orden, cada recuadro que
+ * choca con uno ya puesto se corre en vertical lo mínimo (arriba o abajo de alguno de los puestos) sin
+ * salirse del lienzo ni meterse en la franja reservada. Si no hay lugar libre, queda donde estaba.
+ */
+export function separarEtiquetas(rects: RectEtiqueta[], lienzo: { width: number; height: number }, reservadoArriba = 0): RectEtiqueta[] {
+  const S = SEPARACION_ETIQUETAS;
+  const choca = (a: RectEtiqueta, b: RectEtiqueta) =>
+    a.x < b.x + b.ancho + S && b.x < a.x + a.ancho + S && a.y < b.y + b.alto + S && b.y < a.y + a.alto + S;
+  const minY = reservadoArriba + MARGEN_ETIQUETA;
+  const puestos: RectEtiqueta[] = [];
+  for (const r of rects) {
+    if (puestos.some((p) => choca(r, p))) {
+      const opciones = puestos
+        .flatMap((p) => [p.y + p.alto + S, p.y - r.alto - S])
+        .filter((y) => y >= minY && y + r.alto <= lienzo.height - MARGEN_ETIQUETA)
+        .sort((a, b) => Math.abs(a - r.y) - Math.abs(b - r.y));
+      const y = opciones.find((y) => !puestos.some((p) => choca({ ...r, y }, p)));
+      puestos.push(y === undefined ? r : { ...r, y });
+    } else puestos.push(r);
+  }
+  return puestos;
+}
