@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entenderSimulado, sinEntender } from "./entender-simulado";
+import { entenderSimulado, sinEntender, sintomaParaCitar } from "./entender-simulado";
 
 describe("recepción simulada (fixture)", () => {
   it("reconoce el equipo por lo que se nombra", () => {
@@ -39,5 +39,13 @@ describe("sinEntender", () => {
     expect(sinEntender("otro", undefined)).toBe(true);
     expect(sinEntender("otro", "celular")).toBe(false);
     expect(sinEntender("notebook", "equipo")).toBe(false);
+  });
+});
+
+describe("sintomaParaCitar", () => {
+  it("sin la puntuación del final y con minúscula solo al principio (2 variantes)", () => {
+    expect(sintomaParaCitar("Se apaga sola.")).toBe("se apaga sola");
+    expect(sintomaParaCitar("No anda el HDMI!! ")).toBe("no anda el HDMI");
+    expect(sintomaParaCitar("hace ruido y no enfría…")).toBe("hace ruido y no enfría");
   });
 });

@@ -8,7 +8,7 @@ import { IconoDeEquipo, type IconoEquipo } from "./_ui/iconos-equipo";
 import { LEMA, Marca } from "./_ui/marca";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
-import { sinEntender } from "./_datos/entender-simulado";
+import { sinEntender, sintomaParaCitar } from "./_datos/entender-simulado";
 import { useFlujo } from "./_estado/flujo";
 import { useDictado } from "@/lib/voice/useDictado";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
@@ -164,7 +164,7 @@ export default function QueSeRompio() {
           : entendido && sinElegir
             ? "No me quedó claro qué equipo es. Elegilo acá abajo."
             : entendido
-              ? `Entendí: es tu ${nombreEquipo} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
+              ? `Entendí: es tu ${nombreEquipo} y “${sintomaParaCitar(entendido.sintoma)}”. ¿Es así?`
               : "Hola. Contame qué se rompió.";
 
   // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,

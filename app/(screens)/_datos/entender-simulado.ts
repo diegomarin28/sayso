@@ -47,3 +47,12 @@ const RELLENO = new Set(["mi", "el", "la", "los", "las", "un", "una", "de", "del
 export function sinEntender(clase: Caso["clase"], tipoEquipo: string | null | undefined): boolean {
   return clase === "otro" && (!tipoEquipo?.trim() || tipoEquipo.trim().toLowerCase() === "equipo");
 }
+
+/**
+ * El síntoma para citarlo en «Entendí: es tu … y “…”»: sin la puntuación del final (si no, «“se apaga sola.”.»)
+ * y con minúscula solo en la primera letra (un «HDMI» o un modelo quedan como los escribió la persona).
+ */
+export function sintomaParaCitar(sintoma: string): string {
+  const s = sintoma.trim().replace(/[\s.,;:!?…]+$/u, "");
+  return s.charAt(0).toLocaleLowerCase("es") + s.slice(1);
+}
