@@ -50,7 +50,7 @@ Pantallas 1 a 6, foto rechazada y reintento, pregunta peligrosa, cierre y "Mis c
 
 ### Diego (carril B)
 - [x] B7. Sugerencias de la guía con mal artículo: "¿Dónde está el tornillos del ventilador?" → "¿Dónde están los tornillos del ventilador?". — PR #123
-- [x] B8. `npm run dev` a veces entra en bucle de recargas ("[Fast Refresh] rebuilding" → recarga) al abrir la app con Chrome sin ventana. Para recorrer la app: `NEXT_PUBLIC_DATOS=fixture npm run build && npx next start`. Documentado cómo evitarlo en el README ("Probar en el celular"), sin tocar `next.config.ts` (decisión de Diego). — PR #134
+- [x] B8. `npm run dev` a veces entra en bucle de recargas ("[Fast Refresh] rebuilding" → recarga) al abrir la app con Chrome sin ventana. Para recorrer la app: `NEXT_PUBLIC_DATOS=fixture npm run build && npx next start`. Documentado cómo evitarlo en el README ("Probar en el celular"). — PR #134. **Causa y arreglo:** `allowedDevOrigins` tenía las IPs del arranque; al cambiar de red el servidor rechazaba la recarga en caliente y la página se recargaba sola. Ahora acepta los rangos de red local (OK de Diego). — PR 165
 
 
 ## Ensayo general de la demo (17/10, noche — Diego)
