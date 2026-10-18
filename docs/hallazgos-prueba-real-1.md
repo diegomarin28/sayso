@@ -38,3 +38,17 @@ Cada ítem tiene dueño. Al arreglarlo, marcá [x] y poné el PR.
 - [x] B4. Etiqueta de la pieza: se corta en el borde y se buguea al girar el modelo. (#93)
 - [x] B5. Controles de la guía: pausar, paso anterior, paso siguiente; que no avance solo si no lo estoy mirando (opción de avanzar manual). — PR #90
 - [x] B6. Resaltar mejor la pieza que se nombra (ej. batería) sin tener que escribir. — PR #90
+
+## Recorrido completo con el fixture en tamaño iPhone (17/10, noche — Diego)
+Pantallas 1 a 6, foto rechazada y reintento, pregunta peligrosa, cierre y "Mis casos", a 390 × 844 con `NEXT_PUBLIC_DATOS=fixture` (build de producción). Anduvieron bien: rechazo de la foto con "Reintentar esta foto", bloqueo del paso 7 de la demo, controles de la guía, "¿De dónde sale esto?", cierre y caso nuevo limpio.
+
+### Iaio (carril C)
+- [ ] C9. **Privacidad**: "Mis casos" dice "Se guardan solo en este dispositivo, sin cuenta ni datos personales", pero en producción el caso y las fotos (la etiqueta tiene el N.º de serie) se suben a Supabase por `/api/casos`. — issue #117
+- [ ] C10. Preparando dice siempre "N piezas ubicadas según el manual", aunque el plano sea estimado o genérico (origen por pieza, #61). Usar `resumenOrigen` / `textoResumen` de `components/viewer/origen.ts`. — issue #118
+- [ ] C11. Corregir el equipo en la pantalla 1: solo Notebook / Aire split / Lavarropas / Otro; un celular o un TV caen en "Otro" sin poder decir cuál. — issue #119
+- [ ] C12. Detalles: "⚠" (emoji) en avisos de fotos y Preparando; frase repetida en la ficha; el encabezado "5/6 · EXPERTO" se parte en dos líneas a 390 px. — issue #119
+
+### Diego (carril B)
+- [x] B7. Sugerencias de la guía con mal artículo: "¿Dónde está el tornillos del ventilador?" → "¿Dónde están los tornillos del ventilador?". — PR (este)
+- [ ] B8. `npm run dev` a veces entra en bucle de recargas ("[Fast Refresh] rebuilding" → recarga) al abrir la app con Chrome sin ventana. Para recorrer la app: `NEXT_PUBLIC_DATOS=fixture npm run build && npx next start`. Investigar si vuelve a pasar con un navegador normal.
+
