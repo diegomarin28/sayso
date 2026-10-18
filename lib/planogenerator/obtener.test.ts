@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
-import { fichaEjemplo, knowledgePackEjemplo, type KnowledgePack } from "../../shared";
+import { fichaEjemplo, knowledgePackEjemplo, vistaEnImagen, type KnowledgePack } from "../../shared";
 import type Anthropic from "@anthropic-ai/sdk";
 import { LIMITES, type EnviarMensaje, type LlamarIA, type PedidoIA } from "../ia/claude";
 import { bloqueManual, SYSTEM_LECTOR } from "../knowledge/lector";
@@ -91,8 +91,11 @@ describe("obtenerPlano (caché por marca + modelo)", () => {
     const nueva = r.plano.piezas.find((p) => p.pieza === "parlantes");
     expect(nueva).toMatchObject({ origen: "manual" });
     expect(nueva?.cita?.pagina).toBe(51);
-    // Lo que ya estaba no se movió.
-    for (const p of a.plano.piezas) expect(r.plano.piezas.find((q) => q.pieza === p.pieza)?.pos).toEqual(p.pos);
+    // Lo que ya estaba no se movió; solo una pieza no vista que quedó encima de la nueva (vista) se corre, y se avisa (#235).
+    for (const p of a.plano.piezas) {
+      const ahora = r.plano.piezas.find((q) => q.pieza === p.pieza)?.pos;
+      if (vistaEnImagen(p.origen) || !r.avisos.some((x) => x.startsWith(`"${p.pieza}" no se ve`))) expect(ahora, p.pieza).toEqual(p.pos);
+    }
     expect(r.paginasLeidas).toEqual([51, 12]);
     // La tercera vez ya cubre: no hay IA.
     const otra = await obtenerPlano(e, { cache, descargar, llamar });
