@@ -81,6 +81,17 @@ export function Libro(p: PropsIcono) {
   );
 }
 
+/** Foto (para "Ver la foto del paso"). */
+export function Foto(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="M21 16l-5-5-8 8" />
+    </Icono>
+  );
+}
+
 export function Pausa(p: PropsIcono) {
   return (
     <Icono {...p}>

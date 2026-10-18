@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarGuiaIfixit, equipoIfixit, guiaIfixit, LICENCIA, manualWebDeIfixit, ordenarGuias, type GuiaEnLista } from "./ifixit";
+import { buscarGuiaIfixit, equipoIfixit, fotosPorPaso, guiaIfixit, LICENCIA, manualWebDeIfixit, ordenarGuias, type GuiaEnLista } from "./ifixit";
 
 /**
  * Una API de iFixit simulada (sin red): la búsqueda pide TODAS las palabras (en el título o la descripción),
@@ -129,6 +129,12 @@ describe("guiaIfixit y manualWebDeIfixit", () => {
   it("si la mejor guía viene vacía (un alias), usa la siguiente", async () => {
     const g = await buscarGuiaIfixit("Mando", "la batería no dura", api());
     expect(g?.id).toBe(42);
+  });
+
+  it("fotosPorPaso: la primera foto de cada paso, por la URL del paso (la que lleva la cita)", async () => {
+    const g = (await guiaIfixit(2, api()))!;
+    expect(fotosPorPaso(g)).toEqual({ [`${g.url}#s100`]: "https://img.ej/100-0.standard", [`${g.url}#s101`]: "https://img.ej/101-0.standard" });
+    expect(Object.keys(fotosPorPaso(g))).toEqual(manualWebDeIfixit(g).secciones.slice(1).map((s) => s.url));
   });
 
   it("como manual web: herramientas y piezas, un paso por sección (con su URL) y la atribución", async () => {
