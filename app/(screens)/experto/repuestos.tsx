@@ -4,21 +4,21 @@ import { useState } from "react";
 import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
+import { piezasParaComprar } from "./piezas-compra";
 
 /**
- * Pantalla 6 — repuestos. Botón "Repuestos" con los del manual (los que tienen número de parte
- * citado) y, cuando el experto dice que una pieza hay que cambiarla (`piezaACambiar`, de
- * onCambiarPieza de <GuiaExperto>), un aviso que abre el panel con esa pieza primero.
- * Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar: cada
- * búsqueda cuesta. Nunca se compra ni se paga por la persona.
+ * Pantalla 6 — repuestos. Franja "Ver dónde comprar repuestos" con las piezas que se pueden comprar
+ * (`piezasParaComprar`): las que tienen número de parte citado en el manual o, si el manual no los
+ * trae, las de la guía para buscar por modelo. Cuando el experto dice que una pieza hay que
+ * cambiarla (`piezaACambiar`, de onCambiarPieza de <GuiaExperto>), un aviso abre el panel con esa
+ * pieza primero. Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar:
+ * cada búsqueda cuesta. Nunca se compra ni se paga por la persona.
  */
 
 /** En modo fixture no se busca de verdad (gastaría IA y búsquedas web). */
 const fuenteApagada: FuenteCompras = async () => {
   throw new Error("Modo de prueba: la búsqueda de repuestos está apagada.");
 };
-
-type Item = { pieza: string; numeroParte: string | null; pagina?: number };
 
 export function Repuestos({
   pack,
@@ -42,17 +42,10 @@ export function Repuestos({
   const [avisoCerrado, setAvisoCerrado] = useState<string | null>(null);
   const modelo = ficha.modelo.valor;
 
-  const items: Item[] = pack.repuestos.map((r) => ({
-    pieza: r.pieza,
-    numeroParte: r.numeroParte,
-    pagina: r.cita.pagina,
-  }));
-  // La pieza a cambiar va primero; si el manual no le da número de parte, se busca por modelo.
-  if (piezaACambiar) {
-    const i = items.findIndex((r) => r.pieza === piezaACambiar);
-    const [elegida] = i >= 0 ? items.splice(i, 1) : [{ pieza: piezaACambiar, numeroParte: null }];
-    items.unshift(elegida);
-  }
+  // Siempre hay un camino para comprar: si el manual no trae números de parte, se ofrecen las piezas
+  // de la guía para buscar por modelo (#107). La que el experto pide cambiar va primera.
+  const items = piezasParaComprar(pack, piezaACambiar);
+  const conNumeros = pack.repuestos.length > 0;
   if (items.length === 0 || !modelo) return null;
 
   const nombre = (id: string) => pack.piezas.find((p) => p.id === id)?.nombre ?? id;
@@ -109,7 +102,9 @@ export function Repuestos({
         >
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-texto-suave">
-              Repuestos de tu {[ficha.marca.valor, modelo].filter(Boolean).join(" ")}, según el manual
+              {conNumeros
+                ? `Repuestos de tu ${[ficha.marca.valor, modelo].filter(Boolean).join(" ")}, según el manual`
+                : `El manual no trae números de parte: buscá las piezas de tu ${[ficha.marca.valor, modelo].filter(Boolean).join(" ")} por modelo`}
             </p>
             <button
               type="button"
@@ -122,6 +117,10 @@ export function Repuestos({
               Cerrar
             </button>
           </div>
+          <p className="-mt-2 text-sm text-texto-suave">
+            En cada pieza, tocá «Ver dónde comprar esta pieza» y te muestro dónde comprarla con envío a
+            Uruguay. Nunca compramos ni pagamos por vos: el link abre la publicación.
+          </p>
           {items.map((r) => (
             <div
               key={r.pieza}
@@ -143,10 +142,6 @@ export function Repuestos({
                   {r.numeroParte
                     ? `N.º de parte ${r.numeroParte}${r.pagina ? ` · pág. ${r.pagina} del manual` : ""}`
                     : "Sin número de parte en el manual: se busca por modelo"}
-                </p>
-                <p className="mt-1 text-sm text-texto-suave">
-                  Tocá «Buscar repuesto» y te muestro dónde comprar esta pieza con envío a Uruguay. Nunca
-                  compramos ni pagamos por vos: el link abre la publicación.
                 </p>
               </div>
               <OpcionesCompra
