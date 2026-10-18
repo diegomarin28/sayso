@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coreografiaEjemplo, type Coreografia } from "../../../shared";
 import type { EventoChat } from "./eventos-chat";
-import { Reproductor, type EstadoControles, type EstadoGuia, type ModoAvance } from "./reproducir";
+import { guiaPendiente, Reproductor, type EstadoControles, type EstadoGuia, type ModoAvance } from "./reproducir";
 
 const paso = (n: number, extra: Partial<Coreografia> = {}): Coreografia => ({ ...coreografiaEjemplo[0], paso: n, dice: `Paso ${n}.`, ...extra });
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -33,14 +33,14 @@ function stream(eventos: EventoChat[], { deAUno = false } = {}) {
 }
 
 /** Voz de mentira: cada frase queda "diciéndose" hasta `terminar()` o hasta que la cortan. */
-function armar(modo: ModoAvance) {
+function armar(modo: ModoAvance, inicio?: number) {
   const dichos: string[] = [];
   const cortados: string[] = [];
   const mostrados: number[] = [];
   const estados: EstadoGuia[] = [];
   let terminar: (() => void) | null = null;
   let controles: EstadoControles | null = null;
-  const r = new Reproductor({ modo, alCambiar: (c) => (controles = c) });
+  const r = new Reproductor({ modo, alCambiar: (c) => (controles = c), inicio });
   const m = {
     estado: (e: EstadoGuia) => void estados.push(e),
     paso: (_c: Coreografia, _b: boolean, i: number) => void mostrados.push(i),
@@ -203,3 +203,47 @@ describe("Reproductor: después de terminar la respuesta", () => {
     expect(g.controles()).toMatchObject({ indice: 1, hayAnterior: true, haySiguiente: true });
   });
 });
+
+describe("Reproductor: retomar una guía después de una pregunta suelta", () => {
+  it("con `inicio` arranca en ese paso y sigue desde ahí", async () => {
+    const g = armar("manual", 1);
+    const fin = g.r.reproducir(stream(tres).iterable, g.m, new AbortController().signal);
+    await g.terminar();
+    expect(g.mostrados).toEqual([1]);
+    g.r.siguiente();
+    await g.terminar();
+    await fin;
+    expect(g.mostrados).toEqual([1, 2]);
+  });
+
+  it("guiaPendiente: ofrece retomar a mitad de una guía, no al final, no con un solo paso ni en un bloqueo", async () => {
+    const g = armar("manual");
+    const ctl = new AbortController();
+    void g.r.reproducir(stream(tres).iterable, g.m, ctl.signal);
+    await g.terminar(); // dijo el paso 1 y espera Siguiente
+    expect(guiaPendiente(g.r)).toEqual({ pasos: [paso(1), paso(2), paso(3)], indice: 0 });
+    ctl.abort();
+
+    const fin = armar("auto");
+    const terminada = fin.r.reproducir(stream(tres).iterable, fin.m, new AbortController().signal);
+    await fin.terminar();
+    await fin.terminar();
+    await fin.terminar();
+    await terminada;
+    expect(guiaPendiente(fin.r)).toBeNull(); // llegó al último
+
+    const uno = armar("manual");
+    const corta = uno.r.reproducir(stream([{ tipo: "paso", coreografia: paso(1) }, { tipo: "fin", pasos: 1 }]).iterable, uno.m, new AbortController().signal);
+    await uno.terminar();
+    await corta;
+    expect(guiaPendiente(uno.r)).toBeNull(); // respuesta corta: nada que retomar
+
+    const b = armar("manual");
+    const bloqueo = paso(1, { riesgo: "alto", dice: "Acá frenamos." });
+    const conBloqueo = b.r.reproducir(stream([{ tipo: "bloqueo", coreografia: bloqueo, clases: ["bateria"] }, { tipo: "paso", coreografia: paso(2) }]).iterable, b.m, new AbortController().signal);
+    await b.terminar();
+    await conBloqueo;
+    expect(guiaPendiente(b.r)).toBeNull();
+  });
+});
+

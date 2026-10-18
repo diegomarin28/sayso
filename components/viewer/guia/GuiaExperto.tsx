@@ -4,12 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
 import { ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
-import { FlechaEnviar, GirarCelular, Libro } from "./iconos";
+import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
-import { fuenteApi, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
+import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { conPiezaNombrada } from "./pieza-nombrada";
 import { datosTransparencia, DeDondeSale } from "./transparencia";
-import { esperar, Reproductor, tiempoDeLectura, type EstadoControles, type EstadoGuia, type ModoAvance } from "./reproducir";
+import {
+  esperar,
+  guiaPendiente,
+  Reproductor,
+  tiempoDeLectura,
+  type EstadoControles,
+  type EstadoGuia,
+  type GuiaGuardada,
+  type ModoAvance,
+} from "./reproducir";
 
 /**
  * Pantallas 5 y 6: el experto explica sobre el 3D y la persona pregunta.
@@ -113,23 +122,33 @@ export function GuiaExperto({
   // B6: si el experto nombra una pieza del plano, el 3D va a ella y la resalta solo.
   const idsPlano = useMemo(() => new Set(plano.piezas.map((p) => p.pieza)), [plano]);
 
-  const preguntar = useCallback(
-    async (pregunta: string) => {
-      const limpia = pregunta.trim();
-      if (!limpia) return;
+  /**
+   * Una guía que quedó a medias porque la persona preguntó otra cosa (con el chat corto, la
+   * respuesta nueva reemplaza la guía): el botón "Seguir con la guía" la retoma en ese paso.
+   * Si pregunta varias cosas sueltas seguidas, se conserva la guía original.
+   */
+  const guiaGuardada = useRef<(GuiaGuardada & { vistos: Set<number> }) | null>(null);
+  const [retomable, setRetomable] = useState<GuiaGuardada | null>(null);
+
+  /** Reproduce una respuesta. Con `retomar`, los pasos ya vistos no se vuelven a sumar a la conversación. */
+  const reproducirRespuesta = useCallback(
+    async (eventos: (senal: AbortSignal) => AsyncIterable<EventoChat>, opciones: { inicio?: number; vistos?: Set<number> } = {}) => {
+      // Lo que estaba a medias se guarda antes de cortarlo (si no había ya una guía guardada).
+      const previa = reproductor.current && !guiaGuardada.current ? guiaPendiente(reproductor.current) : null;
+      if (previa) {
+        guiaGuardada.current = { ...previa, vistos: new Set(yaMostrados.current) };
+        setRetomable(previa);
+      }
       actual.current?.abort();
       const ctl = new AbortController();
       actual.current = ctl;
-      const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
-      historial.current = [...historial.current, { rol: "persona", texto: limpia }];
-      setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
       setPasos([]);
       setIndice(0);
-      yaMostrados.current = new Set();
-      const r = new Reproductor({ modo: modoRef.current, alCambiar: setControles });
+      yaMostrados.current = new Set(opciones.vistos);
+      const r = new Reproductor({ modo: modoRef.current, alCambiar: setControles, inicio: opciones.inicio });
       reproductor.current = r;
-      const dicho = await r.reproducir(
-        fuente(pedido, ctl.signal),
+      return r.reproducir(
+        eventos(ctl.signal),
         {
           estado: (e, d) => (setEstado(e), setDetalle(d)),
           paso: (c, _bloqueo, i) => {
@@ -153,10 +172,38 @@ export function GuiaExperto({
         }
         return null;
       });
+    },
+    [pack, plano, idsPlano, decir, onCambiarPieza],
+  );
+
+  const preguntar = useCallback(
+    async (pregunta: string) => {
+      const limpia = pregunta.trim();
+      if (!limpia) return;
+      const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
+      historial.current = [...historial.current, { rol: "persona", texto: limpia }];
+      setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
+      const dicho = await reproducirRespuesta((senal) => fuente(pedido, senal));
       if (dicho) historial.current = [...historial.current, dicho];
     },
-    [casoId, pack, plano, idsPlano, manualFileId, tipoEquipo, fuente, decir, onCambiarPieza],
+    [casoId, pack, plano, manualFileId, tipoEquipo, fuente, reproducirRespuesta],
   );
+
+  /** Retoma la guía guardada en el paso donde quedó (sin IA: los pasos ya llegaron). */
+  const seguirGuia = useCallback(() => {
+    const g = guiaGuardada.current;
+    if (!g) return;
+    guiaGuardada.current = null;
+    setRetomable(null);
+    reproductor.current = null; // la respuesta suelta no se guarda en lugar de la guía
+    void reproducirRespuesta(
+      async function* () {
+        for (const c of g.pasos) yield { tipo: "paso", coreografia: c } satisfies EventoChat;
+        yield { tipo: "fin", pasos: g.pasos.length } satisfies EventoChat;
+      },
+      { inicio: g.indice, vistos: g.vistos },
+    );
+  }, [reproducirRespuesta]);
 
   // Arranque automático y cancelación al salir de la pantalla.
   useEffect(() => {
@@ -258,16 +305,19 @@ export function GuiaExperto({
                 onElegir={verPaso}
                 onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
                 controles={
-                  controles && (controles.total > 1 || !controles.completa) ? (
-                    <ControlesGuia
-                      c={{ ...controles, modo }}
-                      onAnterior={() => reproductor.current?.anterior()}
-                      onPausar={() => reproductor.current?.pausar()}
-                      onSeguir={() => reproductor.current?.seguir()}
-                      onSiguiente={() => reproductor.current?.siguiente()}
-                      onModo={cambiarModo}
-                    />
-                  ) : undefined
+                  <>
+                    {controles && (controles.total > 1 || !controles.completa) && (
+                      <ControlesGuia
+                        c={{ ...controles, modo }}
+                        onAnterior={() => reproductor.current?.anterior()}
+                        onPausar={() => reproductor.current?.pausar()}
+                        onSeguir={() => reproductor.current?.seguir()}
+                        onSiguiente={() => reproductor.current?.siguiente()}
+                        onModo={cambiarModo}
+                      />
+                    )}
+                    {retomable && <BotonSeguirGuia guia={retomable} onSeguir={seguirGuia} />}
+                  </>
                 }
               />
             )}
@@ -374,3 +424,17 @@ function useCelularHorizontal(): boolean {
   }, []);
   return horizontal;
 }
+
+/** Después de una pregunta suelta: vuelve a la guía en el paso donde había quedado. */
+function BotonSeguirGuia({ guia, onSeguir }: { guia: GuiaGuardada; onSeguir: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSeguir}
+      className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-acento/60 bg-acento/10 px-3 text-sm font-medium text-texto transition active:scale-95"
+    >
+      <Siguiente size={18} /> Seguir con la guía · paso {guia.indice + 1} de {guia.pasos.length}
+    </button>
+  );
+}
+
