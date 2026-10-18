@@ -265,3 +265,175 @@ export const planoCafetera: PlanoDePiezas = {
     ]),
   ],
 };
+
+// ---------- Cosas de todos los días (lo que más probablemente traiga alguien en la mano) ----------
+
+/** Auriculares inalámbricos con su estuche de carga (abierto, los dos auriculares adentro). */
+export const planoAuriculares: PlanoDePiezas = {
+  modelo: "Auriculares inalámbricos genéricos (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("estuche_auriculares", [6, 4.75, 3.55], [0, 2.375, 0]),
+    ...hijos("estuche_auriculares", [
+      ["carcasa_auricular_izquierdo", [1.8, 2.3, 1.44], [-1.3, 3.6, 0]],
+      ["carcasa_auricular_derecho", [1.8, 2.3, 1.44], [1.3, 3.6, 0]],
+      ["almohadilla_silicona_izquierda", [1.3, 1.1, 1.3], [-1.3, 5.3, 0.2]],
+      ["almohadilla_silicona_derecha", [1.3, 1.1, 1.3], [1.3, 5.3, 0.2]],
+      ["contacto_resorte_izquierdo", [0.36, 1, 0.36], [-1.3, 1.6, 0]],
+      ["contacto_resorte_derecho", [0.36, 1, 0.36], [1.3, 1.6, 0]],
+      ["bateria_estuche", [4.2, 0.45, 2.6], [0, 0.6, 0]],
+      ["placa_estuche", [4.8, 0.2, 2.8], [0, 0.25, 0]],
+      ["conector_carga", [1.5, 0.32, 0.82], [0, 0.4, -1.4]],
+      ["microfono_mems", [0.55, 0.27, 0.4], [-1.3, 4.6, -0.5]],
+    ]),
+  ],
+};
+
+/** Reloj inteligente acostado, con la pantalla hacia arriba y la correa. */
+export const planoReloj: PlanoDePiezas = {
+  modelo: "Reloj inteligente genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("caja_reloj", [4.4, 1.1, 5.2], [0, 0.95, 0]),
+    ...hijos("caja_reloj", [
+      ["pantalla_reloj", [4, 0.2, 4.8], [0, 1.6, 0]],
+      ["placa", [3.4, 0.2, 3.6], [0, 1.15, 0]],
+      ["bateria", [3, 0.4, 2.8], [0, 0.85, 0.3]],
+      ["motor_vibracion", [2.2, 0.3, 0.9], [0, 0.6, -1.7]],
+      ["sensor_optico", [2.4, 0.4, 3], [0, 0.35, 0]],
+      ["bobina_carga", [3.2, 0.2, 3.2], [0, 0.45, 0]],
+      ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
+      ["corona_reloj", [1.2, 0.7, 0.7], [2.7, 1.1, -0.6]],
+      ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
+    ]),
+  ],
+};
+
+/** Mouse: la carcasa encierra la placa, el sensor, los botones (microinterruptores), la rueda y la pila. */
+export const planoMouse: PlanoDePiezas = {
+  modelo: "Mouse genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("carcasa_mouse", [6.4, 3.6, 10.9], [0, 1.8, 0]),
+    ...hijos("carcasa_mouse", [
+      ["placa", [5.2, 0.15, 8.4], [0, 0.35, 0]],
+      ["sensor_mouse", [2.4, 0.83, 2], [0, 0.85, 0.6]],
+      ["rueda_scroll", [0.8, 2.3, 2.3], [0, 2.1, -2.6]],
+      ["microswitch_izquierdo", [1.4, 1, 0.6], [-1.3, 1.3, -3.2]],
+      ["microswitch_derecho", [1.4, 1, 0.6], [1.3, 1.3, -3.2]],
+      ["pila_aa", [1.44, 1.44, 5.1], [0, 1.2, 2.6]],
+    ]),
+  ],
+};
+
+/** Teclado: la carcasa con las teclas, la membrana de contactos y la plaquita del controlador. */
+export const planoTeclado: PlanoDePiezas = {
+  modelo: "Teclado genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("teclado", [44, 2.4, 14], [0, 1.2, 0]),
+    ...hijos("teclado", [
+      ["membrana_teclado", [40, 0.1, 13], [0, 0.6, 0]],
+      ["placa", [9, 0.2, 3], [16, 0.35, -5]],
+      ["tecla_espacio", [12, 0.7, 1.8], [-2, 2.75, 5]],
+      ["mecanismo_tijera", [1.5, 0.4, 1.3], [-2, 2.2, 5]],
+      ["cable_usb", [24, 0.5, 0.8], [8, 0.4, -7.6]],
+    ]),
+  ],
+};
+
+/** Joystick (mando de consola) acostado: palancas, cruceta, botones, gatillos, motores de vibración y batería. */
+export const planoMando: PlanoDePiezas = {
+  modelo: "Joystick genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("carcasa_mando", [15.7, 4.4, 9.8], [0, 2.2, 0]),
+    ...hijos("carcasa_mando", [
+      ["placa", [10, 0.2, 5], [0, 1.2, 0]],
+      ["joystick_analogico_izquierdo", [2.5, 2.7, 2], [-3.4, 3, 1.4]],
+      ["joystick_analogico_derecho", [2.5, 2.7, 2], [2.4, 3, 2]],
+      ["cruceta_mando", [3, 0.65, 3], [-4.8, 3.6, -1.6]],
+      ["boton_mando_a", [1, 1, 0.9], [4.8, 3.9, -0.6]],
+      ["boton_mando_b", [1, 1, 0.9], [5.9, 3.9, -1.6]],
+      ["boton_mando_x", [1, 1, 0.9], [3.7, 3.9, -1.6]],
+      ["boton_mando_y", [1, 1, 0.9], [4.8, 3.9, -2.6]],
+      ["boton_gatillo_izquierdo", [4, 1.2, 2.5], [-5, 3.2, -4.3]],
+      ["boton_gatillo_derecho", [4, 1.2, 2.5], [5, 3.2, -4.3]],
+      ["motor_vibracion_izquierdo", [1.2, 1.2, 4], [-5.6, 1.1, 2.4]],
+      ["motor_vibracion_derecho", [1.2, 1.2, 4], [5.6, 1.1, 2.4]],
+      ["bateria", [5, 0.6, 3], [0, 0.55, 2]],
+    ]),
+  ],
+};
+
+/** Parlante bluetooth acostado: cuerpo, malla al frente, dos parlantes, radiadores pasivos en los costados, batería y placa. */
+export const planoParlanteBluetooth: PlanoDePiezas = {
+  modelo: "Parlante bluetooth genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_parlante", [18, 7, 7], [0, 3.5, 0], "extrusion"),
+    ...hijos("cuerpo_parlante", [
+      ["malla_acustica", [17, 6.2, 0.3], [0, 3.5, 3.6]],
+      ["parlante_izquierdo", [4, 4, 2.2], [-4.5, 3.5, 2.2]],
+      ["parlante_derecho", [4, 4, 2.2], [4.5, 3.5, 2.2]],
+      ["radiador_pasivo_izquierdo", [0.5, 5, 5], [-9.2, 3.5, 0]],
+      ["radiador_pasivo_derecho", [0.5, 5, 5], [9.2, 3.5, 0]],
+      ["bateria", [9, 1.8, 2.6], [0, 1.4, -1.8]],
+      ["placa", [7, 0.2, 3], [0, 5.6, -1.8]],
+      ["conector_carga", [1.5, 0.82, 0.32], [5, 1.5, -3.6]],
+    ]),
+  ],
+};
+
+/** Cargador de pared: carcasa con la clavija, y adentro la placa, el transformador, el capacitor y el USB. */
+export const planoCargador: PlanoDePiezas = {
+  modelo: "Cargador genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("carcasa_cargador", [3.6, 4.4, 3.4], [0, 2.2, 0]),
+    ...hijos("carcasa_cargador", [
+      ["clavija_red", [2.6, 1.6, 2], [0, 0.8, -2.6]],
+      ["placa", [3, 0.15, 2.8], [0, 0.6, 0]],
+      ["transformador", [1.8, 1.4, 1.6], [-0.5, 1.5, 0.2]],
+      ["capacitor", [0.8, 1.5, 0.8], [1, 1.5, 0.8]],
+      ["nucleo_ferrita", [1, 0.5, 1], [1, 1.0, -0.7]],
+      ["conector_usb_c", [1.5, 0.32, 0.82], [0, 3.9, 1]],
+    ]),
+  ],
+};
+
+/** Control remoto: cuerpo, membrana de botones, placa, LED infrarrojo al frente y el portapilas con dos pilas AA. */
+export const planoControlRemoto: PlanoDePiezas = {
+  modelo: "Control remoto genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("cuerpo_control", [4.6, 2.2, 16], [0, 1.1, 0], "extrusion"),
+    ...hijos("cuerpo_control", [
+      ["membrana_botones", [4, 0.8, 11], [0, 2.2, -1.8]],
+      ["placa", [4, 0.2, 13], [0, 1.3, -0.8]],
+      ["led_infrarrojo", [0.6, 0.6, 1.9], [0, 1.4, -7.6]],
+      ["portapilas", [3.5, 1.2, 5.7], [0, 0.6, 4.8]],
+      ["pila_aa_1", [1.44, 1.44, 5.1], [-0.8, 0.75, 4.8]],
+      ["pila_aa_2", [1.44, 1.44, 5.1], [0.8, 0.75, 4.8]],
+    ]),
+  ],
+};
+
+/** Tablet vista desde atrás (la tapa trasera arriba): marco, pantalla, batería, placa, cámara, parlantes y conector. */
+export const planoTablet: PlanoDePiezas = {
+  modelo: "Tablet genérica (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    pieza("marco", [17.5, 0.7, 24.8], [0, 0.35, 0]),
+    ...hijos("marco", [
+      ["pantalla", [17, 0.35, 24.4], [0, -0.18, 0]],
+      ["bateria", [12, 0.45, 15], [1.8, 0.93, 1.5]],
+      ["placa_madre", [4, 0.25, 15], [-6.2, 0.83, -2]],
+      ["camara_trasera", [1.6, 0.6, 1.6], [-7, 1.25, -10.8]],
+      ["parlante_izquierdo", [1.8, 0.4, 3.5], [-7.4, 0.9, 10.2]],
+      ["parlante_derecho", [1.8, 0.4, 3.5], [7.4, 0.9, 10.2]],
+      ["conector_carga", [1.5, 0.32, 0.82], [0, 0.86, 12]],
+      ["tapa_trasera", [17.4, 0.2, 24.7], [0, 1.6, 0]],
+    ]),
+  ],
+};

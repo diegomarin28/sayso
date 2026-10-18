@@ -16,6 +16,7 @@ export function LabGaleria() {
   const grupos = [
     { titulo: "Equipos", equipos: GALERIA.filter((e) => e.grupo === "equipos") },
     { titulo: "Dispositivos", equipos: GALERIA.filter((e) => e.grupo === "dispositivos") },
+    { titulo: "En la mano", equipos: GALERIA.filter((e) => e.grupo === "en_la_mano") },
   ];
 
   return (

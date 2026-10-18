@@ -56,7 +56,12 @@ const { raiz, nodos, avisos } = construirEscena(planoNotebookBase);
 - **Origen de cada ubicación** (`PiezaPlano.origen`): `manual` = la IA la vio en una página (con confianza alta o media; lleva `cita` con documento y página), `estimada` = sin página o con confianza baja, `plantilla` = posición genérica. La carcasa vale lo que valen sus medidas. El visor lo muestra en cada etiqueta y con un resumen (`components/viewer/origen.ts`): un plano mixto nunca aparece como verificado entero. Planos sin `origen` (viejos o fixtures) = "sin verificar".
 - **Si la IA falla** → `origen: "plantilla"`: la pantalla tiene que mostrar "esquema genérico, no es tu modelo exacto".
   - **Plantilla por tipo de equipo** (`plantillas/por-tipo.ts`, planos en `plantillas/equipos.ts`): notebook, celular,
-    heladera, aire, televisor, lavarropas, microondas, aspiradora, secador, impresora, consola, router y cafetera. Se
+    heladera, aire, televisor, lavarropas, microondas, aspiradora, secador, impresora, consola, router y cafetera, y lo
+    que alguien trae en la mano: tablet, auriculares, reloj inteligente, mouse, teclado, joystick, parlante bluetooth,
+    cargador y control remoto. Por nombre gana la que más palabras comparte; si empatan, la nombrada primero
+    ("cargador de celular" es un cargador).
+  - **Completar lo que la IA no ubicó**: con la plantilla del tipo (`propuestaDePlantillaDeTipo`: por id o por tipo de
+    pieza; en un equipo parado, la cara), no con la de notebook. Así un TV con una sola pieza ubicada no queda vacío. Se
     elige por el `tipoEquipo` de la recepción (opcional en `/api/plano`), si no por la clase del pack, si no por sus
     piezas (solo las que distinguen un equipo, ej. compresor + puerta de freezer → heladera). Del plano de la
     plantilla quedan la raíz y, para cada pieza del pack, la de igual id o del mismo tipo (con el id del pack);
