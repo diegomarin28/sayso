@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
+import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
@@ -52,6 +53,9 @@ export default function CapturaGuiada() {
   const [errorPedidos, setErrorPedidos] = useState<string | null>(null);
 
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
+  /** "No encuentro la etiqueta": se muestra dónde más está el modelo, antes de saltearla. */
+  const [buscarOtro, setBuscarOtro] = useState(false);
+  const donde = dondeBuscarModelo(tipoEquipo);
 
   useEffect(() => {
     if (!caso || pedidos) return;
@@ -127,8 +131,17 @@ export default function CapturaGuiada() {
   }
 
   function saltar() {
+    setBuscarOtro(false);
     actualizar(actual, { salteada: true });
     setActual(actual + 1);
+  }
+
+  /** Foto de otro lugar con el modelo (control remoto, caja…): se lee como si fuera la etiqueta. */
+  function sacarAlternativa(alternativa: string, archivo: File | undefined) {
+    if (!archivo) return;
+    setBuscarOtro(false);
+    actualizar(actual, { alternativa });
+    void alSacar(archivo);
   }
 
   // Sin fotos no se puede reconocer el equipo: hace falta la etiqueta o, al menos, el frente.
@@ -138,6 +151,12 @@ export default function CapturaGuiada() {
   const conEtiqueta = (pedidos ?? []).some((p, i) => p.tipo === "etiqueta" && sirve(i));
   const alcanza = claves.length ? claves.some(sirve) : (pedidos ?? []).some((_, i) => sirve(i));
   const aSacar = claves.length ? claves : (pedidos ?? []).map((_, i) => i);
+
+  const mostrarOtros = buscarOtro && pedido?.tipo === "etiqueta" && !toma.url && !toma.revisando;
+  /** Qué hay que sacar ahora (si es de otro lugar, eso). */
+  const queSacar = toma.alternativa
+    ? `Sacale una foto a ${toma.alternativa.charAt(0).toLowerCase()}${toma.alternativa.slice(1)}, que se lea el modelo.`
+    : pedido?.instruccion;
 
   const dice = errorPedidos
     ? errorPedidos
@@ -157,7 +176,9 @@ export default function CapturaGuiada() {
               ? "Esa foto no me sirve. Te explico abajo qué sacar."
               : aceptada
                 ? "Perfecta."
-                : pedido!.instruccion;
+                : mostrarOtros
+                  ? "No pasa nada. El modelo suele estar también en otro lado:"
+                  : queSacar!;
 
   return (
     <Pantalla>
@@ -203,7 +224,7 @@ export default function CapturaGuiada() {
                     className="absolute inset-0 h-full w-full object-cover opacity-50"
                   />
                 )}
-                <span className="relative">{NOMBRE_TIPO[p.tipo]}</span>
+                <span className="relative">{t?.alternativa ?? NOMBRE_TIPO[p.tipo]}</span>
                 {ok && (
                   <span className="absolute top-1.5 right-1.5 rounded-full bg-confirmado p-0.5 text-black">
                     <Check size={12} />
@@ -215,7 +236,44 @@ export default function CapturaGuiada() {
         </ol>
       )}
 
-      {pedido && !terminado && (
+      {/* Sin etiqueta: dónde más buscar el modelo y sacarle foto a eso; o seguir sin ninguno. */}
+      {pedido && !terminado && mostrarOtros && (
+        <div className="aparece flex flex-1 flex-col gap-5">
+          <ul className="flex flex-col gap-2 rounded-2xl border border-borde bg-superficie/80 p-4 text-sm">
+            {donde.lugares.map((l) => (
+              <li key={l} className="flex gap-2">
+                <span className="text-dato" aria-hidden>
+                  •
+                </span>
+                {l}
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-texto-suave">¿Tenés alguno? Sacale una foto donde se lea el modelo:</p>
+            {donde.alternativas.map((a) => (
+              <InputFoto
+                key={a}
+                camara
+                alElegir={(f) => sacarAlternativa(a, f)}
+                className="border border-acento/60 bg-acento/10"
+              >
+                <Camara size={18} /> {a}
+              </InputFoto>
+            ))}
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-4 text-sm text-texto-suave">
+            <button onClick={() => setBuscarOtro(false)} className="underline underline-offset-4 hover:text-texto">
+              Volver a la etiqueta
+            </button>
+            <button onClick={saltar} className="font-medium text-texto underline underline-offset-4">
+              No tengo ninguno
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pedido && !terminado && !mostrarOtros && (
         <>
           {pedido.advertencia && !toma.url && (
             <p className="flex items-start gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm text-probable">
@@ -288,7 +346,7 @@ export default function CapturaGuiada() {
                 </p>
               </div>
               <p className="text-sm text-texto-suave">
-                <span className="font-medium text-texto">Qué sacar:</span> {pedido.instruccion}
+                <span className="font-medium text-texto">Qué sacar:</span> {queSacar}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <InputFoto camara alElegir={alSacar} className="bg-acento font-semibold text-black sm:flex-1">
@@ -313,7 +371,10 @@ export default function CapturaGuiada() {
               Foto {actual + 1} de {pedidos!.length}
             </span>
             {!toma.revisando && !aceptada && (
-              <button onClick={saltar} className="underline underline-offset-4 hover:text-texto">
+              <button
+                onClick={() => (pedido.tipo === "etiqueta" ? setBuscarOtro(true) : saltar())}
+                className="underline underline-offset-4 hover:text-texto"
+              >
                 {pedido.tipo === "etiqueta" ? "No encuentro la etiqueta" : "No puedo, saltar"}
               </button>
             )}
