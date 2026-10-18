@@ -136,6 +136,17 @@ describe("<VistaCompras>", () => {
     expect(hrefSeguro("https://tienda.uy/x")).toBe("https://tienda.uy/x");
   });
 
+  it("dentro del panel de repuestos (la pieza ya está arriba) no repite ni el nombre ni el id (#208)", () => {
+    for (const pedido of [CONECTOR, BATERIA, { pieza: "tornillos_ventilador", modelo: "NB-15" }, { pieza: "base", nombre: "Carcasa inferior", modelo: "NB-15" }]) {
+      const h = renderToStaticMarkup(<VistaCompras estado={{ t: "inicio" }} pedido={pedido} mostrarPieza={false} onBuscar={() => {}} />);
+      expect(h).not.toContain("Dónde comprar el repuesto");
+      expect(h).toContain("Ver dónde comprar esta pieza");
+      expect(h).not.toContain(pedido.pieza);
+      if (pedido.nombre) expect(h).not.toContain(pedido.nombre);
+      expect(h).not.toContain("N.º de parte");
+    }
+  });
+
   it("el título dice el nombre de la pieza, no el id del pack", () => {
     const h = html({ t: "inicio" }, CONECTOR);
     expect(h).toContain("Conector Lightning de carga");
