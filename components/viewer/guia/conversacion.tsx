@@ -174,15 +174,24 @@ export function EtiquetaCita({ c }: { c: Coreografia }) {
 export function preguntasSugeridas(pack: KnowledgePack, max = 3): string[] {
   const enPasos = new Set(pack.pasos.flatMap((p) => p.piezas));
   const piezas = [...pack.piezas].sort((a, b) => Number(enPasos.has(b.id)) - Number(enPasos.has(a.id)));
-  return piezas.slice(0, max).map((p) => `¿Dónde está ${articulo(p.nombre)}?`);
+  return piezas.slice(0, max).map((p) => {
+    const { texto, plural } = conArticulo(p.nombre);
+    return `¿Dónde ${plural ? "están" : "está"} ${texto}?`;
+  });
 }
 
-/** "Ventilador" → "el ventilador", "Batería" → "la batería" (heurística simple para las sugerencias). */
-function articulo(nombre: string): string {
+/**
+ * "Ventilador" → "el ventilador", "Batería" → "la batería", "Tornillos del ventilador" → "los
+ * tornillos del ventilador" (heurística simple para las sugerencias: género y número de la primera palabra).
+ */
+export function conArticulo(nombre: string): { texto: string; plural: boolean } {
   const n = nombre.charAt(0).toLowerCase() + nombre.slice(1);
   const primera = n.split(/\s+/)[0];
-  const femenina = /a$|ión$|dad$/.test(primera) && !/^(sistema|tema|problema)$/.test(primera);
-  return `${femenina ? "la" : "el"} ${n}`;
+  const plural = primera.length > 3 && /[aeiouáéíóú]s$|[^aeiouáéíóús]es$/.test(primera);
+  const singular = plural ? primera.replace(/(?<=[^aeiouáéíóús])es$/, "").replace(/s$/, "") : primera;
+  const femenina = /a$|i[oó]n$|dad$/.test(singular) && !/^(sistema|tema|problema)$/.test(singular);
+  const articulo = plural ? (femenina ? "las" : "los") : femenina ? "la" : "el";
+  return { texto: `${articulo} ${n}`, plural };
 }
 
 /** Fila arriba de la caja de texto: abrir la conversación y preguntas sugeridas. */
