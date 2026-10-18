@@ -46,17 +46,70 @@ describe("obtenerPlano (caché por marca + modelo)", () => {
     expect(llamadas).toHaveLength(1);
   });
 
-  it("si el pack nuevo pide piezas que no se pidieron antes, regenera", async () => {
+  const conParlantes: KnowledgePack = {
+    ...kp,
+    piezas: [...kp.piezas, { id: "parlantes", nombre: "Parlantes", descripcion: "", ubicacion: "" }],
+  };
+  const parlantes = (pagina: number | null) =>
+    JSON.stringify({
+      base_ancho_cm: null,
+      base_prof_cm: null,
+      piezas: [{ pieza: "parlantes", x: 0.8, z: 0.8, ancho: 0.1, prof: 0.1, alto_cm: null, capa: "sobre_base", sobre: null, forma: "caja", etiquetaManual: null, pagina, confianza: "alta" }],
+    });
+  const conRecorte = async () => {
+    const pdf = Buffer.from(await pdfDePrueba(60));
+    return {
+      entrada: { ...entrada, knowledgePack: conParlantes, manualUrl: "https://ej.com/hmm.pdf", manual: { fileId: "file_123", paginasVistaExplosionada: [12], paginaVistaInterior: 51 } },
+      descargar: async () => new Response(pdf),
+    };
+  };
+
+  it("otro síntoma con piezas nuevas y sin manual: reusa el guardado y suma lo que falta sin IA", async () => {
+    const cache = cachePlanosEnMemoria();
+    const { llamadas, llamar } = contador();
+    const a = await obtenerPlano(entrada, { cache, llamar });
+    const r = await obtenerPlano({ ...entrada, knowledgePack: conParlantes }, { cache, llamar });
+    expect(llamadas).toHaveLength(1);
+    expect(r.desdeCache).toBe(true);
+    expect(r.origen).toBe("ia");
+    expect(r.plano.piezas.map((p) => p.pieza)).toEqual(expect.arrayContaining([...a.plano.piezas.map((p) => p.pieza), "parlantes"]));
+    expect(r.avisos.join(" ")).toMatch(/"parlantes".*sin IA/);
+  });
+
+  it("con manual: la IA ubica solo lo que falta, se suma lo que vio en una página y el guardado crece", async () => {
+    const cache = cachePlanosEnMemoria();
+    const { llamadas, llamar } = contador();
+    const a = await obtenerPlano(entrada, { cache, llamar });
+    const { entrada: e, descargar } = await conRecorte();
+    const pidio: string[] = [];
+    const r = await obtenerPlano(e, { cache, descargar, llamar: async (p) => (pidio.push(JSON.stringify(p.contenido)), parlantes(1)) });
+    // Solo se pidió la pieza nueva, no las del plano guardado.
+    expect(pidio).toHaveLength(1);
+    expect(pidio[0]).toContain("parlantes: Parlantes");
+    for (const p of kp.piezas) expect(pidio[0]).not.toContain(`- ${p.id}: `);
+    expect(r.desdeCache).toBe(false);
+    const nueva = r.plano.piezas.find((p) => p.pieza === "parlantes");
+    expect(nueva).toMatchObject({ origen: "manual" });
+    expect(nueva?.cita?.pagina).toBe(51);
+    // Lo que ya estaba no se movió.
+    for (const p of a.plano.piezas) expect(r.plano.piezas.find((q) => q.pieza === p.pieza)?.pos).toEqual(p.pos);
+    expect(r.paginasLeidas).toEqual([51, 12]);
+    // La tercera vez ya cubre: no hay IA.
+    const otra = await obtenerPlano(e, { cache, descargar, llamar });
+    expect(otra.desdeCache).toBe(true);
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it("con manual, si la IA no ve la pieza nueva en una página, va según el esqueleto y no se vuelve a pedir", async () => {
     const cache = cachePlanosEnMemoria();
     const { llamadas, llamar } = contador();
     await obtenerPlano(entrada, { cache, llamar });
-    const otroPack: KnowledgePack = {
-      ...kp,
-      piezas: [...kp.piezas, { id: "parlantes", nombre: "Parlantes", descripcion: "", ubicacion: "" }],
-    };
-    const r = await obtenerPlano({ ...entrada, knowledgePack: otroPack }, { cache, llamar });
-    expect(r.desdeCache).toBe(false);
-    expect(llamadas).toHaveLength(2);
+    const { entrada: e, descargar } = await conRecorte();
+    const r = await obtenerPlano(e, { cache, descargar, llamar: async () => parlantes(null) });
+    expect(r.plano.piezas.find((p) => p.pieza === "parlantes")?.origen).not.toBe("manual");
+    expect(r.paginasLeidas).toBeNull();
+    expect((await obtenerPlano(e, { cache, descargar, llamar })).desdeCache).toBe(true);
+    expect(llamadas).toHaveLength(1);
   });
 
   it("la plantilla genérica (IA falló) no se guarda", async () => {
