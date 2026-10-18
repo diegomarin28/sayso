@@ -102,8 +102,9 @@ describe("TV (LG 43\", Samsung 65\"): la cara es la pantalla y la placa no se es
     const [px, py] = fraccion(plano, "pantalla_panel");
     expect(px).toBeGreaterThan(0.9);
     expect(py).toBeGreaterThan(0.8);
-    // La placa sigue siendo una placa (4,5 cm), no un tablón de medio metro.
-    expect(pieza(plano, "placa_principal_av")!.dim[1]).toBeLessThan(10);
+    // La placa principal toma la del esqueleto (nombre equivalente): una placa, no un tablón de medio metro.
+    expect(pieza(plano, "placa_principal_av")!.dim[1]).toBeLessThan(20);
+    expect(pieza(plano, "placa_principal_av")!.origen).toBe("plantilla");
   });
 });
 

@@ -191,9 +191,21 @@ export function piezasProbables(tipoEquipo?: string | null, pack?: PackParaElegi
 }
 
 /**
- * Qué pieza de la plantilla le toca a cada id del pack: primero los ids iguales, después del mismo
- * tipo de pieza (`placa_principal` del pack ↔ `placa_control` de la plantilla). Cada pieza de la
- * plantilla se usa una sola vez. Devuelve id en la plantilla → id del pack, y los ids sin lugar.
+ * Nombres que los manuales usan para la MISMA pieza (por tipo, no por modelo): la placa principal es
+ * "placa madre" en una notebook, "placa lógica" en un iPhone, "placa principal" en un TV.
+ */
+const EQUIVALENTES: string[][] = [
+  ["placa_madre", "placa_logica", "placa_principal", "placa_base", "placa_control", "motherboard", "logic_board"],
+  ["parlante", "altavoz", "speaker", "loudspeaker"],
+  ["conector_carga", "puerto_carga", "puerto_usb", "conector_usb", "conector_lightning"],
+];
+const grupoDe = (id: string) => EQUIVALENTES.find((g) => g.some((n) => id === n || id.startsWith(`${n}_`)));
+
+/**
+ * Qué pieza de la plantilla le toca a cada id del pack: primero los ids iguales; después un nombre
+ * equivalente (`placa_logica` del pack ↔ `placa_madre` de la plantilla, no la placa de carga); después
+ * del mismo tipo de pieza (`placa_principal_x` ↔ `placa_control`). Cada pieza de la plantilla se usa una
+ * sola vez. Devuelve id en la plantilla → id del pack, y los ids sin lugar.
  */
 export function emparejar(ids: string[], plantilla: PlantillaDeEquipo): { usadas: Map<string, string>; sinLugar: string[] } {
   const piezas = plantilla.plano.piezas;
@@ -205,7 +217,13 @@ export function emparejar(ids: string[], plantilla: PlantillaDeEquipo): { usadas
     return !igual;
   });
   const sinLugar: string[] = [];
-  for (const id of pendientes) {
+  const porTipo = pendientes.filter((id) => {
+    const grupo = grupoDe(id);
+    const equivalente = grupo && libres().find((p) => grupoDe(p.pieza) === grupo);
+    if (equivalente) usadas.set(equivalente.pieza, id);
+    return !equivalente;
+  });
+  for (const id of porTipo) {
     const tipo = tipoDe(id);
     const mismaForma = tipo ? libres().find((p) => tipoDe(p.pieza) === tipo) : undefined;
     if (mismaForma) usadas.set(mismaForma.pieza, id);

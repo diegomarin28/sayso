@@ -5,7 +5,7 @@ import { claveManual } from "../../knowledge/manuales";
 import { cachePlanosEnMemoria } from "../cache";
 import { generarPlano } from "../generador";
 import { obtenerPlano } from "../obtener";
-import { elegirPlantilla, planoDesdePlantillaDeTipo, PLANTILLAS_POR_TIPO } from "./por-tipo";
+import { elegirPlantilla, emparejar, planoDesdePlantillaDeTipo, PLANTILLAS_POR_TIPO } from "./por-tipo";
 
 const pack = (clase: ClaseEquipo, ids: string[], modelo = "Modelo X1"): KnowledgePack => ({
   modelo,
@@ -235,5 +235,19 @@ describe("completar lo que la IA no ubicó con el esqueleto del tipo", () => {
     expect(de("placa_principal").origen).toBe("manual");
     // Del esqueleto del TV: la tira de LED arriba de los parlantes (en la notebook no hay tiras ni parlantes así).
     expect(de("tira_led_1").pos[1]).toBeGreaterThan(de("parlante_izquierdo").pos[1]);
+  });
+});
+
+describe("emparejar: nombres equivalentes por tipo (no por modelo)", () => {
+  it.each([
+    ["celular", "placa_logica", "placa_madre"], // no la placa de carga
+    ["celular", "placa_principal_s21", "placa_madre"],
+    ["televisor", "placa_principal_av", "placa_control"],
+    ["televisor", "placa_madre_tv", "placa_control"],
+    ["celular", "altavoz_inferior", "parlante_inferior"],
+    ["celular", "puerto_carga_usb_c", "conector_carga"],
+  ])("%s: %s → %s", (tipo, id, enPlantilla) => {
+    const { usadas } = emparejar([id], plantilla(tipo));
+    expect(usadas.get(enPlantilla)).toBe(id);
   });
 });
