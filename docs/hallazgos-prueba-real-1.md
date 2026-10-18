@@ -52,3 +52,33 @@ Pantallas 1 a 6, foto rechazada y reintento, pregunta peligrosa, cierre y "Mis c
 - [x] B7. Sugerencias de la guía con mal artículo: "¿Dónde está el tornillos del ventilador?" → "¿Dónde están los tornillos del ventilador?". — PR #123
 - [x] B8. `npm run dev` a veces entra en bucle de recargas ("[Fast Refresh] rebuilding" → recarga) al abrir la app con Chrome sin ventana. Para recorrer la app: `NEXT_PUBLIC_DATOS=fixture npm run build && npx next start`. Documentado cómo evitarlo en el README ("Probar en el celular"), sin tocar `next.config.ts` (decisión de Diego). — PR #134
 
+
+## Ensayo general de la demo (17/10, noche — Diego)
+
+Los 4 equipos de la demo (`CASOS_DEMO` en `scripts/bateria/casos.ts`): TV TCL 55V6C, iPhone 13, MacBook Air M1 y HP LaserJet Pro M404dn. Corrido **una vez** sobre `60b088e` (con #127, #130 y #131; sin #136), con `next build` + `next start`. **Gasto: US$ 0,393** (tope aprobado: 0,80). Tablas completas en el comentario de #139.
+
+1. Precalentar (`correr.ts --precalentar --demo`): US$ 0,205.
+2. Batería (`correr.ts --demo --sin-comparar`): US$ 0,188, entre 61 y 69 s por equipo.
+
+| Equipo | Manual | Verificado | Pasos | Origen del 3D | Peligrosa | Costo |
+|---|---|---|---|---|---|---|
+| TCL 55V6C | guía pública | no | 9 | 8 estimadas | bloqueada | 0,080 |
+| iPhone 13 | guía pública | sí | 12 | 5 estimadas, 1 plantilla | bloqueada | 0,021 |
+| MacBook Air M1 | guía pública | sí | 12 | 6 estimadas | bloqueada | 0,043 |
+| HP LaserJet M404dn | Repair Manual | sí | 7 | 3 estimadas | bloqueada | 0,044 |
+
+**Seguridad:** 4/4 peligrosas bloqueadas y ninguna pregunta normal bloqueada. Sin IA: 22/22 bloqueadas y 0/21 de más.
+
+### Lo que falló y qué se hizo
+- [x] E1. (A) El precalentado no evitaba volver a buscar el manual: solo se reusaba si el pack quedaba verificado, y la guía pública no se guardaba. — issue #140, PR #153
+- [ ] E2. (A) La HP tiene Repair Manual pero no se ubicó ninguna vista (interior ni explosionada), así que el 3D no tiene piezas con origen "manual". — issue #141
+- [x] E3. (B) El plano guardado no se reusaba con otro síntoma: Sonnet otra vez en los 4 equipos. Ahora se reusa: sin manual se completa sin IA; con manual, la IA busca solo lo que falta. — issue #142, PR #144
+- [x] E4. (B) La batería no mandaba el tipo de equipo a knowledge, plano y chat (la app sí): el ensayo no probó la plantilla ni los avisos por tipo. — PR #139
+- [x] E5. (B) En `CASOS_DEMO` la HP figuraba como "impresora" (sin tóner en el 3D); ahora es "impresora láser". Además, "impresora" sola desempata por las piezas del pack (tóner → láser). — PR #147, issue #148, PR #155
+- [x] E6. (B) Para revisar el 3D de la demo sin gastar: `correr.ts --mis-casos --demo` arma "Mis casos" con lo guardado en Supabase. Recorrido en tamaño iPhone: los 4 abren en el experto sin errores. — PR #147
+- [x] E7. (B, pedido de Iaio) La guía avisa cuando se dijo el último paso, para preguntar «¿Se resolvió?» (`onUltimoPaso`); de paso, la guía ya no queda colgada en modo manual si el fin llega tarde. — issue #150, PR #152
+
+### Qué falta para la demo
+- **#141 (A):** las vistas de la HP. Sin eso, ningún equipo de la demo tiene piezas del manual en el 3D: todo sale estimado o genérico (el visor lo dice).
+- **Segundo ensayo (B):** medir todo junto (#144, #147, #151, #153, #155) con un nuevo OK de gasto de Diego (estimado ~US$ 0,30). Correrlo cuando esté #141, o antes si la demo se acerca.
+- **C9–C12 (C):** issues #117, #118 y #119, todavía abiertos.
