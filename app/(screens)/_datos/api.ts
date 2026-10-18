@@ -90,6 +90,10 @@ const RespEntender = conEventos({
   caso: Caso,
   /** Lo que contó la persona es de riesgo alto (gas, batería hinchada...): mostrar antes de seguir. */
   bloqueo: z.object({ clases: z.array(z.string()), derivacion: z.string().optional() }).optional(),
+  /** false: no se entendió qué equipo es o qué le pasa; la pantalla vuelve a preguntar (#260). */
+  claro: z.boolean().optional(),
+  /** Pregunta corta para pedir lo que falta (solo si `claro` es false). */
+  repregunta: z.string().optional(),
 });
 export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 
@@ -97,9 +101,11 @@ export type Bloqueo = NonNullable<z.infer<typeof RespEntender>["bloqueo"]>;
 export async function entenderSintoma(texto: string): Promise<z.infer<typeof RespEntender>> {
   if (USAR_FIXTURE) {
     await esperar(1800); // lo suficiente para ver la carga de "entender"
-    const { clase, tipoEquipo } = entenderSimulado(texto);
+    const { clase, tipoEquipo, claro, repregunta } = entenderSimulado(texto);
     return RespEntender.parse({
       tipoEquipo,
+      claro,
+      ...(repregunta ? { repregunta } : {}),
       caso: {
         id: crypto.randomUUID(),
         clase,
