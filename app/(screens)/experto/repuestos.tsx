@@ -148,6 +148,8 @@ export function Repuestos({
                 key={r.pieza}
                 casoId={casoId}
                 pieza={r.pieza}
+                // El nombre del pack ("Conector Lightning"): el título y la búsqueda lo usan, no el id (#195).
+                nombre={nombre(r.pieza)}
                 numeroParte={r.numeroParte}
                 modelo={modelo}
                 marca={ficha.marca.valor}
