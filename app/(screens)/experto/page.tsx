@@ -11,12 +11,10 @@ import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { Detener, Encabezado, FlechaAtras, Microfono, Papelera } from "../_ui/experto";
 import {
-  fuenteConFin,
+  fuenteConCierre,
   fuenteConRetomar,
   PanelCierre,
   pasosAlRetomar,
-  pasosSigueIgual,
-  PREGUNTA_SIGUE_IGUAL,
   preguntaAlRetomar,
 } from "./cierre";
 import { Repuestos } from "./repuestos";
@@ -52,23 +50,22 @@ export default function Experto() {
     setUltimaCompra,
   } = useFlujo();
   const [cerrando, setCerrando] = useState(false);
-  /** El experto terminó de responder: se pregunta "¿Se resolvió?" (y si no, qué pieza cambiar). */
-  const [preguntarResuelto, setPreguntarResuelto] = useState(false);
   // Al retomar desde "Mis casos" un caso que esperaba el repuesto, el experto sigue desde el paso
   // de cambiar esa pieza con la guía guardada (sin IA). Si no, la pregunta inicial es el síntoma,
   // una sola vez por caso: al volver a esta pantalla no se repite (ni /api/chat ni la voz).
   const [arranque] = useState(() => {
-    let base = USAR_FIXTURE ? fuenteSimulada : fuenteApi;
-    // Sin IA, "sigue igual" se responde con la guía guardada (con la IA real responde el experto).
-    if (USAR_FIXTURE && preparado && plano)
-      base = fuenteConRetomar(base, PREGUNTA_SIGUE_IGUAL, pasosSigueIgual(preparado.pack, plano.plano));
-    const conFin = (f: typeof base) => fuenteConFin(f, () => setPreguntarResuelto(true));
+    const base = USAR_FIXTURE ? fuenteSimulada : fuenteApi;
     if (cierre?.estado === "esperando_repuesto" && cierre.pieza && preparado && plano) {
       const pregunta = preguntaAlRetomar(preparado.pack, cierre.pieza);
       const pasos = pasosAlRetomar(preparado.pack, plano.plano, cierre.pieza);
-      return { pregunta, fuente: conFin(fuenteConRetomar(base, pregunta, pasos)) };
+      return { pregunta, fuente: fuenteConRetomar(base, pregunta, pasos) };
     }
-    return { pregunta: guiaIniciada ? undefined : caso?.sintoma, fuente: conFin(base) };
+    const pregunta = guiaIniciada ? undefined : caso?.sintoma;
+    // La guía del síntoma termina con probar el equipo y, si sigue igual, la pieza a cambiar:
+    // "Siguiente" llega hasta que se resuelve o no quedan pasos.
+    if (caso && preparado && plano)
+      return { pregunta, fuente: fuenteConCierre(base, caso.sintoma, preparado.pack, plano.plano) };
+    return { pregunta, fuente: base };
   });
   const preguntaInicial = arranque.pregunta;
   useEffect(() => {
@@ -123,32 +120,6 @@ export default function Experto() {
               piezaACambiar={piezaACambiar}
               onCompra={setUltimaCompra}
             />
-          </div>
-        )}
-        {/* Al terminar la respuesta: ¿se resolvió? Si no, se le pregunta al experto qué cambiar. */}
-        {/* Cuando ya dijo qué pieza cambiar, lo que sigue es comprarla: no se pregunta más. */}
-        {preguntarResuelto && !cerrando && !piezaACambiar && (
-          <div className="aparece mt-2 flex items-center gap-2 rounded-2xl border border-dato/40 bg-dato/10 py-1.5 pr-1.5 pl-4">
-            <p className="min-w-0 flex-1 text-sm font-medium">¿Se resolvió?</p>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCerrando(true)}
-                className="h-9 rounded-xl bg-confirmado px-3 text-sm font-semibold text-black active:scale-95"
-              >
-                Sí, quedó
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPreguntarResuelto(false);
-                  setDictada({ texto: PREGUNTA_SIGUE_IGUAL, id: Date.now() });
-                }}
-                className="h-9 rounded-xl border border-borde bg-superficie px-3 text-sm font-medium active:scale-95"
-              >
-                No, sigue igual
-              </button>
-            </div>
           </div>
         )}
       </div>
