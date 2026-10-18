@@ -17,7 +17,7 @@ Nunca compra ni paga: `<OpcionesCompra>` (en `components/compras`) solo abre la 
 
 Configuración (límites del agente): `config.ts`. Modelo y precios: `lib/ia/claude.ts`.
 
-Prueba real: `npx tsx --env-file=.env.local lib/compras/probar.ts "ventilador" "5F10S13875" "ThinkPad E14 Gen 2" "Lenovo"` (~0,05 USD).
+Prueba real: `npx tsx --env-file=.env.local lib/compras/probar.ts "ventilador" "5F10S13875" "ThinkPad E14 Gen 2" "Lenovo"` (~0,04 USD: cada pedido queda debajo de los 100K tokens de la tarifa larga de Haiku; ver `config.ts`).
 
 ## Para la pantalla 6 (Iaio)
 
