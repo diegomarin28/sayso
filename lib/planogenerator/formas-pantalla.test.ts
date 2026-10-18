@@ -5,6 +5,7 @@ import type { LlamarIA } from "../ia/claude";
 import { IndicePiezas, bibliotecaDesdeEscena, modeloPara, type BibliotecaPiezas } from "./biblioteca";
 import { cargadorGlb } from "./cargador";
 import { generarPlano } from "./generador";
+import { terminarGuardado } from "./obtener";
 
 /**
  * #234: el reloj se dibuja con la forma de pantalla que trae el pack (cuadrada o redonda). Es un dato del
@@ -118,6 +119,28 @@ describe("#234: cada forma de reloj usa sus piezas de la biblioteca (2 variantes
       expect(biblioteca.has(nombre), nombre).toBe(true);
       expect(modeloPara(p.pieza, biblioteca, p.dim, "reloj inteligente", p.formaBiblioteca), id).toBe(biblioteca.get(nombre));
     }
+  });
+});
+
+describe("un plano de la caché armado con la otra forma", () => {
+  const otra = { redonda: "cuadrada", cuadrada: "redonda" } as const;
+  it.each([["redonda"], ["cuadrada"]] as const)("toma la forma del pack (%s) en la caja y la pantalla", async (forma) => {
+    const viejo = (await generarPlano({ casoId: "c", knowledgePack: pack(otra[forma]), tipoEquipo: "reloj inteligente" }, iaQueFalla)).plano;
+    const nuevo = (await generarPlano({ casoId: "c", knowledgePack: pack(forma), tipoEquipo: "reloj inteligente" }, iaQueFalla)).plano;
+    const r = terminarGuardado(viejo, pack(forma), "reloj inteligente").plano;
+    expect(raiz(r).formaBiblioteca).toBe(raiz(nuevo).formaBiblioteca);
+    expect(raiz(r).dim).toEqual(raiz(nuevo).dim);
+    expect(pieza(r, "pantalla").formaBiblioteca).toBe(pieza(nuevo, "pantalla").formaBiblioteca);
+    expect(pieza(r, "pantalla").dim).toEqual(pieza(nuevo, "pantalla").dim);
+    expect(r.piezas.map((x) => x.pieza).sort()).toEqual(nuevo.piezas.map((x) => x.pieza).sort());
+  });
+
+  it("una caja que salió de una página del manual no se toca", async () => {
+    const viejo = (await generarPlano({ casoId: "c", knowledgePack: pack("cuadrada"), tipoEquipo: "reloj inteligente" }, iaQueFalla)).plano;
+    const delManual = { ...viejo, piezas: viejo.piezas.map((x) => (!x.padre ? { ...x, origen: "manual" as const } : x)) };
+    const r = terminarGuardado(delManual, pack("redonda"), "reloj inteligente").plano;
+    expect(raiz(r).formaBiblioteca).toBe(raiz(viejo).formaBiblioteca);
+    expect(raiz(r).dim).toEqual(raiz(viejo).dim);
   });
 });
 
