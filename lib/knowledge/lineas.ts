@@ -46,14 +46,18 @@ export function lineasConCitas(bloques: Bloque[]): Linea[] {
  * `urls`: URL de cada documento, cuando el manual es web (una sección por documento): la cita de
  * texto ("char_location") lleva la URL de la sección en vez de un número de página.
  */
-export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[], verificable = true): Cita | null {
+/** Si las citas de texto de un documento cuentan como VERIFICADO: uno para todos, o por documento (manual oficial sí, guía pública no). */
+export type Verificable = boolean | ((documento: number) => boolean);
+
+export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[], verificable: Verificable = true): Cita | null {
   if (c.type === "page_location" && c.cited_text.trim().length >= 8) {
     return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: "VERIFICADO" };
   }
   if (c.type === "char_location" && c.cited_text.trim().length >= 8) {
     const url = urls?.[c.document_index];
     // Texto de un manual oficial: VERIFICADO. De una guía pública guardada: se cita, pero NO_VERIFICABLE.
-    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: verificable ? "VERIFICADO" : "NO_VERIFICABLE" };
+    const oficial = typeof verificable === "function" ? verificable(c.document_index) : verificable;
+    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: oficial ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "web_search_result_location") {
     return { doc: c.title ?? c.url, url: c.url, estado: "NO_VERIFICABLE" };
@@ -61,7 +65,7 @@ export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls
   return null;
 }
 
-function mejorCita(citas: Anthropic.TextCitation[], doc: string, urls?: string[], verificable = true): Cita | undefined {
+function mejorCita(citas: Anthropic.TextCitation[], doc: string, urls?: string[], verificable: Verificable = true): Cita | undefined {
   const convertidas = citas.map((c) => citaDesde(c, doc, urls, verificable)).filter((c): c is Cita => c !== null);
   return convertidas.find((c) => c.estado === "VERIFICADO") ?? convertidas[0];
 }
@@ -95,7 +99,36 @@ function claseVista(campo: string | undefined): ClaseVista | null {
 const ID_PIEZA = /^[a-z0-9_]+$/;
 
 /** `tipoEquipo`: para la seguridad de cada paso (reglas y mensaje según el equipo). */
-export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], tipoEquipo?: string, verificable = true): Contenido {
+/**
+ * Lo que se le dice a la persona va solo en castellano: si el modelo pegó al final la frase original del manual
+ * en inglés (ej. "…y abrila**Press the door-release button…**"), se corta desde ahí. El original ya está en la cita.
+ */
+const PALABRAS_INGLES = new Set(
+  "the and to of from with then remove press open release install reinstall following part complete gently clean is are still present inside before after this that your you it on in into out off by or be not do use using make sure step screw screws could cause may can will should must if when damaged improper".split(" "),
+);
+const PALABRAS_CASTELLANO = new Set("el la los las de del que y en con para por una un se al es lo sin su tu como si más hasta sobre desde".split(" "));
+
+function esIngles(fragmento: string): boolean {
+  const palabras = fragmento.toLowerCase().match(/[a-záéíóúñü]+/g) ?? [];
+  const ingles = palabras.filter((p) => PALABRAS_INGLES.has(p)).length;
+  const castellano = palabras.filter((p) => PALABRAS_CASTELLANO.has(p)).length;
+  return ingles >= 2 && castellano === 0;
+}
+
+export function enCastellano(texto: string): string {
+  // Cortes posibles: negritas, fin de frase, dos puntos, punto y coma, o una palabra pegada a otra en mayúscula.
+  const marcado = texto.replace(/\*\*/g, "\u0000").replace(/([.:;!?])(?:\s+|(?=[A-ZÁÉÍÓÚÑ¿¡]))/g, "$1\u0000").replace(/([a-záéíóúñ])([A-Z][a-z])/g, "$1\u0000$2");
+  const partes = marcado.split("\u0000");
+  const primeraInglesa = partes.findIndex((p, i) => i > 0 && esIngles(p));
+  const queda = (primeraInglesa === -1 ? partes : partes.slice(0, primeraInglesa)).join(" ");
+  const limpio = queda.replace(/\s+/g, " ").replace(/\s+([.,;:!?])/g, "$1").replace(/[;:,]\s*$/, "").trim();
+  return esIngles(limpio) ? "" : limpio;
+}
+
+/** Una advertencia es un aviso de seguridad del equipo, no una nota sobre las fuentes ("no encontré el manual…"). */
+const NOTA_DE_FUENTES = /\b(no encontr\w*|fuentes?|en ingl[eé]s|manual de servicio)\b/i;
+
+export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], tipoEquipo?: string, verificable: Verificable = true): Contenido {
   const r: Contenido = {
     piezas: [],
     pasos: [],
@@ -114,7 +147,9 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
     const cita = mejorCita(l.citas, doc, urls, verificable);
 
     if (tipo === "PIEZA" && campos.length >= 4) {
-      const [, id, nombre, ubicacion, etiqueta] = campos;
+      const [, id, nombreCrudo, ubicacionCruda, etiqueta] = campos;
+      const nombre = enCastellano(nombreCrudo) || nombreCrudo;
+      const ubicacion = enCastellano(ubicacionCruda);
       const p = Pieza.safeParse({
         id: id.toLowerCase(),
         nombre,
@@ -128,7 +163,8 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
         r.piezas.push(p.data);
       } else r.descartadas.push(l.texto);
     } else if (tipo === "PASO" && campos.length >= 5) {
-      const [, orden, texto, piezas, riesgo] = campos;
+      const [, orden, textoCrudo, piezas, riesgo] = campos;
+      const texto = enCastellano(textoCrudo);
       const propuesto = Riesgo.safeParse(riesgo.toLowerCase());
       // La tabla de seguridad decide; la IA solo puede subir el riesgo.
       const evaluado = evaluarRiesgo(texto, { riesgoPropuesto: propuesto.success ? propuesto.data : "medio", ignorarNegadas: true, tipoEquipo });
@@ -161,7 +197,9 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
       else r.descartadas.push(l.texto);
     } else if (tipo === "ADVERTENCIA" && campos[1]) {
-      r.advertencias.push(campos.slice(1).join(" | "));
+      const aviso = enCastellano(campos.slice(1).join(" | "));
+      if (aviso && !NOTA_DE_FUENTES.test(aviso)) r.advertencias.push(aviso);
+      else r.descartadas.push(l.texto);
     }
   }
 

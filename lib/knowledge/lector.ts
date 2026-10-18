@@ -74,13 +74,25 @@ export async function leerManualWeb(
   etapa: string,
   escalar?: { modelo: string; motivo: MotivoEscalada },
 ): Promise<Lectura> {
+  return leerDocumentos(bloquesManualWeb(m), tarea, maxTokens, enviar, etapa, escalar);
+}
+
+/** Lee documentos ya armados (secciones web, guías públicas o el manual oficial junto a una guía), con la tarea al final. */
+export async function leerDocumentos(
+  documentos: Anthropic.DocumentBlockParam[],
+  tarea: string,
+  maxTokens: number,
+  enviar: EnviarMensaje,
+  etapa: string,
+  escalar?: { modelo: string; motivo: MotivoEscalada },
+): Promise<Lectura> {
   const r = await enviar(
     {
       model: escalar?.modelo ?? MODELO_DE.lectura,
       max_tokens: maxTokens,
       output_config: { effort: LIMITES.lectura.effort },
       system: SYSTEM_LECTOR,
-      messages: [{ role: "user", content: [...bloquesManualWeb(m), { type: "text", text: tarea }] }],
+      messages: [{ role: "user", content: [...documentos, { type: "text", text: tarea }] }],
     },
     etapa,
     escalar?.motivo,
