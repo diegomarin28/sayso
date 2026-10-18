@@ -260,3 +260,29 @@ chat por #233; agregar mallas no cambia por sí solo la coreografía existente.
 Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/tablet_demo.py`.
 Renders: `blender -b --factory-startup --python assets/models/blender/tablet_demo.py -- --salida /tmp/tablet --renders assets/models/blender/renders/tablet_demo`.
 Test: `npx vitest run assets/models/blender/tablet-demo.test.ts`.
+
+## Notebook abierta — #232 / #259
+
+`notebook_demo.py` publica **notebook_demo.glb**, menos de 200 KiB. Incluye cuba
+hueca, palmrest con huecos reales, tapa con dos bisagras, panel separado y 60 teclas
+independientes (letras, números, funciones y modificadores). La pieza de la guía `tecla_p` usa la forma `tecla@p`;
+no es un punto dibujado sobre una caja ni parte inseparable del teclado.
+`teclado@bandeja_notebook` es solo la bandeja: cada tecla se monta por su nombre.
+Trackpad, batería y placa existentes se reutilizan; no se inventa RAM/SSD removible.
+
+La tapa se llama `carcasa_pantalla@notebook` para reutilizar la receta de carcasa
+sin tocar materiales.ts. El generador puede mantener `tapa_pantalla` como ID del
+pack y usar esta forma en `formaBiblioteca`. GLB centrado; el plano pone el pivote
+en la bisagra del borde trasero (-Z) y gira sobre X a -110°. La cara activa del panel
+mira hacia -Y al cerrar; al abrir mira hacia la persona delante del teclado.
+No se traslada el pivote del GLB porque rompería el contrato actual de la biblioteca.
+Las posiciones de teclas y la apertura del montaje se ven en `notebook_demo.py`;
+`notebook-cobertura.json` documenta nombres y dos tamaños (32 y 36,48 cm de ancho).
+La conexión a la plantilla y a la cámara sigue en #232/#259, en el otro chat.
+
+![Notebook 32 cm](renders/notebook_demo/notebook_abierta_1.jpg)
+![Notebook 36,48 cm](renders/notebook_demo/notebook_abierta_1.14.jpg)
+
+Publicar: `python3 assets/models/blender/publicar_familia.py assets/models/blender/notebook_demo.py`.
+Renders: `blender -b --factory-startup --python assets/models/blender/notebook_demo.py -- --salida /tmp/notebook --renders assets/models/blender/renders/notebook_demo`.
+Test: `npx vitest run assets/models/blender/notebook-demo.test.ts`.

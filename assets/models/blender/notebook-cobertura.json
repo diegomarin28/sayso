@@ -1,0 +1,99 @@
+{
+  "notebook": {
+    "nuevas": [
+      "base@notebook_abierta",
+      "carcasa_superior@notebook",
+      "carcasa_pantalla@notebook",
+      "pantalla@notebook",
+      "teclado@bandeja_notebook",
+      "tecla@1",
+      "tecla@2",
+      "tecla@3",
+      "tecla@4",
+      "tecla@5",
+      "tecla@6",
+      "tecla@7",
+      "tecla@8",
+      "tecla@9",
+      "tecla@0",
+      "tecla@q",
+      "tecla@w",
+      "tecla@e",
+      "tecla@r",
+      "tecla@t",
+      "tecla@y",
+      "tecla@u",
+      "tecla@i",
+      "tecla@o",
+      "tecla@p",
+      "tecla@a",
+      "tecla@s",
+      "tecla@d",
+      "tecla@f",
+      "tecla@g",
+      "tecla@h",
+      "tecla@j",
+      "tecla@k",
+      "tecla@l",
+      "tecla@z",
+      "tecla@x",
+      "tecla@c",
+      "tecla@v",
+      "tecla@b",
+      "tecla@n",
+      "tecla@m",
+      "tecla@espacio",
+      "tecla@enter",
+      "tecla@shift",
+      "tecla@retroceso",
+      "tecla@esc",
+      "tecla@f1",
+      "tecla@f2",
+      "tecla@f3",
+      "tecla@f4",
+      "tecla@f5",
+      "tecla@f6",
+      "tecla@f7",
+      "tecla@f8",
+      "tecla@f9",
+      "tecla@f10",
+      "tecla@f11",
+      "tecla@f12",
+      "tecla@tab",
+      "tecla@caps",
+      "tecla@ctrl",
+      "tecla@alt",
+      "tecla@izq",
+      "tecla@abajo",
+      "tecla@der"
+    ],
+    "reutilizadas": [
+      "trackpad",
+      "bateria",
+      "placa_madre",
+      "bisagra"
+    ],
+    "variantes": [
+      {
+        "ancho_cm": 32,
+        "escala": 1
+      },
+      {
+        "ancho_cm": 36.48,
+        "escala": 1.14
+      }
+    ],
+    "apertura_grados": 110,
+    "convencion": "GLB Y arriba; teclado hacia +Y; borde trasero -Z. Tapa cerrada con panel hacia -Y; giro x=-110 para abrir. Pivote de bisagra se configura en el plano; los GLB permanecen centrados.",
+    "tecla@p": {
+      "fila_qwerty": 0,
+      "columna": 9,
+      "pos_blender_cm": [
+        8.775,
+        4.55,
+        0.74
+      ]
+    },
+    "integracion_pendiente": "#232 y #259; visor/generador en otro chat"
+  }
+}
