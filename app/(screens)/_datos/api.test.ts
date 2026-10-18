@@ -13,6 +13,7 @@ const knowledge = {
   paginasVistaExplosionada: [],
   paginaVistaInterior: null,
   imagenesPaginas: {},
+  fotosPasos: {},
   vistaInterior: null,
   desdeCache: false,
   eventos: [],
@@ -140,5 +141,24 @@ describe("Ver en el manual (#84)", () => {
     const pagina = 54;
     expect(r.imagenesPaginas[pagina]).toBe("https://ej.com/p54.png");
     expect(r.vistaInterior).toBeNull();
+  });
+});
+
+describe("Ver la foto del paso (#176)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("las fotos de los pasos (iFixit) llegan por la URL del paso", async () => {
+    const url = "https://www.ifixit.com/Guide/iPhone+13+Battery+Replacement/146173#s1";
+    const fetch = vi.fn(() => respuesta({ ...knowledge, fotosPasos: { [url]: "https://guide-images.cdn.ifixit.com/x.jpg" } }));
+    vi.stubGlobal("fetch", fetch);
+    const r = await prepararExperto({ ...ficha, casoId: "caso-fotos" }, "no carga");
+    expect(r.fotosPasos[url]).toBe("https://guide-images.cdn.ifixit.com/x.jpg");
+  });
+
+  it("sin iFixit (respuesta vieja, sin el campo) queda vacío", async () => {
+    const { fotosPasos, ...sinFotos } = knowledge;
+    void fotosPasos;
+    vi.stubGlobal("fetch", vi.fn(() => respuesta(sinFotos)));
+    const r = await prepararExperto({ ...ficha, casoId: "caso-sin-fotos" }, "no carga");
+    expect(r.fotosPasos).toEqual({});
   });
 });

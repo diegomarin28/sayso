@@ -234,6 +234,8 @@ const RespKnowledge = conEventos({
   paginaVistaInterior: z.number().nullable().default(null),
   /** Página del manual → URL del PNG (vista interior y páginas citadas; nunca fotos de la persona). */
   imagenesPaginas: z.record(z.string(), z.string()).default({}),
+  /** URL del paso de la guía → foto (guías con fotos, ej. iFixit): "Ver la foto del paso" (#176). */
+  fotosPasos: z.record(z.string(), z.string()).default({}),
   vistaInterior: z
     .object({ url: z.string(), pagina: z.number(), estado: z.enum(["VERIFICADO", "NO_VERIFICADO"]) })
     .nullable()
