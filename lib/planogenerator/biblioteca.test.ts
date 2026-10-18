@@ -92,7 +92,7 @@ describe("biblioteca de piezas (public/models/piezas)", () => {
   it("la lista de tipos para la IA sale del índice", () => {
     const tipos = TIPOS_DE_PIEZA.map((t) => t.tipo);
     for (const t of ["compresor", "carcasa", "motor", "serpentin", "puerta", "ventilador", "placa"]) expect(tipos).toContain(t);
-    expect(TIPOS_DE_PIEZA.find((t) => t.tipo === "carcasa")!.variantes.sort()).toEqual(["heladera", "lavarropas", "microondas", "split", "televisor"]);
+    expect(TIPOS_DE_PIEZA.find((t) => t.tipo === "carcasa")!.variantes.sort()).toEqual(["heladera", "impresora", "lavarropas", "microondas", "split", "televisor"]);
     expect(tiposParaPrompt()).toMatch(/^ventilador: .+\(variantes: axial, tangencial\)$/m);
   });
 

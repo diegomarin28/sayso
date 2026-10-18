@@ -182,14 +182,24 @@ def cartucho_tinta():
 
 @pieza("cartucho_toner", IMP, "#3d464e", 0.05, 0.5)
 def cartucho_toner():
-    """Cartucho de tóner: depósito alargado, asa, extremos y rodillo visible."""
+    """Cartucho de tóner: depósito con nervios, el tambor verde asomando por la ventana de abajo, tapas con
+    el engranaje, asa, etiqueta y la lengüeta del precinto."""
     caja((25, 7, 7), (0, 0, 3.5), bisel=0.7)
-    cilindro(1.2, 23, (0, -4, 3), "goma", seg=28, eje="x")
+    for i in range(9):
+        caja((0.25, 5.5, 0.15), (-10 + i * 2.5, 0.3, 7.05), "plastico")
+    cilindro(1.2, 23, (0, -4, 3), "pcb", seg=28, eje="x")  # tambor fotoconductor (verde)
+    caja((23.5, 0.3, 1.6), (0, -4.9, 4.6), "plastico")  # labio de la persiana
     for x in (-13, 13):
-        caja((1, 8, 8), (x, 0, 4), "plastico")
+        caja((1, 8, 8), (x, 0, 4), "plastico", bisel=0.15)
+    cilindro(1.5, 0.35, (13.5, -1.5, 3.2), "metal", seg=24, eje="x")
+    for k in range(16):
+        a = 2 * math.pi * k / 16
+        girar(caja((0.35, 0.3, 0.3), (13.5, -1.5 + math.cos(a) * 1.6, 3.2 + math.sin(a) * 1.6), "metal"), (a, 0, 0))
     caja((10, 1, 1.3), (0, 0, 8.5), "plastico", bisel=0.3)
     caja((2, 5, 1.5), (-4, 0, 7.7), "plastico")
     caja((2, 5, 1.5), (4, 0, 7.7), "plastico")
+    CORE["etiqueta_impresa"](8.5, 0.6, 7.0, 5.5, 4.2)
+    caja((1.2, 2.4, 0.1), (-11.5, -2.6, 7.05), "conector")  # lengüeta del precinto
 
 
 @pieza("cabezal_impresion", IMP, "#4c5760", 0.35, 0.4)

@@ -29,6 +29,13 @@ describe("elegirPlantilla", () => {
     expect(elegirPlantilla(pack("otro", []), "Lavarropas carga frontal")?.id).toBe("lavarropas");
   });
 
+  it("impresora láser (la de la demo) contra la de chorro de tinta", () => {
+    expect(elegirPlantilla(pack("otro", []), "Impresora HP LaserJet M404dn")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", []), "impresora láser")?.id).toBe("impresora_laser");
+    expect(elegirPlantilla(pack("otro", []), "Impresora")?.id).toBe("impresora");
+    expect(elegirPlantilla(pack("otro", []), "impresora multifunción de tinta")?.id).toBe("impresora");
+  });
+
   it("si no, por la clase del knowledge pack", () => {
     expect(elegirPlantilla(pack("split", []))?.id).toBe("aire");
     expect(elegirPlantilla(pack("lavarropas", []))?.id).toBe("lavarropas");
