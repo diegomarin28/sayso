@@ -156,12 +156,26 @@ describe("lo que traiga el jurado en la mano", () => {
     ["Nintendo Switch", "consola"],
     ["smart tv", "televisor"],
     ["secadora de ropa", "lavarropas"],
+    // Los que antes no tenían esqueleto.
+    ["power bank Xiaomi", "powerbank"],
+    ["batería externa", "powerbank"],
+    ["GoPro Hero 9", "camara"],
+    ["cámara de fotos Canon", "camara"],
+    ["afeitadora Philips", "afeitadora"],
+    ["cortadora de pelo", "afeitadora"],
+    ["maquinita de afeitar", "afeitadora"],
+    ["planchita de pelo", "planchita"],
+    ["alisadora Remington", "planchita"],
+    ["cepillo de dientes eléctrico", "cepillo"],
+    ["Oral-B", "cepillo"],
+    ["batería del celular", "celular"],
+    ["cargador portátil", "cargador"],
   ])("a ciegas: %s → %s", (dicho, id) => {
     expect(elegirPlantilla(pack("otro", []), dicho)?.id).toBe(id);
   });
 
   it("sin el nombre del aparato ni una plantilla parecida, no adivina: decide el pack", () => {
-    for (const dicho of ["planchita de pelo", "afeitadora Philips", "cepillo de dientes eléctrico", "Chromecast", "calculadora Casio", "cámara de fotos Canon", "GoPro Hero 9", "pendrive", "power bank"]) {
+    for (const dicho of ["Chromecast", "calculadora Casio", "pendrive", "linterna", "lámpara de escritorio"]) {
       expect(elegirPlantilla(pack("otro", []), dicho)?.id, dicho).toBeUndefined();
     }
   });

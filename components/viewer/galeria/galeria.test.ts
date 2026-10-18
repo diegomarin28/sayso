@@ -8,14 +8,18 @@ import { FORMAS_EN_LA_BIBLIOTECA, GALERIA, pasoDespiece, pasoInicial } from "./g
 const indice = IndicePiezas.parse(JSON.parse(readFileSync("public/models/piezas/indice.json", "utf8")));
 const nombres = Object.keys(indice.tipos);
 /** Piezas de ejemplo sin forma a propósito: se ve la primitiva de respaldo. */
-const SIN_FORMA = new Set(["sensor_temperatura", "plato_giratorio", "cuerpo_parlante", "cuerpo_control"]);
+const SIN_FORMA = new Set([
+  "sensor_temperatura", "plato_giratorio", "cuerpo_parlante", "cuerpo_control",
+  "cuerpo_powerbank", "tapa_powerbank", "cuerpo_camara", "lente_camara", "cuerpo_afeitadora", "cabezal_corte", "cuerpo_planchita", "cuerpo_cepillo", "cabezal_cepillo",
+]);
 
 describe("galería del pitch (/lab/galeria)", () => {
-  it("tiene los 7 equipos, los 6 dispositivos y las 9 cosas que se traen en la mano, sin repetir", () => {
+  it("tiene los 7 equipos, los 6 dispositivos y las 14 cosas que se traen en la mano, sin repetir", () => {
     expect(GALERIA.map((e) => e.id)).toEqual([
       "notebook", "celular", "heladera", "aire", "televisor", "lavarropas", "microondas",
       "aspiradora", "secador", "impresora", "consola", "router", "cafetera",
       "tablet", "auriculares", "reloj", "mouse", "teclado", "joystick", "parlante", "cargador", "control_remoto",
+      "powerbank", "camara", "afeitadora", "planchita", "cepillo",
     ]);
     expect(GALERIA.filter((e) => e.grupo === "dispositivos")).toHaveLength(6);
   });
