@@ -1,0 +1,12 @@
+{
+  "familia": "tablet_variantes",
+  "tipo": "tablet",
+  "dato_propuesto": "rasgos3D.tablet.botonFrontal",
+  "variantes": [
+    {"dato": false, "nodo": "pantalla_tablet_dato@sin_boton"},
+    {"dato": true, "nodo": "pantalla_tablet_dato@con_boton"}
+  ],
+  "sin_dato": "Conservar forma actual sin asignar formaBiblioteca nueva",
+  "activacion": "Solo asignar forma explícita al frente cuando el pack trae boolean válido. Cargar el GLB por formaBiblioteca además del ID de pieza.",
+  "coordinacion": 302
+}

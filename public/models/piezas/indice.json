@@ -15,7 +15,8 @@
   "tablet_demo": "tablet_demo.glb",
   "notebook_demo": "notebook_demo.glb",
   "alineacion_demo": "alineacion_demo.glb",
-  "impresoras_demo": "impresoras_demo.glb"
+  "impresoras_demo": "impresoras_demo.glb",
+  "tablet_variantes": "tablet_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3547,6 +3548,28 @@
     6,
     1.6,
     6
+   ]
+  },
+  "pantalla_tablet_dato@sin_boton": {
+   "familia": "tablet_variantes",
+   "ajuste": "libre",
+   "equipos": "tablet tableta",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia +Y GLB.",
+   "caja": [
+    17.3,
+    0.197,
+    24.8
+   ]
+  },
+  "pantalla_tablet_dato@con_boton": {
+   "familia": "tablet_variantes",
+   "ajuste": "libre",
+   "equipos": "tablet tableta",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia +Y GLB.",
+   "caja": [
+    17.3,
+    0.215,
+    24.8
    ]
   }
  }
