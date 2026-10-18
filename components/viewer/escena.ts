@@ -481,6 +481,18 @@ function deLado(direccion: THREE.Vector3, lado: Lado): THREE.Vector3 {
   return lado === "abajo" ? new THREE.Vector3(direccion.x, -direccion.y, -direccion.z) : direccion.clone();
 }
 
+/**
+ * Luz de relleno que sigue a la cámara: toda la luz de estudio viene de arriba, así que lo que se mira desde abajo
+ * (un celular abierto por la pantalla, el dorso de un reloj) quedaba casi negro. Suave para no quemar lo claro:
+ * apenas un toque mirando desde arriba (donde ya hay luz) y más cuanto más abajo está la cámara.
+ * `alturaCamara`: la componente vertical de la dirección objetivo → cámara (1 desde arriba, -1 desde abajo).
+ */
+export const RELLENO = { minimo: 0.12, maximo: 1 };
+export function intensidadRelleno(alturaCamara: number): number {
+  const abajo = Math.min(1, Math.max(0, (0.3 - alturaCamara) / 0.8));
+  return RELLENO.minimo + (RELLENO.maximo - RELLENO.minimo) * abajo;
+}
+
 /** Con el despiece, el radio del equipo entero se toma casi completo (sin recortar las puntas). */
 const MARGEN_DESPIECE = 1;
 

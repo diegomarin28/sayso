@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { planoCelular, planoHeladera, planoTablet, planoTelevisor } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
+import { COLOR_ACTIVO, OPACIDAD_GRANDE_ACTIVA, RELLENO, animar, intensidadRelleno, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 import { conDesarme } from "./guia/desarme";
 
@@ -479,5 +479,17 @@ describe("notebook abierta (#232): se da vuelta el equipo, no la cámara", () =>
     animar(escena, volteada, 0);
     animar(escena, volteada, 5000);
     expect(escena.raiz.rotation.z).toBeCloseTo(0);
+  });
+});
+
+describe("escena: luz de relleno desde la cámara", () => {
+  it("apenas un toque mirando desde arriba y más cuanto más abajo, sin pasarse del máximo", () => {
+    expect(intensidadRelleno(1)).toBeCloseTo(RELLENO.minimo);
+    expect(intensidadRelleno(0.6)).toBeCloseTo(RELLENO.minimo);
+    expect(intensidadRelleno(0)).toBeGreaterThan(intensidadRelleno(0.6));
+    expect(intensidadRelleno(-0.5)).toBeCloseTo(RELLENO.maximo);
+    expect(intensidadRelleno(-1)).toBeCloseTo(RELLENO.maximo);
+    // Suave: siempre menos que la luz de arriba (1,4), para no quemar lo claro.
+    expect(RELLENO.maximo).toBeLessThan(1.4);
   });
 });
