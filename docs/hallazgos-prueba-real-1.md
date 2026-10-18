@@ -53,6 +53,15 @@ Pantallas 1 a 6, foto rechazada y reintento, pregunta peligrosa, cierre y "Mis c
 - [x] B8. `npm run dev` a veces entra en bucle de recargas ("[Fast Refresh] rebuilding" → recarga) al abrir la app con Chrome sin ventana. Para recorrer la app: `NEXT_PUBLIC_DATOS=fixture npm run build && npx next start`. Documentado cómo evitarlo en el README ("Probar en el celular"). — PR #134. **Causa y arreglo:** `allowedDevOrigins` tenía las IPs del arranque; al cambiar de red el servidor rechazaba la recarga en caliente y la página se recargaba sola. Ahora acepta los rangos de red local (OK de Diego). — PR 165
 
 
+## Calidad y cobertura del 3D para el jurado (18/10 — Diego)
+
+- [x] B9. Revisar las piezas esenciales de notebook/MacBook, celular, TV, heladera, split, lavarropas y relojes: 37 formas revisadas, con mejoras de detalle y materiales y renders antes/después de los GLB publicados. Se conservaron las mejoras recientes de main. — PR #164
+- [x] B10. Completar objetos que puede tener cerca el jurado: 21 formas nuevas de canilla/baño, reloj de pared, iluminación, calculadora y proyector, reutilizando las anteriores. Biblioteca total: 233 formas, IDs estables y AJUSTES explícitos. — PR #164
+- [x] B11. Reducir el peso sin perder medidas ni pivotes: las 10 familias quedan en ≤200 KiB cada una (máximo 202.360 bytes; ~1,1 MiB en total), con publicación reproducible y comprobación de cajas físicas antes/después de cuantizar. — PR #164
+- [x] B12. Disponer de una galería enfocada en el campus: `/lab/campus`, 31 ejemplos genéricos para girar, despiezar y armar. Ensayo en navegador de MacBook Air, celular, smartwatch, reloj de pared, canilla y TV. — PR #164
+
+**Evidencia:** [antes/después y reproducción](../assets/models/blender/CALIDAD_DEMO.md), [cobertura y renders del campus](../assets/models/blender/CAMPUS.md). La CI de #164 pasó tests (732), tipos y build estándar. También pasaron lint de archivos modificados y 3 tests Python. Esta revisión usó fixtures, sin consumo de IA; no confirma posiciones de un equipo real, no resuelve las vistas de la HP (#141) y no reemplaza el segundo ensayo completo pendiente.
+
 ## Ensayo general de la demo (17/10, noche — Diego)
 
 Los 4 equipos de la demo (`CASOS_DEMO` en `scripts/bateria/casos.ts`): TV TCL 55V6C, iPhone 13, MacBook Air M1 y HP LaserJet Pro M404dn. Corrido **una vez** sobre `60b088e` (con #127, #130 y #131; sin #136), con `next build` + `next start`. **Gasto: US$ 0,393** (tope aprobado: 0,80). Tablas completas en el comentario de #139.
@@ -80,5 +89,5 @@ Los 4 equipos de la demo (`CASOS_DEMO` en `scripts/bateria/casos.ts`): TV TCL 55
 
 ### Qué falta para la demo
 - **#141 (A):** las vistas de la HP. Sin eso, ningún equipo de la demo tiene piezas del manual en el 3D: todo sale estimado o genérico (el visor lo dice).
-- **Segundo ensayo (B):** medir todo junto (#144, #147, #151, #153, #155) con un nuevo OK de gasto de Diego (estimado ~US$ 0,30). Correrlo cuando esté #141, o antes si la demo se acerca.
-- **C9–C12 (C):** issues #117, #118 y #119, todavía abiertos.
+- **Segundo ensayo (B):** medir todo junto (#144, #147, #151, #153, #155 y la biblioteca de #164) con un nuevo OK de gasto de Diego (estimado ~US$ 0,30). Correrlo cuando esté #141, o antes si la demo se acerca.
+- **C9–C12 (C):** los hallazgos ya están resueltos por #124 y #163; incluir esos cambios en el próximo recorrido completo.
