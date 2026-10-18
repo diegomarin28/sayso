@@ -37,10 +37,30 @@ import {
  * Plantilla genérica POR TIPO de equipo: la red de seguridad cuando la IA no puede ubicar las piezas.
  * `equipos`: palabras con que la recepción nombra ese equipo; `pistas`: marcas, líneas o contexto que valen medio
  * (`galaxy` es un celular salvo que diga `tab`; `tele` en "control de la tele" es un control remoto);
- * `clase`: la clase del knowledge pack que le corresponde.
+ * `clase`: la clase del knowledge pack que le corresponde. `cara`: las piezas que hacen reconocible al equipo
+ * (la pantalla de un TV, las puertas de una heladera): están siempre, aunque el pack no las nombre.
  * `parado`: el equipo se usa parado (TV, heladera…): su cara grande va de frente a la cámara, no acostada.
  */
-export type PlantillaDeEquipo = { id: string; nombre: string; plano: PlanoDePiezas; equipos: string[]; pistas: string[]; clase?: ClaseEquipo; parado?: boolean };
+export type PlantillaDeEquipo = {
+  id: string;
+  nombre: string;
+  plano: PlanoDePiezas;
+  equipos: string[];
+  pistas: string[];
+  cara: string[];
+  clase?: ClaseEquipo;
+  parado?: boolean;
+};
+
+/** La cara de cada tipo (ver `cara`): sin la pantalla, un TV visto de frente es la retroiluminación. */
+const CARA: Record<string, string[]> = {
+  televisor: ["pantalla_panel"],
+  heladera: ["puerta_heladera", "puerta_freezer"],
+  lavarropas: ["puerta_ojo_de_buey"],
+  microondas: ["puerta"],
+  celular: ["pantalla"],
+  tablet: ["pantalla"],
+};
 
 const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, clase?: ClaseEquipo, parado = false, pistas = ""): PlantillaDeEquipo => ({
   id,
@@ -48,6 +68,7 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
   plano,
   equipos: palabras(equipos),
   pistas: palabras(pistas),
+  cara: CARA[id] ?? [],
   ...(clase ? { clase } : {}),
   ...(parado ? { parado } : {}),
 });

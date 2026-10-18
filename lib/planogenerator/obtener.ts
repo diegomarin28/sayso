@@ -5,7 +5,7 @@ import { claveManual } from "../knowledge/manuales";
 import { cachePlanosEnMemoria, cubrePack, type CachePlanos } from "./cache";
 import { ajustarPlanoAlTipo } from "./carcasa";
 import { elegirPlantilla } from "./plantillas/por-tipo";
-import { conSueltas, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
+import { terminarPlano, generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
 import { paginasRecorte, recortarManual } from "./recorte";
 
 /**
@@ -39,8 +39,8 @@ export async function obtenerPlano(
     if (guardado && cubrePack(guardado, entrada.knowledgePack)) {
       // Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
       const tipo = elegirPlantilla(entrada.knowledgePack, entrada.tipoEquipo);
-      // Y las piezas que quedaron sin lugar se suman sueltas (un plano viejo no las tenía).
-      const { plano, avisos } = conSueltas(tipo ? ajustarPlanoAlTipo(guardado.plano, tipo) : guardado.plano, entrada.knowledgePack, tipo);
+      // Y se termina igual que uno nuevo: esqueleto del tipo, medidas con sentido y piezas sueltas (`terminarPlano`).
+      const { plano, avisos } = terminarPlano(tipo ? ajustarPlanoAlTipo(guardado.plano, tipo) : guardado.plano, entrada.knowledgePack, tipo);
       return { plano, avisos: [...guardado.avisos, ...avisos], origen: "ia", desdeCache: true, paginasLeidas: null };
     }
   }

@@ -86,8 +86,8 @@ export const planoTelevisor: PlanoDePiezas = {
   piezas: [
     pieza("carcasa_televisor", [100, 66, 10], [0, 33, 0]),
     ...hijos("carcasa_televisor", [
-      ["pantalla_panel", [100, 58, 2.3], [0, 35, 4.4]],
-      ["retroiluminacion", [96, 56, 0.4], [0, 35, 2.9]],
+      ["pantalla_panel", [100, 58, 2.3], [0, 35, 3.85]],
+      ["retroiluminacion", [96, 56, 0.4], [0, 35, 2.5]],
       ["tira_led_1", [44, 1.2, 0.9], [0, 15, 2.2]],
       ["tira_led_2", [44, 1.2, 0.9], [0, 28, 2.2]],
       ["tira_led_3", [44, 1.2, 0.9], [0, 42, 2.2]],

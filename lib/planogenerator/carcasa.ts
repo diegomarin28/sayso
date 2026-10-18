@@ -4,6 +4,8 @@ import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 /** Si el alto de la cara está más lejos que esto (en veces) del típico del tipo, no es el alto: es la profundidad. */
 export const FACTOR_ALTO_DUDOSO = 2;
+/** Al estirar la planta, una pieza que ocupa al menos esta fracción (un panel) se estira con ella. */
+const OCUPA_LA_PLANTA = 0.8;
 
 /**
  * El plano que arma la IA es siempre una notebook acostada: una base (`base`, el chasis de notebook,
@@ -32,18 +34,23 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
 
   // Parado: la planta es la cara (ancho × alto). Si el "alto" no cuadra con el tipo (un plano viejo con
   // la profundidad, 123 × 7,5 cm), se estira la planta en z hasta la proporción típica: queda estimada.
+  // Se estiran los lugares, no las piezas (una placa de 4,5 cm no pasa a medir 48); solo las que ocupan
+  // casi toda la planta (un panel) se estiran con ella.
   if (plantilla.parado) {
     const tipica = raizTipo.dim[1] / raizTipo.dim[0];
     const [W, , D] = base.dim;
     if (Math.abs(Math.log(D / W / tipica)) > Math.log(FACTOR_ALTO_DUDOSO)) {
       const f = (W * tipica) / D;
       const cz = base.pos[2];
-      piezas = piezas.map((p) => ({
-        ...p,
-        pos: [p.pos[0], p.pos[1], cz + (p.pos[2] - cz) * f] as Vec3,
-        dim: [p.dim[0], p.dim[1], p.dim[2] * f] as Vec3,
-        pivote: [p.pivote[0], p.pivote[1], p.pivote[2] * f] as Vec3,
-      }));
+      piezas = piezas.map((p) => {
+        const g = (!p.padre && p.pieza === base.pieza) || p.dim[2] >= D * OCUPA_LA_PLANTA ? f : 1;
+        return {
+          ...p,
+          pos: [p.pos[0], p.pos[1], cz + (p.pos[2] - cz) * f] as Vec3,
+          dim: [p.dim[0], p.dim[1], p.dim[2] * g] as Vec3,
+          pivote: [p.pivote[0], p.pivote[1], p.pivote[2] * g] as Vec3,
+        };
+      });
       medidas = { ancho: medidas?.ancho ?? "estimada", prof: "estimada" };
     }
   }
