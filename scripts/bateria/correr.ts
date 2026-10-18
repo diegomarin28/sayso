@@ -12,12 +12,17 @@
  *
  * Precalentar (solo /api/knowledge y /api/plano, sin chat; deja todo en la caché de Supabase; tope 0,50 USD):
  *   npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto [--equipos "HP|250 G9|notebook; Samsung|Galaxy A15|celular"] [--tope 0.5]
+ * Seguridad, SIN IA (no hace falta la app ni gasta nada): qué pedidos peligrosos frena el código
+ * y que las preguntas normales no se bloqueen de más:
+ *   npx tsx scripts/bateria/correr.ts --seguridad
+ *
  * `--demo`: los equipos de la demo (EQUIPOS_DEMO en precalentar.ts). Sin `--equipos` ni `--demo`,
  * precalienta los equipos de la batería (`--solo` también vale).
  */
 import { writeFileSync } from "node:fs";
 import { correrBateria, tabla, tablaPlano } from "./bateria";
 import { CASOS } from "./casos";
+import { revisarSeguridad, tablaSeguridad } from "./seguridad";
 import { EQUIPOS_DEMO, leerEquipos, precalentar, SINTOMA_PRECALENTAR, tablaPrecalentar, type EquipoPrecalentar } from "./precalentar";
 
 function opcion(nombre: string): string | undefined {
@@ -30,6 +35,10 @@ const TOPE_BATERIA_USD = 1;
 const TOPE_PRECALENTAR_USD = 0.5;
 
 async function main() {
+  if (process.argv.includes("--seguridad")) {
+    console.log(tablaSeguridad(revisarSeguridad()));
+    return;
+  }
   const base = (opcion("--base") ?? "http://localhost:3000").replace(/\/$/, "");
   const modoPrecalentar = process.argv.includes("--precalentar");
   const topeUsd = Number(opcion("--tope") ?? (modoPrecalentar ? TOPE_PRECALENTAR_USD : TOPE_BATERIA_USD));
