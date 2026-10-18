@@ -57,7 +57,8 @@ export function Encabezado({
           <Orbe estado={orbe} />
         </Link>
         {/* min-w-0: con botones al lado (el experto), el progreso se achica en vez de pasar por debajo. */}
-        <div className="min-w-0 flex-1">
+        {/* @container: el nombre del paso se muestra solo si entra entero (nunca "EX…"). */}
+        <div className="@container min-w-0 flex-1">
           <div className="flex gap-1.5" aria-hidden>
             {PASOS.map((_, i) => (
               <div
@@ -68,8 +69,9 @@ export function Encabezado({
               />
             ))}
           </div>
-          <p className="mt-2 truncate font-mono text-xs font-medium tracking-widest whitespace-nowrap text-texto-suave uppercase">
-            {paso}/6 · {PASOS[paso - 1]}
+          <p className="mt-2 font-mono text-[11px] font-medium tracking-wider whitespace-nowrap text-texto-suave uppercase">
+            {paso}/6
+            <span className="hidden @[6rem]:inline"> · {PASOS[paso - 1]}</span>
           </p>
         </div>
       </div>
