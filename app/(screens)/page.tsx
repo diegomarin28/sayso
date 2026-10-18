@@ -10,6 +10,7 @@ import { useDictado } from "@/lib/voice/useDictado";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import {
   BotonPrincipal,
+  BarraAccion,
   BotonSecundario,
   DiceExperto,
   Encabezado,
@@ -43,7 +44,9 @@ const NOMBRE_CLASE: Record<Caso["clase"], string> = {
 
 export default function QueSeRompio() {
   const router = useRouter();
-  const { caso, setCaso, agregarEventos, tipoEquipo } = useFlujo();
+  const { caso: casoEnCurso, cierre, setCaso, agregarEventos, tipoEquipo } = useFlujo();
+  // Un caso ya cerrado no se retoma desde acá: la pantalla 1 arranca limpia (está en "Mis casos").
+  const caso = cierre ? null : casoEnCurso;
   // Si la persona vuelve con la flecha, se sigue con el mismo caso (no se vuelve a llamar a la IA
   // ni se pierde lo ya preparado). Solo "No, lo corrijo" arma un caso nuevo.
   const [texto, setTexto] = useState(caso?.sintoma ?? "");
@@ -187,12 +190,14 @@ export default function QueSeRompio() {
               </button>
             )}
           </div>
-          <BotonPrincipal onClick={enviar} disabled={!texto.trim() || pensando}>
-            {pensando ? "Pensando…" : "Seguir"} <Flecha />
-          </BotonPrincipal>
+          <BarraAccion>
+            <BotonPrincipal onClick={enviar} disabled={!texto.trim() || pensando}>
+              {pensando ? "Pensando…" : "Seguir"} <Flecha />
+            </BotonPrincipal>
+          </BarraAccion>
         </>
       ) : (
-        <div className="mt-auto flex flex-col gap-3">
+        <BarraAccion>
           {bloqueo && (
             <div
               role="alert"
@@ -234,7 +239,7 @@ export default function QueSeRompio() {
             {bloqueo ? "Entendí, sigamos con cuidado" : "Sí, sigamos"} <Flecha />
           </BotonPrincipal>
           <BotonSecundario onClick={corregir}>No, lo corrijo</BotonSecundario>
-        </div>
+        </BarraAccion>
       )}
     </Pantalla>
   );

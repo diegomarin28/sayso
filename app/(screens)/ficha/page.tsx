@@ -7,7 +7,7 @@ import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
 import { vistaPrevia } from "../_datos/imagen";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la chapa, cada dato con su estado. */
 
@@ -132,7 +132,7 @@ export default function FichaDelEquipo() {
       <DiceExperto texto={dice} />
 
       {error && !ficha && (
-        <div className="mt-auto">
+        <BarraAccion>
           <BotonPrincipal
             onClick={() => {
               setError(null);
@@ -141,7 +141,7 @@ export default function FichaDelEquipo() {
           >
             Probar de nuevo
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
 
       {!ficha ? (
@@ -258,12 +258,12 @@ export default function FichaDelEquipo() {
       )}
 
       {ficha && (
-        <div className="mt-auto flex flex-col gap-3">
+        <BarraAccion>
           <p className="text-center text-xs text-texto-suave">Lo que escribís vos queda como confirmado.</p>
           <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
             {enviando ? "Guardando…" : "Sí, es este"} <Flecha />
           </BotonPrincipal>
-        </div>
+        </BarraAccion>
       )}
     </Pantalla>
   );

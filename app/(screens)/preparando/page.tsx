@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BotonPrincipal, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import {
+  BarraAccion,
+  BotonPrincipal,
+  Check,
+  DiceExperto,
+  Encabezado,
+  Flecha,
+  Pantalla,
+} from "../_ui/experto";
 import { AnimacionPreparando } from "../_ui/animacion-preparando";
 import { FeedActividad } from "../_ui/feed";
 import { ResumenGuia } from "../_ui/resumen-guia";
@@ -118,30 +126,34 @@ export default function Preparando() {
 
       {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} />}
 
-      <div className="mt-auto flex flex-col gap-6">
+      <div className="mt-auto">
         <FeedActividad eventos={eventos} />
-        {error && (
-          <BotonPrincipal
-            onClick={() => {
-              setError(null);
-              setSegundos(0);
-              setVuelta((v) => v + 1);
-            }}
-          >
-            Probar de nuevo
-          </BotonPrincipal>
-        )}
-        {listo && (
-          <BotonPrincipal
-            onClick={() => {
-              desbloquearAudio(); // el experto habla solo al entrar: en iPhone hace falta este toque
-              router.push("/experto");
-            }}
-          >
-            Ver al experto <Flecha />
-          </BotonPrincipal>
-        )}
       </div>
+      {(error || listo) && (
+        <BarraAccion>
+          {error && (
+            <BotonPrincipal
+              onClick={() => {
+                setError(null);
+                setSegundos(0);
+                setVuelta((v) => v + 1);
+              }}
+            >
+              Probar de nuevo
+            </BotonPrincipal>
+          )}
+          {listo && (
+            <BotonPrincipal
+              onClick={() => {
+                desbloquearAudio(); // el experto habla solo al entrar: en iPhone hace falta este toque
+                router.push("/experto");
+              }}
+            >
+              Ver al experto <Flecha />
+            </BotonPrincipal>
+          )}
+        </BarraAccion>
+      )}
     </Pantalla>
   );
 }
