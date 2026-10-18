@@ -20,6 +20,16 @@ export type MensajeChat = { rol: "persona"; texto: string; id: number } | { rol:
  * El texto, en 3 líneas con "ver más". Abajo, en una sola fila, los controles (con "Ver en el manual"
  * como ícono). Queda a la vista hasta el siguiente.
  */
+/** Cuántos puntos de paso entran junto al sello en un celular de 390 px. */
+const MAX_PUNTOS = 9;
+
+/** Los pasos que tienen punto: todos si entran; si no, una ventana de `max` que sigue al paso actual. */
+export function puntosVisibles(total: number, indice: number, max = MAX_PUNTOS): number[] {
+  const n = Math.min(total, max);
+  const desde = Math.min(Math.max(indice - Math.floor(n / 2), 0), total - n);
+  return Array.from({ length: n }, (_, i) => desde + i);
+}
+
 export function TarjetaPaso({
   c,
   indice,
@@ -58,7 +68,7 @@ export function TarjetaPaso({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <p className={`shrink-0 text-[11px] font-semibold tracking-widest uppercase ${bloqueo ? "text-peligro" : "text-acento"}`}>
             {bloqueo
               ? "Paso bloqueado"
@@ -71,8 +81,9 @@ export function TarjetaPaso({
         {total > 1 && (
           // El punto se ve chico, pero se toca en 44 px de alto: el botón es más grande que el punto.
           // En pantallas muy angostas (SE de 320 px) los puntos no entran con el sello: el título ya dice "Paso N de M".
-          <div className="-my-3.5 -mr-1 flex shrink items-center overflow-hidden max-[360px]:hidden" role="group" aria-label="Pasos">
-            {Array.from({ length: total }, (_, i) => (
+          // Con guías largas (30 o 40 pasos) se ve una ventana alrededor del paso actual: todos juntos tapaban el sello.
+          <div className="-my-3.5 -mr-1 flex min-w-0 items-center overflow-hidden max-[360px]:hidden" role="group" aria-label="Pasos">
+            {puntosVisibles(total, indice).map((i) => (
               <button
                 key={i}
                 type="button"
