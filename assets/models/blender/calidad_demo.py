@@ -11,7 +11,7 @@ EQUIPOS = {
  "relojes": ["caja_reloj", "correa_reloj", "corona_reloj", "mecanismo_reloj", "agujas_reloj", "esfera_reloj", "pantalla@reloj", "sensor_optico", "bobina_carga"],
  "notebook": ["ventilador", "bateria", "bateria@celdas_pegadas", "placa_madre", "placa_logica_integrada", "trackpad", "teclado@notebook", "pantalla"],
  "celular": ["pantalla", "bateria@celular", "placa_madre@celular", "conector@usb_c", "conector@lightning", "parlante@celular", "camara", "camara@modulo", "tornillo", "bandeja_sim", "marco", "tapa_trasera"],
- "televisor": ["pantalla@panel", "retroiluminacion", "tira_led", "fuente", "placa_principal_av", "placa_tcon"],
+ "televisor": ["carcasa@televisor", "pantalla@panel", "retroiluminacion", "tira_led", "fuente", "placa_principal_av", "placa_tcon", "parlante"],
  "heladera": ["compresor", "evaporador", "serpentin", "ventilador@axial"],
  "aire": ["ventilador@tangencial", "serpentin", "compresor", "ventilador@axial"],
  "lavarropas": ["tambor", "bomba", "motor"],
