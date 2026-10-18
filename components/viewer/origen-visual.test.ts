@@ -21,17 +21,20 @@ describe("el visor dibuja distinto lo que no salió del manual", () => {
     expect(malla("ssd").borde.geometry.getAttribute("lineDistance")).toBeDefined();
   });
 
-  it("las inciertas quedan más transparentes, también resaltadas (un poco menos)", () => {
+  it("las inciertas son opacas como las demás (#196): las capas encimadas se leen; la señal es el punteado", () => {
     const quieto = estadoInicial(plano.piezas.map((p) => p.pieza));
     animar(escena, quieto, 0);
     animar(escena, quieto, 5000);
-    expect(malla("ssd").malla.material.opacity).toBeLessThan(malla("ventilador").malla.material.opacity);
+    for (const id of ["ssd", "ram", "ventilador"]) {
+      expect(malla(id).malla.material.opacity, id).toBe(1);
+      expect(malla(id).malla.material.depthWrite, id).toBe(true); // tapa lo de atrás
+    }
+    // El punteado se marca más que el borde sólido.
+    expect(malla("ssd").borde.material.opacity).toBeGreaterThan(malla("ventilador").borde.material.opacity);
 
-    const resaltadas = aplicarAccion(aplicarAccion(quieto, { t: "resaltar", pieza: "ssd" }, { casoId: "t" }).estado, { t: "resaltar", pieza: "ventilador" }, { casoId: "t" }).estado;
+    const resaltadas = aplicarAccion(quieto, { t: "resaltar", pieza: "ssd" }, { casoId: "t" }).estado;
     animar(escena, resaltadas, 6000);
     animar(escena, resaltadas, 12000);
-    const ssd = malla("ssd").malla.material.opacity;
-    expect(ssd).toBeLessThan(malla("ventilador").malla.material.opacity);
-    expect(ssd).toBeGreaterThan(0.5); // resaltada se ve bien
+    expect(malla("ssd").malla.material.opacity).toBe(1);
   });
 });

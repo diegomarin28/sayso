@@ -17,11 +17,11 @@ const ACTIVO = new THREE.Color(COLOR_ACTIVO);
 const FANTASMA = new THREE.Color("#7d8894");
 const OPACIDAD_FANTASMA = 0.1;
 /**
- * Piezas con ubicación incierta ("estimada" o "plantilla"): contorno punteado y más transparentes
- * (también resaltadas, un poco menos). Las del manual quedan sólidas; sin origen (planos viejos), igual que antes.
+ * Piezas con ubicación incierta ("estimada" o "plantilla"): contorno PUNTEADO, opacas como las demás
+ * (decisión #196). Translúcidas no escriben profundidad y, con varias capas encimadas (un celular real
+ * con todo estimado), se veía todo a través de todo. La señal de "no verificado" es el punteado, el chip
+ * "N estimadas · N genéricas" y la etiqueta "Sin verificar" de cada pieza.
  */
-const OPACIDAD_INCIERTA = 0.5;
-const OPACIDAD_INCIERTA_ACTIVA = 0.8;
 /** Trazo del punteado como fracción del lado mayor de la pieza (entre 0,3 y 3 cm). */
 const TRAZO_PUNTEADO = 0.08;
 const BORDE = new THREE.Color("#cfd8e2");
@@ -325,7 +325,7 @@ const OPACIDAD_CUBIERTA_ABIERTA = 0.2;
 
 /**
  * `cerrada`: null si no es una cubierta; si lo es, 1 = equipo cerrado (opaca aunque su receta o su
- * ubicación incierta la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
+ * la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
  */
 function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: number, latido: number, cubierta: number | null = null) {
   const cerrada = cubierta ?? 0;
@@ -335,9 +335,8 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   mat.roughness = lerp(m.roughness, 0.45, foco);
   mat.emissiveIntensity = foco * brilloActivo * latido;
 
-  const incierta = lerp(m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1, 1, cerrada);
   const base = cubierta === null ? m.opacidad : lerp(Math.min(m.opacidad, OPACIDAD_CUBIERTA_ABIERTA), 1, cerrada);
-  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible * incierta;
+  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible;
   mat.opacity = opacidad;
   const transparente = (m.transparente && cerrada < 0.999) || opacidad < 0.999;
   if (mat.transparent !== transparente) {
@@ -349,7 +348,7 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
 
   const b = m.borde.material;
   b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(BORDE_ACTIVO, foco);
-  // El punteado se marca un poco más, para que se note aunque la pieza sea más transparente.
+  // El punteado se marca un poco más que el borde sólido: es la señal de "no verificado".
   b.opacity = lerp(lerp(m.incierta ? 0.45 : 0.22, 0.4, fantasma), m.incierta ? 0.85 : 0.7, foco) * visible;
   m.borde.visible = b.opacity > 0.01;
 }
