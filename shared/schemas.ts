@@ -129,6 +129,12 @@ export const KnowledgePack = z.object({
   pasos: z.array(PasoReparacion),
   advertencias: z.array(z.string()),
   repuestos: z.array(Repuesto),
+  /**
+   * Forma de la pantalla del equipo (un reloj cuadrado o redondo), de lo que se encontró del modelo
+   * (fotos de referencia). Es un dato del pack: el 3D la dibuja por tipo, nunca por marca ni modelo.
+   * Sin dato, el 3D usa la forma más común del tipo y la marca como estimada.
+   */
+  formaPantalla: z.enum(["cuadrada", "redonda"]).optional(),
 });
 export type KnowledgePack = z.infer<typeof KnowledgePack>;
 
@@ -154,6 +160,11 @@ export const PiezaPlano = z.object({
   cita: Cita.optional(),
   /** De dónde sale la ubicación. Sin dato (planos viejos, fixtures) = no verificada. */
   origen: OrigenDato3D.optional(),
+  /**
+   * La forma de la biblioteca 3D que la dibuja, si el generador la eligió (ej. la pantalla de un reloj
+   * redondo usa una forma redonda). Sin dato, la forma sale del id (`tipoPara`). Si no existe, igual que sin dato.
+   */
+  formaBiblioteca: z.string().optional(),
 });
 export type PiezaPlano = z.infer<typeof PiezaPlano>;
 
