@@ -76,10 +76,18 @@ export class Reproductor {
   private senal: AbortSignal | null = null;
   private modo: ModoAvance;
   private readonly alCambiar?: (e: EstadoControles) => void;
+  private readonly inicio: number;
 
-  constructor(o: { modo?: ModoAvance; alCambiar?: (e: EstadoControles) => void } = {}) {
+  /** `inicio`: paso por el que arranca (para retomar una guía; por defecto el primero). */
+  constructor(o: { modo?: ModoAvance; alCambiar?: (e: EstadoControles) => void; inicio?: number } = {}) {
     this.modo = o.modo ?? "manual";
     this.alCambiar = o.alCambiar;
+    this.inicio = Math.max(0, o.inicio ?? 0);
+  }
+
+  /** Todos los pasos recibidos hasta ahora (tal como llegaron, antes del filtro del visor). */
+  pasosRecibidos(): Coreografia[] {
+    return this.pasos.map((p) => p.c);
   }
 
   controles(): EstadoControles {
@@ -155,11 +163,11 @@ export class Reproductor {
     m.estado("pensando");
     void this.leer(eventos, senal);
 
-    let objetivo = 0;
+    let objetivo = this.inicio;
     let final: EstadoGuia = "esperando";
     for (;;) {
       // Esperar a que llegue el paso (o el fin de la respuesta). El estado se avisa solo si cambia.
-      let avisado = objetivo === 0 ? "pensando" : ""; // al arrancar ya se avisó "pensando"
+      let avisado = objetivo === this.inicio ? "pensando" : ""; // al arrancar ya se avisó "pensando"
       while (!senal.aborted && this.pasos.length <= objetivo && !this.fin && this.salto === null) {
         const ahora = this.aviso ? `buscando:${this.aviso}` : "pensando";
         if (ahora !== avisado) m.estado(this.aviso ? "buscando" : "pensando", this.aviso);
@@ -271,6 +279,22 @@ export class Reproductor {
     d.forEach((r) => r());
     this.alCambiar?.(this.controles());
   }
+}
+
+/** Una guía que quedó a medias porque la persona preguntó otra cosa: se puede retomar. */
+export type GuiaGuardada = { pasos: Coreografia[]; indice: number };
+
+/**
+ * Si vale la pena ofrecer "Seguir con la guía": la respuesta tiene más de un paso, no se llegó
+ * al último (o todavía estaban llegando) y el paso actual no es un bloqueo.
+ */
+export function guiaPendiente(r: Reproductor): GuiaGuardada | null {
+  const c = r.controles();
+  const pasos = r.pasosRecibidos();
+  if (pasos.length < 2 || c.indice < 0) return null;
+  if (pasos[c.indice]?.riesgo === "alto") return null;
+  if (c.completa && c.indice >= pasos.length - 1) return null;
+  return { pasos, indice: c.indice };
 }
 
 /** Reproduce una respuesta entera en modo automático (sin controles). Devuelve lo que dijo el experto. */

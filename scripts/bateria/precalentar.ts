@@ -1,5 +1,6 @@
 import { ClaseEquipo, Ficha } from "../../shared";
 import { Corte, postJson, RespKnowledge, RespPlano, textoOrigen, type Opciones } from "./bateria";
+import { CASOS_DEMO } from "./casos";
 
 /**
  * Precalentar: deja en la caché de Supabase el manual (búsqueda, vistas), el pack y el plano de
@@ -23,11 +24,8 @@ export type FilaPrecalentar = {
   nota?: string;
 };
 
-/**
- * Equipos de la demo (`--demo`): los dos de la prueba real 1 (TV TCL e iPhone 13), una MacBook y
- * uno de la facultad (impresora láser: la biblioteca 3D de facultad tiene fusor y cilindro).
- */
-export const EQUIPOS_DEMO = "TCL|55V6C|televisor; Apple|iPhone 13|celular; Apple|MacBook Air M1 2020|notebook; HP|LaserJet Pro M404dn|impresora";
+/** Equipos de la demo (`--demo`): los mismos casos del ensayo general (CASOS_DEMO en casos.ts). */
+export const EQUIPOS_DEMO = CASOS_DEMO.map((c) => `${c.marca}|${c.modelo}|${c.tipoEquipo}`).join("; ");
 
 /** Síntoma con el que se guarda el pack precalentado (el pack se guarda por marca + modelo + síntoma). */
 export const SINTOMA_PRECALENTAR = "Revisión general: cómo está armado por dentro y qué piezas tiene.";
