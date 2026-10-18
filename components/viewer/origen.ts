@@ -1,4 +1,5 @@
 import { vistaEnImagen, type OrigenDato3D, type PiezaPlano, type PlanoDePiezas } from "../../shared";
+import { ES_TAPA_DE_PANTALLA } from "../../lib/planogenerator/cubiertas";
 
 /**
  * Cuánto se puede confiar en cada ubicación del 3D (ver `OrigenDato3D` en shared/).
@@ -9,11 +10,14 @@ import { vistaEnImagen, type OrigenDato3D, type PiezaPlano, type PlanoDePiezas }
 /**
  * Las piezas genéricas: las que el esqueleto del tipo suma y el pack del caso no nombra (origen "plantilla" y
  * fuera del pack, ver `seguirPlantilla`). El visor las pinta en gris. Sin pack (lab), ninguna.
+ * La tapa de pantalla de una notebook y su panel no (`conTapaDePantalla`): no son una pieza de adentro que el
+ * manual no nombró, son lo que la hace reconocible; en gris, la pantalla no se leía como pantalla.
  */
 export function piezasGenericas(plano: PlanoDePiezas, piezasDelPack?: ReadonlyArray<{ id: string }>): Set<string> {
   if (!piezasDelPack?.length) return new Set();
   const delPack = new Set(piezasDelPack.map((p) => p.id));
-  return new Set(plano.piezas.filter((p) => p.origen === "plantilla" && !delPack.has(p.pieza)).map((p) => p.pieza));
+  const deLaTapaDePantalla = (p: PiezaPlano) => ES_TAPA_DE_PANTALLA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.padre ?? "");
+  return new Set(plano.piezas.filter((p) => p.origen === "plantilla" && !delPack.has(p.pieza) && !deLaTapaDePantalla(p)).map((p) => p.pieza));
 }
 
 export type ResumenOrigen = Record<OrigenDato3D | "sinDato", number> & { medidasEstimadas: boolean };
