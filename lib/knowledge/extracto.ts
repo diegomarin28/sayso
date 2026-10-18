@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import { getDocumentProxy } from "unpdf";
 import { z } from "zod";
-import { LIMITES, MODELOS, nombreDeArchivo, pedirJson, type LlamarIA } from "../ia/claude";
+import { LIMITES, MODELOS, nombreDeArchivo, pedirJsonConEscalada, type LlamarIA } from "../ia/claude";
 
 /**
  * Bibliotecario: extracto del manual. A la IA nunca se le manda el PDF entero (cuesta ~1 USD):
@@ -99,7 +99,7 @@ export async function elegirPaginas(
   sintoma: string,
   llamar?: LlamarIA,
 ): Promise<Seleccion> {
-  return pedirJson(
+  const { resultado } = await pedirJsonConEscalada(
     Seleccion,
     {
       modelo: MODELOS.corto,
@@ -110,6 +110,7 @@ export async function elegirPaginas(
     },
     llamar,
   );
+  return resultado;
 }
 
 /** Páginas del extracto, en orden y sin pasarse del máximo. Prioridad: fijas, vistas, síntoma, índice. */

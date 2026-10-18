@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ClaseEquipo, Evento, TipoFoto, type Agente } from "../../shared";
-import { ErrorIA, LIMITES, medirCosto, MODELOS, totalUsd, type Uso } from "../ia/claude";
+import { ErrorIA, LIMITES, medirCosto, MODELOS, totalUsd, type Uso, TEXTO_ESCALADA } from "../ia/claude";
 import { estadoFreno, gastoPendiente, IAEnPausa, respuestaPausa } from "../ia/freno";
 
 /** Esquemas de entrada de /api/intake/*. Todo lo que manda el cliente se valida acá. */
@@ -79,13 +79,18 @@ export function eventoCosto(casoId: string, agente: z.infer<typeof Agente>, usos
   const modelos = [...new Set(usos.map((u) => NOMBRE_MODELO[u.modelo] ?? u.modelo))].join(" y ");
   const leida = suma("cacheLeida");
   const usd = totalUsd(usos);
+  const escaladas = usos.filter((u) => u.escalada);
+  const textoEscaladas = escaladas.length
+    ? ` Escaló a un modelo más capaz ${escaladas.length === 1 ? "1 vez" : `${escaladas.length} veces`} (${[...new Set(escaladas.map((u) => TEXTO_ESCALADA[u.escalada!]))].join("; ")}).`
+    : "";
   return evento(
     casoId,
     agente,
     "costo",
     `Costo de este paso: ${formatoUsd(usd)} (${usos.length} ${usos.length === 1 ? "llamada" : "llamadas"} a ${modelos}; ` +
-      `${suma("entrada") + suma("cacheEscrita")} tokens de entrada${leida ? ` y ${leida} leídos de la caché` : ""}, ${suma("salida")} de salida).`,
-    { usd, usos },
+      `${suma("entrada") + suma("cacheEscrita")} tokens de entrada${leida ? ` y ${leida} leídos de la caché` : ""}, ${suma("salida")} de salida).` +
+      textoEscaladas,
+    { usd, usos, escaladas: escaladas.length },
   );
 }
 

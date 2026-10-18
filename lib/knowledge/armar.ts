@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { KnowledgePack, type Evento, type Ficha } from "../../shared";
 import { planoNotebookBase } from "../planogenerator/plantillas/notebook";
 import { tiposParaPrompt } from "../planogenerator/tipos";
-import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb } from "../ia/claude";
+import { enviarMensaje, ErrorIA, LIMITES, subirArchivo, type EnviarMensaje, type LlamarIA, type SubirArchivo, MODELO_DE, herramientasWeb, ESCALADA, puedeEscalar, type MotivoEscalada } from "../ia/claude";
 import { IAEnPausa } from "../ia/freno";
 import { normalizar } from "../intake/chapa";
 import { evento } from "../intake/entrada";
@@ -259,14 +259,24 @@ export async function armarKnowledgePack(
   let lectura: Lectura | null = null;
   let contenido: Contenido | null = null;
   if (fuenteManual) {
-    try {
+    const leer = async (escalar?: { modelo: string; motivo: MotivoEscalada }): Promise<[Lectura, Contenido] | null> => {
       if (manual) {
-        lectura = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual");
-        contenido = aPaginasDelManual(parsearContenido(lineasConCitas(lectura.bloques), manual.titulo, undefined, tipoEquipo ?? ficha.clase), manual.paginas);
-      } else if (manualWeb) {
+        const l = await leerManual(manual, tareaPack(equipoDescrito, sintoma, true, ["explosionada", "interior"]), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual", escalar);
+        return [l, aPaginasDelManual(parsearContenido(lineasConCitas(l.bloques), manual.titulo, undefined, tipoEquipo ?? ficha.clase), manual.paginas)];
+      }
+      if (manualWeb) {
         // Manual web: sin páginas (no hay vistas para el 3D); cada cita lleva la URL de su sección.
-        lectura = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web");
-        contenido = parsearContenido(lineasConCitas(lectura.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase);
+        const l = await leerManualWeb(manualWeb, tareaPack(equipoDescrito, sintoma, true, []), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: leer manual web", escalar);
+        return [l, parsearContenido(lineasConCitas(l.bloques), manualWeb.titulo, manualWeb.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase)];
+      }
+      return null;
+    };
+    try {
+      [lectura, contenido] = (await leer()) ?? [null, null];
+      // Escalada (una sola vez): si el modelo barato no sacó ningún paso del manual, lo relee el más capaz.
+      if (contenido && contenido.pasos.length === 0 && puedeEscalar(MODELO_DE.lectura)) {
+        eventos.push(evento(casoId, "bibliotecario", "lectura_escalada", "La primera lectura no dio pasos: la repito con un modelo más capaz."));
+        [lectura, contenido] = (await leer({ modelo: ESCALADA.hacia, motivo: "sin_pasos" })) ?? [lectura, contenido];
       }
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"

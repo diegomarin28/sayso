@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PedidoDeFoto, TipoFoto, type ClaseEquipo } from "../../shared";
-import { LIMITES, MODELOS, pedirJson, type LlamarIA } from "../ia/claude";
+import { LIMITES, MODELOS, pedirJsonConEscalada, type LlamarIA } from "../ia/claude";
 
 /**
  * Qué fotos pedir. Las decide la IA según el tipo de equipo (cualquier dispositivo);
@@ -80,7 +80,7 @@ export async function decidirPedidos(
 ): Promise<{ pedidos: PedidoDeFoto[]; porIA: boolean }> {
   const base = pedidosBase(clase);
   try {
-    const r = await pedirJson(
+    const { resultado: r } = await pedirJsonConEscalada(
       SalidaPedidos,
       {
         modelo: MODELOS.corto,

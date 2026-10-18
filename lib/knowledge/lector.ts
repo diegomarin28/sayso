@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { LIMITES, MODELO_DE, type EnviarMensaje } from "../ia/claude";
+import { LIMITES, MODELO_DE, type EnviarMensaje, type MotivoEscalada } from "../ia/claude";
 import { bloquesManualWeb, type ManualWeb } from "./manualweb";
 
 /**
@@ -48,26 +48,42 @@ export async function leerManual(
   maxTokens: number,
   enviar: EnviarMensaje,
   etapa: string,
+  /** Escalada: otro modelo (no comparte la caché del prefijo) y el motivo, para el costo. */
+  escalar?: { modelo: string; motivo: MotivoEscalada },
 ): Promise<Lectura> {
   const { documento, ...fijo } = prefijoManual(m);
   const r = await enviar(
-    { ...fijo, max_tokens: maxTokens, messages: [{ role: "user", content: [documento, { type: "text", text: tarea }] }] },
+    {
+      ...fijo,
+      ...(escalar ? { model: escalar.modelo } : {}),
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: [documento, { type: "text", text: tarea }] }],
+    },
     etapa,
+    escalar?.motivo,
   );
   return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
 }
 
 /** Lee un manual web (una sección por documento de texto, con citas de la API). */
-export async function leerManualWeb(m: ManualWeb, tarea: string, maxTokens: number, enviar: EnviarMensaje, etapa: string): Promise<Lectura> {
+export async function leerManualWeb(
+  m: ManualWeb,
+  tarea: string,
+  maxTokens: number,
+  enviar: EnviarMensaje,
+  etapa: string,
+  escalar?: { modelo: string; motivo: MotivoEscalada },
+): Promise<Lectura> {
   const r = await enviar(
     {
-      model: MODELO_DE.lectura,
+      model: escalar?.modelo ?? MODELO_DE.lectura,
       max_tokens: maxTokens,
       output_config: { effort: LIMITES.lectura.effort },
       system: SYSTEM_LECTOR,
       messages: [{ role: "user", content: [...bloquesManualWeb(m), { type: "text", text: tarea }] }],
     },
     etapa,
+    escalar?.motivo,
   );
   return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
 }

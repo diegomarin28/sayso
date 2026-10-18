@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Foto, type TipoFoto } from "../../shared";
-import { bloqueImagen, LIMITES, pedirJson, type ImagenEntrada, type LlamarIA, MODELO_DE } from "../ia/claude";
+import { bloqueImagen, LIMITES, pedirJsonConEscalada, type ImagenEntrada, type LlamarIA, MODELO_DE } from "../ia/claude";
 
 /**
  * Control de calidad de una foto. La IA mide; el código decide si se acepta.
@@ -8,12 +8,16 @@ import { bloqueImagen, LIMITES, pedirJson, type ImagenEntrada, type LlamarIA, MO
 
 export const NITIDEZ_MINIMA = LIMITES.foto.nitidezMinima;
 
-const SalidaCalidad = z.object({
+/** Confianza que el propio modelo declara: "baja" hace escalar a Sonnet (ver ESCALADA en lib/ia/claude.ts). */
+const Confianza = z.enum(["alta", "media", "baja"]);
+const FormatoCalidad = z.object({
   nitidez: z.number(),
   encuadreOk: z.boolean(),
   muestraLoPedido: z.boolean(),
   motivo: z.string().nullable(),
+  confianza: Confianza,
 });
+const SalidaCalidad = FormatoCalidad.extend({ confianza: Confianza.default("media") });
 type SalidaCalidad = z.infer<typeof SalidaCalidad>;
 
 const QUE_DEBE_MOSTRAR: Record<z.infer<typeof TipoFoto>, string> = {
@@ -27,6 +31,7 @@ const QUE_DEBE_MOSTRAR: Record<z.infer<typeof TipoFoto>, string> = {
 const SYSTEM_CALIDAD = `Evaluás la calidad de una foto que sacó una persona con el celular para un servicio de reparación.
 Devolvé:
 - nitidez: de 0 (totalmente movida o desenfocada) a 1 (perfectamente nítida).
+- confianza: "baja" si no podés juzgar bien la foto (muy oscura, rara, no sabés qué mirar).
 - encuadreOk: true si lo importante está entero dentro de la foto, sin cortes, y no está demasiado lejos ni oscuro.
 - muestraLoPedido: true si la foto muestra lo que se pidió.
 - motivo: si algo falla, una frase corta en español rioplatense dirigida a la persona, diciendo qué corregir (ej. "Salió movida, apoyá el codo y probá de nuevo."). Si está todo bien, null.
@@ -38,7 +43,7 @@ export type ResultadoCalidad = {
 };
 
 /** Regla del código: aceptar solo si la foto es nítida, está bien encuadrada y muestra lo pedido. */
-export function decidirAceptacion(m: SalidaCalidad): { aceptada: boolean; motivoRechazo?: string } {
+export function decidirAceptacion(m: Omit<SalidaCalidad, "confianza">): { aceptada: boolean; motivoRechazo?: string } {
   const nitidez = Math.min(1, Math.max(0, m.nitidez));
   if (nitidez < NITIDEZ_MINIMA) {
     return { aceptada: false, motivoRechazo: m.motivo ?? "La foto salió movida o desenfocada. Probá de nuevo con buena luz." };
@@ -56,9 +61,10 @@ export async function evaluarFoto(
   entrada: { casoId: string; tipoPedido: z.infer<typeof TipoFoto>; imagen: ImagenEntrada; url?: string; id?: string },
   llamar?: LlamarIA,
 ): Promise<ResultadoCalidad> {
-  const medicion = await pedirJson(
+  const { resultado: medicion } = await pedirJsonConEscalada(
     SalidaCalidad,
     {
+      formato: FormatoCalidad,
       modelo: MODELO_DE.calidad,
       system: SYSTEM_CALIDAD,
       contenido: [
@@ -69,6 +75,7 @@ export async function evaluarFoto(
       etapa: "recepción: calidad de foto",
     },
     llamar,
+    (m) => (m.confianza === "baja" ? "confianza_baja" : null),
   );
 
   const decision = decidirAceptacion(medicion);
