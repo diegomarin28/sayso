@@ -5,7 +5,7 @@ import { claveManual } from "../../knowledge/manuales";
 import { cachePlanosEnMemoria } from "../cache";
 import { generarPlano } from "../generador";
 import { obtenerPlano } from "../obtener";
-import { elegirPlantilla, planoDesdePlantillaDeTipo, PLANTILLAS_POR_TIPO } from "./por-tipo";
+import { elegirPlantilla, piezasProbables, planoDesdePlantillaDeTipo, PLANTILLAS_POR_TIPO } from "./por-tipo";
 
 const pack = (clase: ClaseEquipo, ids: string[], modelo = "Modelo X1"): KnowledgePack => ({
   modelo,
@@ -36,6 +36,18 @@ describe("elegirPlantilla", () => {
     expect(elegirPlantilla(pack("otro", []), "impresora láser")?.cara).toEqual(["puerta_frontal"]);
     expect(elegirPlantilla(pack("otro", []), "Impresora")?.id).toBe("impresora");
     expect(elegirPlantilla(pack("otro", []), "impresora multifunción de tinta")?.id).toBe("impresora");
+  });
+
+  it("«impresora» a secas: con piezas de láser en el pack (tóner, fusor) elige la láser; sin ellas, la de tinta (#148)", () => {
+    const laser = (ids: string[]) => elegirPlantilla(pack("otro", ids), "impresora")?.id;
+    expect(laser(["cartucho_toner", "rodillo_mp", "placa_formateador"])).toBe("impresora_laser"); // HP LaserJet M404dn
+    expect(laser(["cartucho_toner", "unidad_fusora", "unidad_tambor"])).toBe("impresora_laser"); // Brother HL-L2350DW
+    expect(laser(["cabezal", "cartucho_tinta", "placa_control"])).toBe("impresora");
+    expect(laser([])).toBe("impresora");
+    // Con la láser, el 3D suma su esqueleto y la cara (la tapa de adelante).
+    expect(piezasProbables("impresora", pack("otro", ["cartucho_toner", "rodillo_mp"]))).toEqual(expect.arrayContaining(["unidad_fusora", "puerta_frontal"]));
+    // El nombre manda: "de tinta" sigue siendo la de tinta aunque el pack nombre un tóner.
+    expect(elegirPlantilla(pack("otro", ["cartucho_toner", "unidad_fusora"]), "impresora multifunción de tinta")?.id).toBe("impresora");
   });
 
   it("si no, por la clase del knowledge pack", () => {

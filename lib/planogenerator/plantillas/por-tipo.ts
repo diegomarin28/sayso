@@ -87,7 +87,7 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("microondas", "microondas", planoMicroondas, "microondas", undefined, true),
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador"),
-  t("impresora", "impresora", planoImpresora, "impresora"),
+  t("impresora", "impresora", planoImpresora, "impresora", undefined, false, "tinta inkjet deskjet chorro"),
   // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: la de arriba.
   t("impresora_laser", "impresora láser", planoImpresoraLaser, "impresora laser toner", undefined, false, "laserjet"),
   t("consola", "consola", planoConsola, "consola playstation play xbox nintendo switch videojuegos"),
@@ -134,24 +134,32 @@ const MIN_DISTINTIVAS = 2;
 export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
   // Por nombre: la que más palabras comparte con lo que dijo la recepción, las pistas valen medio
   // ("control remoto" no es un joystick; "control de PlayStation", sí). Empate: la nombrada primero
-  // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, la primera de la lista.
+  // ("cargador de celular" es un cargador: en español el sustantivo va adelante); si no, las piezas del pack
+  // ("impresora" a secas, con tóner y fusor, es una láser), y si no, la primera de la lista.
   const dichas = tipoEquipo ? palabras(tipoEquipo) : [];
-  let porNombre: { p: PlantillaDeEquipo; n: number; primera: number } | undefined;
+  const tiposDelPack = kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x);
+  const distintivasDelPack = (p: PlantillaDeEquipo) => tiposDelPack.filter((x) => DISTINTIVOS.get(p.id)!.has(x)).length;
+  let porNombre: { p: PlantillaDeEquipo; n: number; primera: number; distintivas: number } | undefined;
   for (const p of PLANTILLAS_POR_TIPO) {
     const peso = (d: string) => (p.equipos.some((e) => nombra(d, e)) ? 1 : p.pistas.some((e) => nombra(d, e)) ? 0.5 : 0);
     const posiciones = dichas.flatMap((d, i) => (peso(d) ? [i] : []));
     if (!posiciones.length) continue;
-    const cand = { p, n: dichas.reduce((n, d) => n + peso(d), 0), primera: posiciones[0] };
-    if (!porNombre || cand.n > porNombre.n || (cand.n === porNombre.n && cand.primera < porNombre.primera)) porNombre = cand;
+    const cand = { p, n: dichas.reduce((n, d) => n + peso(d), 0), primera: posiciones[0], distintivas: distintivasDelPack(p) };
+    const empata = porNombre && cand.n === porNombre.n && cand.primera === porNombre.primera;
+    if (
+      !porNombre ||
+      cand.n > porNombre.n ||
+      (cand.n === porNombre.n && cand.primera < porNombre.primera) ||
+      (empata && cand.distintivas > porNombre.distintivas)
+    )
+      porNombre = cand;
   }
   if (porNombre) return porNombre.p;
   const porClase = PLANTILLAS_POR_TIPO.find((p) => p.clase && p.clase === kp.clase);
   if (porClase) return porClase;
-  const tiposDelPack = kp.piezas.map((p) => tipoDe(p.id)).filter((x): x is string => !!x);
   let mejor: { p: PlantillaDeEquipo; n: number } | undefined;
   for (const p of PLANTILLAS_POR_TIPO) {
-    const distintivos = DISTINTIVOS.get(p.id)!;
-    const n = tiposDelPack.filter((x) => distintivos.has(x)).length;
+    const n = distintivasDelPack(p);
     if (n >= MIN_DISTINTIVAS && (!mejor || n > mejor.n)) mejor = { p, n };
   }
   return mejor?.p;
