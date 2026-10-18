@@ -388,6 +388,30 @@ export const planoReloj: PlanoDePiezas = {
   ],
 };
 
+/**
+ * Reloj de pantalla REDONDA (el mismo tipo, otra forma de pantalla: dato del pack, `formaPantalla`):
+ * caja y pantalla circulares. La biblioteca todavía no tiene caja ni pantalla de reloj redondas, así que
+ * usan formas redondas que ya existen (`formaBiblioteca`): la tapa del reloj estirada en alto y la esfera.
+ */
+export const planoRelojRedondo: PlanoDePiezas = {
+  modelo: "Reloj inteligente redondo genérico (ejemplo)",
+  unidades: "cm",
+  piezas: [
+    { ...pieza("caja_reloj", [4.6, 1.1, 4.6], [0, 0.95, 0], "cilindro"), formaBiblioteca: "tapa_reloj" },
+    { ...pieza("pantalla_reloj", [4, 0.2, 4], [0, 1.6, 0], "cilindro", "caja_reloj"), formaBiblioteca: "esfera_reloj" },
+    ...hijos("caja_reloj", [
+      ["placa", [3.2, 0.2, 3.2], [0, 1.15, 0]],
+      ["bateria", [2.8, 0.4, 2.6], [0, 0.85, 0.2]],
+      ["motor_vibracion", [2, 0.3, 0.9], [0, 0.6, -1.5]],
+      ["sensor_optico", [2.4, 0.4, 2.4], [0, 0.35, 0]],
+      ["bobina_carga", [3.2, 0.2, 3.2], [0, 0.45, 0]],
+      ["tapa_reloj", [4.2, 0.3, 4.2], [0, 0.15, 0]],
+      ["corona_reloj", [1.2, 0.7, 0.7], [2.8, 1.1, -0.4]],
+      ["correa_reloj", [2.4, 0.4, 19], [0, 0.6, 0]],
+    ]),
+  ],
+};
+
 /** Mouse: la carcasa encierra la placa, el sensor, los botones (microinterruptores), la rueda y la pila. */
 export const planoMouse: PlanoDePiezas = {
   modelo: "Mouse genérico (ejemplo)",

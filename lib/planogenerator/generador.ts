@@ -21,6 +21,7 @@ import { ajustarPlanoAlTipo, conTapa, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import {
   caraTipica,
   elegirPlantilla,
+  marcarFormaEstimada,
   planoDesdePlantillaDeTipo,
   proporcionDeLaCara,
   propuestaDePlantillaDeTipo,
@@ -510,7 +511,8 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
  * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
- * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado.
+ * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado;
+ * 5. si el tipo tiene varias formas de pantalla y el pack no trajo la suya, la común queda estimada (`marcarFormaEstimada`).
  * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
@@ -520,7 +522,8 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(acotado.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  return { plano: tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos] };
+  const forma = marcarFormaEstimada(tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, tipo, kp);
+  return { plano: forma.plano, avisos: [...seguido.avisos, ...acotado.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 
 /** La IA la vio en una página del manual (con confianza) o la dedujo. */

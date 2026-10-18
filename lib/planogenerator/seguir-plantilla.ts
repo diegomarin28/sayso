@@ -54,6 +54,8 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   const lugar = (t: PiezaPlano) => ({
     pos: t.pos.map((v, i) => +(raiz.pos[i] + (v - raizT.pos[i]) * escala[i]).toFixed(2)) as Vec3,
     dim: t.dim.map((v, i) => +(v * Math.abs(escala[i])).toFixed(2)) as Vec3,
+    // La forma que eligió el esqueleto (ej. la pantalla redonda de un reloj redondo).
+    ...(t.formaBiblioteca ? { formaBiblioteca: t.formaBiblioteca } : {}),
   });
   const deLaPlantilla = new Map([...usadas].map(([idT, id]) => [id, plantilla.plano.piezas.find((p) => p.pieza === idT)!]));
 

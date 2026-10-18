@@ -131,7 +131,7 @@ function crearNodo(p: PiezaPlano, { biblioteca, tipoEquipo }: OpcionesEscena): T
   };
   nodo.userData = datos;
 
-  const modelo = modeloPara(p.pieza, biblioteca, p.dim, tipoEquipo);
+  const modelo = modeloPara(p.pieza, biblioteca, p.dim, tipoEquipo, p.formaBiblioteca);
   const malla = modelo ? mallaDeBiblioteca(p, partesAjustadas(modelo, p.dim)) : new THREE.Mesh(crearGeometria(p), materialPara(p.pieza));
   malla.name = p.pieza + SUFIJO_MALLA;
   malla.position.set(-p.pivote[0], -p.pivote[1], -p.pivote[2]);

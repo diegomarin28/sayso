@@ -87,7 +87,14 @@ export function ajustarPlanoAlTipo(plano: PlanoDePiezas, plantilla: PlantillaDeE
   if (!notebook) {
     const grosor = Math.max(espesor, techo() - piso);
     piezas = piezas.map((p) => {
-      if (p.pieza === "base") return { ...p, pieza: id, pos: [p.pos[0], piso + grosor / 2, p.pos[2]] as Vec3, dim: [p.dim[0], grosor, p.dim[2]] as Vec3 };
+      if (p.pieza === "base")
+        return {
+          ...p,
+          pieza: id,
+          pos: [p.pos[0], piso + grosor / 2, p.pos[2]] as Vec3,
+          dim: [p.dim[0], grosor, p.dim[2]] as Vec3,
+          ...(raizTipo.formaBiblioteca ? { formaBiblioteca: raizTipo.formaBiblioteca } : {}),
+        };
       return p.padre === "base" ? { ...p, padre: id } : p;
     });
   }
@@ -113,7 +120,13 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   const piezas = plano.piezas;
   const piso = Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2));
   const techo = Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));
-  const base = { pieza: nombre, forma: tapa.forma, padre: raiz.pieza, origen: "plantilla" as const };
+  const base = {
+    pieza: nombre,
+    forma: tapa.forma,
+    padre: raiz.pieza,
+    origen: "plantilla" as const,
+    ...(tapa.formaBiblioteca ? { formaBiblioteca: tapa.formaBiblioteca } : {}),
+  };
 
   if (envuelve(tapa, plantilla.plano)) {
     const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);

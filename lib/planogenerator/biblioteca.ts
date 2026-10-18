@@ -207,9 +207,13 @@ function esPara(modelo: ModeloPieza, equipo: string[]): boolean {
  *   biblioteca conoce, se descartan las variantes marcadas para otro equipo (las sin marca quedan);
  * - con `dim`, de las que quedan, la que menos se deforma (una batería de 26 cm usa la de notebook;
  *   una de 6 cm, la de celular). Sin `dim`, la base.
+ * Antes que todo eso, `formaBiblioteca` (la forma que eligió el generador para esa pieza), si existe.
  */
-export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: Vec3, tipoEquipo?: string): ModeloPieza | undefined {
+export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: Vec3, tipoEquipo?: string, formaBiblioteca?: string): ModeloPieza | undefined {
   if (!biblioteca) return undefined;
+  // La forma que eligió el generador (ej. la pantalla redonda de un reloj redondo), si la biblioteca la tiene.
+  const elegida = formaBiblioteca ? biblioteca.get(formaBiblioteca) : undefined;
+  if (elegida) return elegida;
   const mejor = tipoPara(pieza, biblioteca.keys());
   if (!mejor) return undefined;
   let variantes = [...biblioteca].filter(([nombre]) => tipoDe(nombre) === mejor);

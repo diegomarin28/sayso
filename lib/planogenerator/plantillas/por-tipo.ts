@@ -18,6 +18,7 @@ import {
   planoMouse,
   planoParlanteBluetooth,
   planoReloj,
+  planoRelojRedondo,
   planoTablet,
   planoTeclado,
   planoCafetera,
@@ -51,6 +52,17 @@ export type PlantillaDeEquipo = {
   cara: string[];
   clase?: ClaseEquipo;
   parado?: boolean;
+  /** Si el tipo tiene más de una forma de pantalla (reloj cuadrado o redondo): un plano por forma y la más común. */
+  formas?: FormasDePantalla;
+};
+
+export type FormaPantalla = NonNullable<KnowledgePack["formaPantalla"]>;
+/** `piezas`: las del esqueleto que llevan la forma (la caja y la pantalla del reloj). */
+export type FormasDePantalla = { comun: FormaPantalla; planos: Record<FormaPantalla, PlanoDePiezas>; piezas: string[] };
+
+/** Tipos con más de una forma de pantalla (dato del pack `formaPantalla`). La común es la de más uso en el tipo. */
+const FORMAS: Record<string, FormasDePantalla> = {
+  reloj: { comun: "cuadrada", planos: { cuadrada: planoReloj, redonda: planoRelojRedondo }, piezas: ["caja_reloj", "pantalla_reloj"] },
 };
 
 /** La cara de cada tipo (ver `cara`): sin la pantalla, un TV visto de frente es la retroiluminación. */
@@ -71,12 +83,36 @@ const t = (id: string, nombre: string, plano: PlanoDePiezas, equipos: string, cl
   equipos: palabras(equipos),
   pistas: palabras(pistas),
   cara: CARA[id] ?? [],
+  ...(FORMAS[id] ? { formas: FORMAS[id] } : {}),
   ...(clase ? { clase } : {}),
   ...(parado ? { parado } : {}),
 });
 
 /** Lo que hace falta del pack para elegir la plantilla: su clase y los ids de sus piezas. */
-export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string };
+export type PackParaElegir = { clase: ClaseEquipo; piezas: Array<{ id: string }>; modelo?: string; formaPantalla?: FormaPantalla };
+
+/**
+ * La plantilla con el plano de la forma de pantalla del pack (un reloj redondo usa el esqueleto redondo).
+ * Sin dato, la forma más común del tipo: queda estimada (ver `formaEstimada`).
+ */
+export function conFormaDePantalla(p: PlantillaDeEquipo, formaPantalla?: FormaPantalla): PlantillaDeEquipo {
+  return p.formas ? { ...p, plano: p.formas.planos[formaPantalla ?? p.formas.comun] } : p;
+}
+
+/**
+ * Si el pack no trajo la forma de la pantalla y el tipo tiene varias, el 3D usó la más común: sus piezas
+ * (la raíz y las del mismo tipo que las de la forma, con el id que tengan en el plano) pasan a "estimada"
+ * y se avisa. Si la trajo, o el tipo tiene una sola forma, el plano no cambia.
+ */
+export function marcarFormaEstimada(plano: PlanoDePiezas, p: PlantillaDeEquipo | undefined, kp: { formaPantalla?: FormaPantalla }): { plano: PlanoDePiezas; avisos: string[] } {
+  if (!p?.formas || kp.formaPantalla) return { plano, avisos: [] };
+  const tipos = new Set(p.formas.piezas.map((id) => tipoDe(id) ?? id));
+  const deLaForma = (x: PiezaPlano) => !x.padre || tipos.has(tipoDe(x.pieza) ?? x.pieza);
+  return {
+    plano: { ...plano, piezas: plano.piezas.map((x) => (deLaForma(x) && x.origen !== "manual" ? { ...x, origen: "estimada" as const } : x)) },
+    avisos: [`La forma de la pantalla no vino en el pack: se usa la más común de ${p.nombre} (${p.formas.comun}), estimada.`],
+  };
+}
 
 export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("notebook", "notebook", planoNotebookBase, "notebook laptop portatil netbook ultrabook macbook", "notebook"),
@@ -138,7 +174,9 @@ const MIN_DISTINTIVAS = 2;
  */
 export function elegirPlantilla(kp: PackParaElegir, tipoEquipo?: string): PlantillaDeEquipo | undefined {
   const elegida = elegirPorTipo(kp, tipoEquipo);
-  return elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
+  const especial = elegida && kp.modelo ? especializar(elegida, kp.modelo) : elegida;
+  // Con el plano de la forma de pantalla del pack (dato del pack; sin dato, la más común del tipo).
+  return especial && conFormaDePantalla(especial, kp.formaPantalla);
 }
 
 /**
@@ -296,6 +334,7 @@ export function planoDesdePlantillaDeTipo(kp: KnowledgePack, plantilla: Plantill
         pivote: [...p.pivote],
         ...(padre ? { padre } : {}),
         ...(numero ? { etiquetaManual: numero } : {}),
+        ...(p.formaBiblioteca ? { formaBiblioteca: p.formaBiblioteca } : {}),
         origen: "plantilla" as const,
       };
     });
