@@ -69,7 +69,7 @@ export const LIMITES = {
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
-  guiaPublica: { busquedas: 4, continuaciones: 3 },
+  guiaPublica: { busquedas: 4, continuaciones: 3, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
   chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4 },
 } as const;
 
