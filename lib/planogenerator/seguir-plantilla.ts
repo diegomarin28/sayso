@@ -2,10 +2,20 @@ import indice from "../../public/models/piezas/indice.json";
 import { vistaEnImagen, type PiezaPlano, type PlanoDePiezas, type Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
 import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
-import { emparejar, equivalentes, PLANTILLAS_POR_TIPO, type PlantillaDeEquipo } from "./plantillas/por-tipo";
+import { emparejar, equivalentes, lado, PLANTILLAS_POR_TIPO, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
 const NOMBRES = Object.keys(INDICE.tipos);
+
+/**
+ * Piezas del pack que van DENTRO de una del esqueleto, sin reemplazarla (por tipo de pieza): [la del pack, la
+ * que la contiene]. La carcasa de un auricular de vincha está en la copa; la biblioteca la dibuja como la de un
+ * in-ear, así que en el lugar de la copa se vería una cápsula estirada.
+ */
+const DENTRO: [string, string][] = [["carcasa_auricular", "copa"]];
+/** Lo que va dentro mide esta parte de lo que la contiene: entra en un cilindro sin asomar por las esquinas. */
+const ESCALA_DENTRO = 0.7;
+const conPrefijo = (id: string, n: string) => id === n || id.startsWith(`${n}_`);
 
 /**
  * Lo que no vino de una página del manual sigue al esqueleto del TIPO de equipo (reglas por tipo, nunca
@@ -41,7 +51,15 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   const deTapa = (p: PiezaPlano) => ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.padre ?? "");
   // La raíz del esqueleto no se empareja: una pieza no pasa a medir lo que la carcasa.
   const sinRaiz = { ...plantilla, plano: { ...plantilla.plano, piezas: plantilla.plano.piezas.filter((p) => p !== raizT && !deTapa(p)) } };
-  const { usadas } = emparejar([...new Set(candidatas)], sinRaiz);
+  // Lo que va dentro de una pieza del esqueleto (la carcasa en la copa) no la reemplaza: va en su centro, más chico.
+  const contenedor = new Map<string, PiezaPlano>();
+  for (const id of new Set(candidatas)) {
+    const regla = DENTRO.find(([n]) => conPrefijo(id, n));
+    const libres = regla ? sinRaiz.plano.piezas.filter((t) => conPrefijo(t.pieza, regla[1]) && ![...contenedor.values()].includes(t)) : [];
+    const t = libres.find((x) => lado(x.pieza) === lado(id)) ?? libres[0];
+    if (t) contenedor.set(id, t);
+  }
+  const { usadas } = emparejar([...new Set(candidatas)].filter((id) => !contenedor.has(id)), sinRaiz);
   const tiposDelPlano = new Set([...plano.piezas.map((p) => p.pieza), ...ids].map((id) => tipoPara(id, NOMBRES)).filter(Boolean));
   const cara = plantilla.cara.filter((idT) => !usadas.has(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)));
   // Lo que el esqueleto tiene y el plano no: ni la misma pieza ni una del mismo tipo (dos tiras de LED de la
@@ -61,13 +79,22 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
     ...(t.formaBiblioteca ? { formaBiblioteca: t.formaBiblioteca } : {}),
   });
   const deLaPlantilla = new Map([...usadas].map(([idT, id]) => [id, plantilla.plano.piezas.find((p) => p.pieza === idT)!]));
+  const adentro = (t: PiezaPlano) => {
+    const { pos, dim } = lugar(t);
+    return { pos, dim: dim.map((v) => +(v * ESCALA_DENTRO).toFixed(2)) as Vec3 };
+  };
+  const ubicar = (id: string) => {
+    const c = contenedor.get(id);
+    if (c) return adentro(c);
+    const t = deLaPlantilla.get(id);
+    return t && lugar(t);
+  };
 
   // Cuánto se movió cada pieza que sigue al esqueleto, para llevar con ella a las que cuelgan de ella.
   const corrimiento = new Map<string, Vec3>();
   let piezas = plano.piezas.map((p) => {
-    const t = deLaPlantilla.get(p.pieza);
-    if (!t || p === raiz) return p;
-    const nuevo = lugar(t);
+    const nuevo = p === raiz ? undefined : ubicar(p.pieza);
+    if (!nuevo) return p;
     corrimiento.set(p.pieza, nuevo.pos.map((v, i) => v - p.pos[i]) as Vec3);
     return { ...p, ...nuevo, origen: "plantilla" as const };
   });
@@ -76,12 +103,17 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
     return undefined;
   };
   piezas = piezas.map((p) => {
-    const d = deLaPlantilla.has(p.pieza) ? undefined : arrastre(p);
+    const d = deLaPlantilla.has(p.pieza) || contenedor.has(p.pieza) ? undefined : arrastre(p);
     return d ? { ...p, pos: p.pos.map((v, i) => +(v + d[i]).toFixed(2)) as Vec3 } : p;
   });
 
   const nueva = (id: string, t: PiezaPlano): PiezaPlano => ({ pieza: id, forma: t.forma, ...lugar(t), pivote: [0, 0, 0], padre: raiz.pieza, origen: "plantilla" });
-  const nuevas: PiezaPlano[] = ids.filter((id) => !esta.has(id) && deLaPlantilla.has(id)).map((id) => nueva(id, deLaPlantilla.get(id)!));
+  const nuevas: PiezaPlano[] = ids
+    .filter((id) => !esta.has(id) && (deLaPlantilla.has(id) || contenedor.has(id)))
+    .map((id) => {
+      const c = contenedor.get(id);
+      return c ? { ...nueva(id, c), ...adentro(c) } : nueva(id, deLaPlantilla.get(id)!);
+    });
   const deLaCara = cara.map((idT) => nueva(idT, plantilla.plano.piezas.find((p) => p.pieza === idT)!));
   const delEsqueleto = genericas.map((idT) => nueva(idT, plantilla.plano.piezas.find((p) => p.pieza === idT)!));
 

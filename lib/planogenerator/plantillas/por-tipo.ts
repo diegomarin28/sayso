@@ -339,8 +339,12 @@ const EQUIVALENTES: string[][] = [
   ["placa_madre", "placa_logica", "placa_principal", "placa_base", "placa_control", "motherboard", "logic_board"],
   ["parlante", "altavoz", "speaker", "loudspeaker"],
   ["conector_carga", "puerto_carga", "puerto_usb", "conector_usb", "conector_lightning"],
+  // Auriculares de vincha: la almohadilla de la copa es la de la oreja.
+  ["almohadilla_copa", "almohadilla_oreja"],
 ];
 const grupoDe = (id: string) => EQUIVALENTES.find((g) => g.some((n) => id === n || id.startsWith(`${n}_`)));
+/** "izquierd" o "derech" si el id dice de qué lado va ("copa_derecha", "almohadilla_oreja_izquierda"). */
+export const lado = (id: string) => id.match(/_(izquierd|derech)[oa]?(_|$)/)?.[1];
 
 /** ¿Dos ids nombran la misma pieza? (`placa_logica` y `placa_madre`: sí; `placa_madre` y `placa_carga`: no). */
 export function equivalentes(a: string, b: string): boolean {
@@ -366,7 +370,9 @@ export function emparejar(ids: string[], plantilla: PlantillaDeEquipo): { usadas
   const sinLugar: string[] = [];
   const porTipo = pendientes.filter((id) => {
     const grupo = grupoDe(id);
-    const equivalente = grupo && libres().find((p) => grupoDe(p.pieza) === grupo);
+    // Del mismo lado si el id lo dice ("almohadilla_oreja_derecha" → la de la copa derecha).
+    const delGrupo = grupo ? libres().filter((p) => grupoDe(p.pieza) === grupo) : [];
+    const equivalente = delGrupo.find((p) => lado(p.pieza) === lado(id)) ?? delGrupo[0];
     if (equivalente) usadas.set(equivalente.pieza, id);
     return !equivalente;
   });
