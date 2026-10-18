@@ -69,7 +69,8 @@ export function TarjetaPaso({
         </div>
         {total > 1 && (
           // El punto se ve chico, pero se toca en 44 px de alto: el botón es más grande que el punto.
-          <div className="-my-3.5 -mr-1 flex shrink items-center overflow-hidden" role="group" aria-label="Pasos">
+          // En pantallas muy angostas (SE de 320 px) los puntos no entran con el sello: el título ya dice "Paso N de M".
+          <div className="-my-3.5 -mr-1 flex shrink items-center overflow-hidden max-[360px]:hidden" role="group" aria-label="Pasos">
             {Array.from({ length: total }, (_, i) => (
               <button
                 key={i}
@@ -89,7 +90,7 @@ export function TarjetaPaso({
           </div>
         )}
       </div>
-      <p ref={medir} className={`mt-1 text-[15px] leading-snug font-medium ${entero ? "" : "line-clamp-3"}`}>
+      <p ref={medir} className={`mt-1 text-[15px] leading-snug font-medium ${entero ? "" : "line-clamp-3 [@media(max-height:600px)]:line-clamp-2"}`}>
         {c.dice.split(/\s+/).map((palabra, i) => (
           <Fragment key={i}>
             <span className="palabra" style={{ animationDelay: `${i * 40}ms` }}>

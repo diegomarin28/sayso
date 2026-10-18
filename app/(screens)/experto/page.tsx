@@ -93,7 +93,17 @@ export default function Experto() {
           <div className="min-w-0 flex-1">
             <Encabezado paso={5} />
           </div>
-          {/* Acá "Atrás" va al lado de "Terminar": debajo le sacaría lugar al 3D. */}
+          {/* Repuestos, "Atrás" y "Terminar" van en esta fila: debajo le sacarían lugar al 3D (#199). */}
+          {ficha && (
+            <Repuestos
+              pack={preparado.pack}
+              ficha={ficha}
+              casoId={caso.id}
+              onEvento={(e) => agregarEventos([e])}
+              piezaACambiar={piezaACambiar}
+              onCompra={setUltimaCompra}
+            />
+          )}
           <button
             type="button"
             onClick={() => router.push("/preparando")}
@@ -110,18 +120,6 @@ export default function Experto() {
             Terminar
           </button>
         </div>
-        {ficha && (
-          <div className="mt-2">
-            <Repuestos
-              pack={preparado.pack}
-              ficha={ficha}
-              casoId={caso.id}
-              onEvento={(e) => agregarEventos([e])}
-              piezaACambiar={piezaACambiar}
-              onCompra={setUltimaCompra}
-            />
-          </div>
-        )}
       </div>
       <GuiaExperto
         className="min-h-0 flex-1"
