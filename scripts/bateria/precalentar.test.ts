@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { knowledgePackEjemplo, planoEjemplo } from "../../shared";
 import { CASOS } from "./casos";
-import { claseDe, leerEquipos, precalentar, tablaPrecalentar } from "./precalentar";
+import { claseDe, EQUIPOS_DEMO, leerEquipos, precalentar, tablaPrecalentar } from "./precalentar";
 
 const costo = (usd: number) => ({ tipo: "costo", datos: { usd } });
 
@@ -60,5 +60,16 @@ describe("precalentar (sin IA)", () => {
     ]);
     expect(claseDe("Portátil HP")).toBe("notebook");
     expect(() => leerEquipos("solo-una-cosa")).toThrow(/Marca\|Modelo/);
+  });
+});
+
+describe("equipos de la demo", () => {
+  it("TV TCL, iPhone 13, MacBook y uno de la facultad, cada uno con su clase", () => {
+    expect(leerEquipos(EQUIPOS_DEMO).map((e) => [e.marca, e.modelo, e.clase])).toEqual([
+      ["TCL", "55V6C", "otro"],
+      ["Apple", "iPhone 13", "otro"],
+      ["Apple", "MacBook Air M1 2020", "notebook"],
+      ["HP", "LaserJet Pro M404dn", "otro"],
+    ]);
   });
 });

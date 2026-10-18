@@ -12,12 +12,13 @@
  *
  * Precalentar (solo /api/knowledge y /api/plano, sin chat; deja todo en la caché de Supabase; tope 0,50 USD):
  *   npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto [--equipos "HP|250 G9|notebook; Samsung|Galaxy A15|celular"] [--tope 0.5]
- * Sin `--equipos`, precalienta los equipos de la batería (`--solo` también vale).
+ * `--demo`: los equipos de la demo (EQUIPOS_DEMO en precalentar.ts). Sin `--equipos` ni `--demo`,
+ * precalienta los equipos de la batería (`--solo` también vale).
  */
 import { writeFileSync } from "node:fs";
 import { correrBateria, tabla, tablaPlano } from "./bateria";
 import { CASOS } from "./casos";
-import { leerEquipos, precalentar, SINTOMA_PRECALENTAR, tablaPrecalentar, type EquipoPrecalentar } from "./precalentar";
+import { EQUIPOS_DEMO, leerEquipos, precalentar, SINTOMA_PRECALENTAR, tablaPrecalentar, type EquipoPrecalentar } from "./precalentar";
 
 function opcion(nombre: string): string | undefined {
   const i = process.argv.indexOf(nombre);
@@ -38,7 +39,7 @@ async function main() {
   if (casos.length === 0) throw new Error(`--solo no coincide con ningún caso (${CASOS.map((c) => c.id).join(", ")})`);
 
   if (modoPrecalentar) {
-    const lista = opcion("--equipos");
+    const lista = process.argv.includes("--demo") ? EQUIPOS_DEMO : opcion("--equipos");
     const equipos: EquipoPrecalentar[] = lista
       ? leerEquipos(lista)
       : casos.map((c) => ({ marca: c.marca, modelo: c.modelo, tipoEquipo: c.tipoEquipo, clase: c.clase }));

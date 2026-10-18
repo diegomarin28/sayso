@@ -23,6 +23,12 @@ export type FilaPrecalentar = {
   nota?: string;
 };
 
+/**
+ * Equipos de la demo (`--demo`): los dos de la prueba real 1 (TV TCL e iPhone 13), una MacBook y
+ * uno de la facultad (impresora láser: la biblioteca 3D de facultad tiene fusor y cilindro).
+ */
+export const EQUIPOS_DEMO = "TCL|55V6C|televisor; Apple|iPhone 13|celular; Apple|MacBook Air M1 2020|notebook; HP|LaserJet Pro M404dn|impresora";
+
 /** Síntoma con el que se guarda el pack precalentado (el pack se guarda por marca + modelo + síntoma). */
 export const SINTOMA_PRECALENTAR = "Revisión general: cómo está armado por dentro y qué piezas tiene.";
 

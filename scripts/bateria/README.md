@@ -37,6 +37,7 @@ Solo corre `/api/knowledge` y `/api/plano` (sin recepción ni chat), tope **0,50
 npx tsx scripts/bateria/correr.ts --precalentar                                   # muestra la lista, NO gasta
 npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto                  # los 9 equipos de la batería
 npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto --equipos "HP|250 G9|notebook; Samsung|Galaxy A15|celular"
+npx tsx scripts/bateria/correr.ts --precalentar --confirmo-gasto --demo                                # los equipos de la demo
 ```
 
 - Formato de `--equipos`: `Marca|Modelo|tipo de equipo`, separados por `;`. La clase sale del tipo (notebook, split, lavarropas u otro).
