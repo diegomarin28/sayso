@@ -144,3 +144,15 @@ Antes (GLB publicados por #164) y después, mismo estudio:
 En el visor, tamaño iPhone: abierto (antes y después) y despiezado (antes y después):
 
 ![Visor](renders/calidad/celular-guia-visor.jpg)
+
+## Televisor de frente
+
+El TV va parado y de frente a la cámara (B1), así que cerrado se ve el frente de la carcasa, y el frente era una chapa gris: en la prueba real no se reconocía como un TV. Ahora la zona de la pantalla es vidrio oscuro, con el marco y el logo del borde de abajo. Sirve para cualquier TV, con las mismas medidas de antes (no cambia cómo se ajusta). `carcasas.glb`: 29 KiB.
+
+Antes y después (mismo estudio):
+
+![Carcasa del TV, antes y después](renders/calidad/tv-frente-antes-despues.jpg)
+
+En el visor, tamaño iPhone, cerrado: el TV TCL de la caché (generado) y el TV del lab (esqueleto). El vigía de "3D en negro" no lo toma como falla:
+
+![TV en el visor](renders/calidad/tv-frente-visor.jpg)

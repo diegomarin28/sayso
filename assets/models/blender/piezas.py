@@ -1522,11 +1522,14 @@ def carcasa_split():
 
 
 def carcasa_televisor():
-    """Carcasa de televisor: marco frontal, tapa trasera con la joroba, rejillas, zona de puertos y patas."""
+    """Carcasa de televisor: marco frontal con la pantalla (vidrio oscuro: así el TV cerrado, de frente, se
+    reconoce como un TV y no como una chapa), tapa trasera con la joroba, rejillas, zona de puertos y patas."""
     W, P, H, z0 = 100.0, 6.0, 60.0, 6.0
     bisel_f = caja((W, 1.2, H), (0, -P / 2 + 0.6, z0 + H / 2), "plastico", bisel=0.2)
     restar(bisel_f, caja((W - 1.4, 2.0, H - 1.4), (0, -P / 2 + 0.6, z0 + H / 2), mat=None))
     caja((W - 0.4, 0.6, H - 0.4), (0, -P / 2 + 1.5, z0 + H / 2))
+    caja((W - 1.6, 0.1, H - 1.6), (0, -P / 2 + 0.25, z0 + H / 2), "vidrio")  # la pantalla, de frente
+    caja((3.0, 0.15, 0.5), (0, -P / 2 + 0.2, z0 + 0.35), "metal", bisel=0.05)  # logo/receptor del borde de abajo
     # La joroba llega casi hasta abajo: ahí van los parlantes y la entrada del cable.
     caja((W - 14.0, P - 1.8, H - 10.0), (0, 0.9, z0 + 0.8 + (H - 10.0) / 2), bisel=1.5)
     for i in range(12):

@@ -1312,7 +1312,7 @@
   },
   "carcasa@televisor": {
    "familia": "carcasas",
-   "descripcion": "Carcasa de televisor: marco frontal, tapa trasera con la joroba, rejillas, zona de puertos y patas.",
+   "descripcion": "Carcasa de televisor: marco frontal con la pantalla (vidrio oscuro: así el TV cerrado, de frente, se reconoce como un TV y no como una chapa), tapa trasera con la joroba, rejillas, zona de puertos y patas.",
    "equipos": "televisor tv monitor",
    "ajuste": "libre",
    "caja": [
