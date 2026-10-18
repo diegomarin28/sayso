@@ -3,7 +3,7 @@ import { fichaEjemplo, PlanoDePiezas, type KnowledgePack, type PiezaPlano, type 
 import type { LlamarIA } from "../ia/claude";
 import { generarPlano } from "./generador";
 import { obtenerPlano } from "./obtener";
-import { PLANTILLAS_POR_TIPO } from "./plantillas/por-tipo";
+import { equivalentes, PLANTILLAS_POR_TIPO } from "./plantillas/por-tipo";
 import indice from "../../public/models/piezas/indice.json";
 import { IndicePiezas, tipoPara } from "./biblioteca";
 import { acotarMedidas, seguirPlantilla, VECES_LA_FORMA } from "./seguir-plantilla";
@@ -182,6 +182,24 @@ describe("piezas genéricas: lo que el esqueleto del tipo tiene y el pack no nom
     expect(gen.length).toBeGreaterThan(0);
     const tiposDelPack = new Set(ids.map((id) => tipoPara(id, NOMBRES)).filter(Boolean));
     for (const g of gen) expect(tiposDelPack.has(tipoPara(g.pieza, NOMBRES)), g.pieza).toBe(false);
+  });
+});
+
+describe("un plano guardado con otro nombre para la misma pieza (pack de antes)", () => {
+  it.each([
+    ["Samsung Galaxy A54", "placa_logica", "placa_madre"],
+    ["Motorola Moto G84", "placa_principal", "placa_madre"],
+  ])("celular %s: «%s» del plano pasa a ser «%s» del pack, sin una segunda placa", async (modelo, vieja, delPack) => {
+    const kp = pack(modelo, ["bateria", delPack, "pantalla"]);
+    const guardado = planoViejo(7.4, 15.8, [
+      ["bateria", [5.6, 0.45, 8.6], [0, 1, 2.4]],
+      [vieja, [6, 0.25, 5.4], [0, 0.9, -4.6]],
+      ["pantalla", [7.1, 0.35, 15.5], [0, -0.2, 0]],
+    ]);
+    const plano = await leer(guardado, kp, "celular");
+    const placas = plano.piezas.filter((p) => equivalentes(p.pieza, delPack));
+    expect(placas.map((p) => p.pieza)).toEqual([delPack]);
+    expect(pieza(plano, vieja)).toBeUndefined();
   });
 });
 
