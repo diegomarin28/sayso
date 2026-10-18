@@ -103,7 +103,7 @@ export default function CapturaGuiada() {
       const imagen = await prepararImagen(archivo);
       actualizar(i, { url: vistaPrevia(imagen) });
       // La URL definitiva la pone /api/casos al subir la foto a Supabase.
-      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento);
+      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento, pedido.instruccion);
       agregarFoto(r.foto, imagen);
       agregarEventos(r.eventos);
       actualizar(i, { revisando: false, resultado: r.foto });

@@ -135,6 +135,8 @@ export async function evaluarFoto(
   tipo: PedidoDeFoto["tipo"],
   imagen: ImagenB64,
   intento: number,
+  /** Lo que se le pidió a la persona: el validador juzga contra esto (#229). */
+  instruccion?: string,
 ): Promise<z.infer<typeof RespCalidad>> {
   if (USAR_FIXTURE) {
     // La primera foto de la etiqueta sale "movida", como en el fixture.
@@ -150,7 +152,7 @@ export async function evaluarFoto(
       },
     });
   }
-  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen }, RespCalidad);
+  return llamar("/api/intake/calidad", { casoId, tipoPedido: tipo, imagen, ...(instruccion ? { instruccion } : {}) }, RespCalidad);
 }
 
 /**

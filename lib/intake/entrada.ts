@@ -31,6 +31,8 @@ export const EntradaPedidos = z.object({
 export const EntradaCalidad = z.object({
   casoId: z.string().min(1),
   tipoPedido: TipoFoto,
+  /** Lo que se le pidió a la persona, tal cual (ej. "la tecla P, de cerca"): el validador juzga contra esto. */
+  instruccion: z.string().max(400).optional(),
   imagen: ImagenSchema,
   url: z.string().optional(),
 });
