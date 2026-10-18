@@ -115,7 +115,14 @@ export const IndicePiezas = z.object({
   familias: z.record(z.string(), z.string()),
   tipos: z.record(
     z.string(),
-    z.object({ familia: z.string(), descripcion: z.string(), equipos: z.string(), ajuste: z.string().default("libre") }),
+    z.object({
+      familia: z.string(),
+      descripcion: z.string(),
+      equipos: z.string(),
+      ajuste: z.string().default("libre"),
+      /** Medidas reales del tipo (cm) antes de comprimir el GLB (assets/models/comprimir.mjs). */
+      caja: z.array(z.number()).length(3).optional(),
+    }),
   ),
 });
 export type IndicePiezas = z.infer<typeof IndicePiezas>;
@@ -172,7 +179,7 @@ export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: V
     if (aplicables.length) variantes = aplicables;
   }
   if (!dim || variantes.length === 1) return (variantes.find(([nombre]) => nombre === mejor) ?? variantes[0])[1];
-  return variantes.reduce((a, b) => (deformacion(b[1], dim) < deformacion(a[1], dim) ? b : a))[1];
+  return variantes.reduce((a, b) => (deformacion(b[1], dim) < deformacion(a[1], dim) - EMPATE ? b : a))[1];
 }
 
 /** Si los dos lados de la planta difieren en más que esto, se respeta la orientación. */
@@ -191,10 +198,18 @@ const ORIENTACIONES: Vec3[] = [
 const costo = (tam: number[], dim: number[], o: Vec3) =>
   o.reduce((s, eje, i) => s + Math.abs(Math.log(dim[i] / Math.max(tam[eje], 0.01))), 0);
 
+/**
+ * Diferencias de costo menores que esto (≈1 %) son un empate y gana la primera opción. Sin esto, una
+ * pieza simétrica (un capacitor mide lo mismo en x que en z) cambia de orientación o de variante por
+ * una diferencia de medida mínima, como la que deja comprimir el GLB (0,2 %).
+ */
+const EMPATE = 0.01;
+
 /** La orientación que menos deforma; la del modelo salvo que otra mejore claramente (si no, dejaría de verse "derecha"). */
 function orientacion(tam: number[], dim: number[]): Vec3 {
-  const mejor = ORIENTACIONES.reduce((a, b) => (costo(tam, dim, b) < costo(tam, dim, a) ? b : a));
-  return costo(tam, dim, ORIENTACIONES[0]) - costo(tam, dim, mejor) > MEJORA_MINIMA ? mejor : ORIENTACIONES[0];
+  const mejor = ORIENTACIONES.reduce((a, b) => (costo(tam, dim, b) < costo(tam, dim, a) - EMPATE ? b : a));
+  // Con margen: justo en el límite, una diferencia de medida mínima no la hace girar de un lado o del otro.
+  return costo(tam, dim, ORIENTACIONES[0]) - costo(tam, dim, mejor) > MEJORA_MINIMA + EMPATE ? mejor : ORIENTACIONES[0];
 }
 
 const ejes = (v: THREE.Vector3) => [v.x, v.y, v.z];

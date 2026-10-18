@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { cargadorGlb } from "../../lib/planogenerator/cargador";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Accion } from "../../shared";
 import { IndicePiezas, archivosPara, bibliotecaDesdeEscena, planoNotebookBase, type BibliotecaPiezas } from "../../lib/planogenerator";
@@ -15,7 +15,7 @@ beforeAll(async () => {
   biblioteca = new Map();
   for (const archivo of archivosPara(planoNotebookBase.piezas.map((p) => p.pieza), indice)) {
     const datos = readFileSync(carpeta + archivo);
-    const gltf = await new GLTFLoader().parseAsync(datos.buffer.slice(datos.byteOffset, datos.byteOffset + datos.byteLength), "");
+    const gltf = await cargadorGlb().parseAsync(datos.buffer.slice(datos.byteOffset, datos.byteOffset + datos.byteLength), "");
     for (const [nombre, modelo] of bibliotecaDesdeEscena(gltf.scene)) biblioteca.set(nombre, modelo);
   }
 });
