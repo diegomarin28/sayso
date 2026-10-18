@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { planoEjemplo, type PlanoDePiezas } from "../../shared";
+import { planoEjemplo, type KnowledgePack, type PlanoDePiezas } from "../../shared";
+import { generarPlano } from "../../lib/planogenerator/generador";
 import { piezasGenericas, resumenOrigen, textoEtiquetaPieza, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 
 const con = (origenes: (PlanoDePiezas["piezas"][number]["origen"])[], medidas?: PlanoDePiezas["medidas"]): PlanoDePiezas => ({
@@ -56,6 +57,33 @@ describe("piezasGenericas", () => {
   it("sin pack (el lab), ninguna", () => {
     expect(piezasGenericas(plano).size).toBe(0);
     expect(piezasGenericas(plano, []).size).toBe(0);
+  });
+});
+
+describe("piezasGenericas en una notebook del generador: la pantalla no va en gris", () => {
+  const pack = (modelo: string, ids: string[]): KnowledgePack => ({
+    modelo,
+    clase: "otro",
+    verificado: false,
+    fuentes: [{ doc: "guía pública" }],
+    piezas: ids.map((id) => ({ id, nombre: id, descripcion: "", ubicacion: "" })),
+    pasos: [],
+    advertencias: [],
+    repuestos: [],
+  });
+  const sinIA = async () => "no es json";
+
+  it.each([
+    ["HP 15 (genérica)", ["bateria", "ventilador", "tecla_p"]],
+    ["MacBook Air M1 (sin ventilador)", ["bateria", "tecla_p", "mecanismo_tijera_p"]],
+  ])("%s: la tapa de pantalla y su panel con su color; lo de adentro que el pack no nombra, en gris", async (modelo, ids) => {
+    const kp = pack(modelo, ids);
+    const { plano } = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo: "notebook" }, sinIA);
+    expect(plano.piezas.find((p) => p.pieza === "pantalla")?.origen).toBe("plantilla");
+    const grises = piezasGenericas(plano, kp.piezas);
+    expect(grises.has("pantalla")).toBe(false);
+    expect(grises.has("carcasa_pantalla")).toBe(false);
+    expect(grises.has("teclado_notebook")).toBe(true);
   });
 });
 
