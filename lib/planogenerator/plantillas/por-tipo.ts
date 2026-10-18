@@ -25,6 +25,7 @@ import {
   planoConsola,
   planoHeladera,
   planoImpresora,
+  planoImpresoraLaser,
   planoLavarropas,
   planoMicroondas,
   planoRouter,
@@ -62,6 +63,8 @@ export const PLANTILLAS_POR_TIPO: PlantillaDeEquipo[] = [
   t("aspiradora", "aspiradora", planoAspiradora, "aspiradora aspirador"),
   t("secador", "secador de pelo", planoSecador, "secador"),
   t("impresora", "impresora", planoImpresora, "impresora"),
+  // "Impresora HP LaserJet" nombra a las dos; la láser suma "laserjet" y gana. "Impresora" sola: la de arriba.
+  t("impresora_laser", "impresora láser", planoImpresoraLaser, "impresora laser toner", undefined, false, "laserjet"),
   t("consola", "consola", planoConsola, "consola playstation play xbox nintendo switch videojuegos"),
   t("router", "router", planoRouter, "router modem"),
   t("cafetera", "cafetera", planoCafetera, "cafetera espresso"),

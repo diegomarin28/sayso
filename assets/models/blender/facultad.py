@@ -306,14 +306,19 @@ def modulador_imagen():
 
 @pieza("unidad_fusora", "impresora", "#667b88", 0.3)
 def unidad_fusora():
-    """Unidad fusora de impresora láser: dos rodillos, soportes y cubierta superior; sin calefacción funcional."""
-    for x in (-12, 12):
-        caja((2, 6, 6), (x, 0, 3), "plastico", bisel=0.4)
-    cilindro(1.3, 23, (0, 0, 4.3), "metal", seg=28, eje="x")
-    cilindro(1.1, 23, (0, 0, 1.8), "goma", seg=28, eje="x")
-    caja((24, 2, 0.4), (0, 2.3, 6), bisel=0.3)
-    for x in (-12, 12):
-        cilindro(0.8, 0.5, (x, 0, 4.3), "contactos", seg=16, eje="x")
+    """Unidad fusora de impresora láser: rodillo calefactor metálico y rodillo de presión de goma entre dos
+    chapas, cubierta con la etiqueta de "superficie caliente", engranaje, termistor y ficha con su cable."""
+    for x in (-12.4, 12.4):
+        caja((1.2, 6, 6), (x, 0, 3), "metal", bisel=0.1)
+    cilindro(1.3, 23.6, (0, 0.3, 4.2), "metal", seg=28, eje="x")
+    cilindro(1.1, 23.6, (0, 0.3, 1.7), "goma", seg=28, eje="x")
+    caja((24.8, 2.4, 0.3), (0, 1.8, 6.05), "plastico", bisel=0.1)
+    caja((24.8, 0.3, 4.0), (0, 2.9, 4.0), "plastico")
+    cilindro(1.1, 0.35, (11.3, 0.3, 1.7), "plastico", seg=20, eje="x")
+    caja((0.8, 0.5, 0.3), (4.0, 0.3, 5.65), "chip")
+    caja((1.6, 1.0, 0.8), (-10.5, 2.4, 5.4), "conector", bisel=0.05)
+    CORE["tubo"]([(-10.5, 2.9, 5.4), (-9.0, 2.95, 5.2), (3.6, 2.95, 5.4), (4.0, 0.6, 5.7)], 0.08, "plastico", seg=6)
+    CORE["etiqueta_impresa"](2.0, 1.8, 6.2, 7.0, 2.0)
 
 
 @pieza("cilindro_fotoconductor", "impresora", "#337b74", 0.4, 0.25)

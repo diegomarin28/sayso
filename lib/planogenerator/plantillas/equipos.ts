@@ -202,6 +202,33 @@ export const planoImpresora: PlanoDePiezas = {
   ],
 };
 
+/**
+ * Impresora láser (la de la demo es una): gabinete con el cassette de papel abajo, rodillo de recogida,
+ * cartucho de tóner con su tambor, rodillo de transferencia, unidad fusora atrás, unidad láser arriba,
+ * placa, fuente, motor y ventilador. Medidas típicas de una láser monocromática de escritorio.
+ */
+export const planoImpresoraLaser: PlanoDePiezas = {
+  modelo: "Impresora láser genérica (ejemplo del lab)",
+  unidades: "cm",
+  piezas: [
+    pieza("carcasa_impresora", [38, 22, 36], [0, 11, 0]),
+    ...hijos("carcasa_impresora", [
+      ["bandeja_papel", [33, 5, 30], [0, 3, 2]],
+      ["rodillo_recogida", [22, 1.6, 1.6], [0, 6.5, -13], "cilindro"],
+      ["cartucho_toner", [27, 9, 9], [0, 12.5, 4]],
+      ["rodillo_transferencia", [26, 1.6, 1.6], [0, 7.2, 6], "cilindro"],
+      ["unidad_fusora", [26, 6.2, 6.3], [0, 10, -12]],
+      ["unidad_laser", [20, 4, 12], [0, 19, -3]],
+      ["placa_control", [1.5, 9, 12], [17.5, 11, -6]],
+      ["fuente", [12, 3, 7], [-12, 17, -14]],
+      ["motor_principal", [5, 4, 4], [15, 7, -10], "cilindro"],
+      ["engranaje_arrastre", [0.7, 6, 6], [16.5, 11, 0], "cilindro"],
+      ["sensor_papel", [1.6, 3.6, 1.1], [8, 8, -9]],
+      ["ventilador_fuente", [2, 6, 6], [-17, 13, -2], "cilindro"],
+    ]),
+  ],
+};
+
 /** Consola de videojuegos sin carcasa (y un mando al lado): placa, blindaje, lectora, fuente y ventilador. */
 export const planoConsola: PlanoDePiezas = {
   modelo: "Consola genérica (ejemplo del lab)",

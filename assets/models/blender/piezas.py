@@ -80,6 +80,8 @@ COLORES = {
     "cuerpo.filtro": ("#cfd4d8", 0.05, 0.5),
     "cuerpo.puerta": ("#e8eaec", 0.2, 0.4),
     "cuerpo.carcasa": ("#dfe3e7", 0.3, 0.4),
+    "cuerpo.unidad_laser": ("#2f343a", 0.3, 0.5),
+    "cuerpo.rodillo": ("#2a2d31", 0.0, 0.9),
     "cuerpo.evaporador": ("#c9d0d6", 0.8, 0.35),
     "cuerpo.turbina": ("#d9dcdf", 0.1, 0.5),
     "cuerpo.retroiluminacion": ("#e9ecef", 0.1, 0.4),
@@ -339,6 +341,7 @@ EQUIPOS_SPLIT = "aire split acondicionado climatizador"
 EQUIPOS_TV = "televisor tv monitor"
 EQUIPOS_LAVARROPAS = "lavarropas lavasecarropas lavadora secarropas"
 EQUIPOS_MICROONDAS = "microondas"
+EQUIPOS_IMPRESORA = "impresora laser laserjet"
 EQUIPOS_ELECTRO = " ".join([EQUIPOS_HELADERA, EQUIPOS_SPLIT, EQUIPOS_TV, EQUIPOS_LAVARROPAS, EQUIPOS_MICROONDAS])
 
 def ventilador():
@@ -1496,6 +1499,66 @@ def carcasa_microondas():
     return armar("carcasa@microondas", EQUIPOS_MICROONDAS)
 
 
+# ---------- Impresora láser ----------
+
+def unidad_laser():
+    """Unidad láser (escáner) de impresora láser: bandeja abierta con el motor del espejo poligonal,
+    la lente f-theta, el espejo de reenvío y el módulo del diodo láser con su flex."""
+    W, D = 20.0, 12.0
+    bandeja_l = caja((W, D, 3.6), (0, 0, 1.8), bisel=0.2)
+    restar(bandeja_l, caja((W - 0.8, D - 0.8, 3.6), (0, 0, 2.2), mat=None))
+    caja((W - 0.8, D - 0.8, 0.2), (0, 0, 0.5), "metal")
+    # Motor del espejo poligonal: placa redonda, rotor y el espejo hexagonal plateado.
+    cilindro(2.4, 0.15, (-5.5, 1.5, 0.7), "pcb", seg=28)
+    cilindro(1.5, 0.6, (-5.5, 1.5, 1.05), "metal", seg=28)
+    hexagono = [(math.cos(math.pi * k / 3) * 1.25, math.sin(math.pi * k / 3) * 1.25) for k in range(6)]
+    prisma([(x - 5.5, y + 1.5) for x, y in hexagono], 0.5, (0, 0, 1.6), "metal", bisel=0.02)
+    # Lente f-theta (alargada) y espejo de reenvío inclinado.
+    caja((13.0, 1.0, 1.3), (2.0, -1.5, 1.4), "vidrio", bisel=0.2)
+    girar(caja((16.0, 0.15, 1.6), (0.5, -4.2, 1.6), "metal"), (math.radians(35), 0, 0))
+    # Diodo láser con su placa chica y el flex que sale al costado.
+    cilindro(0.35, 1.4, (-8.0, 4.2, 1.4), "metal", seg=16, eje="y")
+    caja((1.8, 0.15, 1.6), (-8.0, 5.0, 1.4), "pcb")
+    caja((3.0, 0.03, 0.9), (-8.0, 5.2, 2.6), "plastico")
+    for x in (-W / 2 + 0.8, W / 2 - 0.8):
+        oreja = caja((1.2, 1.2, 0.2), (x, D / 2 - 0.8, 3.5), "metal")
+        restar(oreja, cilindro(0.25, 1.0, (x, D / 2 - 0.8, 3.5), mat=None, seg=12))
+    return armar("unidad_laser", EQUIPOS_IMPRESORA)
+
+
+def rodillo():
+    """Rodillo genérico (transferencia, recogida o salida de papel): cuerpo de goma o espuma sobre un eje
+    metálico, con bujes en las puntas. Se estira a lo largo sin deformar las puntas."""
+    L, R = 24.0, 0.8
+    cilindro(R, L - 3.0, (0, 0, R), seg=28, eje="x", bisel=0.08)
+    cilindro(0.25, L, (0, 0, R), "metal", seg=12, eje="x")
+    for sx in (-1, 1):
+        cilindro(0.5, 0.8, (sx * (L / 2 - 1.0), 0, R), "plastico", seg=16, eje="x")
+    return armar("rodillo")
+
+
+def carcasa_impresora():
+    """Gabinete de impresora láser: caja hueca con la bandeja de salida arriba, la boca del cassette de papel
+    adelante, el panel de control, la tapa del tóner y el botón de encendido."""
+    W, P, H = 38.0, 36.0, 22.0
+    gab = caja((W, P, H), (0, 0, H / 2), bisel=1.0)
+    restar(
+        gab,
+        caja((W - 1.6, P - 1.6, H - 1.6), (0, 0, H / 2), mat=None),
+        caja((W - 6.0, P * 0.55, 2.0), (0, 2.0, H), mat=None),  # bandeja de salida (rebaje arriba)
+        caja((W - 5.0, 3.0, 5.0), (0, -P / 2, 3.5), mat=None),  # boca del cassette
+    )
+    caja((W - 6.0, P * 0.55, 0.3), (0, 2.0, H - 2.0), "plastico")
+    caja((W - 5.5, 0.4, 0.8), (0, -P / 2 + 0.2, 6.5), "ranura")  # junta de la tapa del tóner
+    caja((8.0, 0.5, 3.0), (W / 2 - 7.0, -P / 2 - 0.1, H - 3.5), "plastico", bisel=0.15)  # panel
+    caja((3.4, 0.1, 1.4), (W / 2 - 8.0, -P / 2 - 0.36, H - 3.3), "vidrio")
+    cilindro(0.5, 0.3, (W / 2 - 4.5, -P / 2 - 0.25, H - 3.5), "goma", seg=16, eje="y")
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cilindro(1.2, 0.4, (sx * (W / 2 - 3.0), sy * (P / 2 - 3.0), 0.2), "goma", seg=12)
+    return armar("carcasa@impresora", EQUIPOS_IMPRESORA)
+
+
 # Cada familia es un GLB aparte (public/models/piezas/<familia>.glb): el visor baja solo las que usa el plano.
 FAMILIAS = {
     "computo": [
@@ -1505,14 +1568,15 @@ FAMILIAS = {
     "electronica": [
         placa_compacta, placa_control, fuente, capacitor, capacitor_motor, transformador, panel,
         parlante, parlante_celular, conector, conector_usb_c, conector_terminal, pantalla_panel, retroiluminacion, tira_led,
+        unidad_laser,
     ],
-    "movimiento": [ventilador, ventilador_axial, ventilador_tangencial, turbina_centrifuga, motor, bomba, correa, tambor, compresor],
+    "movimiento": [ventilador, ventilador_axial, ventilador_tangencial, turbina_centrifuga, motor, bomba, correa, tambor, compresor, rodillo],
     "frio_calor": [serpentin, condensador_heladera, evaporador, termostato, resistencia, valvula],
     "estructura": [
         tornillo, manguera, filtro, filtro_cartucho, cable, cable_redondo, bisagra, bisagra_puerta, puerta, puerta_ojo_de_buey,
         bandeja, bandeja_goteo, bandeja_estante,
     ],
-    "carcasas": [carcasa_heladera, carcasa_split, carcasa_televisor, carcasa_lavarropas, carcasa_microondas],
+    "carcasas": [carcasa_heladera, carcasa_split, carcasa_televisor, carcasa_lavarropas, carcasa_microondas, carcasa_impresora],
 }
 
 # Cómo se ajusta cada forma a las medidas del plano (va al GLB como `extras.ajuste` y a indice.json).
@@ -1525,6 +1589,8 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    # Impresora láser.
+    "rodillo": "tramo:x:redondo",
     # Familia facultad: formas nuevas, ejes del GLB.
     "bateria@celdas_pegadas": "proporcional",
     "placa_logica_integrada": "libre",
