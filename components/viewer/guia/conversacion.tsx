@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { Coreografia, KnowledgePack } from "../../../shared";
 import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
 import type { EstadoControles } from "./reproducir";
@@ -281,61 +282,132 @@ export function BotonIcono({ etiqueta, onClick, insignia, children }: { etiqueta
   );
 }
 
+/** La charla como texto, para copiarla o compartirla ("Vos: …" / "Experto: …", con la página citada). */
+export function chatComoTexto(mensajes: MensajeChat[]): string {
+  return mensajes
+    .map((m) => {
+      if (m.rol === "persona") return `Vos: ${m.texto}`;
+      const pagina = m.c.cita?.pagina ? ` (${m.c.cita.doc ?? "manual"}, p. ${m.c.cita.pagina})` : "";
+      return `Experto: ${m.c.dice}${pagina}`;
+    })
+    .join("\n\n");
+}
+
 /** "Conversación (n)": ícono con el número de preguntas en una insignia; abre la charla entera. */
 export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
   const [abierta, setAbierta] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  /** El modal sumó una entrada al historial: "atrás" la consume y cierra (no se va del experto). */
+  const conHistorial = useRef(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+
+  function abrir() {
+    setCopiado(false);
+    setAbierta(true);
+    window.history.pushState({ ...window.history.state, conversacion: true }, "");
+    conHistorial.current = true;
+  }
+  function cerrar() {
+    setAbierta(false);
+    if (conHistorial.current) {
+      conHistorial.current = false;
+      window.history.back(); // saca la entrada que sumó abrir()
+    }
+  }
+  useEffect(() => {
+    if (!abierta) return;
+    // Atrás (gesto o botón) y Escape cierran el modal.
+    const alVolver = () => {
+      conHistorial.current = false;
+      setAbierta(false);
+    };
+    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cerrar();
+    window.addEventListener("popstate", alVolver);
+    window.addEventListener("keydown", alTecla);
+    return () => {
+      window.removeEventListener("popstate", alVolver);
+      window.removeEventListener("keydown", alTecla);
+    };
+  }, [abierta]);
+
+  async function exportar() {
+    const texto = chatComoTexto(mensajes);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Conversación con el experto", text: texto });
+        return;
+      }
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+    } catch {
+      // Si la persona cancela la hoja de compartir, no pasa nada.
+    }
+  }
+
   if (!mensajes.length) return null;
   return (
     <>
-      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={() => setAbierta(true)} insignia={preguntas}>
+      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
         <Globo size={20} />
       </BotonIcono>
 
-      {abierta && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Conversación con el experto"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
-          onClick={() => setAbierta(false)}
-        >
+      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
+          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
+      {abierta &&
+        createPortal(
           <div
-            className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Conversación con el experto"
+            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
+            onClick={cerrar}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-borde px-5 py-4">
-              <p className="font-semibold">Conversación con el experto</p>
-              <button
-                type="button"
-                onClick={() => setAbierta(false)}
-                className="h-11 rounded-full border border-borde px-4 text-sm"
-              >
-                Cerrar
-              </button>
-            </div>
-            <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-              {mensajes.map((m) =>
-                m.rol === "persona" ? (
-                  <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
-                    {m.texto}
-                  </li>
-                ) : (
-                  <li
-                    key={m.id}
-                    className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
-                      m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
-                    }`}
+            <div
+              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-borde px-5 py-4">
+                <p className="min-w-0 font-semibold">Conversación con el experto</p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={exportar}
+                    className="h-11 rounded-full border border-borde px-4 text-sm"
                   >
-                    <p className="mb-1.5 leading-snug">{m.c.dice}</p>
-                    <EtiquetaCita c={m.c} />
-                  </li>
-                ),
-              )}
-            </ol>
-          </div>
-        </div>
-      )}
+                    {copiado ? "Copiado ✓" : "Compartir"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cerrar}
+                    className="h-11 rounded-full border border-borde px-4 text-sm"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+              <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                {mensajes.map((m) =>
+                  m.rol === "persona" ? (
+                    <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
+                      {m.texto}
+                    </li>
+                  ) : (
+                    <li
+                      key={m.id}
+                      className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
+                        m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
+                      }`}
+                    >
+                      <p className="mb-1.5 leading-snug">{m.c.dice}</p>
+                      <EtiquetaCita c={m.c} />
+                    </li>
+                  ),
+                )}
+              </ol>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
