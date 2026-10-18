@@ -28,6 +28,14 @@ export const metadata: Metadata = {
   description: "Contale qué se rompió. Te guío con el manual de tu equipo, en 3D.",
   // En iPhone, "Agregar a inicio" la abre como app, sin la barra de Safari.
   appleWebApp: { capable: true, title: "Sayso", statusBarStyle: "black-translucent" },
+  // Vista previa del link (la imagen es app/opengraph-image.tsx).
+  openGraph: {
+    title: "Sayso",
+    description: "Contale qué se rompió. Te guío con el manual de tu equipo, en 3D.",
+    siteName: "Sayso",
+    locale: "es_AR",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
