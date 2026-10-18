@@ -14,12 +14,12 @@ Cada ítem tiene dueño. Al arreglarlo, marcá [x] y poné el PR.
 - [x] C8. Repuestos: no se entiende cómo llegar a comprar. Que el botón sea visible y se explique ("Ver dónde comprar esta pieza"). — PR #101
 
 ## Juanma (carril A: IA, manual, seguridad, chat)
-- [ ] A1. Ficha incompleta: leyó "iPhone 13" pero no completó marca (Apple) ni año. Inferir marca/año del modelo (búsqueda), siempre "probable" con confirmación.
+- [x] A1. Ficha incompleta: leyó "iPhone 13" pero no completó marca (Apple) ni año. Inferir marca/año del modelo (búsqueda), siempre "probable" con confirmación. (PR #96)
 - [ ] A2. Marca por foto del frente: un TV con "TCL" visible no se identificó. Usar el logo del frente como "probable".
-- [ ] A3. Apple "NO VERIFICADO": para iPhone 12+ Apple publica manuales oficiales (Self Service Repair) con pasos y números de parte. Buscar primero ahí; si se usa, VERIFICADO.
-- [ ] A4. Números de parte: "no tengo verificado ningún número de parte" en un iPhone 13. Sacarlos del manual oficial cuando exista.
+- [x] A3. Apple "NO VERIFICADO": para iPhone 12+ Apple publica manuales oficiales (Self Service Repair) con pasos y números de parte. Buscar primero ahí; si se usa, VERIFICADO. (PR #96)
+- [x] A4. Números de parte: "no tengo verificado ningún número de parte" en un iPhone 13. Sacarlos del manual oficial cuando exista. (PR #96)
 - [ ] A5. Seguridad mal explicada: en un celular el bloqueo dice "220 V / capacitores". Para equipos a batería el riesgo es la batería de litio (pinchar, doblar, hinchada). Mensaje y regla según el tipo de equipo; no bloquear de más.
-- [ ] A6. Orden de la guía: el primer paso tiene que ser abrir el equipo (tornillos, calor, ventosa) si hace falta, no arrancar ya abierto.
+- [x] A6. Orden de la guía: el primer paso tiene que ser abrir el equipo (tornillos, calor, ventosa) si hace falta, no arrancar ya abierto. (PR #96)
 - [ ] A7. Chat: si pregunto algo distinto, responder eso (corto, con acciones solo de esa pieza), no rehacer toda la coreografía desde cero.
 - [ ] A8. TV con guía floja (2 pasos genéricos): buscar manual de la serie/línea o guías del fabricante antes de caer en lo genérico.
 - [ ] A9. Seguridad sin IA: el filtro del código (`evaluarPedido`, `lib/safety/riesgos.ts`) no frena 6 de 19 pedidos peligrosos; hoy dependen de que la IA los marque. Medir con `npx tsx scripts/bateria/correr.ts --seguridad` (sin IA, no gasta). Las que faltan:

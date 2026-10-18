@@ -20,7 +20,7 @@ async function main() {
 
   if (soloBuscar) {
     const m = await buscarManual({ marca, modelo, clase: "notebook" });
-    console.log(m ? `PDF ✔ [${m.fuente}] ${m.titulo}\n        ${m.url} (${(m.pdf.bytes / 1e6).toFixed(1)} MB)` : "No encontró el manual.");
+    console.log(m ? `PDF ✔ [${m.fuente}] ${m.titulo}\n        ${m.url} (${m.formato === "pdf" ? (m.pdf.bytes / 1e6).toFixed(1) + " MB" : "manual web"})` : "No encontró el manual.");
     return;
   }
 

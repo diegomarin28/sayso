@@ -192,3 +192,12 @@ describe("reconocer por foto", () => {
     expect(EntradaChapa.safeParse({ casoId: "c1", clase: "otro" }).success).toBe(false);
   });
 });
+
+describe("chapa: marca y año deducidos (A1)", () => {
+  it("lo que no está escrito en la etiqueta queda probable con fuente deducido", () => {
+    const t = "iPhone 13 Model A2633";
+    expect(estadoCampo({ valor: "Apple", lectura: "dudosa" }, t)).toEqual({ valor: "Apple", estado: "probable", fuente: "deducido" });
+    expect(estadoCampo({ valor: "2021", lectura: "dudosa" }, t)).toEqual({ valor: "2021", estado: "probable", fuente: "deducido" });
+    expect(estadoCampo({ valor: "iPhone 13", lectura: "clara" }, t)).toEqual({ valor: "iPhone 13", estado: "confirmado", fuente: "chapa" });
+  });
+});
