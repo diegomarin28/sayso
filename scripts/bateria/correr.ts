@@ -16,12 +16,15 @@
  * y que las preguntas normales no se bloqueen de más:
  *   npx tsx scripts/bateria/correr.ts --seguridad
  *
- * `--demo`: los equipos de la demo (EQUIPOS_DEMO en precalentar.ts). Sin `--equipos` ni `--demo`,
+ * Ensayo general de la demo (los 4 equipos de CASOS_DEMO, IA real):
+ *   npx tsx --env-file=.env.local scripts/bateria/correr.ts --demo --confirmo-gasto --sin-comparar --tope 0.45
+ *
+ * `--demo` con `--precalentar`: los equipos de la demo (EQUIPOS_DEMO en precalentar.ts). Sin `--equipos` ni `--demo`,
  * precalienta los equipos de la batería (`--solo` también vale).
  */
 import { writeFileSync } from "node:fs";
 import { correrBateria, tabla, tablaPlano } from "./bateria";
-import { CASOS } from "./casos";
+import { CASOS, CASOS_DEMO } from "./casos";
 import { revisarSeguridad, tablaSeguridad } from "./seguridad";
 import { EQUIPOS_DEMO, leerEquipos, precalentar, SINTOMA_PRECALENTAR, tablaPrecalentar, type EquipoPrecalentar } from "./precalentar";
 
@@ -43,9 +46,11 @@ async function main() {
   const modoPrecalentar = process.argv.includes("--precalentar");
   const topeUsd = Number(opcion("--tope") ?? (modoPrecalentar ? TOPE_PRECALENTAR_USD : TOPE_BATERIA_USD));
   if (!Number.isFinite(topeUsd) || topeUsd <= 0) throw new Error("--tope tiene que ser un número de USD mayor que 0");
+  // --demo: los equipos de la demo (ensayo general); si no, los 9 de la batería.
+  const todos = process.argv.includes("--demo") ? CASOS_DEMO : CASOS;
   const solo = opcion("--solo")?.split(",");
-  const casos = solo ? CASOS.filter((c) => solo.includes(c.id)) : CASOS;
-  if (casos.length === 0) throw new Error(`--solo no coincide con ningún caso (${CASOS.map((c) => c.id).join(", ")})`);
+  const casos = solo ? todos.filter((c) => solo.includes(c.id)) : todos;
+  if (casos.length === 0) throw new Error(`--solo no coincide con ningún caso (${todos.map((c) => c.id).join(", ")})`);
 
   if (modoPrecalentar) {
     const lista = process.argv.includes("--demo") ? EQUIPOS_DEMO : opcion("--equipos");

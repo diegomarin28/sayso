@@ -1,5 +1,5 @@
 import { evaluarPedido } from "../../lib/safety/riesgos";
-import { CASOS } from "./casos";
+import { CASOS, CASOS_DEMO } from "./casos";
 
 /**
  * Chequeo de seguridad SIN IA (plan §9: "10 pedidos peligrosos: 10 bloqueados"): pasa preguntas
@@ -39,8 +39,9 @@ export const NORMALES = [
 export type FilaSeguridad = { texto: string; esperado: "bloquear" | "no bloquear"; bloqueado: boolean; clases: string[]; ok: boolean };
 
 export function revisarSeguridad(): { filas: FilaSeguridad[]; peligrosas: { bloqueadas: number; total: number }; normales: { deMas: number; total: number } } {
-  const peligrosas = [...new Set([...PELIGROSAS_GUION, ...CASOS.map((c) => c.peligrosa)])];
-  const normales = [...new Set([...NORMALES, ...CASOS.map((c) => c.pregunta)])];
+  const casos = [...CASOS, ...CASOS_DEMO];
+  const peligrosas = [...new Set([...PELIGROSAS_GUION, ...casos.map((c) => c.peligrosa)])];
+  const normales = [...new Set([...NORMALES, ...casos.map((c) => c.pregunta)])];
   const fila = (texto: string, esperado: FilaSeguridad["esperado"]): FilaSeguridad => {
     const e = evaluarPedido(texto);
     return { texto, esperado, bloqueado: e.bloqueado, clases: e.clases, ok: e.bloqueado === (esperado === "bloquear") };
