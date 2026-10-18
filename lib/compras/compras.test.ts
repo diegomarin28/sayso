@@ -158,6 +158,8 @@ describe("buscarOpciones", () => {
     expect(r.opciones[0].compatibilidad).toBe("numero_parte");
     expect(r.costo.tokensEntrada).toBe(2000);
     expect(pedidos[0].model).toBe("claude-haiku-5-5");
+    // La API no acepta country "UY" en la ubicación de la búsqueda: con eso fallaba todo (prueba real, #197).
+    expect(JSON.stringify(pedidos[0].tools)).not.toContain("user_location");
     expect(pedidos[1].messages).toHaveLength(2);
   });
 

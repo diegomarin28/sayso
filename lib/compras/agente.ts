@@ -52,7 +52,8 @@ export async function buscarOpciones(
       type: COMPRAS.herramientas.busqueda,
       name: "web_search",
       max_uses: COMPRAS.busquedas,
-      user_location: { type: "approximate", country: "UY" },
+      // Sin `user_location`: la API rechaza country "UY" (400 "Country code UY is not supported") y eso
+      // hacía fallar TODAS las búsquedas. Uruguay va en el pedido (site:mercadolibre.com.uy, envío a Uruguay).
     },
     { type: COMPRAS.herramientas.lectura, name: "web_fetch", max_uses: COMPRAS.lecturas, max_content_tokens: COMPRAS.tokensPorPagina },
   ];
