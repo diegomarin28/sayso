@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PedidoDeFoto, TipoFoto, type ClaseEquipo } from "../../shared";
 import { LIMITES, MODELOS, pedirJsonConEscalada, type LlamarIA } from "../ia/claude";
 import { elegirPlantilla } from "../planogenerator/plantillas/por-tipo";
+import { noPrende } from "./sintoma";
 
 /**
  * Qué fotos pedir. Las decide la IA según el tipo de equipo (cualquier dispositivo);
@@ -117,8 +118,6 @@ export async function decidirPedidos(
 
 /** Tipos de equipo que tienen el modelo o el número de serie grabado en la parte de atrás. */
 const DATOS_ATRAS = new Set(["celular", "tablet", "reloj"]);
-/** "No prende", "no enciende", "no arranca", "no da imagen", "está muerto"… */
-const NO_PRENDE = /\bno\s+(me\s+)?(prende|enciende|arranca|inicia|bootea|da\s+(imagen|senales))\b|\b(muert[oa]|no\s+hace\s+nada)\b/;
 /** Un pedido que solo se puede cumplir con el equipo prendido (menús, Ajustes, Información, pantalla de…). */
 const NECESITA_PRENDIDO = /ajustes|configuraci[oó]n|settings|men[uú]|acerca\s+de|informaci[oó]n|general\s*>|desbloque|prend[eé]\s+(el|la)|encend[eé]/;
 /** Pedir el puerto o la carga de un equipo que no tiene puerto (un reloj se carga por atrás). */
@@ -135,7 +134,7 @@ const sinTildes = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "
 export function ajustarPorTipo(pedidos: PedidoDeFoto[], sintoma: string, tipoEquipo?: string): PedidoDeFoto[] {
   const tipo = tipoEquipo ? elegirPlantilla({ clase: "otro", piezas: [] }, tipoEquipo)?.id : undefined;
   const atras = !!tipo && DATOS_ATRAS.has(tipo);
-  const noPrende = NO_PRENDE.test(sinTildes(sintoma));
+  const apagado = noPrende(sintoma);
   const equipo = tipo === "reloj" ? "el reloj" : tipo === "tablet" ? "la tablet" : tipo === "celular" ? "el celular" : "el equipo";
   const etiquetaAtras: PedidoDeFoto = {
     tipo: "etiqueta",
@@ -149,12 +148,12 @@ export function ajustarPorTipo(pedidos: PedidoDeFoto[], sintoma: string, tipoEqu
   };
   let res = pedidos.map((p): PedidoDeFoto => {
     const texto = sinTildes(p.instruccion);
-    if (noPrende && NECESITA_PRENDIDO.test(texto)) return p.tipo === "etiqueta" ? etiquetaAtras : { ...p, instruccion: "" };
+    if (apagado && NECESITA_PRENDIDO.test(texto)) return p.tipo === "etiqueta" ? etiquetaAtras : { ...p, instruccion: "" };
     if (tipo === "reloj" && (p.tipo === "puertos" || (p.tipo !== "etiqueta" && DE_CARGA.test(texto)))) return parteDeAtras;
     return p;
   });
   res = res.filter((p, i) => p.instruccion && res.findIndex((q) => q.instruccion === p.instruccion) === i);
-  if (noPrende && !res.some((p) => p.tipo === "frente")) {
+  if (apagado && !res.some((p) => p.tipo === "frente")) {
     res.push({ tipo: "frente", instruccion: `Sacá una foto de frente a ${equipo}, completo, aunque esté apagado.` });
   }
   return res;
