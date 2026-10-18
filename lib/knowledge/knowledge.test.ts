@@ -425,3 +425,58 @@ describe("extracto", () => {
     expect(paginasDeNombre("manual.pdf")).toBeNull();
   });
 });
+
+describe("caché del manual y de la guía pública (#140)", () => {
+  const sinCachePacks: CachePacks = { get: async () => undefined, set: async () => {} };
+  const subir = async () => "file_1";
+  const modelo = fichaEjemplo.modelo.valor!;
+
+  it("reusa la ubicación del manual aunque el pack anterior no haya salido verificado", async () => {
+    const manuales = repoEnMemoria();
+    await manuales.guardar({ marca: fichaEjemplo.marca.valor!, modelo, url: "https://ej.com/hmm.pdf", titulo: "HMM", verificado: false, fuente: "fabricante" });
+    const f = enviarFalso();
+    await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "otro síntoma" }, { enviar: f.enviar, fetch: pdfOk, subir, manuales, cache: sinCachePacks });
+    expect(f.de("bibliotecario")).toHaveLength(0);
+  });
+
+  it("guarda la ubicación apenas encuentra el manual, aunque la lectura no dé pasos", async () => {
+    const manuales = repoEnMemoria();
+    const base = enviarFalso();
+    const enviar: EnviarMensaje = async (p, etapa, esc) =>
+      String(p.system).includes("bibliotecario") ? base.enviar(p, etapa, esc) : mensaje([{ type: "text", text: "nada" }]);
+    await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "x" }, { enviar, fetch: pdfOk, subir, manuales, cache: sinCachePacks });
+    expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({ url: "https://ej.com/hmm.pdf", verificado: false });
+  });
+
+  it("sin manual, guarda las fuentes de la guía pública y la próxima vez las relee sin búsqueda web", async () => {
+    const manuales = repoEnMemoria();
+    const fuente = "https://guias.ej.com/tv-sin-imagen";
+    const citaWeb = { type: "web_search_result_location", cited_text: "Check the power cable", encrypted_index: "x", title: "Guía TV", url: fuente } as Anthropic.TextCitation;
+    const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const enviar: EnviarMensaje = async (p) => {
+      llamadas.push(p);
+      if (String(p.system).includes("bibliotecario")) return mensaje([{ type: "text", text: '{"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null}' }]);
+      if (p.tools?.length) return mensaje([{ type: "text", text: "PASO|1|Revisá el cable de alimentación.|cable|bajo", citations: [citaWeb] }]);
+      const charLoc = { type: "char_location", cited_text: "Check the power cable", document_index: 0, document_title: "Guía TV", start_char_index: 0, end_char_index: 10, file_id: null };
+      return mensaje([{ type: "text", text: "PASO|1|Revisá el cable de alimentación.|cable|bajo", citations: [charLoc] }]);
+    };
+    const paginas = (async (url: string | URL) =>
+      String(url) === fuente
+        ? new Response("<html><body><h1>Guía TV</h1><p>Check the power cable before anything else.</p><p>More text to be long enough for a section.</p></body></html>", { headers: { "content-type": "text/html" } })
+        : new Response("no", { status: 404 })) as typeof fetch;
+    const deps = { enviar, fetch: paginas, subir, manuales, cache: sinCachePacks };
+
+    const r1 = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "no da imagen" }, deps);
+    expect(r1.pack.verificado).toBe(false);
+    expect(await manuales.buscar(fichaEjemplo.marca.valor, modelo)).toMatchObject({ fuentes_publicas: [fuente], verificado: false });
+
+    llamadas.length = 0;
+    const r2 = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, deps);
+    expect(r2.eventos.map((e) => e.tipo)).toContain("guia_publica_en_cache");
+    expect(llamadas.some((p) => p.tools?.length)).toBe(false); // sin búsqueda web
+    expect(llamadas.some((p) => String(p.system).includes("bibliotecario"))).toBe(false); // ni búsqueda del manual
+    expect(r2.pack.verificado).toBe(false);
+    expect(r2.pack.pasos[0].cita).toMatchObject({ estado: "NO_VERIFICABLE", url: fuente });
+    expect(r2.pack.fuentes).toEqual([{ doc: fuente, url: fuente }]);
+  });
+});

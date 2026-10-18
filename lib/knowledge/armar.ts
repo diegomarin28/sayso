@@ -13,7 +13,7 @@ import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./im
 import { leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
 import { armarManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
-import { columnasVistas, repoManuales, vistasDe, type RepoManuales } from "./manuales";
+import { columnasVistas, esSoloGuia, repoManuales, vistasDe, type RepoManuales } from "./manuales";
 import { combinar, instruccionesVistas, SIN_VISTAS } from "./vistas";
 
 /**
@@ -57,11 +57,15 @@ export function claveCache(ficha: Ficha, sintoma: string): string {
 
 const IDS_PLANTILLA = planoNotebookBase.piezas.map((p) => p.pieza);
 
-function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[]): string {
+/** `publicasAdjuntas`: sin manual, pero con las páginas de una guía pública ya guardadas (van adjuntas, sin búsqueda web). */
+function tareaPack(equipo: string, sintoma: string, conManual: boolean, vistas: ClaseVista[], publicasAdjuntas = false): string {
   const fuente = conManual ? "el manual" : "las fuentes";
-  return `Prepará una guía de reparación casera a partir de ${
-    conManual ? "el manual de servicio adjunto" : "fuentes públicas de la web (buscá con la herramienta)"
-  }.
+  const origen = conManual
+    ? "el manual de servicio adjunto"
+    : publicasAdjuntas
+      ? "las guías públicas adjuntas (no son del fabricante)"
+      : "fuentes públicas de la web (buscá con la herramienta)";
+  return `Prepará una guía de reparación casera a partir de ${origen}.
 Escribí SOLO líneas con este formato exacto, una por renglón, sin títulos ni markdown:
 PIEZA|id|nombre|ubicación en palabras (relativa a otras piezas)|número en la vista explosionada (o vacío)
 PASO|orden|instrucción corta para una persona sin experiencia|ids de piezas separados por coma|riesgo (bajo, medio o alto)
@@ -186,12 +190,13 @@ export async function armarKnowledgePack(
   const equipoDescrito = tipoEquipo ? `${nombreEquipo} (${tipoEquipo})` : nombreEquipo;
   eventos.push(evento(casoId, "bibliotecario", "manual_buscando", `Busco el manual de servicio de ${nombreEquipo}.`));
 
-  // 1. Caché de manuales (Supabase): si ya lo encontramos y verificamos antes, se reusa con sus vistas.
+  // 1. Caché de manuales (Supabase): si ya lo encontramos antes, se reusa con sus vistas (la URL la verificó
+  //    el código al encontrarla; "verificado" es de las citas). Una fila "solo guía" guarda fuentes públicas.
   const repo = deps.manuales ?? repoManuales();
   let encontrado: ManualEncontrado | null = null;
   let vistas: Vistas = SIN_VISTAS;
   const registro = await repo.buscar(ficha.marca.valor, modelo);
-  if (registro?.verificado) {
+  if (registro && !esSoloGuia(registro)) {
     const pdf = await descargarPdf(registro.url, deps.fetch);
     const indice = pdf ? null : await leerPaginaWeb(registro.url, deps.fetch);
     if (pdf || pareceIndice(indice)) {
@@ -204,7 +209,22 @@ export async function armarKnowledgePack(
   }
   const manualDeCache = encontrado !== null;
   // 2. Si no, el bibliotecario lo busca (agente con búsqueda web + probar_pdf).
-  encontrado ??= await buscarManual({ marca: ficha.marca.valor, modelo, clase: tipoEquipo ?? ficha.clase }, { enviar, fetch: deps.fetch });
+  //    Si ya se buscó antes y solo hubo guías públicas, no se vuelve a buscar (se releen esas guías).
+  if (!encontrado && !esSoloGuia(registro)) {
+    encontrado = await buscarManual({ marca: ficha.marca.valor, modelo, clase: tipoEquipo ?? ficha.clase }, { enviar, fetch: deps.fetch });
+  }
+  if (encontrado && !manualDeCache) {
+    // Se guarda la ubicación apenas se encuentra: aunque la lectura falle, la próxima vez no se vuelve a buscar.
+    await repo.guardar({
+      marca: ficha.marca.valor ?? "",
+      modelo,
+      url: encontrado.url,
+      titulo: encontrado.titulo,
+      ...columnasVistas(SIN_VISTAS),
+      verificado: false,
+      fuente: encontrado.fuente,
+    });
+  }
 
   // 3. Extracto: solo las páginas que importan. Si no se puede armar, no se manda el PDF entero: guía pública.
   let manual: Manual | null = null;
@@ -293,10 +313,47 @@ export async function armarKnowledgePack(
     }
   }
   const conManual = fuenteManual !== null && contenido !== null && contenido.pasos.length > 0;
-  if (!conManual) {
+  let fuentesPublicas: string[] = [];
+  if (!conManual && esSoloGuia(registro)) {
+    // Guía pública ya conocida: el código baja esas páginas (gratis) y se leen como texto, sin búsqueda web.
+    try {
+      const guardadas = registro!.fuentes_publicas;
+      const paginas = await armarManualWeb(
+        { url: guardadas[0], titulo: "Guías públicas", texto: "", enlaces: [] },
+        guardadas.map((url) => ({ titulo: url, url })),
+        deps.fetch,
+      );
+      if (paginas.secciones.length) {
+        const l = await leerManualWeb(paginas, tareaPack(equipoDescrito, sintoma, false, [], true), LIMITES.lectura.maxTokensPack, enviar, "bibliotecario: guía pública guardada");
+        const c = parsearContenido(lineasConCitas(l.bloques), "Guías públicas", paginas.secciones.map((x) => x.url), tipoEquipo ?? ficha.clase, false);
+        if (c.pasos.length) {
+          [lectura, contenido, fuentesPublicas] = [l, c, paginas.secciones.map((x) => x.url)];
+          eventos.push(evento(casoId, "bibliotecario", "guia_publica_en_cache", "Ya tenía guías públicas de este equipo: las releo sin buscar en la web (NO VERIFICADO)."));
+        }
+      }
+    } catch (e) {
+      if (e instanceof IAEnPausa) throw e;
+      console.error("[knowledge] no pude releer la guía pública guardada:", (e as Error).message);
+    }
+  }
+  if (!conManual && fuentesPublicas.length === 0) {
     try {
       lectura = await guiaPublica(equipoDescrito, sintoma, enviar);
       contenido = parsearContenido(lineasConCitas(lectura.bloques), "Fuente pública", undefined, tipoEquipo ?? ficha.clase);
+      fuentesPublicas = fuentesWeb(lectura.bloques).map((f) => f.url).slice(0, LIMITES.guiaPublica.maxFuentes);
+      // Se guardan sus fuentes (si no hay un manual guardado), así la próxima no se paga la búsqueda web.
+      if (contenido.pasos.length && fuentesPublicas.length && (!registro || esSoloGuia(registro)) && !encontrado) {
+        await repo.guardar({
+          marca: ficha.marca.valor ?? "",
+          modelo,
+          url: fuentesPublicas[0],
+          titulo: "Guías públicas",
+          ...columnasVistas(SIN_VISTAS),
+          verificado: false,
+          fuente: "otro",
+          fuentes_publicas: fuentesPublicas,
+        });
+      }
     } catch (e) {
       if (e instanceof IAEnPausa) throw e; // el freno de gasto no es una falla del manual: la ruta responde "IA en pausa"
       huboFalla = true;
@@ -318,7 +375,12 @@ export async function armarKnowledgePack(
     modelo: nombreEquipo,
     clase: ficha.clase,
     verificado: conManual && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO"),
-    fuentes: conManual && fuenteManual ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }] : fuentesWeb(lectura.bloques),
+    fuentes:
+      conManual && fuenteManual
+        ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }]
+        : fuentesWeb(lectura.bloques).length
+          ? fuentesWeb(lectura.bloques)
+          : fuentesPublicas.map((url) => ({ doc: url, url })),
     piezas: contenido.piezas,
     pasos: contenido.pasos,
     advertencias: contenido.advertencias,

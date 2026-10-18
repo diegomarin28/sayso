@@ -46,13 +46,14 @@ export function lineasConCitas(bloques: Bloque[]): Linea[] {
  * `urls`: URL de cada documento, cuando el manual es web (una sección por documento): la cita de
  * texto ("char_location") lleva la URL de la sección en vez de un número de página.
  */
-export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[]): Cita | null {
+export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[], verificable = true): Cita | null {
   if (c.type === "page_location" && c.cited_text.trim().length >= 8) {
     return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: "VERIFICADO" };
   }
   if (c.type === "char_location" && c.cited_text.trim().length >= 8) {
     const url = urls?.[c.document_index];
-    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: "VERIFICADO" };
+    // Texto de un manual oficial: VERIFICADO. De una guía pública guardada: se cita, pero NO_VERIFICABLE.
+    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: verificable ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "web_search_result_location") {
     return { doc: c.title ?? c.url, url: c.url, estado: "NO_VERIFICABLE" };
@@ -60,8 +61,8 @@ export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls
   return null;
 }
 
-function mejorCita(citas: Anthropic.TextCitation[], doc: string, urls?: string[]): Cita | undefined {
-  const convertidas = citas.map((c) => citaDesde(c, doc, urls)).filter((c): c is Cita => c !== null);
+function mejorCita(citas: Anthropic.TextCitation[], doc: string, urls?: string[], verificable = true): Cita | undefined {
+  const convertidas = citas.map((c) => citaDesde(c, doc, urls, verificable)).filter((c): c is Cita => c !== null);
   return convertidas.find((c) => c.estado === "VERIFICADO") ?? convertidas[0];
 }
 
@@ -94,7 +95,7 @@ function claseVista(campo: string | undefined): ClaseVista | null {
 const ID_PIEZA = /^[a-z0-9_]+$/;
 
 /** `tipoEquipo`: para la seguridad de cada paso (reglas y mensaje según el equipo). */
-export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], tipoEquipo?: string): Contenido {
+export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], tipoEquipo?: string, verificable = true): Contenido {
   const r: Contenido = {
     piezas: [],
     pasos: [],
@@ -110,7 +111,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
     const limpia = l.texto.replace(/\*\*/g, "").replace(/^[\s`>]*(?:[-*•]+|\d+[.)])?\s*/, "").replace(/`+$/, "");
     const campos = limpia.split("|").map((c) => c.trim());
     const tipo = campos[0]?.toUpperCase();
-    const cita = mejorCita(l.citas, doc, urls);
+    const cita = mejorCita(l.citas, doc, urls, verificable);
 
     if (tipo === "PIEZA" && campos.length >= 4) {
       const [, id, nombre, ubicacion, etiqueta] = campos;
