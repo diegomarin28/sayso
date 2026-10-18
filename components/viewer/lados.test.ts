@@ -61,8 +61,6 @@ describe("ladosDelPlano (por tipo)", () => {
   });
 
   it.each([
-    ["notebook genérica, sin teclado en el plano", planoNotebookBase],
-    ["notebook sin ventilador (el teclado queda adentro de la base cerrada, #232)", equipos.planoNotebookSinVentilador],
     ["teclado suelto", equipos.planoTeclado],
     ["consola (tapa que envuelve todo)", equipos.planoConsola],
     ["batería externa", equipos.planoPowerBank],
@@ -76,6 +74,59 @@ describe("ladosDelPlano (por tipo)", () => {
     ["heladera", equipos.planoHeladera],
   ])("%s (parado): sin lados, se mira de frente", (_, plano) => {
     expect(ladosDelPlano(plano)).toBeUndefined();
+  });
+});
+
+describe("notebook abierta, mirada por el teclado (#232)", () => {
+  const sinVentilador = equipos.planoNotebookSinVentilador;
+  it.each([
+    ["notebook genérica (plantilla)", planoNotebookBase],
+    ["notebook sin ventilador (plantilla)", sinVentilador],
+  ])("%s: arranca por el teclado (abajo), con la tapa de pantalla abriéndose hacia afuera", (_, plano) => {
+    const lados = ladosDelPlano(plano)!;
+    expect(lados.inicial).toBe("abajo");
+    // Bisagra atrás (-z), tapa abajo: +110° sobre x la lleva hacia abajo (afuera) y atrás.
+    expect(lados.bisagra).toEqual({ pieza: "carcasa_pantalla", grados: 110 });
+    expect(lados.piezas.carcasa_pantalla).toBe("abajo");
+    expect(lados.piezas.tapa_inferior).toBe("arriba");
+    // La tapa y su panel no cuentan como "lo de adentro": sigue del lado de la tapa inferior.
+    expect(lados.adentro).toBe("arriba");
+  });
+
+  it.each([
+    ["notebook", ["bateria", "ventilador"]],
+    ["notebook", ["tecla_p", "teclado_notebook", "pantalla"]],
+    ["macbook air", ["bateria", "tecla_p"]],
+  ])("%s armada por el generador (%j): con la tapa de pantalla y arranca por el teclado", async (tipo, ids) => {
+    const plano = await esqueleto(tipo, ids);
+    const lados = ladosDelPlano(plano)!;
+    expect(lados.inicial).toBe("abajo");
+    expect(lados.bisagra?.pieza).toBe("carcasa_pantalla");
+    // Una sola pantalla, adentro de la tapa (también la que nombra el pack), y la tapa pegada al teclado.
+    expect(plano.piezas.filter((p) => p.pieza.startsWith("pantalla")).map((p) => [p.pieza, p.padre])).toEqual([["pantalla", "carcasa_pantalla"]]);
+    const tapa = plano.piezas.find((p) => p.pieza === "carcasa_pantalla")!;
+    const resto = plano.piezas.filter((p) => !["carcasa_pantalla", "pantalla"].includes(p.pieza));
+    expect(tapa.pos[1] + tapa.dim[1] / 2).toBeLessThanOrEqual(Math.min(...resto.map((p) => p.pos[1] - p.dim[1] / 2)));
+  });
+
+  it("la tapa se abre mirándola por el teclado, se cierra al darla vuelta para sacar la tapa inferior y vuelve a abrirse", () => {
+    const lados = ladosDelPlano(sinVentilador)!;
+    const ids = sinVentilador.piezas.map((p) => p.pieza);
+    const abierta = (Math.PI * 110) / 180;
+    const inicio = estadoInicial(ids, { tapa_inferior: "tapa", carcasa_pantalla: "tapa" }, lados);
+    expect(inicio.piezas.carcasa_pantalla.rot[0]).toBeCloseTo(abierta);
+    const volteada = aplicarAccion(inicio, { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 }, ctx).estado;
+    expect(volteada.lado).toBe("arriba");
+    expect(volteada.piezas.carcasa_pantalla.rot[0]).toBe(0);
+    const cerrada = cerrar(volteada);
+    expect(cerrada.lado).toBe("abajo");
+    expect(cerrada.piezas.carcasa_pantalla.rot[0]).toBeCloseTo(abierta);
+    expect(cerrada.piezas.tapa_inferior.rot).toEqual([0, 0, 0]);
+    // Despiezada se mira del lado de lo de adentro (la tapa inferior): la de pantalla se cierra; armada, se abre.
+    const despiezada = aplicarAccion(inicio, { t: "despiezar", cantidad: 1 }, ctx).estado;
+    expect(despiezada.lado).toBe("arriba");
+    expect(despiezada.piezas.carcasa_pantalla.rot[0]).toBe(0);
+    expect(aplicarAccion(despiezada, { t: "despiezar", cantidad: 0 }, ctx).estado.piezas.carcasa_pantalla.rot[0]).toBeCloseTo(abierta);
   });
 });
 

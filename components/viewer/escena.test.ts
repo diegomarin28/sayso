@@ -233,7 +233,7 @@ describe("escena: cerrado / abierto", () => {
     (escena.nodos.get(id)!.principal.material as THREE.MeshStandardMaterial).opacity;
 
   it("tapas, puertas y carcasas son cubiertas; la raíz que no es carcasa, no", () => {
-    expect(prepararEscena(planoNotebookBase).cubiertas).toEqual({ tapa_inferior: "tapa" });
+    expect(prepararEscena(planoNotebookBase).cubiertas).toEqual({ tapa_inferior: "tapa", carcasa_pantalla: "tapa" });
   });
 
   it("la tapa (translúcida en su receta) se ve opaca cerrada y translúcida al abrir", () => {
@@ -451,5 +451,33 @@ describe("resaltado de una pieza grande (#231: no rellenar todo de celeste)", ()
     expect(escena.nodos.get("bateria")!.grande).toBe(false);
     expect(mat(escena, "bateria").opacity).toBeCloseTo(1, 3);
     expect(mat(escena, "placa_madre").opacity).toBeLessThan(0.6);
+  });
+});
+
+describe("notebook abierta (#232): se da vuelta el equipo, no la cámara", () => {
+  const camara = new THREE.PerspectiveCamera(35, 390 / 844);
+  const tam = { width: 390, height: 844 };
+
+  it("arranca dada vuelta (mirada por el teclado) y la cámara sigue arriba y adelante", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    expect(escena.vuelta).toBeDefined();
+    expect(escena.raiz.rotation.z).toBeCloseTo(Math.PI);
+    const e = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo");
+    expect(e.posicion.y).toBeGreaterThan(e.objetivo.y);
+    expect(e.posicion.z).toBeGreaterThan(e.objetivo.z);
+  });
+
+  it("encuadra con la tapa de pantalla abierta (no la caja cerrada) y vuelve a girar al sacar la tapa inferior", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    const inicio = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);
+    const girados = { carcasa_pantalla: inicio.piezas.carcasa_pantalla.rot };
+    const cerrada = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo");
+    const abierta = encuadre(escena, "general", 1, camara, tam, 0, 0, "abajo", {}, girados);
+    // Abierta, la pantalla sube: el centro de lo que se encuadra queda más arriba.
+    expect(abierta.objetivo.y).toBeGreaterThan(cerrada.objetivo.y + 3);
+    const volteada = aplicarAccion(inicio, { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 }, { casoId: "c" }).estado;
+    animar(escena, volteada, 0);
+    animar(escena, volteada, 5000);
+    expect(escena.raiz.rotation.z).toBeCloseTo(0);
   });
 });

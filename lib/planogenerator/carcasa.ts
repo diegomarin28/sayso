@@ -1,5 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
-import { ES_TAPA } from "./cubiertas";
+import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
 import { pararPlano } from "./orientacion";
 import type { PlantillaDeEquipo } from "./plantillas/por-tipo";
 
@@ -148,4 +148,40 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
     pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
   };
   return { ...plano, piezas: [...piezas, nueva] };
+}
+
+/**
+ * La tapa de pantalla de una notebook (#232), si el tipo la tiene y el plano no: cerrada sobre la cara del
+ * teclado, del ancho y lo hondo de la carcasa, con la bisagra atrás; el visor la abre cuando mira por ese lado
+ * (`Lados.bisagra`). Con su panel: la pantalla que nombra el pack (si no salió de una página del manual) va
+ * adentro de la tapa. Como `conTapa`, sobre el plano terminado: al generar, al leer de la caché y con el
+ * esqueleto solo. Por TIPO, nunca por modelo.
+ */
+export function conTapaDePantalla(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): PlanoDePiezas {
+  const tapa = plantilla.parado ? undefined : plantilla.plano.piezas.find((p) => ES_TAPA_DE_PANTALLA.test(p.pieza));
+  const raiz = plano.piezas.find((p) => !p.padre);
+  const raizTipo = plantilla.plano.piezas.find((p) => !p.padre);
+  if (!tapa || !raiz || !raizTipo || plano.piezas.some((p) => ES_TAPA_DE_PANTALLA.test(p.pieza))) return plano;
+  const hijos = plantilla.plano.piezas.filter((p) => p.padre === tapa.pieza);
+  const delPack = new Map(plano.piezas.map((p) => [p.pieza, p]));
+  const queda = (id: string) => delPack.get(id)?.origen === "manual";
+  // Pegada a la cara de ese lado del equipo, como en el esqueleto (las teclas sobresalen de la carcasa).
+  const abajo = tapa.pos[1] < raizTipo.pos[1];
+  const cara = (piezas: PiezaPlano[]) =>
+    abajo ? Math.min(...piezas.map((p) => p.pos[1] - p.dim[1] / 2)) : Math.max(...piezas.map((p) => p.pos[1] + p.dim[1] / 2));
+  const deLaTapa = new Set([tapa.pieza, ...hijos.map((p) => p.pieza)]);
+  const dy = cara(plano.piezas.filter((p) => !deLaTapa.has(p.pieza) || queda(p.pieza))) - cara(plantilla.plano.piezas.filter((p) => !deLaTapa.has(p.pieza)));
+  const escala = [raiz.dim[0] / raizTipo.dim[0], 1, raiz.dim[2] / raizTipo.dim[2]];
+  const lugar = (t: PiezaPlano): PiezaPlano => ({
+    ...(delPack.get(t.pieza) ?? {}),
+    ...t,
+    pos: t.pos.map((v, i) => +(i === 1 ? v + dy : raiz.pos[i] + (v - raizTipo.pos[i]) * escala[i]).toFixed(3)) as Vec3,
+    dim: t.dim.map((v, i) => +(v * escala[i]).toFixed(3)) as Vec3,
+    pivote: t.pivote.map((v, i) => +(v * escala[i]).toFixed(3)) as Vec3,
+    padre: t.padre === raizTipo.pieza ? raiz.pieza : t.padre,
+    origen: "plantilla",
+  });
+  const nuevas = [tapa, ...hijos.filter((h) => !queda(h.pieza))].map(lugar);
+  const reemplazadas = new Set(nuevas.map((p) => p.pieza));
+  return { ...plano, piezas: [...plano.piezas.filter((p) => !reemplazadas.has(p.pieza)), ...nuevas] };
 }

@@ -462,7 +462,8 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
       if (!c) return;
       const { despiece, lado, piezas } = estado.current;
       const corridas = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.desp.some((v) => v !== 0)).map(([id, p]) => [id, p.desp]));
-      const e = encuadre(escena, objetivo, zoom, camara, tam, despiece, reservado.current, lado, corridas);
+      const girados = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.rot.some((v) => v !== 0)).map(([id, p]) => [id, p.rot]));
+      const e = encuadre(escena, objetivo, zoom, camara, tam, despiece, reservado.current, lado, corridas, girados);
       void c.setLookAt(e.posicion.x, e.posicion.y, e.posicion.z, e.objetivo.x, e.objetivo.y, e.objetivo.z, animado);
       // Corre la vista para que la pieza quede en el centro de lo que no tapa la frase.
       void c.setFocalOffset(0, e.focal, 0, animado);

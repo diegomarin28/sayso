@@ -1,4 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../../shared";
+import { tapaDePantalla } from "./notebook";
 
 /**
  * Plantillas genéricas POR TIPO de equipo: medidas típicas en cm, no de un modelo.
@@ -95,7 +96,8 @@ export const planoCelular: PlanoDePiezas = {
 /**
  * Notebook SIN ventilador y con la placa integrada (memoria y almacenamiento soldados): dada vuelta como la
  * genérica (la tapa de abajo arriba). Placa chica junto a la bisagra, batería de celdas pegadas que ocupa casi
- * todo, teclado y trackpad del otro lado, parlantes a los costados. No tiene ventilador, RAM ni SSD sueltos.
+ * todo, teclado y trackpad del otro lado (con la tapa de pantalla cerrada encima), parlantes a los costados.
+ * No tiene ventilador, RAM ni SSD sueltos.
  */
 export const planoNotebookSinVentilador: PlanoDePiezas = {
   modelo: "Notebook sin ventilador genérica (ejemplo del lab)",
@@ -105,14 +107,15 @@ export const planoNotebookSinVentilador: PlanoDePiezas = {
     ...hijos("base", [
       ["placa_madre", [18, 0.3, 6], [0, 0.7, -6.6]],
       ["bateria", [26, 0.6, 11], [0, 0.85, 3.6]],
-      ["teclado_notebook", [27, 0.3, 10], [0, 0.35, -4]],
-      ["trackpad", [12, 0.3, 7.5], [0, 0.35, 5.5]],
+      ["teclado_notebook", [27, 0.3, 10], [0, -0.7, -4]],
+      ["trackpad", [12, 0.3, 7.5], [0, -0.7, 5.5]],
       ["parlante_izquierdo", [2, 0.7, 8], [-13.6, 0.85, -1.5]],
       ["parlante_derecho", [2, 0.7, 8], [13.6, 0.85, -1.5]],
       ["conector_usb_c", [0.9, 0.35, 0.8], [-14.6, 0.75, -6.5]],
       ["cable_pantalla", [10, 0.1, 1], [0, 0.75, -10]],
       ["tapa_inferior", [30.4, 0.2, 21.2], [0, 1.45, 0]],
     ]),
+    ...tapaDePantalla([30.4, 21.2], -0.85),
   ],
 };
 

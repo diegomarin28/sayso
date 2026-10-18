@@ -17,7 +17,7 @@ import {
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
-import { ajustarPlanoAlTipo, conTapa, FACTOR_ALTO_DUDOSO } from "./carcasa";
+import { ajustarPlanoAlTipo, conTapa, conTapaDePantalla, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import {
   caraTipica,
   elegirPlantilla,
@@ -514,7 +514,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  * 2. ninguna pieza estimada mide mucho más que su forma (`acotarMedidas`);
  * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
  * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
- * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado;
+ * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado; y la tapa de pantalla de una notebook (`conTapaDePantalla`);
  * 5. si el tipo tiene varias formas de pantalla y el pack no trajo la suya, la común queda estimada (`marcarFormaEstimada`).
  * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
@@ -527,7 +527,7 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
   const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(teclas.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  const forma = marcarFormaEstimada(tipo ? conTapa(sueltas.plano, tipo) : sueltas.plano, tipo, kp);
+  const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
   return { plano: forma.plano, avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 

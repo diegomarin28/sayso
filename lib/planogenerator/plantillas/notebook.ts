@@ -1,4 +1,4 @@
-import type { PlanoDePiezas } from "../../../shared";
+import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../../shared";
 
 /**
  * Plantilla genérica de notebook (escalón 1 de la escalera 3D).
@@ -8,10 +8,44 @@ import type { PlanoDePiezas } from "../../../shared";
  *
  * Alturas (centro en y): la base ocupa y ∈ [-0.6, 0.6]; la placa madre apoya sobre la
  * base y los componentes apoyan sobre la placa (tope de la placa = 0.78).
+ * Del otro lado (abajo, y < -0.6) están el teclado, el trackpad y la tapa de pantalla, cerrada sobre ellos
+ * con la bisagra en el borde de atrás (-z): el visor la abre cuando mira la notebook por el teclado (#232).
  */
 const TOPE_BASE = 0.6;
 const TOPE_PLACA = 0.78;
 const sobre = (tope: number, alto: number) => tope + alto / 2;
+
+/**
+ * La tapa de pantalla (con su panel) de una notebook dada vuelta con la base `[ancho, hondo]` centrada en x y z:
+ * cerrada debajo del teclado (`cara`: la y de su cara), del ancho y lo hondo de la de la biblioteca (31 × 21,4
+ * en una base de 32 × 23) y con la bisagra en el borde de atrás. El panel va del lado del teclado (el que mira a
+ * quien la abre) y por fuera del marco, que en la forma de la biblioteca sobresale hacia ese lado.
+ */
+export function tapaDePantalla([ancho, hondo]: [number, number], cara: number): PiezaPlano[] {
+  const tapa: Vec3 = [+((ancho * 31) / 32).toFixed(2), 0.76, +((hondo * 21.38) / 23).toFixed(2)];
+  const z = -hondo / 2 + tapa[2] / 2;
+  const y = cara - 0.12 - tapa[1] / 2;
+  return [
+    {
+      pieza: "carcasa_pantalla",
+      forma: "caja",
+      dim: tapa,
+      pos: [0, y, +z.toFixed(2)],
+      pivote: [0, tapa[1] / 2, +(-0.48 * tapa[2]).toFixed(2)],
+      padre: "base",
+      formaBiblioteca: "carcasa_pantalla@notebook",
+    },
+    {
+      pieza: "pantalla",
+      forma: "caja",
+      dim: [+((ancho * 29.7) / 32).toFixed(2), 0.11, +((hondo * 19.6) / 23).toFixed(2)],
+      pos: [0, +(cara - 0.065).toFixed(3), +(z + 0.2).toFixed(2)],
+      pivote: [0, 0, 0],
+      padre: "carcasa_pantalla",
+      formaBiblioteca: "pantalla@notebook",
+    },
+  ];
+}
 
 export const planoNotebookBase: PlanoDePiezas = {
   modelo: "Notebook genérica (plantilla)",
@@ -115,6 +149,16 @@ export const planoNotebookBase: PlanoDePiezas = {
       pivote: [0, 0, 0],
       padre: "base",
     },
+    {
+      pieza: "teclado_notebook",
+      forma: "caja",
+      dim: [31, 0.3, 11],
+      pos: [0, -0.75, -4.5],
+      pivote: [0, 0, 0],
+      padre: "base",
+    },
+    { pieza: "trackpad", forma: "caja", dim: [13, 0.3, 8], pos: [0, -0.75, 7.2], pivote: [0, 0, 0], padre: "base" },
+    ...tapaDePantalla([36, 25], -0.9),
     {
       // Se abre desde el borde trasero, como una tapa con bisagra.
       pieza: "tapa_inferior",
