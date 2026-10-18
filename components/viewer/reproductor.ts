@@ -1,5 +1,6 @@
 import type { Accion, Coreografia, Evento, Vec3 } from "../../shared";
 import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
+import type { Lado, Lados } from "./lados";
 
 /**
  * Lógica pura del reproductor de coreografía: recibe acciones validadas por Zod
@@ -18,6 +19,10 @@ import { ES_TAPA } from "../../lib/planogenerator/cubiertas";
  * un paso saca o mueve una tapa (`ocultar`, `desplazar` o `rotar` una cubierta; la carcasa raíz no se
  * abre al girarla: girar el TV no es abrirlo) o despieza. Se cierra con `restaurar`, al armar
  * (`despiezar` 0) o con un paso que solo vuelve a la vista general (las tapas vuelven a su lugar).
+ *
+ * Lado (equipos acostados, ver `ladosDelPlano`): la cámara arranca del lado de la cara de uso (la pantalla o
+ * el teclado). Sacar o mover una tapa (o la pantalla de una tablet) la lleva al lado de esa pieza; cerrar o
+ * `restaurar` la vuelve a la cara de uso.
  */
 
 export const OBJETIVO_GENERAL = "general";
@@ -39,14 +44,24 @@ export type EstadoEscena = {
   /** Abierto: las cubiertas se ven translúcidas (rayos X). Cerrado (o sin dato): opacas. */
   abierto?: boolean;
   cubiertas?: Cubiertas;
+  /** Desde qué lado mira la cámara (solo equipos acostados). */
+  lado?: Lado;
+  lados?: Lados;
 };
 
 export type ContextoEventos = { casoId: string };
 
 const reposo = (): EstadoPieza => ({ rot: [0, 0, 0], desp: [0, 0, 0], visible: true, resaltada: false });
 
-export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {}): EstadoEscena {
-  const estado: EstadoEscena = { piezas: {}, despiece: 0, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 }, abierto: false, cubiertas };
+export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {}, lados?: Lados): EstadoEscena {
+  const estado: EstadoEscena = {
+    piezas: {},
+    despiece: 0,
+    camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 },
+    abierto: false,
+    cubiertas,
+    ...(lados ? { lado: lados.inicial, lados } : {}),
+  };
   for (const id of piezas) estado.piezas[id] = reposo();
   return estado;
 }
@@ -96,9 +111,12 @@ export function aplicarAccion(
   const piezas = { ...estado.piezas };
   const cambiar = (id: string, f: (p: EstadoPieza) => EstadoPieza) => (piezas[id] = f(piezas[id]));
   const cubierta = pieza !== undefined ? estado.cubiertas?.[pieza] : undefined;
-  // Sacar o mover una tapa abre el equipo (girar la carcasa raíz, no).
+  // Sacar o mover una tapa (o la pantalla de una tablet, que se abre por adelante) abre el equipo; girar la carcasa raíz, no.
+  const deUnLado = pieza !== undefined && !!estado.lados?.piezas[pieza];
   const abre =
-    (accion.t === "ocultar" || accion.t === "desplazar") && !!cubierta ? true : accion.t === "rotar" && cubierta === "tapa" ? true : undefined;
+    (accion.t === "ocultar" || accion.t === "desplazar") && (!!cubierta || deUnLado) ? true : accion.t === "rotar" && cubierta === "tapa" ? true : undefined;
+  // Sacar, mover o girar una tapa (o la pantalla de una tablet) lleva la cámara a su lado.
+  const lado = pieza !== undefined && (accion.t === "ocultar" || accion.t === "desplazar" || accion.t === "rotar") ? estado.lados?.piezas[pieza] : undefined;
 
   switch (accion.t) {
     case "camara":
@@ -122,9 +140,12 @@ export function aplicarAccion(
     case "despiezar":
       return { estado: { ...estado, despiece: accion.cantidad, abierto: accion.cantidad > 0 } };
     case "restaurar":
-      return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas) };
+      return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas, estado.lados) };
   }
-  return { estado: { ...estado, piezas, ...(abre ? { abierto: true } : {}) } };
+  // Se ve el equipo entero, abierto: del otro lado, o si lo que se miraba era la tapa que se movió.
+  const gira =
+    lado !== undefined && (lado !== estado.lado || estado.camara.objetivo === pieza) ? { lado, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 } } : {};
+  return { estado: { ...estado, piezas, ...(abre ? { abierto: true } : {}), ...gira } };
 }
 
 /** ¿El paso solo vuelve a la vista general? (Entonces el equipo se cierra.) */
@@ -140,7 +161,7 @@ export function cerrar(estado: EstadoEscena): EstadoEscena {
     if (!p) continue;
     piezas[id] = { ...p, visible: true, desp: [0, 0, 0], rot: tipo === "tapa" ? [0, 0, 0] : p.rot };
   }
-  return { ...estado, piezas, despiece: 0, abierto: false };
+  return { ...estado, piezas, despiece: 0, abierto: false, ...(estado.lados ? { lado: estado.lados.inicial } : {}) };
 }
 
 /** Empieza un paso nuevo: apaga los resaltados del paso anterior. */

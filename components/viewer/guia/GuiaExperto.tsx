@@ -8,6 +8,7 @@ import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
 import { pasosDelPack } from "./guia-del-pack";
+import { conDesarme } from "./desarme";
 import { conPiezaNombrada } from "./pieza-nombrada";
 import { datosTransparencia, DeDondeSale } from "./transparencia";
 import {
@@ -164,7 +165,8 @@ export function GuiaExperto({
           estado: (e, d) => (setEstado(e), setDetalle(d)),
           paso: (c, _bloqueo, i) => {
             pasoEnVisor.current = i;
-            setCoreografia(conPiezaNombrada(c, pack.piezas, idsPlano));
+            // #233: si el paso saca una tapa (o la pantalla de una tablet) o sus tornillos, el 3D lo desarma.
+            setCoreografia(conDesarme(conPiezaNombrada(c, pack.piezas, idsPlano), plano, pack.piezas));
             const pieza = piezaACambiar(c, plano);
             if (pieza) onCambiarPieza?.(pieza);
           },

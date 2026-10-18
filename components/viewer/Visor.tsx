@@ -438,7 +438,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     () => prepararEscenaSegura(plano, biblioteca, tipoEquipo, new Set(claveGenericas ? claveGenericas.split(",") : [])),
     [plano, biblioteca, tipoEquipo, claveGenericas],
   );
-  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
   const onPasoRef = useRef(onPaso);
@@ -460,7 +460,9 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     acciones.current.mirar = (objetivo, zoom, animado) => {
       const c = controles.current;
       if (!c) return;
-      const e = encuadre(escena, objetivo, zoom, camara, tam, estado.current.despiece, reservado.current);
+      const { despiece, lado, piezas } = estado.current;
+      const corridas = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.desp.some((v) => v !== 0)).map(([id, p]) => [id, p.desp]));
+      const e = encuadre(escena, objetivo, zoom, camara, tam, despiece, reservado.current, lado, corridas);
       void c.setLookAt(e.posicion.x, e.posicion.y, e.posicion.z, e.objetivo.x, e.objetivo.y, e.objetivo.z, animado);
       // Corre la vista para que la pieza quede en el centro de lo que no tapa la frase.
       void c.setFocalOffset(0, e.focal, 0, animado);
@@ -485,7 +487,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const avisosDados = useRef(new Set<string>());
   useEffect(() => {
     if (!soloPiezas.current) {
-      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas));
+      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados));
       avisosDados.current = new Set();
     }
     for (const aviso of escena.avisos) {
@@ -528,12 +530,15 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     actualizar(soloVuelveAGeneral(paso.coreografia) ? cerrar(inicio) : inicio);
     const timers = paso.coreografia.acciones.map((accion, i) =>
       setTimeout(() => {
+        const antes = estado.current;
         const r = aplicarAccion(estado.current, accion, { casoId });
         actualizar(r.estado);
         if (r.evento) onEventoRef.current?.(r.evento);
         // La cámara va a la pieza del plano (la guía pudo nombrarla de otra forma: ver `resolverPieza`).
         else if (accion.t === "camara") acciones.current.mirar(r.estado.camara.objetivo, accion.zoom ?? 1, true);
         else if (accion.t === "restaurar") acciones.current.mirar(OBJETIVO_GENERAL, 1, true);
+        // Se sacó una tapa (o se despegó la pantalla): la cámara va al equipo abierto, del lado de la tapa (#233).
+        else if (r.estado.lado !== antes.lado || r.estado.camara !== antes.camara) acciones.current.mirar(r.estado.camara.objetivo, r.estado.camara.zoom, true);
       }, i * ESPACIO_ENTRE_ACCIONES_MS),
     );
     return () => timers.forEach(clearTimeout);

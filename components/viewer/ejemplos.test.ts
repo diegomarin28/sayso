@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Coreografia, PlanoDePiezas } from "../../shared";
 import { EJEMPLOS, coreografiaHeladera, coreografiaImpresoraLaser, planoHeladera } from "./ejemplos";
 import { prepararEscena } from "./escena";
+import { conDesarme } from "./guia/desarme";
 import { prepararPaso } from "./paso";
 import { OBJETIVO_GENERAL, aplicarCoreografia, estadoInicial } from "./reproductor";
 
@@ -59,12 +60,13 @@ describe("ejemplos del lab", () => {
 
   it("cada coreografía de ejemplo abre el equipo, pasa la seguridad con su tipo y termina con la pieza resaltada", () => {
     const conCoreografia = Object.entries(EJEMPLOS).filter(([, e]) => e.coreografia);
-    expect(conCoreografia.map(([n]) => n).sort()).toEqual(["celular", "heladera", "impresora_laser", "notebook", "televisor"]);
+    expect(conCoreografia.map(([n]) => n).sort()).toEqual(["celular", "heladera", "impresora_laser", "notebook", "tablet", "televisor"]);
     for (const [nombre, e] of conCoreografia) {
       const escena = prepararEscena(e.plano, undefined, e.tipoEquipo);
-      let estado = estadoInicial(escena.nodos.keys(), escena.cubiertas);
+      let estado = estadoInicial(escena.nodos.keys(), escena.cubiertas, escena.lados);
       let ultima: Coreografia | undefined;
-      for (const c of e.coreografia!) {
+      // Como el lab y la guía: un paso que saca una tapa (o despega la pantalla) desarma el modelo (#233).
+      for (const c of e.coreografia!.map((x) => conDesarme(x, e.plano))) {
         const preparado = prepararPaso(c, { ...ctx, tipoEquipo: e.tipoEquipo });
         // La heladera nombra el compresor a propósito: la tabla lo bloquea (ver coreografiaHeladera).
         if (!(nombre === "heladera" && c.paso === 3)) expect(preparado.evaluacion.bloqueado, `${nombre} paso ${c.paso}`).toBe(false);

@@ -3,6 +3,7 @@ import { ES_CUBIERTA } from "../../lib/planogenerator/cubiertas";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
 import { despiezado, type Cubiertas, type EstadoEscena } from "./reproductor";
+import { ladosDelPlano, type Lado, type Lados } from "./lados";
 import { ACTIVO_RESPALDO } from "./tema";
 import { crearTween, seguir, type Tween } from "./tween";
 
@@ -114,6 +115,8 @@ export type EscenaPreparada = {
   direccion: THREE.Vector3;
   /** Qué piezas tapan el equipo (para `estadoInicial`: arranca cerrado). */
   cubiertas: Cubiertas;
+  /** De qué lado se mira un equipo acostado (para `estadoInicial`: arranca por su cara de uso). */
+  lados?: Lados;
   /** Fundido entre cerrado (0) y abierto (1). */
   apertura: Tween;
 };
@@ -182,6 +185,7 @@ export function prepararEscena(
     despiece: { ultimo: 0, subiendo: true },
     direccion,
     cubiertas,
+    lados: ladosDelPlano(plano),
     apertura: crearTween([0]),
   };
 }
@@ -432,15 +436,32 @@ const FRACCION_LIBRE_MIN = 0.4;
  * los objetos en pantalla, así que para bajar la pieza es negativo).
  * En un celular en vertical el ancho es el que limita: se encuadra para que entre en los dos ejes.
  */
+/**
+ * Un equipo acostado mirado por abajo (su pantalla, el dorso de un reloj): como si se lo diera vuelta en la
+ * mano, por su eje largo. La cámara pasa abajo y al otro borde: así la parte de arriba del equipo (z negativo)
+ * sigue arriba en la pantalla (solo bajarla daría la vuelta de arriba a abajo: el conector quedaba arriba).
+ */
+function deLado(direccion: THREE.Vector3, lado: Lado): THREE.Vector3 {
+  return lado === "abajo" ? new THREE.Vector3(direccion.x, -direccion.y, -direccion.z) : direccion.clone();
+}
+
 /** Con el despiece, el radio del equipo entero se toma casi completo (sin recortar las puntas). */
 const MARGEN_DESPIECE = 1;
 
-/** La caja del equipo con cada pieza donde la deja el despiece (`cantidad`), sin moverlas de verdad. */
-export function cajaDespiezada(escena: EscenaPreparada, cantidad: number): THREE.Box3 {
+/**
+ * La caja del equipo con cada pieza donde la deja el despiece (`cantidad`) y donde termina lo que se corrió
+ * (`desplazadas`: la tapa que se dejó al costado), sin moverlas de verdad.
+ */
+export function cajaDespiezada(escena: EscenaPreparada, cantidad: number, desplazadas: Record<string, Vec3> = {}): THREE.Box3 {
   const antes = new Map<NodoAnimable, THREE.Vector3>();
   for (const a of escena.nodos.values()) {
     antes.set(a, a.nodo.position.clone());
-    a.nodo.position.set(a.reposo.x + a.despiezado[0] * cantidad, a.reposo.y + a.despiezado[1] * cantidad, a.reposo.z + a.despiezado[2] * cantidad);
+    const [dx, dy, dz] = desplazadas[a.id] ?? [0, 0, 0];
+    a.nodo.position.set(
+      a.reposo.x + a.despiezado[0] * cantidad + dx,
+      a.reposo.y + a.despiezado[1] * cantidad + dy,
+      a.reposo.z + a.despiezado[2] * cantidad + dz,
+    );
   }
   escena.raiz.updateMatrixWorld(true);
   const caja = new THREE.Box3().setFromObject(escena.raiz);
@@ -457,11 +478,15 @@ export function encuadre(
   tamPantalla: { width: number; height: number },
   despiece = 0,
   reservadoArriba = 0,
+  lado: Lado = "arriba",
+  desplazadas: Record<string, Vec3> = {},
 ) {
   const nodo = escena.nodos.get(objetivo)?.nodo ?? escena.raiz;
   // Despiezado, el equipo entero se mide con cada pieza en su lugar final (no un margen fijo): lo que se
   // abre hacia los costados (los aros de un parlante, las capas de un celular) entra en la pantalla.
-  const cajaEquipo = () => (despiece > 0 ? cajaDespiezada(escena, despiece) : new THREE.Box3().setFromObject(escena.raiz));
+  // Igual con una tapa corrida al costado: se mide donde termina, no donde está a mitad de camino.
+  const corridas = Object.keys(desplazadas).length > 0;
+  const cajaEquipo = () => (despiece > 0 || corridas ? cajaDespiezada(escena, despiece, desplazadas) : new THREE.Box3().setFromObject(escena.raiz));
   const caja = nodo === escena.raiz ? cajaEquipo() : new THREE.Box3().setFromObject(nodo);
   const esfera = caja.getBoundingSphere(new THREE.Sphere());
   // Una pieza se encuadra con su entorno para que se entienda dónde está.
@@ -489,7 +514,7 @@ export function encuadre(
   const libre = (height - reservado) / height;
 
   if (camara instanceof THREE.OrthographicCamera) {
-    const posicion = objetivoPos.clone().addScaledVector(DIRECCION_ISOMETRICA, 200);
+    const posicion = objetivoPos.clone().addScaledVector(deLado(DIRECCION_ISOMETRICA, lado), 200);
     const zoomOrto = (Math.min(width, height - reservado) / (2 * radio)) * zoom;
     return { posicion, objetivo: objetivoPos, zoomOrto, focal: -reservado / 2 / zoomOrto };
   }
@@ -500,7 +525,8 @@ export function encuadre(
   const mitadH = Math.atan(tanV * (width / height));
   const distancia = Math.max(radio / Math.sin(mitadV), radio / Math.sin(mitadH)) / zoom;
   const d = Math.max(distancia, 8);
-  const posicion = objetivoPos.clone().addScaledVector(escena.direccion ?? DIRECCION_PERSPECTIVA, d);
+  const direccion = deLado(escena.direccion ?? DIRECCION_PERSPECTIVA, lado);
+  const posicion = objetivoPos.clone().addScaledVector(direccion, d);
   const unidadesPorPx = (2 * d * tanV) / height;
   return { posicion, objetivo: objetivoPos, zoomOrto: null, focal: -(reservado / 2) * unidadesPorPx };
 }
