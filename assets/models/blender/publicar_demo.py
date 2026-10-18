@@ -31,7 +31,7 @@ def main():
             subprocess.run([blender, '-b', '--factory-startup', '--python', str(CARPETA / (nombre + '.py')),
                             '--', '--salida', str(crudos)], cwd=ROOT, check=True)
         subprocess.run([node, str(CARPETA / 'optimizar.mjs'), str(crudos), str(finales)], cwd=ROOT, check=True)
-        indice = json.loads((crudos / 'indice.json').read_text())
+        indice = json.loads((finales / 'indice.json').read_text())
         for archivo in indice['familias'].values():
             f = finales / archivo
             if not f.exists() or f.stat().st_size > 200 * 1024:

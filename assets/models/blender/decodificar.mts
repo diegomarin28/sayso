@@ -43,12 +43,15 @@ for (const archivo of (await readdir(entrada)).filter((f) => f.endsWith(".glb"))
       }
       if (!elegidos.length) continue;
       const receta = recetas[r];
-      const datos: Receta = receta === "cuerpo" ? recetaPara(tipo.getName()) : RECETAS_DETALLE[receta as keyof typeof RECETAS_DETALLE];
+      const propia = recetaPara(tipo.getName());
+      const detalle = RECETAS_DETALLE[receta as keyof typeof RECETAS_DETALLE];
+      const datos: Receta = receta === "cuerpo" ? propia : propia.opacity === undefined ? detalle : { ...detalle, opacity: Math.min(1, propia.opacity * 2) };
       if (!datos) throw new Error("Receta desconocida: " + receta);
       const color = new Color(datos.color);
       const mat = doc.createMaterial(receta === "cuerpo" ? `cuerpo.${tipo.getName().split("@")[0]}` : receta)
         .setBaseColorFactor([color.r, color.g, color.b, datos.opacity ?? 1])
-        .setMetallicFactor(datos.metalness).setRoughnessFactor(datos.roughness);
+        .setMetallicFactor(datos.metalness).setRoughnessFactor(datos.roughness)
+        .setAlphaMode(datos.opacity === undefined ? "OPAQUE" : "BLEND");
       const parte = p.clone().setMaterial(mat).setAttribute("COLOR_0", null).setAttribute("_RECETA", null);
       parte.setIndices(doc.createAccessor().setType("SCALAR").setArray(new Uint32Array(elegidos)).setBuffer(indices.getBuffer()));
       mesh.addPrimitive(parte);

@@ -13,11 +13,11 @@ el plano** (una heladera no baja las piezas de notebook).
 | Familia (GLB) | Tipos |
 |---|---|
 | `computo` | base, tapa_inferior, placa_madre, disipador, heatpipe, ram, ssd, wifi, pila, bateria, disco_duro, soporte; celular: pantalla, camara (`@modulo`: tres traseras), marco, tapa_trasera, `bateria@celular`, `placa_madre@celular` |
-| `electronica` | placa (compacta en L; `@control`: placa de electrodoméstico con relés), fuente, capacitor (`@motor`: de arranque/marcha), transformador, panel (de control), parlante (`@celular`), conector (puerto; `@usb_c`, `@terminal`: ficha con cables), `pantalla@panel` (TV/monitor), retroiluminacion (TV), tira_led |
-| `movimiento` | ventilador (blower de notebook; `@axial`, `@tangencial`), turbina (tangencial; `@centrifuga`), motor, bomba, correa, tambor, compresor |
+| `electronica` | placa (compacta en L; `@control`: placa de electrodoméstico con relés), fuente, capacitor (`@motor`: de arranque/marcha), transformador, panel (de control), parlante (`@celular`), conector (puerto; `@usb_c`, `@terminal`: ficha con cables), `pantalla@panel` (TV/monitor), retroiluminacion (TV), tira_led, unidad_laser |
+| `movimiento` | ventilador (blower de notebook; `@axial`, `@tangencial`), turbina (tangencial; `@centrifuga`), motor, bomba, correa, tambor, compresor, rodillo |
 | `frio_calor` | serpentin, condensador (de heladera; `@aletas`: de aire; `@electrolitico`: el capacitor), evaporador (placa roll-bond; `@aletas`), termostato, resistencia, valvula |
-| `estructura` | tornillo, manguera, filtro (`@cartucho`), cable (flex; `@redondo`), bisagra (`@puerta`), puerta (`@ojo_de_buey`: lavarropas), bandeja (cajón; `@goteo`, `@estante`), estante |
-| `carcasas` | carcasa `@heladera`, `@split`, `@televisor`, `@lavarropas`, `@microondas` (translúcidas en la app) |
+| `estructura` | tornillo, manguera, filtro (`@cartucho`), cable (flex; `@redondo`), bisagra (`@puerta`), puerta (`@ojo_de_buey`: lavarropas; `@impresora`), bandeja (cajón; `@goteo`, `@estante`), estante |
+| `carcasas` | carcasa `@heladera`, `@split`, `@televisor`, `@lavarropas`, `@microondas`, `@impresora` (translúcidas en la app) |
 
 La lista para la IA sale del índice: `TIPOS_DE_PIEZA` y `tiposParaPrompt()` en `lib/planogenerator/tipos.ts`.
 
@@ -39,10 +39,13 @@ para todos. Si el texto no nombra ninguno ("MacBook"), deciden las medidas.
   palabra en cualquier parte: en español el sustantivo va primero (`cable_bateria` es un cable, no una batería).
 - Cada tipo nuevo necesita su receta en `materiales.ts` (lo controla un test).
 
-- Publicar todas las familias (Blender y Node instalados): `npm run modelos:demo`. Exporta a temporales, centra, optimiza y valida antes de copiar a `public/models/piezas`. Los comandos individuales `modelos:*` exportan GLB crudos para edición; no sustituyen este paso final. Para revisión de los GLB publicados, ver [calidad de la demo](blender/CALIDAD_DEMO.md).
+- Publicar todas las familias (Blender y Node instalados): `npm run modelos:demo`. Exporta a temporales, centra, optimiza y valida antes de copiar a `public/models/piezas`. Los comandos individuales existentes conservan su compresión convencional; no sustituyen la publicación con presupuesto de 200 KiB. Para revisión de los GLB publicados, ver [calidad de la demo](blender/CALIDAD_DEMO.md).
 - Son formas **típicas por tipo**, no de un modelo: la posición y las medidas siguen saliendo del plano.
 - Un nodo raíz estable por tipo, pivote centrado y malla compacta. El GLB crudo usa materiales `cuerpo.<tipo>` y `RECETAS_DETALLE`. El publicado guarda sus recetas en extras y etiquetas por vértice; el cargador reconstruye las mismas partes/materiales para el visor.
-- Límite final: **200 KiB por familia**, sin texturas. Meshopt se decodifica con el módulo incluido en Three.js, sin CDN. La simplificación conserva los tipos redondos y tramos; las normales se reconstruyen conservando las separaciones de aristas. Ver formato y regeneración en [CALIDAD_DEMO.md](blender/CALIDAD_DEMO.md).
+- Límite final: **200 KiB por familia**, sin texturas. Meshopt se decodifica con el módulo incluido en Three.js, sin CDN. La simplificación usa error más bajo en tipos redondos y tramos; las normales se reconstruyen conservando las separaciones de aristas. Ver formato y regeneración en [CALIDAD_DEMO.md](blender/CALIDAD_DEMO.md).
+- El índice conserva la caja real de cada tipo (`caja`, en cm), tomada antes del LOD y cuantización. Los tests comparan la caja cargada con esa referencia (≤0,5 %). Se restaura el tamaño original del conjunto antes y después de cuantizar.
+- El cargador de main (`lib/planogenerator/cargador.ts`) y `enFloat` siguen siendo comunes: convierten los atributos antes de aplicar las matrices. Se conserva también el margen de empate de orientación/variante para que diferencias mínimas no hagan girar una pieza.
+- `modelos:comprimir` sigue disponible para compresión convencional con materiales separados; saltea GLB ya comprimidos. Para publicar esta entrega con LOD, paleta y límite de 200 KiB, usar `modelos:demo`.
 - **Forma y lugar, separados:** la forma (y cómo se puede ajustar) es de Blender; dónde va la pieza y cuánto
   lugar ocupa lo dice el plano. Cada tipo declara su regla en `AJUSTES` (`piezas.py`), que va al GLB
   (`extras.ajuste`) y a `indice.json`; la aplica `partesAjustadas` (`lib/planogenerator/biblioteca.ts`):
@@ -74,6 +77,6 @@ Incluye reglas de ajuste, 42 renders individuales y 15 hojas para los equipos y 
 
 ## Objetos del campus y revisión de calidad
 
-[21 formas nuevas de canilla, lavatorio, cisterna, reloj de pared, iluminación, calculadora y proyector](blender/CAMPUS.md), reutilizando la biblioteca existente. La galería `/lab/campus` reúne 22 ejemplos genéricos, incluidos celulares, notebooks, MacBook y relojes. Solo funciona en desarrollo o con fixtures; las posiciones de equipos reales siguen viniendo del plano validado.
+[21 formas nuevas de canilla, lavatorio, cisterna, reloj de pared, iluminación, calculadora y proyector](blender/CAMPUS.md), reutilizando la biblioteca existente. La galería `/lab/campus` reúne 31 ejemplos genéricos, incluidos celulares, notebooks, MacBook y relojes. Solo funciona en desarrollo o con fixtures; las posiciones de equipos reales siguen viniendo del plano validado.
 
 [Antes/después de las piezas esenciales, presupuesto y reproducción](blender/CALIDAD_DEMO.md).

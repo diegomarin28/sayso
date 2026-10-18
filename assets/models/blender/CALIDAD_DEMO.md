@@ -1,6 +1,6 @@
 # Calidad de las piezas de la demo
 
-Se revisaron 37 formas esenciales de notebook/MacBook, celular, TV, heladera, split, lavarropas y relojes. Se mejoraron 13 formas existentes (más el alias turbina que comparte geometría): ventilador blower, baterías de notebook/celular/celdas adheridas, placa madre, placa compacta, cámara simple y triple, pantalla, panel de TV, tangencial, compresor y tambor. Los demás tipos conservan su diseño y se vuelven a publicar optimizados.
+Se revisaron 37 formas esenciales de notebook/MacBook, celular, TV, heladera, split, lavarropas y relojes. Se mejoraron 13 formas existentes (más el alias turbina que comparte geometría): ventilador blower, baterías de notebook/celular/celdas adheridas, placa madre, placa compacta, cámara simple y triple, pantalla, panel de TV, tangencial, compresor y tambor. Se conservaron también las mejoras de placa madre y tangencial que se fusionaron en main durante este trabajo; la comparación histórica las incluye. Los demás tipos conservan su diseño y se vuelven a publicar optimizados.
 
 Los cambios añaden álabes curvos, pestañas y marcas abstractas de celdas, encapsulados y blindajes, óptica oscura, rejilla de auricular, fijaciones traseras de panel, nervios y tornillos del compresor, borde y perforaciones ilustrativas del tambor. No se inventan marcas, capacidades, conexiones funcionales ni compatibilidades.
 
@@ -89,25 +89,25 @@ Las hojas reúnen también piezas que no necesitaron rediseño. Hay un JPG indiv
 
 Máximo permitido: **204.800 bytes (200 KiB) por familia**, controlado al publicar y en tests. Tamaños de esta entrega:
 
-- `computo.glb`: 125,144 bytes.
-- `electronica.glb`: 100,460 bytes.
-- `movimiento.glb`: 153,312 bytes.
-- `frio_calor.glb`: 72,012 bytes.
-- `estructura.glb`: 60,548 bytes.
-- `carcasas.glb`: 25,832 bytes.
-- `dispositivos.glb`: 168,664 bytes.
-- `cotidianos.glb`: 203,672 bytes.
-- `facultad.glb`: 162,068 bytes.
-- `campus.glb`: 103,968 bytes.
+- `computo.glb`: 121,212 bytes.
+- `electronica.glb`: 108,892 bytes.
+- `movimiento.glb`: 156,092 bytes.
+- `frio_calor.glb`: 70,548 bytes.
+- `estructura.glb`: 49,904 bytes.
+- `carcasas.glb`: 29,640 bytes.
+- `dispositivos.glb`: 165,516 bytes.
+- `cotidianos.glb`: 202,360 bytes.
+- `facultad.glb`: 159,996 bytes.
+- `campus.glb`: 103,580 bytes.
 
-El archivo final usa `EXT_meshopt_compression` y cuantización de posiciones. El decodificador es el módulo incluido en Three.js, sin CDN. No hay texturas. Se omiten normales serializadas y se reconstruyen sobre los vértices con las aristas separadas que dejó la exportación. Los tipos `redondo` y `tramo` no se simplifican; en los demás hay simplificación con error acotado, más fuerte en las familias grandes cotidianos/facultad. La revisión incluye relojes para controlar esa reducción.
+El archivo final usa `EXT_meshopt_compression` y cuantización de posiciones. El decodificador es el módulo incluido en Three.js, sin CDN. No hay texturas. Se omiten normales serializadas y se reconstruyen sobre los vértices con las aristas separadas que dejó la exportación. Los tipos `redondo` y `tramo` usan un error geométrico más conservador (0,004 del radio) y no llegan al mismo recorte que los demás. En el resto hay simplificación con error acotado, más fuerte en las familias grandes cotidianos/facultad; caja de reloj, pantalla circular, sensor y bobina usan un error específico bajo (0,005). Se restaura la caja real antes y después de cuantizar (ajustando la matriz de decodificación) y se registra en el índice para controlar medidas. La revisión incluye relojes para controlar esa reducción.
 
 Cada tipo mantiene su nodo raíz, nombre, extras de equipo/AJUSTES y pivote centrado. Para reducir el coste de muchas primitivas, el GLB publicado guarda una malla compacta y una paleta: `scene.extras.paletaRecetas`, códigos en `tipo.extras.recetas` y el índice local de receta en el byte alfa de `COLOR_0`. El material del GLB es opaco: ese alfa es una etiqueta, no transparencia. El cargador valida que los tres vértices del triángulo pertenezcan a una receta y reconstruye partes con materiales de la app. Para Blender o intercambio con materiales completos, usar el decodificador de revisión. Los GLB crudos conservan materiales convencionales.
 
 ## Reproducción
 
 1. `npm ci`; Blender instalado y Node en PATH (también acepta `BLENDER_BIN`).
-2. `npm run modelos:demo`: exporta los cinco scripts a temporales, optimiza, verifica todas las familias y publica GLB/índice conservando entradas existentes. Los comandos individuales `modelos:*` son exportaciones crudas para edición; no usarlos como publicación final.
+2. `npm run modelos:demo`: exporta los cinco scripts a temporales, optimiza, verifica todas las familias y publica GLB/índice conservando entradas existentes. Los comandos individuales existentes conservan la compresión convencional de main; usar este flujo completo para asegurar 200 KiB.
 3. `npm run modelos:decodificar -- public/models/piezas /tmp/sayso-revision`.
 4. `blender -b --factory-startup --python assets/models/blender/calidad_demo.py -- --modelos /tmp/sayso-revision --renders assets/models/blender/renders/calidad/despues`.
 5. Mismo comando con `--campus` y destino `renders/campus` para las 21 formas nuevas.
@@ -123,3 +123,5 @@ Galería de prueba `/lab/campus`, con `NEXT_PUBLIC_DATOS=fixture`. Se comprobó 
 ![Canilla](renders/calidad/visor-canilla.png)
 ![Celular](renders/calidad/visor-celular.png)
 ![Reloj de pared](renders/calidad/visor-reloj-pared.png)
+
+![Reloj inteligente](renders/calidad/visor-smartwatch.png)

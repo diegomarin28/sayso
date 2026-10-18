@@ -21,7 +21,7 @@ describe("calidad y presupuesto de la demo", () => {
     for (const nombre of Object.values(indice.familias))
       expect(statSync("public/models/piezas/" + nombre).size, nombre).toBeLessThanOrEqual(200 * 1024);
     for (const [id, anterior] of Object.entries(referencia))
-      expect([...familias.get(id)!.keys()].sort(), id).toEqual([...anterior.tipos].sort());
+      expect([...familias.get(id)!.keys()], id).toEqual(expect.arrayContaining(anterior.tipos));
     expect(familias.get("campus")?.size).toBe(21);
   });
 

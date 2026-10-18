@@ -1,6 +1,6 @@
 # Objetos a mano en la facultad
 
-Familia independiente `campus.glb`: **21 formas nuevas**, para completar lo que un jurado puede encontrar cerca. No reemplaza tipos ni recetas anteriores. La biblioteca total conserva 208 formas anteriores y suma estas 21: **229**.
+Familia independiente `campus.glb`: **21 formas nuevas**, para completar lo que un jurado puede encontrar cerca. No reemplaza tipos ni recetas anteriores. La biblioteca total conserva 212 formas de main y suma estas 21: **233**.
 
 - Canilla y baño: cuerpo monocomando, manija, cartucho, aireador, llave de paso, flexible, desagüe, sifón, pulsador, flotante y válvula de descarga.
 - Reloj de pared: caja, movimiento de cuarzo y agujas largas (`agujas_reloj@pared`). Reutiliza esfera, pila AA y tornillos.
@@ -23,7 +23,7 @@ Hay además un JPG por cada forma en `renders/campus`. Los renders se obtienen d
 
 ## Ensayo interactivo
 
-Con `NEXT_PUBLIC_DATOS=fixture npm run dev`, abrir `/lab/campus`. Hay **22 ejemplos**: notebooks, MacBook Air/Pro, celulares genéricos tipo iPhone/Samsung, TV, heladera, split, lavarropas, impresora, router, smartwatch, reloj de pulsera, reloj de pared, baño, calculadora, proyector, luminaria y toma de pared. Se puede girar, despiezar y armar.
+Con `NEXT_PUBLIC_DATOS=fixture npm run dev`, abrir `/lab/campus`. Hay **31 ejemplos**: notebooks, MacBook Air/Pro, celulares genéricos tipo iPhone/Samsung, TV, heladera, split, lavarropas, impresora, router, smartwatch, reloj de pulsera, reloj de pared, baño, calculadora, proyector, luminaria y toma de pared. También incluye tablet, auriculares, mouse, teclado, joystick, parlante bluetooth, cargador, control remoto y batería externa reutilizados de main. Se puede girar, despiezar y armar.
 
 Son esquemas ilustrativos exclusivos del lab. No confirman disposición, compatibilidad, repuestos ni procedimientos de un equipo real. Los MacBook de prueba usan placa integrada y celdas adheridas; Air no lleva ventilador y ninguno tiene RAM/SSD removibles.
 

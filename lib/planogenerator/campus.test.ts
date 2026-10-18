@@ -41,7 +41,7 @@ describe("objetos cercanos del campus", () => {
   });
 
   it("GLB liviano con exactamente los tipos del índice y render de cada uno", () => {
-    expect(statSync(archivo).size).toBeLessThan(2 * 1024 * 1024);
+    expect(statSync(archivo).size).toBeLessThanOrEqual(200 * 1024);
     expect([...biblioteca.keys()].sort()).toEqual(entradas.map(([id]) => id).sort());
     for (const [id] of entradas) {
       expect(id).toMatch(/^[a-z][a-z0-9_]+(@[a-z0-9_]+)?$/);

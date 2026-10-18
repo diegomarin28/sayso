@@ -86,4 +86,5 @@ const ejemplos: EquipoGaleria[] = [
 export const GALERIA_CAMPUS: EquipoGaleria[] = [
   ...GALERIA.filter((e) => ["notebook", "celular", "televisor", "heladera", "aire", "lavarropas", "impresora", "router"].includes(e.id)).map((e) => ({ ...e, grupo: "equipos" as const })),
   ...ejemplos,
+  ...GALERIA.filter((e) => ["tablet", "auriculares", "mouse", "teclado", "joystick", "parlante", "cargador", "control_remoto", "powerbank"].includes(e.id)),
 ];

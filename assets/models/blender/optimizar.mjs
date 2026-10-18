@@ -1,5 +1,5 @@
 /** Centra cada tipo y comprime su geometría sin cambiar IDs, recetas o extras. */
-import { readdir, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Accessor, NodeIO, PropertyType } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -12,13 +12,18 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 const carpeta = process.argv[2] || 'public/models/piezas';
 const destino = process.argv[3] || carpeta;
 const informes = [];
+const indice = JSON.parse(await readFile(path.join(carpeta, "indice.json"), "utf8"));
 for (const archivo of (await readdir(carpeta)).filter((f) => f.endsWith('.glb')).sort()) {
   const doc = await io.read(path.join(carpeta, archivo));
   doc.getRoot().getAsset().generator = "Sayso";
   doc.getRoot().getDefaultScene().setName("");
   for (const b of doc.getRoot().listBuffers()) b.setName("");
+  const medidasOriginales = new Map();
   for (const tipo of doc.getRoot().getDefaultScene().listChildren()) {
     const { min, max } = getBounds(tipo);
+    const medidas = max.map((v, i) => v - min[i]);
+    medidasOriginales.set(tipo, medidas);
+    if (indice.tipos[tipo.getName()]) indice.tipos[tipo.getName()].caja = medidas.map((v) => +v.toFixed(4));
     const centro = min.map((v, i) => (v + max[i]) / 2);
     if (tipo.getExtras().recetas) throw new Error('Usá los GLB crudos recién exportados por Blender, no los ya optimizados.');
     const mesh = doc.createMesh();
@@ -42,9 +47,9 @@ for (const archivo of (await readdir(carpeta)).filter((f) => f.endsWith('.glb'))
       for (const tipo of doc.getRoot().getDefaultScene().listChildren()) {
         const protegida = /^(tramo|redondo):/.test(tipo.getExtras().ajuste || '');
         for (const p of tipo.listChildren()[0].getMesh().listPrimitives()) {
-          if (protegida) continue;
-          simplifyPrimitive(p, { simplifier: MeshoptSimplifier, ratio: 0.1,
-            error: /^(caja_reloj|pantalla@reloj|sensor_optico|bobina_carga)$/.test(tipo.getName()) ? 0.005 : archivo === 'cotidianos.glb' ? 0.055 : archivo === 'facultad.glb' ? 0.02 : 0.002 });
+
+          simplifyPrimitive(p, { simplifier: MeshoptSimplifier, ratio: protegida ? 0.3 : 0.1,
+            error: protegida ? 0.004 : /^(caja_reloj|pantalla@reloj|sensor_optico|bobina_carga)$/.test(tipo.getName()) ? 0.005 : archivo === 'cotidianos.glb' ? 0.055 : archivo === 'facultad.glb' ? 0.02 : 0.002 });
         }
       }
     },
@@ -55,7 +60,11 @@ for (const archivo of (await readdir(carpeta)).filter((f) => f.endsWith('.glb'))
         const { min, max } = getBounds(tipo);
         const c = min.map((v, i) => (v + max[i]) / 2);
         const hijo = tipo.listChildren()[0];
-        hijo.setTranslation(hijo.getTranslation().map((v, i) => v - c[i]));
+        const original = medidasOriginales.get(tipo);
+        const escala = max.map((v, i) => original[i] / (v - min[i]));
+        // Mantener las medidas reales aun si el LOD quitó un vértice extremo.
+        const matrix = [escala[0],0,0,0, 0,escala[1],0,0, 0,0,escala[2],0, -c[0]*escala[0],-c[1]*escala[1],-c[2]*escala[2],1];
+        for (const p of hijo.getMesh().listPrimitives()) transformPrimitive(p, matrix);
       }
     },
     async () => {
@@ -94,8 +103,19 @@ for (const archivo of (await readdir(carpeta)).filter((f) => f.endsWith('.glb'))
       }
     },
     prune({ keepLeaves: true, keepAttributes: true }),
-    meshopt({ encoder: MeshoptEncoder, level: 'high', quantizePosition: archivo === 'cotidianos.glb' ? 10 : archivo === 'facultad.glb' ? 12 : 16, quantizeNormal: 8 }),
+    meshopt({ encoder: MeshoptEncoder, level: 'medium', quantizationVolume: 'mesh', quantizePosition: archivo === 'cotidianos.glb' ? 10 : archivo === 'facultad.glb' ? 12 : 16, quantizeNormal: 8 }),
   );
+  // La cuadrícula de cuantización puede mover extremos de piezas largas y delgadas.
+  // Corregir la matriz de decodificación para conservar la caja física exacta por eje.
+  for (const tipo of doc.getRoot().getDefaultScene().listChildren()) {
+    const { min, max } = getBounds(tipo);
+    const original = medidasOriginales.get(tipo);
+    const k = max.map((v, i) => original[i] / (v - min[i]));
+    const c = min.map((v, i) => (v + max[i]) / 2);
+    const hijo = tipo.listChildren()[0];
+    hijo.setScale(hijo.getScale().map((v, i) => v * k[i]));
+    hijo.setTranslation(hijo.getTranslation().map((v, i) => (v - c[i]) * k[i]));
+  }
   // Evita decenas de dígitos residuales en las matrices de decodificación.
   const redondear = (v) => Math.round(v * (archivo === 'cotidianos.glb' ? 1e3 : 1e4)) / (archivo === 'cotidianos.glb' ? 1e3 : 1e4);
   for (const n of doc.getRoot().listNodes()) {
@@ -108,3 +128,5 @@ for (const archivo of (await readdir(carpeta)).filter((f) => f.endsWith('.glb'))
   informes.push({ archivo, bytes: datos.byteLength });
 }
 console.log(JSON.stringify(informes, null, 2));
+
+await writeFile(path.join(destino, "indice.json"), JSON.stringify(indice, null, 1) + "\n");
