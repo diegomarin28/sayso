@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { KnowledgePack } from "@/shared";
 import type { Plano } from "../_datos/api";
+import { selloCita } from "../../../components/viewer/guia/conversacion";
 import { resumenOrigen, textoResumen, todoDelManual } from "../../../components/viewer/origen";
 import { AnimacionPreparando } from "./animacion-preparando";
 import { Alerta } from "./experto";
@@ -105,7 +106,7 @@ export function ResumenGuia({
                     {i + 1}
                   </span>
                   <p className="min-w-0 flex-1 text-sm leading-snug">{p.texto}</p>
-                  <SelloPaso paso={p} packVerificado={pack.verificado} />
+                  <SelloPaso paso={p} />
                 </li>
               ))}
             </ol>
@@ -141,17 +142,9 @@ export function resumenPasos(pack: Pick<KnowledgePack, "pasos" | "verificado">):
   return `${pack.verificado ? "Manual" : "Guía pública"}: ${conPagina} de ${n} ${n === 1 ? "paso" : "pasos"} con página del manual`;
 }
 
-/** El sello de cada paso: "Manual ✓ p.N" si tiene cita verificada; si no, discreto y en gris. */
-export function textoSelloPaso(
-  p: Pick<KnowledgePack["pasos"][number], "cita">,
-  packVerificado: boolean,
-): { texto: string; verificado: boolean } {
-  if (p.cita?.estado === "VERIFICADO" && p.cita.pagina) return { texto: `Manual ✓ p.${p.cita.pagina}`, verificado: true };
-  return { texto: packVerificado ? "Sin página" : "Guía pública", verificado: false };
-}
-
-function SelloPaso({ paso, packVerificado }: { paso: KnowledgePack["pasos"][number]; packVerificado: boolean }) {
-  const { texto, verificado } = textoSelloPaso(paso, packVerificado);
+/** El sello de cada paso: el mismo de la tarjeta del paso de la guía (`selloCita`, carril B). */
+function SelloPaso({ paso }: { paso: KnowledgePack["pasos"][number] }) {
+  const { texto, verificada: verificado } = selloCita(paso);
   return (
     <span
       className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
