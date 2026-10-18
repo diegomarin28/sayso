@@ -19,12 +19,23 @@ export const TIEMPO_MAXIMO_MS = 150_000;
 /** Error con un mensaje que se le puede mostrar a la persona tal cual. */
 export class ErrorCompras extends Error {}
 
+/** Uno por causa: qué pasó, dicho para la persona (la alternativa la ofrece la pantalla). */
 export const MENSAJES = {
-  sinConexion: "No hay conexión. Revisá internet y probá de nuevo.",
-  tardo: "La búsqueda tardó demasiado. Probá de nuevo.",
-  faltanDatos: "Faltan datos del repuesto para buscarlo.",
-  general: "No pude buscar el repuesto ahora. Probá de nuevo en un rato.",
+  sinConexion: "No hay conexión a internet, así que no pude buscar. Revisá la conexión.",
+  tardo: "La búsqueda tardó más de lo que permite el servidor y se cortó antes de terminar.",
+  faltanDatos: "Faltan datos del repuesto (el modelo del equipo) para buscarlo.",
+  ia: "El buscador (la IA que lee las publicaciones) no respondió esta vez.",
+  interno: "Hubo un error de nuestro lado al buscar el repuesto.",
+  general: "No pude buscar el repuesto por un error inesperado.",
 } as const;
+
+/** El mensaje según la respuesta HTTP de /api/compras (el tope de gasto, 503, lo resuelve `mensajePausa`). */
+export function mensajePorEstado(status: number): string {
+  if (status === 400) return MENSAJES.faltanDatos;
+  if (status === 504 || status === 408) return MENSAJES.tardo; // Vercel cortó la función (maxDuration)
+  if (status === 502) return MENSAJES.ia;
+  return MENSAJES.interno;
+}
 
 /** Corta a los `ms` o cuando corta `senal` (la pantalla se cerró o se buscó de nuevo). */
 function conPlazo(senal: AbortSignal, ms: number): { senal: AbortSignal; vencio: () => boolean; listo: () => void } {
@@ -60,15 +71,14 @@ export function crearFuenteApi(fetcher: typeof fetch = (...a) => fetch(...a), pl
       const datos: unknown = await res.json().catch(() => null);
       const pausa = mensajePausa(res.status, datos);
       if (pausa) throw new ErrorCompras(pausa);
-      if (res.status === 400) throw new ErrorCompras(MENSAJES.faltanDatos);
       if (!res.ok) {
         console.warn("[compras]", res.status, datos);
-        throw new ErrorCompras(MENSAJES.general);
+        throw new ErrorCompras(mensajePorEstado(res.status));
       }
       const r = RespuestaCompras.safeParse(datos);
       if (!r.success) {
         console.error("[compras] respuesta inválida", r.error);
-        throw new ErrorCompras(MENSAJES.general);
+        throw new ErrorCompras(MENSAJES.interno);
       }
       return r.data;
     } finally {
@@ -82,7 +92,7 @@ export const fuenteApi = crearFuenteApi();
 export type EstadoCompras =
   | { t: "inicio" }
   | { t: "buscando" }
-  | { t: "listo"; opciones: OpcionCompra[] }
+  | { t: "listo"; opciones: OpcionCompra[]; motivo?: "incompleta" }
   | { t: "error"; mensaje: string };
 
 /**
@@ -99,7 +109,7 @@ export async function buscar(
     const r = await fuente(pedido, senal);
     if (senal.aborted) return null;
     r.eventos.forEach((e) => onEvento?.(e));
-    return { t: "listo", opciones: r.opciones };
+    return { t: "listo", opciones: r.opciones, ...(r.motivo ? { motivo: r.motivo } : {}) };
   } catch (e) {
     if (senal.aborted) return null;
     if (!(e instanceof ErrorCompras)) console.error("[compras]", e);

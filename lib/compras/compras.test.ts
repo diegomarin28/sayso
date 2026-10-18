@@ -161,14 +161,50 @@ describe("buscarOpciones", () => {
     expect(pedidos[1].messages).toHaveLength(2);
   });
 
-  it("pide corregir una vez y si vuelve a fallar lanza ErrorIA", async () => {
+  it("pide corregir una vez y si vuelve a fallar no es un error: vuelve sin opciones y con motivo «incompleta»", async () => {
     let llamadas = 0;
     const enviar: EnviarMensaje = async () => {
       llamadas++;
       return mensaje([texto("no sé")]);
     };
-    await expect(buscarOpciones(PEDIDO, { enviar })).rejects.toThrow("propuesta válida");
+    const r = await buscarOpciones(PEDIDO, { enviar });
     expect(llamadas).toBe(2);
+    expect(r).toMatchObject({ opciones: [], motivo: "incompleta" });
+    expect(r.costo.tokensEntrada).toBe(2000);
+  });
+
+  it("pasado el plazo deja de buscar: pide el JSON sin herramientas y devuelve lo que encontró (antes del corte de la ruta)", async () => {
+    let reloj = 0;
+    const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const enviar: EnviarMensaje = async (p) => {
+      pedidos.push(structuredClone(p));
+      reloj += 40_000; // cada vuelta de búsqueda tarda
+      return p.tool_choice?.type === "none"
+        ? mensaje([texto(JSON.stringify({ cotizacion: null, candidatos: [candidato(ML, 1290)] }))])
+        : mensaje(BLOQUES, "pause_turn");
+    };
+    const r = await buscarOpciones(PEDIDO, { enviar, ahora: () => reloj });
+    expect(r.opciones).toHaveLength(1);
+    expect(r.motivo).toBeUndefined();
+    expect(pedidos.slice(0, -1).every((p) => !p.tool_choice)).toBe(true);
+    const ultimo = pedidos.at(-1)!;
+    expect(ultimo.tool_choice).toEqual({ type: "none" });
+    expect(JSON.stringify(ultimo.messages.at(-1))).toContain("Se terminó el tiempo de búsqueda");
+    expect(pedidos.length).toBeLessThanOrEqual(4); // 75 s de plazo: 2 vueltas de 40 s y el cierre
+  });
+
+  it("busca con el nombre de la pieza (no con el id del pack) y sin número de parte dice «desconocido»", async () => {
+    const pedidos: Anthropic.MessageCreateParamsNonStreaming[] = [];
+    const enviar: EnviarMensaje = async (p) => {
+      pedidos.push(structuredClone(p));
+      return mensaje([texto(JSON.stringify({ cotizacion: null, candidatos: [] }))]);
+    };
+    const r = await buscarOpciones({ pieza: "conector_lightning", nombre: "Conector Lightning de carga", numeroParte: null, modelo: "iPhone 13", marca: "Apple" }, { enviar });
+    expect(r).toMatchObject({ opciones: [] });
+    expect(r.motivo).toBeUndefined();
+    const pedido = JSON.stringify(pedidos[0].messages[0]);
+    expect(pedido).toContain("Conector Lightning de carga");
+    expect(pedido).toContain("número de parte (FRU): desconocido");
   });
 });
 

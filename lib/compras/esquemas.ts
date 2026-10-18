@@ -10,6 +10,8 @@ import { LIMITES_COMPRAS as COMPRAS } from "./limites";
 export const PedidoCompra = z.object({
   /** Id de la pieza del knowledge pack, ej. "ventilador". */
   pieza: z.string().min(1).max(80),
+  /** Nombre de la pieza en el pack, ej. "Conector Lightning de carga": se busca y se muestra con él. */
+  nombre: z.string().max(120).nullable().optional(),
   /** FRU del knowledge pack. Sin él solo se puede verificar por modelo. */
   numeroParte: z.string().max(60).nullable().optional(),
   modelo: z.string().min(1).max(120),
@@ -72,5 +74,7 @@ export const ResultadoCompras = z.object({
   /** Por qué se descartó cada candidato (para el feed y para depurar). */
   descartados: z.array(z.string()),
   costo: Costo,
+  /** "incompleta": el agente no llegó a cerrar la búsqueda a tiempo (las opciones pueden faltar). */
+  motivo: z.enum(["incompleta"]).optional(),
 });
 export type ResultadoCompras = z.infer<typeof ResultadoCompras>;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Evento } from "../../shared";
 import type { OpcionCompra, PedidoCompra } from "../../lib/compras/esquemas";
 import { buscar as buscarOpciones, fuenteApi, hrefSeguro, type EstadoCompras, type FuenteCompras } from "./fuente";
-import { avisoPrecio, COMPATIBILIDAD, precio, textoEnvio, textoTotal } from "./textos";
+import { avisoPrecio, COMPATIBILIDAD, enlaceBusqueda, nombrePieza, precio, textoEnvio, textoTotal } from "./textos";
 
 /**
  * Pantalla 6 — dónde comprar el repuesto (A6). Autocontenido: llama a /api/compras y muestra
@@ -32,16 +32,16 @@ export function OpcionesCompra({
 }: OpcionesCompraProps) {
   const [estado, setEstado] = useState<EstadoCompras>({ t: buscarAlMontar ? "buscando" : "inicio" });
   const control = useRef<AbortController | null>(null);
-  const { pieza, numeroParte, modelo, marca, casoId } = pedido;
+  const { pieza, nombre, numeroParte, modelo, marca, casoId } = pedido;
 
   const buscar = useCallback(async () => {
     control.current?.abort();
     const c = new AbortController();
     control.current = c;
     setEstado({ t: "buscando" });
-    const r = await buscarOpciones(fuente, { pieza, numeroParte, modelo, marca, casoId }, c.signal, onEvento);
+    const r = await buscarOpciones(fuente, { pieza, nombre, numeroParte, modelo, marca, casoId }, c.signal, onEvento);
     if (r) setEstado(r);
-  }, [fuente, onEvento, pieza, numeroParte, modelo, marca, casoId]);
+  }, [fuente, onEvento, pieza, nombre, numeroParte, modelo, marca, casoId]);
 
   useEffect(() => {
     const t = buscarAlMontar ? setTimeout(() => void buscar(), 0) : undefined;
@@ -53,30 +53,30 @@ export function OpcionesCompra({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <VistaCompras estado={estado} pieza={pieza} numeroParte={numeroParte} onBuscar={() => void buscar()} className={className} />;
+  return <VistaCompras estado={estado} pedido={pedido} onBuscar={() => void buscar()} className={className} />;
 }
 
 /** Lo que se ve en cada estado. Sin estado propio: se prueba renderizándola (components/compras/compras.test.tsx). */
 export function VistaCompras({
   estado,
-  pieza,
-  numeroParte,
+  pedido,
   onBuscar,
   className = "",
 }: {
   estado: EstadoCompras;
-  pieza: string;
-  numeroParte?: string | null;
+  pedido: Pick<PedidoCompra, "pieza" | "nombre" | "numeroParte" | "modelo" | "marca">;
   onBuscar: () => void;
   className?: string;
 }) {
+  const nombre = nombrePieza(pedido.pieza, pedido.nombre);
+  const equipo = [pedido.marca, pedido.modelo].filter(Boolean).join(" ");
   return (
     <section className={`flex min-w-0 flex-col gap-3 text-texto ${className}`} aria-live="polite" aria-busy={estado.t === "buscando"}>
       <header>
         <h2 className="text-lg font-semibold">Dónde comprar el repuesto</h2>
         <p className="text-sm break-words text-texto-suave">
-          {pieza}
-          {numeroParte ? ` · N.º de parte ${numeroParte}` : ""}
+          {nombre}
+          {pedido.numeroParte ? ` · N.º de parte ${pedido.numeroParte}` : ""}
         </p>
       </header>
 
@@ -90,12 +90,21 @@ export function VistaCompras({
 
       {estado.t === "error" && (
         <Aviso tono="peligro" texto={estado.mensaje}>
+          <Alternativa pedido={pedido} />
           <BotonBuscar secundario onClick={onBuscar}>Buscar de nuevo</BotonBuscar>
         </Aviso>
       )}
 
       {estado.t === "listo" && estado.opciones.length === 0 && (
-        <Aviso tono="neutro" texto="No encontré publicaciones de este repuesto con envío a Uruguay. Probá de nuevo más tarde o consultá con un técnico.">
+        <Aviso
+          tono="neutro"
+          texto={
+            estado.motivo === "incompleta"
+              ? `No llegué a terminar la búsqueda de ${nombre} a tiempo: hay muchas publicaciones para leer.`
+              : `No encontré publicaciones de ${nombre} para ${equipo || "tu equipo"} con envío a Uruguay${pedido.numeroParte ? "" : " (el manual no trae número de parte, así que busqué por modelo)"}.`
+          }
+        >
+          <Alternativa pedido={pedido} />
           <BotonBuscar secundario onClick={onBuscar}>Buscar de nuevo</BotonBuscar>
         </Aviso>
       )}
@@ -113,6 +122,32 @@ export function VistaCompras({
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * Lo que la persona puede hacer igual: buscarlo en Mercado Libre (una búsqueda, no un resultado verificado) o
+ * pedirlo en un servicio técnico con el número de parte. Nunca compra nada.
+ */
+function Alternativa({ pedido }: { pedido: Pick<PedidoCompra, "pieza" | "nombre" | "numeroParte" | "modelo" | "marca"> }) {
+  const href = hrefSeguro(enlaceBusqueda(pedido));
+  return (
+    <div className="flex flex-col gap-2 text-sm text-texto-suave">
+      <p>
+        Mientras tanto podés buscarlo vos en Mercado Libre (no está verificado que sea compatible)
+        {pedido.numeroParte ? ` o pedirlo en un servicio técnico con el N.º de parte ${pedido.numeroParte}` : " o consultarlo en un servicio técnico"}.
+      </p>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-12 items-center justify-center rounded-2xl border border-borde px-4 py-2 text-center font-semibold text-texto"
+        >
+          Buscarlo en Mercado Libre
+        </a>
+      )}
+    </div>
   );
 }
 
