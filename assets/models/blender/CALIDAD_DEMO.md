@@ -147,12 +147,18 @@ En el visor, tamaño iPhone: abierto (antes y después) y despiezado (antes y de
 
 ## Televisor de frente
 
-El TV va parado y de frente a la cámara (B1), así que cerrado se ve el frente de la carcasa, y el frente era una chapa gris: en la prueba real no se reconocía como un TV. Ahora la zona de la pantalla es vidrio oscuro, con el marco y el logo del borde de abajo. Sirve para cualquier TV, con las mismas medidas de antes (no cambia cómo se ajusta). `carcasas.glb`: 29 KiB.
+El TV va parado y de frente a la cámara (B1), así que cerrado se ve el frente de la carcasa. Primero era una chapa gris; con #203 pasó a vidrio oscuro, pero era un rectángulo negro sin nada que lo identificara (#219, punto 5). Ahora se reconoce como un TV, **por tipo y sin marca ni modelo**:
 
-Antes y después (mismo estudio):
+- pantalla de vidrio oscuro dentro de un **bisel fino con filete metálico**;
+- **mentón** abajo, con una placa lisa al centro y el **LED** de encendido a la derecha;
+- **pie de dos patas en "Λ"** plateadas, abiertas hacia el piso, tan profundas como el cuerpo.
+
+Las medidas casi no cambian (66,3 × 6,1 cm, contra 66 × 6,06). `carcasas.glb`: 30 KiB.
+
+Antes (#203) y después, mismo estudio:
 
 ![Carcasa del TV, antes y después](renders/calidad/tv-frente-antes-despues.jpg)
 
-En el visor, tamaño iPhone, cerrado: el TV TCL de la caché (generado) y el TV del lab (esqueleto). El vigía de "3D en negro" no lo toma como falla:
+En el visor, tamaño iPhone, cerrados: el TV TCL 55" de la caché y un Samsung 65" generado con IA simulada (otras medidas y otras piezas). El vigía de "3D en negro" no los toma como falla:
 
-![TV en el visor](renders/calidad/tv-frente-visor.jpg)
+![Dos TV en el visor](renders/calidad/tv-frente-visor.jpg)

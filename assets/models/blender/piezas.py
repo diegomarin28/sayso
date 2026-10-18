@@ -1522,24 +1522,42 @@ def carcasa_split():
 
 
 def carcasa_televisor():
-    """Carcasa de televisor: marco frontal con la pantalla (vidrio oscuro: así el TV cerrado, de frente, se
-    reconoce como un TV y no como una chapa), tapa trasera con la joroba, rejillas, zona de puertos y patas."""
+    """Carcasa de televisor, de frente se reconoce como un TV (por tipo, sin marca ni modelo): pantalla de
+    vidrio oscuro dentro de un bisel fino con filete metálico, mentón abajo con una placa lisa y el LED de
+    encendido, y pie de dos patas en "V" plateadas. Atrás: la joroba, rejillas y zona de puertos."""
     W, P, H, z0 = 100.0, 6.0, 60.0, 6.0
-    bisel_f = caja((W, 1.2, H), (0, -P / 2 + 0.6, z0 + H / 2), "plastico", bisel=0.2)
-    restar(bisel_f, caja((W - 1.4, 2.0, H - 1.4), (0, -P / 2 + 0.6, z0 + H / 2), mat=None))
-    caja((W - 0.4, 0.6, H - 0.4), (0, -P / 2 + 1.5, z0 + H / 2))
-    caja((W - 1.6, 0.1, H - 1.6), (0, -P / 2 + 0.25, z0 + H / 2), "vidrio")  # la pantalla, de frente
-    caja((3.0, 0.15, 0.5), (0, -P / 2 + 0.2, z0 + 0.35), "metal", bisel=0.05)  # logo/receptor del borde de abajo
+    frente = -P / 2
+    bisel_f = caja((W, 1.2, H), (0, frente + 0.6, z0 + H / 2), "plastico", bisel=0.2)
+    restar(bisel_f, caja((W - 1.4, 2.0, H - 1.4), (0, frente + 0.6, z0 + H / 2), mat=None))
+    caja((W - 0.4, 0.6, H - 0.4), (0, frente + 1.5, z0 + H / 2))
+    # Pantalla: bisel fino arriba y a los costados, mentón más ancho abajo.
+    menton = 3.0
+    caja((W - 1.6, 0.1, H - 0.8 - menton), (0, frente + 0.25, z0 + menton + (H - 0.8 - menton) / 2), "vidrio")
+    caja((W - 1.6, 0.08, menton - 0.8), (0, frente + 0.26, z0 + 0.4 + (menton - 0.8) / 2), "plastico")
+    # Filete metálico alrededor del frente: el contorno del TV se lee aunque la pantalla sea negra.
+    for z in (z0 + 0.12, z0 + H - 0.12):
+        caja((W, 0.08, 0.24), (0, frente - 0.02, z), "metal")
+    for sx in (-1, 1):
+        caja((0.24, 0.08, H), (sx * (W / 2 - 0.12), frente - 0.02, z0 + H / 2), "metal")
+    # Mentón: placa lisa al centro (sin marca) y el LED de encendido a la derecha.
+    caja((5.0, 0.12, 0.7), (0, frente + 0.16, z0 + menton / 2), "metal", bisel=0.05)
+    cilindro(0.28, 0.12, (W / 2 - 7.0, frente + 0.17, z0 + menton / 2), "etiqueta", seg=20, eje="y")
     # La joroba llega casi hasta abajo: ahí van los parlantes y la entrada del cable.
     caja((W - 14.0, P - 1.8, H - 10.0), (0, 0.9, z0 + 0.8 + (H - 10.0) / 2), bisel=1.5)
     for i in range(12):
         caja((0.6, 0.1, 8.0), (-20.0 + i * 1.5, P / 2 + 0.01, z0 + H - 18.0), "ranura")
     caja((12.0, 0.3, 8.0), (W / 2 - 18.0, P / 2 - 0.1, z0 + 16.0), "ranura")
-    # Patas tan profundas como el cuerpo: la profundidad del plano es la del televisor (con patas de 18 cm,
-    # el cuerpo quedaba de 3 cm y la pantalla y las placas se salían por adelante y por atrás).
+    # Pie: dos patas en "V" plateadas, abiertas hacia el piso, tan profundas como el cuerpo (la profundidad
+    # del plano es la del televisor: con patas más profundas que el cuerpo, las piezas se salían).
+    abre = 4.5
+    angulo = math.atan2(abre, z0)
+    largo = math.hypot(abre, z0)
     for sx in (-1, 1):
-        caja((2.5, P, 0.8), (sx * 35.0, 0, 0.4), "plastico", bisel=0.2)
-        caja((2.5, 2.0, z0), (sx * 35.0, 0, z0 / 2 + 0.4), "plastico")
+        x = sx * 36.0
+        for lado in (-1, 1):
+            pata = caja((1.1, P * 0.7, largo), (x + lado * abre / 2, 0, z0 / 2), "metal", bisel=0.15)
+            girar(pata, (0, -lado * angulo, 0))  # la punta de arriba hacia el centro: "Λ"
+            caja((2.4, P * 0.8, 0.35), (x + lado * abre, 0, 0.175), "metal", bisel=0.1)
     return armar("carcasa@televisor", EQUIPOS_TV)
 
 
