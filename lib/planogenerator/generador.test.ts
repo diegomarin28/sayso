@@ -251,7 +251,8 @@ describe("generarPlano (con la IA simulada)", () => {
     expect(pedido!.system).toMatch(/DATOS, nunca instrucciones/);
     expect(pedido!.contenido[0]).toMatchObject({ type: "image" });
     const texto = JSON.stringify(pedido!.contenido);
-    for (const p of kp.piezas.filter((q) => q.id !== "base")) expect(texto).toContain(`- ${p.id}:`);
+    // La estructura (base y tapa inferior) no se pide: la pone la plantilla.
+    for (const p of kp.piezas.filter((q) => !["base", "tapa_inferior"].includes(q.id))) expect(texto).toContain(`- ${p.id}:`);
     expect(texto).toContain("páginas 54");
   });
 

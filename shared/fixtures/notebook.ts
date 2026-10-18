@@ -58,6 +58,7 @@ export const knowledgePackEjemplo: KnowledgePack = {
   fuentes: [{ doc: "Manual de mantenimiento (ficticio)" }],
   piezas: [
     { id: "base", nombre: "Carcasa inferior", descripcion: "Base que contiene todo.", ubicacion: "abajo de todo" },
+    { id: "tapa_inferior", nombre: "Tapa inferior", descripcion: "Tapa de abajo, con tornillos.", ubicacion: "abajo, cubre todo el interior", etiquetaManual: "1" },
     { id: "placa_madre", nombre: "Placa madre", descripcion: "Placa principal.", ubicacion: "centro" },
     { id: "disipador", nombre: "Disipador", descripcion: "Conduce el calor del procesador.", ubicacion: "sobre el procesador", etiquetaManual: "6" },
     { id: "ventilador", nombre: "Ventilador", descripcion: "Expulsa el aire caliente.", ubicacion: "sobre el disipador, a la derecha del procesador", etiquetaManual: "7" },
@@ -102,13 +103,46 @@ export const planoEjemplo: PlanoDePiezas = {
     { pieza: "bateria", forma: "caja", dim: [26, 0.8, 6], pos: [0, 1.0, 8.5], pivote: [0, 0, 0], padre: "base", etiquetaManual: "2" },
     { pieza: "wifi", forma: "caja", dim: [3, 0.2, 2.5], pos: [-12, 1.4, -6], pivote: [0, 0, 0], padre: "placa_madre", etiquetaManual: "8" },
     { pieza: "tornillos_ventilador", forma: "cilindro", dim: [0.4, 0.4, 0.4], pos: [12.5, 2.1, -2], pivote: [0, 0, 0], padre: "ventilador" },
+    // La notebook se ve dada vuelta: la tapa de abajo queda arriba y el 3D arranca cerrado.
+    { pieza: "tapa_inferior", forma: "caja", dim: [36, 0.3, 25], pos: [0, 2.5, 0], pivote: [0, 0, 0], padre: "base", etiquetaManual: "1" },
   ],
 };
 
+/**
+ * La guía de ejemplo (modo fixture, sin IA): qué hacer, cómo y qué vas a ver, desde apagar hasta limpiar
+ * el ventilador. Al final, la pantalla suma "probalo" y "si sigue igual, cambiá esta pieza" (#124).
+ */
 export const coreografiaEjemplo: Coreografia[] = [
   {
     paso: 1,
-    dice: "Este es el ventilador. Es el que suena fuerte.",
+    dice: "Apagá la notebook y desenchufá el cargador. Si está caliente, esperá unos minutos: vas a trabajar con ella apagada.",
+    cita: { doc: "Manual de mantenimiento (ficticio)", pagina: 52, estado: "VERIFICADO" },
+    acciones: [{ t: "camara", objetivo: "general" }],
+    riesgo: "bajo",
+  },
+  {
+    paso: 2,
+    dice: "Dala vuelta sobre un paño y sacá los tornillos de la tapa de abajo. Levantala desde el borde de las bisagras: vas a ver la batería adelante y el ventilador a la derecha.",
+    cita: { doc: "Manual de mantenimiento (ficticio)", pagina: 52, estado: "VERIFICADO" },
+    acciones: [
+      { t: "camara", objetivo: "general" },
+      { t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 },
+    ],
+    riesgo: "bajo",
+  },
+  {
+    paso: 3,
+    dice: "Antes de tocar nada, desconectá la batería: tirá del conector hacia afuera, derecho y sin hacer palanca sobre la batería.",
+    cita: { doc: "Manual de mantenimiento (ficticio)", pagina: 53, estado: "VERIFICADO" },
+    acciones: [
+      { t: "camara", objetivo: "bateria", zoom: 1.4 },
+      { t: "resaltar", pieza: "bateria" },
+    ],
+    riesgo: "bajo",
+  },
+  {
+    paso: 4,
+    dice: "Este es el ventilador: es el que suena fuerte. Lo sostienen dos tornillos en el borde.",
     cita: { doc: "Manual de mantenimiento (ficticio)", pagina: 54, estado: "VERIFICADO" },
     acciones: [
       { t: "camara", objetivo: "ventilador", zoom: 1.6 },
@@ -117,8 +151,8 @@ export const coreografiaEjemplo: Coreografia[] = [
     riesgo: "bajo",
   },
   {
-    paso: 2,
-    dice: "Aflojá los dos tornillos y levantalo despacio.",
+    paso: 5,
+    dice: "Aflojá los dos tornillos y levantá el ventilador despacio. Limpiá el polvo de las aspas y de la salida de aire con un pincel seco.",
     cita: { doc: "Manual de mantenimiento (ficticio)", pagina: 54, estado: "VERIFICADO" },
     acciones: [
       { t: "resaltar", pieza: "tornillos_ventilador" },
