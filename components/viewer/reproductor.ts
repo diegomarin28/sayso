@@ -12,6 +12,11 @@ import type { Accion, Coreografia, Evento, Vec3 } from "../../shared";
  * - `ocultar`: la pieza se desvanece. `restaurar` vuelve todo al reposo.
  * - `despiezar`: separa todas las piezas; `cantidad` 0 = armado, 1 = despiece completo.
  * - `camara`: encuadra una pieza (o "general" para ver todo) con un `zoom` opcional.
+ *
+ * Cerrado / abierto: el equipo arranca CERRADO (tapas y carcasas opacas, sin rayos X). Se abre cuando
+ * un paso saca o mueve una tapa (`ocultar`, `desplazar` o `rotar` una cubierta; la carcasa raíz no se
+ * abre al girarla: girar el TV no es abrirlo) o despieza. Se cierra con `restaurar`, al armar
+ * (`despiezar` 0) o con un paso que solo vuelve a la vista general (las tapas vuelven a su lugar).
  */
 
 export const OBJETIVO_GENERAL = "general";
@@ -23,18 +28,24 @@ export type EstadoPieza = {
   resaltada: boolean;
 };
 
+/** Qué piezas tapan el equipo: "tapa" (tapas, puertas, carcasas hijas) o "raiz" (la carcasa de la que cuelga todo). */
+export type Cubiertas = Record<string, "tapa" | "raiz">;
+
 export type EstadoEscena = {
   piezas: Record<string, EstadoPieza>;
   despiece: number;
   camara: { objetivo: string; zoom: number };
+  /** Abierto: las cubiertas se ven translúcidas (rayos X). Cerrado (o sin dato): opacas. */
+  abierto?: boolean;
+  cubiertas?: Cubiertas;
 };
 
 export type ContextoEventos = { casoId: string };
 
 const reposo = (): EstadoPieza => ({ rot: [0, 0, 0], desp: [0, 0, 0], visible: true, resaltada: false });
 
-export function estadoInicial(piezas: Iterable<string>): EstadoEscena {
-  const estado: EstadoEscena = { piezas: {}, despiece: 0, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 } };
+export function estadoInicial(piezas: Iterable<string>, cubiertas: Cubiertas = {}): EstadoEscena {
+  const estado: EstadoEscena = { piezas: {}, despiece: 0, camara: { objetivo: OBJETIVO_GENERAL, zoom: 1 }, abierto: false, cubiertas };
   for (const id of piezas) estado.piezas[id] = reposo();
   return estado;
 }
@@ -55,6 +66,10 @@ export function aplicarAccion(
 
   const piezas = { ...estado.piezas };
   const cambiar = (id: string, f: (p: EstadoPieza) => EstadoPieza) => (piezas[id] = f(piezas[id]));
+  const cubierta = pieza !== undefined ? estado.cubiertas?.[pieza] : undefined;
+  // Sacar o mover una tapa abre el equipo (girar la carcasa raíz, no).
+  const abre =
+    (accion.t === "ocultar" || accion.t === "desplazar") && !!cubierta ? true : accion.t === "rotar" && cubierta === "tapa" ? true : undefined;
 
   switch (accion.t) {
     case "camara":
@@ -76,11 +91,27 @@ export function aplicarAccion(
       cambiar(accion.pieza, (p) => ({ ...p, visible: false, resaltada: false }));
       break;
     case "despiezar":
-      return { estado: { ...estado, despiece: accion.cantidad } };
+      return { estado: { ...estado, despiece: accion.cantidad, abierto: accion.cantidad > 0 } };
     case "restaurar":
-      return { estado: estadoInicial(Object.keys(estado.piezas)) };
+      return { estado: estadoInicial(Object.keys(estado.piezas), estado.cubiertas) };
   }
-  return { estado: { ...estado, piezas } };
+  return { estado: { ...estado, piezas, ...(abre ? { abierto: true } : {}) } };
+}
+
+/** ¿El paso solo vuelve a la vista general? (Entonces el equipo se cierra.) */
+export function soloVuelveAGeneral(coreografia: Coreografia): boolean {
+  return coreografia.acciones.length > 0 && coreografia.acciones.every((a) => a.t === "camara" && a.objetivo === OBJETIVO_GENERAL);
+}
+
+/** Cierra el equipo: las tapas vuelven a su lugar (visibles, sin girar ni correr), armado y opaco. */
+export function cerrar(estado: EstadoEscena): EstadoEscena {
+  const piezas = { ...estado.piezas };
+  for (const [id, tipo] of Object.entries(estado.cubiertas ?? {})) {
+    const p = piezas[id];
+    if (!p) continue;
+    piezas[id] = { ...p, visible: true, desp: [0, 0, 0], rot: tipo === "tapa" ? [0, 0, 0] : p.rot };
+  }
+  return { ...estado, piezas, despiece: 0, abierto: false };
 }
 
 /** Empieza un paso nuevo: apaga los resaltados del paso anterior. */
@@ -97,7 +128,7 @@ export function aplicarCoreografia(
   ctx: ContextoEventos,
 ): { estado: EstadoEscena; eventos: Evento[] } {
   const eventos: Evento[] = [];
-  let actual = comenzarPaso(estado);
+  let actual = soloVuelveAGeneral(coreografia) ? cerrar(comenzarPaso(estado)) : comenzarPaso(estado);
   for (const accion of coreografia.acciones) {
     const r = aplicarAccion(actual, accion, ctx);
     actual = r.estado;

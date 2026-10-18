@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
-import { COLOR_ACTIVO, animar, encuadre, ladoEtiqueta, prepararEscena } from "./escena";
+import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -126,5 +126,81 @@ describe("escena: lado de la etiqueta", () => {
 
   it("a la izquierda si a la derecha se sale del lienzo", () => {
     expect(ladoEtiqueta({ x: 300, y: 300 }, etiqueta, lienzo, 0).h).toBe("izquierda");
+  });
+});
+
+describe("escena: cerrado / abierto", () => {
+  const opacidadDe = (escena: ReturnType<typeof prepararEscena>, id: string) =>
+    (escena.nodos.get(id)!.principal.material as THREE.MeshStandardMaterial).opacity;
+
+  it("tapas, puertas y carcasas son cubiertas; la raíz que no es carcasa, no", () => {
+    expect(prepararEscena(planoNotebookBase).cubiertas).toEqual({ tapa_inferior: "tapa" });
+  });
+
+  it("la tapa (translúcida en su receta) se ve opaca cerrada y translúcida al abrir", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    const cerrado = estadoInicial(escena.nodos.keys(), escena.cubiertas);
+    animar(escena, cerrado, 0);
+    animar(escena, cerrado, 5000);
+    expect(opacidadDe(escena, "tapa_inferior")).toBeCloseTo(1, 3);
+    const abierto = aplicarAccion(cerrado, { t: "despiezar", cantidad: 1 }, { casoId: "c" }).estado;
+    animar(escena, abierto, 5001);
+    animar(escena, abierto, 10000);
+    expect(opacidadDe(escena, "tapa_inferior")).toBeLessThan(0.5);
+  });
+});
+
+describe("escena: la etiqueta adentro de la pantalla y sin temblar", () => {
+  const lienzo = { width: 390, height: 600 };
+  const etiqueta = { ancho: 150, alto: 34 };
+  const adentro = (u: ReturnType<typeof colocarEtiqueta>, ancla: { x: number; y: number }, reservado = 0) => {
+    const x = ancla.x + u.caja.x;
+    const y = ancla.y + u.caja.y;
+    expect(x).toBeGreaterThanOrEqual(8);
+    expect(x + etiqueta.ancho).toBeLessThanOrEqual(lienzo.width - 8);
+    expect(y).toBeGreaterThanOrEqual(reservado + 8);
+    expect(y + etiqueta.alto).toBeLessThanOrEqual(lienzo.height - 8);
+  };
+
+  it("nunca se corta en el borde: pieza pegada a la derecha, a la izquierda, arriba o fuera de la pantalla", () => {
+    for (const ancla of [{ x: 385, y: 300 }, { x: 5, y: 300 }, { x: 200, y: 20 }, { x: 200, y: 595 }, { x: 600, y: -50 }]) {
+      adentro(colocarEtiqueta(ancla, etiqueta, lienzo, 0), ancla);
+    }
+  });
+
+  it("tampoco se mete debajo de la frase", () => {
+    const ancla = { x: 200, y: 140 };
+    adentro(colocarEtiqueta(ancla, etiqueta, lienzo, 120), ancla, 120);
+  });
+
+  it("no salta de lado por poco al girar: se queda mientras entre (o casi), y cambia si ya no entra", () => {
+    const ancla = { x: 212, y: 300 }; // a la derecha le faltan 8 px (212 + 28 + 150 = 390 > 382)
+    expect(colocarEtiqueta(ancla, etiqueta, lienzo, 0).lado.h).toBe("izquierda"); // sin historia, el que entra
+    expect(colocarEtiqueta(ancla, etiqueta, lienzo, 0, { h: "derecha", v: "arriba" }).lado.h).toBe("derecha"); // venía de la derecha: se queda
+    expect(colocarEtiqueta({ x: 260, y: 300 }, etiqueta, lienzo, 0, { h: "derecha", v: "arriba" }).lado.h).toBe("izquierda"); // ya no entra: cambia
+  });
+
+  it("la línea guía llega a la esquina del recuadro más cercana a la pieza", () => {
+    const u = colocarEtiqueta({ x: 100, y: 300 }, etiqueta, lienzo, 0);
+    expect(u.lado).toEqual({ h: "derecha", v: "arriba" });
+    expect(u.punta).toEqual({ x: u.caja.x, y: u.caja.y + etiqueta.alto });
+  });
+});
+
+describe("escena: vista general en el celular", () => {
+  it("en una pantalla vertical el equipo entra entero a lo ancho (no se sale por los costados)", () => {
+    const escena = prepararEscena(planoNotebookBase);
+    const tam = { width: 390, height: 500 };
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const e = encuadre(escena, "general", 1, camara, tam);
+    camara.position.copy(e.posicion);
+    camara.lookAt(e.objetivo);
+    camara.updateMatrixWorld();
+    const caja = new THREE.Box3().setFromObject(escena.raiz);
+    for (const x of [caja.min.x, caja.max.x])
+      for (const z of [caja.min.z, caja.max.z]) {
+        const p = new THREE.Vector3(x, caja.max.y, z).project(camara);
+        expect(Math.abs(p.x)).toBeLessThanOrEqual(1);
+      }
   });
 });

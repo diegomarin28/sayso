@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
-import { desplazamientoDespiece, type EstadoEscena } from "./reproductor";
+import { desplazamientoDespiece, type Cubiertas, type EstadoEscena } from "./reproductor";
 import { crearTween, seguir, type Tween } from "./tween";
 
 /**
@@ -53,6 +53,8 @@ export type NodoAnimable = {
   ancestros: string[];
   /** Posición en la secuencia del despiece (de abajo hacia arriba). */
   orden: number;
+  /** Tapa, puerta o carcasa: opaca con el equipo cerrado, translúcida cuando se abre. */
+  cubierta: boolean;
   tw: Record<"desp" | "despiece" | "rot" | "visible" | "foco" | "fantasma", Tween>;
 };
 
@@ -65,7 +67,14 @@ export type EscenaPreparada = {
   despiece: { ultimo: number; subiendo: boolean };
   /** Desde dónde mira la cámara (perspectiva): la cara grande del equipo hacia la cámara (ver `direccionDeCamara`). */
   direccion: THREE.Vector3;
+  /** Qué piezas tapan el equipo (para `estadoInicial`: arranca cerrado). */
+  cubiertas: Cubiertas;
+  /** Fundido entre cerrado (0) y abierto (1). */
+  apertura: Tween;
 };
+
+/** Tapas, puertas y carcasas: lo que tapa el interior. */
+const ES_CUBIERTA = /^(tapa|carcasa|puerta)/;
 
 export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
   const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca, tipoEquipo });
@@ -85,6 +94,7 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
       centroPadre: padre?.centro ?? null,
       ancestros: ancestrosDe(nodo, raiz),
       orden: enOrden.indexOf(id),
+      cubierta: ES_CUBIERTA.test(id),
       tw: {
         desp: crearTween([0, 0, 0]),
         despiece: crearTween([0, 0, 0]),
@@ -98,7 +108,19 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
   const caja = new THREE.Box3().setFromObject(raiz);
   const radio = Math.max(caja.getBoundingSphere(new THREE.Sphere()).radius, 1);
   const direccion = direccionDeCamara(caja.getSize(new THREE.Vector3()));
-  return { raiz, nodos: animables, avisos, radio, piso: caja.min.y, despiece: { ultimo: 0, subiendo: true }, direccion };
+  const cubiertas: Cubiertas = {};
+  for (const a of animables.values()) if (a.cubierta) cubiertas[a.id] = a.ancestros.length === 0 ? "raiz" : "tapa";
+  return {
+    raiz,
+    nodos: animables,
+    avisos,
+    radio,
+    piso: caja.min.y,
+    despiece: { ultimo: 0, subiendo: true },
+    direccion,
+    cubiertas,
+    apertura: crearTween([0]),
+  };
 }
 
 /**
@@ -216,6 +238,7 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
   }
   const activos = new Set(piezasResaltadas(estado));
   const latido = 1 + 0.25 * Math.sin(ahora / 260);
+  const [apertura] = seguir(escena.apertura, [estado.abierto ? 1 : 0], ahora, DURACION.fundido);
   const total = escena.nodos.size;
 
   for (const [id, a] of escena.nodos) {
@@ -248,21 +271,30 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     const [fantasma] = seguir(a.tw.fantasma, [esFantasma ? 1 : 0], ahora, DURACION.foco);
     const [visible] = seguir(a.tw.visible, [e.visible ? 1 : 0], ahora, DURACION.fundido);
 
-    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido);
+    for (const m of a.mallas) pintar(m, foco, fantasma, visible, latido, a.cubierta ? 1 - apertura : null);
   }
 }
 
-function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: number, latido: number) {
+/** Una cubierta con el equipo abierto se ve así de translúcida como mucho (aunque su receta sea opaca, ej. una puerta). */
+const OPACIDAD_CUBIERTA_ABIERTA = 0.2;
+
+/**
+ * `cerrada`: null si no es una cubierta; si lo es, 1 = equipo cerrado (opaca aunque su receta o su
+ * ubicación incierta la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
+ */
+function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: number, latido: number, cubierta: number | null = null) {
+  const cerrada = cubierta ?? 0;
   const mat = m.malla.material;
   mat.color.copy(m.color).lerp(FANTASMA, fantasma).lerp(ACTIVO, foco);
   mat.metalness = lerp(m.metalness, 0.1, foco);
   mat.roughness = lerp(m.roughness, 0.45, foco);
   mat.emissiveIntensity = foco * 0.9 * latido;
 
-  const incierta = m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1;
-  const opacidad = lerp(lerp(m.opacidad, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible * incierta;
+  const incierta = lerp(m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1, 1, cerrada);
+  const base = cubierta === null ? m.opacidad : lerp(Math.min(m.opacidad, OPACIDAD_CUBIERTA_ABIERTA), 1, cerrada);
+  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible * incierta;
   mat.opacity = opacidad;
-  const transparente = m.transparente || opacidad < 0.999;
+  const transparente = (m.transparente && cerrada < 0.999) || opacidad < 0.999;
   if (mat.transparent !== transparente) {
     mat.transparent = transparente;
     mat.needsUpdate = true;
@@ -320,11 +352,13 @@ export function encuadre(
   // Una pieza se encuadra con su entorno para que se entienda dónde está.
   // Con el despiece las piezas suben y se abren: se deja más margen.
   // Un equipo alto (heladera) tiene que entrar entero a lo alto; uno chato (notebook) no cambia.
+  // En una pantalla vertical (celular) la vista general va con el radio entero: con 0,8 un celular se salía por los costados.
   const alto = caja.getSize(new THREE.Vector3()).y / 2;
-  const radio =
-    nodo === escena.raiz ? Math.max(esfera.radius * (0.8 + 0.45 * despiece), alto * 1.15) : Math.max(esfera.radius * 2.6, 12);
-  const objetivoPos = esfera.center;
   const { width, height } = tamPantalla;
+  const ajusteGeneral = width < height ? 1 : 0.8;
+  const radio =
+    nodo === escena.raiz ? Math.max(esfera.radius * (ajusteGeneral + 0.45 * despiece), alto * 1.15) : Math.max(esfera.radius * 2.6, 12);
+  const objetivoPos = esfera.center;
   const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));
   const libre = (height - reservado) / height;
 
@@ -350,6 +384,58 @@ export type LadoEtiqueta = { h: "derecha" | "izquierda"; v: "arriba" | "abajo" }
 /** Largo de la línea guía de la etiqueta, en px (horizontal y vertical). */
 export const LINEA_ETIQUETA = { dx: 28, dy: 44 };
 const MARGEN_ETIQUETA = 8;
+
+/** Cuánto puede pasarse el lado actual antes de cambiar (px): evita que salte de lado en lado al girar. */
+const HISTERESIS_ETIQUETA = 16;
+
+export type UbicacionEtiqueta = {
+  lado: LadoEtiqueta;
+  /** Esquina superior izquierda del recuadro, en px relativos a la pieza (`ancla`). */
+  caja: { x: number; y: number };
+  /** Punta de la línea guía (la esquina del recuadro más cercana a la pieza), relativa a la pieza. */
+  punta: { x: number; y: number };
+};
+
+/**
+ * Dónde dibujar la etiqueta: el lado de `ladoEtiqueta`, pero sin cambiar de lado mientras el actual
+ * todavía entre (histéresis: al girar el modelo no salta de lado en lado) y siempre ADENTRO del lienzo
+ * y debajo de la franja reservada (si no entra, se corre hasta que entre: nunca se corta en el borde).
+ */
+export function colocarEtiqueta(
+  ancla: { x: number; y: number },
+  etiqueta: { ancho: number; alto: number },
+  lienzo: { width: number; height: number },
+  reservadoArriba = 0,
+  anterior?: LadoEtiqueta,
+): UbicacionEtiqueta {
+  const { dx, dy } = LINEA_ETIQUETA;
+  const M = MARGEN_ETIQUETA;
+  const sobra = {
+    arriba: ancla.y - dy - etiqueta.alto - (reservadoArriba + M),
+    abajo: lienzo.height - M - (ancla.y + dy + etiqueta.alto),
+    derecha: lienzo.width - M - (ancla.x + dx + etiqueta.ancho),
+    izquierda: ancla.x - dx - etiqueta.ancho - M,
+  };
+  const nuevo = ladoEtiqueta(ancla, etiqueta, lienzo, reservadoArriba);
+  const lado: LadoEtiqueta = {
+    v: anterior && sobra[anterior.v] >= -HISTERESIS_ETIQUETA ? anterior.v : nuevo.v,
+    h: anterior && sobra[anterior.h] >= -HISTERESIS_ETIQUETA ? anterior.h : nuevo.h,
+  };
+  const sx = lado.h === "derecha" ? 1 : -1;
+  const sy = lado.v === "arriba" ? -1 : 1;
+  // Recuadro en el lado elegido y, si igual se sale, corrido hasta que entre (en px del lienzo).
+  const x0 = ancla.x + (sx > 0 ? dx : -dx - etiqueta.ancho);
+  const y0 = ancla.y + (sy < 0 ? -dy - etiqueta.alto : dy);
+  const dentro = (v: number, min: number, max: number) => (max < min ? min : Math.min(Math.max(v, min), max));
+  const x = dentro(x0, M, lienzo.width - M - etiqueta.ancho);
+  const y = dentro(y0, reservadoArriba + M, lienzo.height - M - etiqueta.alto);
+  const caja = { x: x - ancla.x, y: y - ancla.y };
+  return {
+    lado,
+    caja,
+    punta: { x: sx > 0 ? caja.x : caja.x + etiqueta.ancho, y: sy < 0 ? caja.y + etiqueta.alto : caja.y },
+  };
+}
 
 /**
  * Dónde va la etiqueta respecto de la pieza (`ancla`, en px del lienzo): arriba a la derecha

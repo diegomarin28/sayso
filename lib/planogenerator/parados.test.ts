@@ -35,14 +35,21 @@ describe("equipos parados (TV, heladera, aire, lavarropas, microondas)", () => {
   it("TV con la profundidad en vez del alto (prueba real): queda parado, de frente, con el alto típico", async () => {
     const r = await generarPlano({ casoId: "c", knowledgePack: pack("otro", IDS_TV), tipoEquipo: "televisor" }, ia(propuestaTV(8)));
     expect(() => PlanoDePiezas.parse(r.plano)).not.toThrow();
-    const [ancho, alto, prof] = raiz(r.plano).dim;
+    const carcasa = raiz(r.plano);
+    expect(carcasa.pieza).toBe("carcasa_televisor"); // la carcasa del tipo, no el chasis de notebook
+    const [ancho, alto, prof] = carcasa.dim;
     expect(ancho).toBe(100);
     expect(alto).toBeCloseTo(66, 0); // proporción de la plantilla de TV (100 × 66)
-    expect(prof).toBeLessThan(3); // la chapa: fina hacia la cámara, no una tira acostada
+    expect(prof).toBe(10); // la profundidad real del TV (plantilla), no una tira acostada
+    // La carcasa envuelve las piezas.
+    for (const x of r.plano.piezas.filter((y) => y.padre)) {
+      expect(x.pos[2] - x.dim[2] / 2, x.pieza).toBeGreaterThanOrEqual(carcasa.pos[2] - prof / 2 - 1e-6);
+      expect(x.pos[2] + x.dim[2] / 2, x.pieza).toBeLessThanOrEqual(carcasa.pos[2] + prof / 2 + 1e-6);
+    }
     expect(r.avisos.join(" ")).toMatch(/8 cm no puede ser el alto.*parece la profundidad/);
     // Apoyado en el piso, y las piezas de la placa hacia la cámara (+z), delante de la chapa.
     for (const x of r.plano.piezas) expect(x.pos[1] - x.dim[1] / 2, x.pieza).toBeGreaterThanOrEqual(-1e-6);
-    for (const x of r.plano.piezas.filter((y) => y.padre)) expect(x.pos[2], x.pieza).toBeGreaterThan(raiz(r.plano).pos[2]);
+    for (const x of r.plano.piezas.filter((y) => y.padre)) expect(x.pos[2], x.pieza).toBeGreaterThan(carcasa.pos[2] - prof / 2);
     // Lo de arriba de la imagen (z = -0.6, la tira de LED) queda arriba.
     const tira = r.plano.piezas.find((x) => x.pieza === "tira_led_1")!;
     const parlante = r.plano.piezas.find((x) => x.pieza === "parlante_izquierdo")!;

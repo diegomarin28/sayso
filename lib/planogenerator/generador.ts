@@ -4,7 +4,7 @@ import { bloqueImagen, enviarMensaje, ErrorIA, MODELO_DE, pedirJson, type Enviar
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
-import { pararPlano } from "./orientacion";
+import { ajustarPlanoAlTipo, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import { caraTipica, elegirPlantilla, planoDesdePlantillaDeTipo, proporcionDeLaCara, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 import type { ManualRecortado } from "./recorte";
 
@@ -172,12 +172,12 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
             llamar,
           );
     if (recorte) propuesta.piezas = propuesta.piezas.map((p) => ({ ...p, pagina: paginaDelManual(p.pagina, recorte.paginas) }));
-    // Un equipo parado (TV, heladera…) se arma con su cara grande como planta y después se para.
+    // Con el tipo de equipo: carcasa del tipo, tapa y, si se usa parado (TV, heladera…), su cara grande
+    // como planta y después parado (ver carcasa.ts).
     const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
-    const parado = tipo?.parado ? tipo : undefined;
     const avisosCara: string[] = [];
-    const armado = planoDesdePropuesta(kp, parado ? conAltoDeLaCara(propuesta, parado, avisosCara) : propuesta);
-    const plano = parado ? pararPlano(armado.plano) : armado.plano;
+    const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta);
+    const plano = tipo ? ajustarPlanoAlTipo(armado.plano, tipo) : armado.plano;
     const avisos = [...avisosCara, ...armado.avisos];
     return { plano, avisos, origen: "ia", camino, modelo, propuesta };
   } catch (e) {
@@ -231,9 +231,6 @@ export function jsonDelTexto(texto: string): unknown {
     return null;
   }
 }
-
-/** Si el alto de la cara está más lejos que esto (en veces) del típico del tipo, no es el alto: es la profundidad. */
-const FACTOR_ALTO_DUDOSO = 2;
 
 /**
  * En un equipo parado, `base_prof_cm` tiene que ser el ALTO de la cara grande. Si la IA dio la

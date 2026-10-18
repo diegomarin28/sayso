@@ -23,7 +23,7 @@ import {
   animar,
   continuarAnimacion,
   encuadre,
-  ladoEtiqueta,
+  colocarEtiqueta,
   LINEA_ETIQUETA,
   liberar,
   piezasResaltadas,
@@ -36,7 +36,7 @@ import {
 import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 import { prepararPaso, type PasoPreparado } from "./paso";
 import { bajarCalidad, calidadInicial, esNegro, puntosVigia, soporteDe, Vigia, type Calidad } from "./salud";
-import { OBJETIVO_GENERAL, aplicarAccion, comenzarPaso, estadoInicial, type EstadoEscena } from "./reproductor";
+import { OBJETIVO_GENERAL, aplicarAccion, cerrar, comenzarPaso, estadoInicial, soloVuelveAGeneral, type EstadoEscena } from "./reproductor";
 
 /**
  * "auto": bloom encendido, se apaga solo si el equipo no sostiene ~30 fps.
@@ -389,7 +389,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const camara = useThree((s) => s.camera);
   const tam = useThree((s) => s.size);
   const escena = useMemo(() => prepararEscenaSegura(plano, biblioteca, tipoEquipo), [plano, biblioteca, tipoEquipo]);
-  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys()));
+  const estado = useRef<EstadoEscena>(estadoInicial(escena.nodos.keys(), escena.cubiertas));
   const [activos, setActivos] = useState<string[]>([]);
   const onEventoRef = useRef(onEvento);
   const onPasoRef = useRef(onPaso);
@@ -436,7 +436,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   const avisosDados = useRef(new Set<string>());
   useEffect(() => {
     if (!soloPiezas.current) {
-      acciones.current.actualizar(estadoInicial(escena.nodos.keys()));
+      acciones.current.actualizar(estadoInicial(escena.nodos.keys(), escena.cubiertas));
       avisosDados.current = new Set();
     }
     for (const aviso of escena.avisos) {
@@ -474,7 +474,9 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     paso.eventos.forEach((e) => onEventoRef.current?.(e));
     onPasoRef.current?.(paso);
     const { actualizar } = acciones.current;
-    actualizar(comenzarPaso(estado.current));
+    // Un paso que solo vuelve a la vista general cierra el equipo (las tapas vuelven a su lugar).
+    const inicio = comenzarPaso(estado.current);
+    actualizar(soloVuelveAGeneral(paso.coreografia) ? cerrar(inicio) : inicio);
     const timers = paso.coreografia.acciones.map((accion, i) =>
       setTimeout(() => {
         const r = aplicarAccion(estado.current, accion, { casoId });
@@ -549,43 +551,42 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado }: EtiquetaPro
   const camara = useThree((st) => st.camera);
   const tam = useThree((st) => st.size);
   const caja = useRef<HTMLDivElement>(null);
-  const [lado, setLado] = useState<LadoEtiqueta>({ h: "derecha", v: "arriba" });
+  const linea = useRef<SVGLineElement>(null);
+  const lado = useRef<LadoEtiqueta | undefined>(undefined);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
   }, []);
 
+  // Cada cuadro: dónde cae la pieza en pantalla y dónde va el recuadro (adentro del lienzo, sin
+  // saltar de lado). Se escribe directo en el DOM: sin re-render ni transición de posición (no tiembla).
   const punto = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
-    if (!caja.current) return;
+    const el = caja.current;
+    if (!el) return;
     punto.set(...desde);
     animable.nodo.localToWorld(punto).project(camara);
     const ancla = { x: ((punto.x + 1) / 2) * tam.width, y: ((1 - punto.y) / 2) * tam.height };
-    const nuevo = ladoEtiqueta(ancla, { ancho: caja.current.offsetWidth, alto: caja.current.offsetHeight }, tam, reservado.current);
-    setLado((l) => (l.h === nuevo.h && l.v === nuevo.v ? l : nuevo));
+    const u = colocarEtiqueta(ancla, { ancho: el.offsetWidth, alto: el.offsetHeight }, tam, reservado.current, lado.current);
+    lado.current = u.lado;
+    el.style.left = `${u.caja.x}px`;
+    el.style.top = `${u.caja.y}px`;
+    linea.current?.setAttribute("x2", String(u.punta.x));
+    linea.current?.setAttribute("y2", String(u.punta.y));
   });
 
-  const sx = lado.h === "derecha" ? 1 : -1;
-  const sy = lado.v === "arriba" ? -1 : 1;
-  const { dx, dy } = LINEA_ETIQUETA;
   return createPortal(
     <Html position={desde} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
       <div style={{ opacity: visible ? 1 : 0, transition: "opacity 300ms ease-out" }}>
         <svg width={1} height={1} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-          <line x1={0} y1={0} x2={sx * dx} y2={sy * dy} stroke={COLOR_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
+          <line ref={linea} x1={0} y1={0} x2={LINEA_ETIQUETA.dx} y2={-LINEA_ETIQUETA.dy} stroke={COLOR_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
           <circle cx={0} cy={0} r={2.5} fill={COLOR_ACTIVO} />
         </svg>
         <div
           ref={caja}
           className="absolute flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-black/80 py-1 pl-1 pr-2 text-xs font-medium text-white shadow-lg"
-          style={{
-            left: sx * dx,
-            top: sy * dy,
-            borderColor: COLOR_ACTIVO,
-            transform: `translate(${sx > 0 ? 0 : -100}%, ${sy < 0 ? -100 : 0}%) translateY(${visible ? 0 : sy * -6}px)`,
-            transition: "transform 300ms ease-out",
-          }}
+          style={{ left: LINEA_ETIQUETA.dx, top: -LINEA_ETIQUETA.dy, borderColor: COLOR_ACTIVO }}
         >
           {numero && (
             <span

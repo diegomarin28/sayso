@@ -3,6 +3,8 @@ import type { EnviarMensaje, LlamarIA } from "../ia/claude";
 import type { Fetch } from "../knowledge/descargar";
 import { claveManual } from "../knowledge/manuales";
 import { cachePlanosEnMemoria, cubrePack, type CachePlanos } from "./cache";
+import { ajustarPlanoAlTipo } from "./carcasa";
+import { elegirPlantilla } from "./plantillas/por-tipo";
 import { generarPlano, type EntradaGenerador, type ResultadoGenerador } from "./generador";
 import { paginasRecorte, recortarManual } from "./recorte";
 
@@ -35,7 +37,10 @@ export async function obtenerPlano(
   if (clave) {
     const guardado = await cache.get(clave);
     if (guardado && cubrePack(guardado, entrada.knowledgePack)) {
-      return { plano: guardado.plano, avisos: guardado.avisos, origen: "ia", desdeCache: true, paginasLeidas: null };
+      // Un plano guardado antes de ajustar por tipo (ej. un TV acostado) se ajusta al leerlo; uno ya ajustado no cambia.
+      const tipo = elegirPlantilla(entrada.knowledgePack, entrada.tipoEquipo);
+      const plano = tipo ? ajustarPlanoAlTipo(guardado.plano, tipo) : guardado.plano;
+      return { plano, avisos: guardado.avisos, origen: "ia", desdeCache: true, paginasLeidas: null };
     }
   }
 
