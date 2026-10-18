@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { LIMITES, MODELO_DE, type EnviarMensaje } from "../ia/claude";
+import { bloquesManualWeb, type ManualWeb } from "./manualweb";
 
 /**
  * Lectura del extracto del manual con citas de la API.
@@ -51,6 +52,21 @@ export async function leerManual(
   const { documento, ...fijo } = prefijoManual(m);
   const r = await enviar(
     { ...fijo, max_tokens: maxTokens, messages: [{ role: "user", content: [documento, { type: "text", text: tarea }] }] },
+    etapa,
+  );
+  return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
+}
+
+/** Lee un manual web (una sección por documento de texto, con citas de la API). */
+export async function leerManualWeb(m: ManualWeb, tarea: string, maxTokens: number, enviar: EnviarMensaje, etapa: string): Promise<Lectura> {
+  const r = await enviar(
+    {
+      model: MODELO_DE.lectura,
+      max_tokens: maxTokens,
+      output_config: { effort: LIMITES.lectura.effort },
+      system: SYSTEM_LECTOR,
+      messages: [{ role: "user", content: [...bloquesManualWeb(m), { type: "text", text: tarea }] }],
+    },
     etapa,
   );
   return { bloques: r.content.filter((b): b is Anthropic.TextBlock => b.type === "text"), motivo: r.stop_reason };
