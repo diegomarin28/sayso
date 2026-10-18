@@ -112,7 +112,9 @@ describe("biblioteca de piezas (public/models/piezas)", () => {
   it("cubre todas las piezas de la plantilla de notebook, con las variantes de notebook", () => {
     for (const p of planoNotebookBase.piezas) {
       expect(modeloPara(p.pieza, biblioteca), p.pieza).toBeDefined();
-      expect(nombreDe(modeloPara(p.pieza, biblioteca, p.dim)), p.pieza).not.toContain(SEPARADOR_VARIANTE);
+      // Sin variante, o la de notebook (el teclado, la tapa de pantalla).
+      const nombre = nombreDe(modeloPara(p.formaBiblioteca ?? p.pieza, biblioteca, p.dim));
+      if (nombre?.includes(SEPARADOR_VARIANTE)) expect(nombre, p.pieza).toMatch(/@notebook$/);
     }
   });
 

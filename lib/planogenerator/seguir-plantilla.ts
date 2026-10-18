@@ -1,7 +1,7 @@
 import indice from "../../public/models/piezas/indice.json";
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../shared";
 import { IndicePiezas, tipoDe, tipoPara } from "./biblioteca";
-import { ES_TAPA } from "./cubiertas";
+import { ES_TAPA, ES_TAPA_DE_PANTALLA } from "./cubiertas";
 import { emparejar, equivalentes, PLANTILLAS_POR_TIPO, type PlantillaDeEquipo } from "./plantillas/por-tipo";
 
 const INDICE = IndicePiezas.parse(indice);
@@ -33,13 +33,14 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
   if (!raiz || !raizT) return { plano, avisos: renombradas.avisos };
 
   const esta = new Set(plano.piezas.map((p) => p.pieza));
-  // Las tapas no: las pone `conTapa`, sobre el plano terminado.
+  // Las tapas no: las pone `conTapa`, sobre el plano terminado. Ni la tapa de pantalla con su panel (`conTapaDePantalla`).
   const candidatas = [
     ...plano.piezas.filter((p) => p !== raiz && p.origen !== "manual").map((p) => p.pieza),
     ...ids.filter((id) => !esta.has(id)),
-  ].filter((id) => !ES_TAPA.test(id));
+  ].filter((id) => !ES_TAPA.test(id) && !ES_TAPA_DE_PANTALLA.test(id));
+  const deTapa = (p: PiezaPlano) => ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.padre ?? "");
   // La raíz del esqueleto no se empareja: una pieza no pasa a medir lo que la carcasa.
-  const sinRaiz = { ...plantilla, plano: { ...plantilla.plano, piezas: plantilla.plano.piezas.filter((p) => p !== raizT && !ES_TAPA.test(p.pieza)) } };
+  const sinRaiz = { ...plantilla, plano: { ...plantilla.plano, piezas: plantilla.plano.piezas.filter((p) => p !== raizT && !deTapa(p)) } };
   const { usadas } = emparejar([...new Set(candidatas)], sinRaiz);
   const tiposDelPlano = new Set([...plano.piezas.map((p) => p.pieza), ...ids].map((id) => tipoPara(id, NOMBRES)).filter(Boolean));
   const cara = plantilla.cara.filter((idT) => !usadas.has(idT) && !tiposDelPlano.has(tipoPara(idT, NOMBRES)));
@@ -105,7 +106,8 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
  * es otro (una de tinta que se armó como láser, una consola con los joysticks del mando, unos de vincha armados
  * como in-ear), eso sobra: se sacan las piezas de origen "plantilla" que ni el pack nombra ni el esqueleto de
  * hoy tiene, y la raíz de otra plantilla pasa a ser la de este tipo (sin su forma). Las tapas que puso el
- * esqueleto se sacan siempre: `conTapa` las vuelve a poner envolviendo lo que quedó. Lo de la IA no se toca.
+ * esqueleto se sacan siempre: `conTapa` las vuelve a poner envolviendo lo que quedó (y la de pantalla,
+ * `conTapaDePantalla`). Lo de la IA no se toca.
  * Se aplica antes de `seguirPlantilla`, que suma lo que falte del esqueleto de hoy.
  */
 export function sinEsqueletoAjeno(plano: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): { plano: PlanoDePiezas; avisos: string[] } {
@@ -114,7 +116,8 @@ export function sinEsqueletoAjeno(plano: PlanoDePiezas, ids: string[], plantilla
   if (!raiz || !raizT) return { plano, avisos: [] };
   const delPack = new Set(ids);
   const deHoy = new Set(plantilla.plano.piezas.filter((p) => !plantilla.opcionales.includes(p.pieza)).map((p) => p.pieza));
-  const sobra = (p: PiezaPlano) => p.padre && p.origen === "plantilla" && !delPack.has(p.pieza) && (ES_TAPA.test(p.pieza) || !deHoy.has(p.pieza));
+  const sobra = (p: PiezaPlano) =>
+    p.padre && p.origen === "plantilla" && !delPack.has(p.pieza) && (ES_TAPA.test(p.pieza) || ES_TAPA_DE_PANTALLA.test(p.pieza) || !deHoy.has(p.pieza));
   const quitadas = new Set(plano.piezas.filter(sobra).map((p) => p.pieza));
   // La raíz de OTRA plantilla (no un nombre de la IA), si el plano no usa ya el id de la de hoy.
   const raicesAjenas = new Set(PLANTILLAS_POR_TIPO.map((t) => t.plano.piezas.find((p) => !p.padre)?.pieza).filter((id) => id && id !== raizT.pieza));

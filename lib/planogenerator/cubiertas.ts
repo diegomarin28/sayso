@@ -9,3 +9,6 @@ export const ES_CUBIERTA = /^(tapa|carcasa|puerta|cubierta)|^(panel|chapa)_(tras
 
 /** La tapa que se saca para abrir (no la carcasa entera ni una puerta), con el nombre que sea. */
 export const ES_TAPA = /^(tapa|cubierta)|^(carcasa|panel|chapa)_(trasero|trasera|inferior|posterior)/;
+
+/** La tapa de pantalla con bisagra de una notebook (#232): no tapa el interior ni se saca, se abre (ver `conTapaDePantalla`). */
+export const ES_TAPA_DE_PANTALLA = /^carcasa_pantalla/;
