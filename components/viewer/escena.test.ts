@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { planoNotebookBase } from "../../lib/planogenerator";
 import { planoCelular, planoHeladera } from "../../lib/planogenerator/plantillas/equipos";
-import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, usarColorActivo } from "./escena";
+import { COLOR_ACTIVO, animar, colocarEtiqueta, encuadre, ladoEtiqueta, prepararEscena, separarEtiquetas, suavizar, usarColorActivo, type CambioLado, type LadoEtiqueta } from "./escena";
 import { aplicarAccion, estadoInicial, type EstadoEscena } from "./reproductor";
 
 const ctx = { casoId: "t" };
@@ -65,6 +65,20 @@ describe("escena: modo rayos X", () => {
     expect(cian.intensidad).toBeLessThan(naranja.intensidad * 0.6);
     // Un color más oscuro que el naranja no brilla de más.
     expect(brillo("#7a2a00").intensidad).toBeCloseTo(naranja.intensidad, 5);
+  });
+
+  it("las piezas genéricas (el pack no las nombra) van en gris; las demás, con su receta", () => {
+    const conReceta = prepararEscena(planoNotebookBase);
+    const escena = prepararEscena(planoNotebookBase, undefined, undefined, new Set(["ram"]));
+    const gris = new THREE.Color("#8d96a1").getHexString();
+    expect(material(escena, "ram").color.getHexString()).toBe(gris);
+    expect(material(conReceta, "ram").color.getHexString()).not.toBe(gris);
+    expect(material(escena, "ssd").color.getHexString()).toBe(material(conReceta, "ssd").color.getHexString());
+    // Resaltada, igual toma el color de resaltado (la guía puede nombrarla).
+    const e = con(estadoInicial(escena.nodos.keys()), { t: "resaltar", pieza: "ram" });
+    animar(escena, e, 0);
+    animar(escena, e, 5000);
+    expect(material(escena, "ram").color.getHexString()).toBe(new THREE.Color(COLOR_ACTIVO).getHexString());
   });
 
   it("sin piezas resaltadas todo vuelve a su material original", () => {
@@ -165,6 +179,22 @@ describe("escena: encuadre de una pieza en un equipo chico", () => {
     expect(distancia(planoCelular, "conector_carga", 1.5)).toBeLessThan(general);
   });
 
+  it("el conector de un celular, con el zoom de la pieza nombrada, se ve grande (no un puntito al borde): ≥ 15 % del ancho", () => {
+    const escena = prepararEscena(planoCelular);
+    const camara = new THREE.PerspectiveCamera(35, tam.width / tam.height);
+    const e = encuadre(escena, "conector_carga", 1.4, camara, tam);
+    camara.position.copy(e.posicion);
+    camara.lookAt(e.objetivo);
+    camara.updateMatrixWorld();
+    const caja = new THREE.Box3().setFromObject(escena.nodos.get("conector_carga")!.nodo);
+    const ancho = caja.getSize(new THREE.Vector3()).x;
+    const a = caja.getCenter(new THREE.Vector3()).addScaledVector(new THREE.Vector3(1, 0, 0), -ancho / 2).project(camara);
+    const b = caja.getCenter(new THREE.Vector3()).addScaledVector(new THREE.Vector3(1, 0, 0), ancho / 2).project(camara);
+    expect(Math.abs(b.x - a.x) / 2).toBeGreaterThanOrEqual(0.15);
+    // Y sigue viéndose su entorno: no llena la pantalla.
+    expect(Math.abs(b.x - a.x) / 2).toBeLessThan(0.6);
+  });
+
   it("en una notebook, la batería tampoco queda más lejos que la notebook entera", () => {
     expect(distancia(planoNotebookBase, "bateria", 1.2)).toBeLessThan(distancia(planoNotebookBase, "general"));
   });
@@ -248,6 +278,46 @@ describe("escena: la etiqueta adentro de la pantalla y sin temblar", () => {
     expect(colocarEtiqueta({ x: 260, y: 300 }, etiqueta, lienzo, 0, { h: "derecha", v: "arriba" }).lado.h).toBe("izquierda"); // ya no entra: cambia
   });
 
+  it("al girar la cámara (3 s a 60 cuadros, pieza oscilando donde ningún lado entra entero) no cambia de lado más de una vez por segundo", () => {
+    // Una etiqueta larga ("Conector Lightning de carga") en un celular angosto: era la que saltaba.
+    const larga = { ancho: 210, alto: 34 };
+    let lado: LadoEtiqueta | undefined;
+    let cambio: CambioLado = { h: -Infinity, v: -Infinity };
+    const cambios: number[] = [];
+    for (let cuadro = 0; cuadro <= 180; cuadro++) {
+      const ahora = cuadro * (1000 / 60);
+      // Va y viene por el medio (3 vueltas por segundo) con un temblor de ±6 px, como al girar con el dedo.
+      const ancla = { x: 195 + 70 * Math.sin((2 * Math.PI * 3 * ahora) / 1000) + 6 * Math.sin(cuadro * 1.7), y: 300 };
+      const u = colocarEtiqueta(ancla, larga, lienzo, 0, lado, { ahora, cambio });
+      if (lado && u.lado.h !== lado.h) cambios.push(ahora);
+      lado = u.lado;
+      cambio = u.cambio;
+    }
+    for (const t of cambios) expect(cambios.filter((x) => x >= t && x < t + 1000)).toHaveLength(1);
+    // Sin el freno de tiempo y de margen, el mismo giro cambiaba de lado muchas veces.
+    let sinFreno: LadoEtiqueta | undefined;
+    let saltos = 0;
+    for (let cuadro = 0; cuadro <= 180; cuadro++) {
+      const ahora = cuadro * (1000 / 60);
+      const ancla = { x: 195 + 70 * Math.sin((2 * Math.PI * 3 * ahora) / 1000) + 6 * Math.sin(cuadro * 1.7), y: 300 };
+      const nuevo = ladoEtiqueta(ancla, larga, lienzo, 0);
+      if (sinFreno && nuevo.h !== sinFreno.h) saltos++;
+      sinFreno = nuevo;
+    }
+    expect(saltos).toBeGreaterThan(5);
+  });
+
+  it("suavizar: el recuadro se acerca a donde tiene que ir según el tiempo, sin pasarse; la primera vez va directo", () => {
+    expect(suavizar(null, { x: 100, y: 50 }, 16)).toEqual({ x: 100, y: 50 });
+    const a = suavizar({ x: 0, y: 0 }, { x: 100, y: 0 }, 16);
+    expect(a.x).toBeGreaterThan(0);
+    expect(a.x).toBeLessThan(30);
+    let p = { x: 0, y: 0 };
+    for (let i = 0; i < 60; i++) p = suavizar(p, { x: 100, y: 0 }, 16);
+    expect(p.x).toBeGreaterThan(99);
+    expect(p.x).toBeLessThanOrEqual(100);
+  });
+
   it("la línea guía llega a la esquina del recuadro más cercana a la pieza", () => {
     const u = colocarEtiqueta({ x: 100, y: 300 }, etiqueta, lienzo, 0);
     expect(u.lado).toEqual({ h: "derecha", v: "arriba" });
@@ -270,5 +340,34 @@ describe("escena: vista general en el celular", () => {
         const p = new THREE.Vector3(x, caja.max.y, z).project(camara);
         expect(Math.abs(p.x)).toBeLessThanOrEqual(1);
       }
+  });
+});
+
+describe("separarEtiquetas (#179: varias piezas resaltadas a la vez)", () => {
+  const lienzo = { width: 390, height: 600 };
+  const r = (x: number, y: number, ancho = 120, alto = 36) => ({ x, y, ancho, alto });
+  const sePisan = (a: ReturnType<typeof r>, b: ReturnType<typeof r>) => a.x < b.x + b.ancho && b.x < a.x + a.ancho && a.y < b.y + b.alto && b.y < a.y + a.alto;
+
+  it("dos etiquetas encimadas: la segunda se corre lo mínimo y ya no se pisan", () => {
+    const [a, b] = separarEtiquetas([r(20, 300), r(30, 310)], lienzo);
+    expect(a).toEqual(r(20, 300));
+    expect(b.x).toBe(30);
+    expect(sePisan(a, b)).toBe(false);
+    expect(Math.abs(b.y - 310)).toBeLessThanOrEqual(36 + 4 + 10);
+  });
+
+  it("tres juntas (como disipador, placa madre y ventilador): ninguna se pisa y todas quedan adentro", () => {
+    const res = separarEtiquetas([r(20, 300), r(25, 305), r(30, 298)], lienzo, 100);
+    for (let i = 0; i < res.length; i++) {
+      for (let j = i + 1; j < res.length; j++) expect(sePisan(res[i], res[j])).toBe(false);
+      expect(res[i].y).toBeGreaterThanOrEqual(100);
+      expect(res[i].y + res[i].alto).toBeLessThanOrEqual(lienzo.height);
+    }
+  });
+
+  it("si no se tocan no se mueven, y nunca se meten en la franja reservada de arriba", () => {
+    expect(separarEtiquetas([r(10, 300), r(250, 300)], lienzo)).toEqual([r(10, 300), r(250, 300)]);
+    const [, b] = separarEtiquetas([r(20, 110), r(20, 112)], lienzo, 100);
+    expect(b.y).toBeGreaterThanOrEqual(110 + 36);
   });
 });

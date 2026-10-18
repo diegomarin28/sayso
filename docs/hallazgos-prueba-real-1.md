@@ -91,3 +91,13 @@ Los 4 equipos de la demo (`CASOS_DEMO` en `scripts/bateria/casos.ts`): TV TCL 55
 - **#141 (A):** las vistas de la HP. Sin eso, ningún equipo de la demo tiene piezas del manual en el 3D: todo sale estimado o genérico (el visor lo dice).
 - **Segundo ensayo (B):** medir todo junto (#144, #147, #151, #153, #155 y la biblioteca de #164) con un nuevo OK de gasto de Diego (estimado ~US$ 0,30). Correrlo cuando esté #141, o antes si la demo se acerca.
 - **C9–C12 (C):** los hallazgos ya están resueltos por #124 y #163; incluir esos cambios en el próximo recorrido completo.
+
+## Prueba real en iPhone (18/10, 01:05–01:09 — Diego) · guía y 3D
+
+Medido a 390×844 con el fixture y "Mis casos" de `/lab/demo` (iPhone 13), con capturas antes/después.
+
+- [x] B9. La etiqueta de la pieza ("Conector Lightning de carga") saltaba de derecha a izquierda al girar. Ahora el lado cambia solo con un cambio claro (40 px), nunca dos veces en menos de 1 s, y el movimiento va suavizado. Medido arrastrando 3 s: 25 cambios de lado antes, 0 después. — PR #192
+- [x] B10. El 3D se veía chico. Tarjeta del paso compacta (3 líneas con "ver más", controles en una fila, puntitos chicos); vista y origen en un ícono en la esquina del 3D; "Conversación (n)" y "¿De dónde sale esto?" como íconos junto al campo de pregunta; las sugerencias, solo sin un paso a la vista; las etiquetas no tapan los íconos. **3D a la vista: 54 % del alto (456 de 844 px) con el paso visible**, antes ~30 %. — PR #202
+  - [ ] "Ver dónde comprar repuestos (n)" como ícono en el encabezado (carril C, suma ~50 px más al 3D). — issue #199
+- [x] B11. La pieza nombrada era un puntito al borde: la cámara se acerca con su entorno (mínimo 12 cm en equipos grandes, 0,45 del equipo en uno chico). El conector de un celular mide ≥ 15 % del ancho. — PR #192
+- [x] B12. Sello de la tarjeta: "Guía pública" (gris) sin cita, "Manual ✓ p. N" con cita verificada y "Manual p. N · sin verificar" si no se pudo verificar (`selloCita`). La lista de pasos de Preparando, igual (carril C, #199). — PR #202

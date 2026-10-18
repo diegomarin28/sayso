@@ -1,10 +1,12 @@
-import { coreografiaEjemplo, type Coreografia } from "../../../shared";
+import type { Coreografia } from "../../../shared";
 import { evaluarPedido } from "../../../lib/safety/riesgos";
 import type { EventoChat, FuenteChat } from "./eventos-chat";
+import { guiaDelPack } from "./guia-del-pack";
 
 /**
- * Fuente de respuestas SIMULADA para /lab y tests (sin IA, sin gastar créditos).
- * Usa los fixtures y el mismo bloqueo de seguridad que el servidor.
+ * Fuente de respuestas SIMULADA para /lab, el modo fixture y tests (sin IA, sin gastar créditos).
+ * Usa el mismo bloqueo de seguridad que el servidor; si la pregunta nombra una pieza, dice dónde
+ * está; si no, la guía paso a paso armada con el pack del caso (`guiaDelPack`).
  */
 const pausa = (ms: number, senal: AbortSignal) =>
   new Promise<void>((r) => {
@@ -30,7 +32,7 @@ export const fuenteSimulada: FuenteChat = async function* (pedido, senal) {
     pasos = [
       {
         paso: 1,
-        dice: `${nombrada.nombre}: ${nombrada.ubicacion}. Te la marco en naranja.`,
+        dice: `${nombrada.nombre}: ${nombrada.ubicacion}. Te la marco en el 3D.`,
         // Sin marcas, como suele responder la IA: la guía va a la pieza nombrada sola (B6, pieza-nombrada.ts).
         acciones: [{ t: "restaurar" }],
         riesgo: "bajo",
@@ -39,7 +41,10 @@ export const fuenteSimulada: FuenteChat = async function* (pedido, senal) {
   } else {
     yield { tipo: "buscando", texto: "Dejame buscarlo en el manual…" } satisfies EventoChat;
     await pausa(1500, senal);
-    pasos = coreografiaEjemplo;
+    pasos = guiaDelPack(pedido.pack, pedido.plano);
+    if (!pasos.length) {
+      pasos = [{ paso: 1, dice: "Para este equipo todavía no tengo el paso a paso. Preguntame por una pieza y te muestro dónde está.", acciones: [{ t: "restaurar" }], riesgo: "bajo" }];
+    }
   }
   for (const c of pasos) {
     if (senal.aborted) return;

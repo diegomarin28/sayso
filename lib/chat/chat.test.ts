@@ -266,3 +266,19 @@ describe("tipo de equipo en la seguridad del chat (#112)", () => {
     expect(b.coreografia.dice).not.toMatch(/220/);
   });
 });
+
+describe("guía del síntoma explicada (#160)", () => {
+  it("la primera respuesta pide 4 a 8 pasos explicados; las de seguimiento no", async () => {
+    const sistemas: string[] = [];
+    const stream: StreamIA = async function* (p) {
+      sistemas.push(JSON.stringify(p.system));
+      yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Ok. " } } as Anthropic.RawMessageStreamEvent;
+    };
+    const base5 = { casoId: "c1", pack: knowledgePackEjemplo, manualFileId: null };
+    await todos(conversar({ ...base5, pregunta: "No enciende" }, stream));
+    await todos(conversar({ ...base5, historial: [{ rol: "experto", texto: "Revisá el cargador." }], pregunta: "¿Y si no anda?" }, stream));
+    expect(sistemas[0]).toMatch(/de 4 a 8 pasos/);
+    expect(sistemas[0]).toMatch(/qué vas a ver o escuchar/);
+    expect(sistemas[1]).not.toMatch(/de 4 a 8 pasos/);
+  });
+});

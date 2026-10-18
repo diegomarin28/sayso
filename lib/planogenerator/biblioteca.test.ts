@@ -191,8 +191,8 @@ const planoCelular: PlanoDePiezas = {
       ["placa_carga", [6, 0.2, 2]],
       ["camara_trasera", [2.6, 0.7, 2.6]],
       ["camara_frontal", [0.8, 0.5, 0.8]],
-      ["conector_carga", [0.9, 0.32, 0.75]],
-      ["parlante_inferior", [1.8, 0.35, 1]],
+      ["conector_carga", [1.5, 0.32, 1.78]], // el puerto con su tramo de flex (como en plantillas/equipos.ts)
+      ["parlante_inferior", [2.2, 0.4, 1.3]],
       ["tapa_trasera", [7.3, 0.18, 15.7]],
     ] as const
   ).map(([pieza, dim]) => ({ pieza, forma: "caja", dim: [...dim], pos: [0, 0, 0], pivote: [0, 0, 0] })),

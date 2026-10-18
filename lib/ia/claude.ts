@@ -64,14 +64,14 @@ export const LIMITES = {
   /** Manuales publicados como páginas web (índice + una página por sección), leídos como texto. */
   manualWeb: { timeoutMs: 30_000, maxBytesHtml: 2_000_000, minSecciones: 8, maxSecciones: 8, maxCaracteresSeccion: 20_000 },
   /** Extracto del manual: lo único que se le manda a la IA (nunca el PDF entero). */
-  extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400 },
+  extracto: { maxPaginas: 10, maxPaginasPorRango: 6, paginasIniciales: 8, caracteresPorPagina: 90, maxMarcadores: 400, maxMarcadoresLeidos: 3000, /** Datos de trazo desde los que una página sin imágenes cuenta como dibujo. */ minDatosDibujo: 20000 },
   pack: { maxPasos: 12 },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
   lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
   guiaPublica: { busquedas: 4, continuaciones: 3, /** Páginas de la guía que se guardan para no volver a buscarlas. */ maxFuentes: 5 },
-  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4 },
+  chat: { maxTokensPack: 1500, maxTokensManual: 2000, maxHistorial: 30, maxFrasesSeguimiento: 4, /** Un procedimiento (abrir el equipo, cambiar una pieza) no se corta a las 4 frases. */ maxFrasesProcedimiento: 14, maxTokensConsulta: 4000, /** Sin manual ni iFixit: guía pública con búsqueda web (~US$ 0,02–0,04 por pregunta). Apagada hasta que la apruebe Diego. */ busquedaWeb: false, busquedasPorPregunta: 2 },
 } as const;
 
 // ---------- Costo ----------

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ES_CUBIERTA } from "../../lib/planogenerator/cubiertas";
 import type { PlanoDePiezas, Vec3 } from "../../shared";
 import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza } from "../../lib/planogenerator";
-import { desplazamientoDespiece, type Cubiertas, type EstadoEscena } from "./reproductor";
+import { despiezado, type Cubiertas, type EstadoEscena } from "./reproductor";
 import { ACTIVO_RESPALDO } from "./tema";
 import { crearTween, seguir, type Tween } from "./tween";
 
@@ -17,11 +17,11 @@ const ACTIVO = new THREE.Color(COLOR_ACTIVO);
 const FANTASMA = new THREE.Color("#7d8894");
 const OPACIDAD_FANTASMA = 0.1;
 /**
- * Piezas con ubicación incierta ("estimada" o "plantilla"): contorno punteado y más transparentes
- * (también resaltadas, un poco menos). Las del manual quedan sólidas; sin origen (planos viejos), igual que antes.
+ * Piezas con ubicación incierta ("estimada" o "plantilla"): contorno PUNTEADO, opacas como las demás
+ * (decisión #196). Translúcidas no escriben profundidad y, con varias capas encimadas (un celular real
+ * con todo estimado), se veía todo a través de todo. La señal de "no verificado" es el punteado, el chip
+ * "N estimadas · N genéricas" y la etiqueta "Sin verificar" de cada pieza.
  */
-const OPACIDAD_INCIERTA = 0.5;
-const OPACIDAD_INCIERTA_ACTIVA = 0.8;
 /** Trazo del punteado como fracción del lado mayor de la pieza (entre 0,3 y 3 cm). */
 const TRAZO_PUNTEADO = 0.08;
 const BORDE = new THREE.Color("#cfd8e2");
@@ -30,6 +30,7 @@ const BORDE_FANTASMA = new THREE.Color("#a9bacb");
 const OSCURO_BORDE_ACTIVO = 0.08;
 const BORDE_ACTIVO = ACTIVO.clone().multiplyScalar(OSCURO_BORDE_ACTIVO);
 const ANGULO_BORDES = 30; // grados: solo aristas marcadas, no las de superficies curvas
+const ANGULO_BORDES_CUBIERTA = 60;
 
 /** Cuánto brilla la pieza activa con el naranja (por el que se ajustó el bloom). */
 const BRILLO_ACTIVO = 0.9;
@@ -63,6 +64,8 @@ type MallaAnimable = {
   /** LineDashedMaterial si la ubicación es incierta. */
   borde: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
   incierta: boolean;
+  /** De una tapa o carcasa: menos aristas, sin punteado, y casi sin bordes con el equipo abierto. */
+  cubierta: boolean;
   color: THREE.Color;
   opacidad: number;
   transparente: boolean;
@@ -81,6 +84,8 @@ export type NodoAnimable = {
   ancestros: string[];
   /** Posición en la secuencia del despiece (de abajo hacia arriba). */
   orden: number;
+  /** Cuánto se mueve en el despiece completo, en ejes del padre (`despiezado`: capas en un equipo plano). */
+  despiezado: Vec3;
   /** Tapa, puerta o carcasa: opaca con el equipo cerrado, translúcida cuando se abre. */
   cubierta: boolean;
   tw: Record<"desp" | "despiece" | "rot" | "visible" | "foco" | "fantasma", Tween>;
@@ -102,12 +107,22 @@ export type EscenaPreparada = {
 };
 
 
-export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas, tipoEquipo?: string): EscenaPreparada {
+/** Gris de las piezas genéricas (`piezasGenericas`: el esqueleto del tipo las suma, el pack no las nombra). */
+const GRIS_GENERICA = new THREE.Color("#8d96a1");
+
+/** `genericas`: piezas que se pintan en gris, sin su receta (ver `piezasGenericas` en origen.ts). */
+export function prepararEscena(
+  plano: PlanoDePiezas,
+  biblioteca?: BibliotecaPiezas,
+  tipoEquipo?: string,
+  genericas: ReadonlySet<string> = new Set(),
+): EscenaPreparada {
   const { raiz, nodos, avisos } = construirEscena(plano, { biblioteca, tipoEquipo });
   const animables = new Map<string, NodoAnimable>();
   const ids = [...nodos.keys()];
   const profundidad = (id: string) => ancestrosDe(nodos.get(id)!, raiz).length;
   const enOrden = [...ids].sort((a, b) => profundidad(a) - profundidad(b) || ids.indexOf(a) - ids.indexOf(b));
+  const despiece = despiezado(plano.piezas.map((p) => ({ id: p.pieza, centro: p.pos, dim: p.dim, padre: p.padre ?? null })));
 
   for (const [id, nodo] of nodos) {
     const padre = nodo.parent?.userData as Partial<DatosPieza> | undefined;
@@ -115,11 +130,12 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
       id,
       nodo,
       principal: nodo.getObjectByName(id + SUFIJO_MALLA) as THREE.Mesh,
-      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza))),
+      mallas: mallasPropias(nodo).map((m) => prepararMalla(m, esIncierta(nodo.userData as DatosPieza), genericas.has(id), ES_CUBIERTA.test(id))),
       reposo: nodo.position.clone(),
       centroPadre: padre?.centro ?? null,
       ancestros: ancestrosDe(nodo, raiz),
       orden: enOrden.indexOf(id),
+      despiezado: despiece.get(id) ?? [0, 0, 0],
       cubierta: ES_CUBIERTA.test(id),
       tw: {
         desp: crearTween([0, 0, 0]),
@@ -153,13 +169,18 @@ export function prepararEscena(plano: PlanoDePiezas, biblioteca?: BibliotecaPiez
  * Como `prepararEscena`, pero si las piezas de Blender rompen algo, arma la escena con las
  * primitivas (cajas y cilindros) y lo avisa: el 3D nunca queda vacío por culpa del GLB.
  */
-export function prepararEscenaSegura(plano: PlanoDePiezas, biblioteca?: BibliotecaPiezas | null, tipoEquipo?: string): EscenaPreparada {
-  if (!biblioteca) return prepararEscena(plano, undefined, tipoEquipo);
+export function prepararEscenaSegura(
+  plano: PlanoDePiezas,
+  biblioteca?: BibliotecaPiezas | null,
+  tipoEquipo?: string,
+  genericas?: ReadonlySet<string>,
+): EscenaPreparada {
+  if (!biblioteca) return prepararEscena(plano, undefined, tipoEquipo, genericas);
   try {
-    return prepararEscena(plano, biblioteca, tipoEquipo);
+    return prepararEscena(plano, biblioteca, tipoEquipo, genericas);
   } catch (e) {
     console.warn("[visor] las piezas de Blender fallaron, uso primitivas:", e);
-    const escena = prepararEscena(plano, undefined, tipoEquipo);
+    const escena = prepararEscena(plano, undefined, tipoEquipo, genericas);
     escena.avisos.unshift("Las piezas detalladas no cargaron en este equipo: se muestran formas simples.");
     return escena;
   }
@@ -190,14 +211,20 @@ export function esIncierta(d: Pick<DatosPieza, "origen">): boolean {
   return d.origen === "estimada" || d.origen === "plantilla";
 }
 
-function prepararMalla(m: THREE.Mesh, incierta: boolean): MallaAnimable {
+function prepararMalla(m: THREE.Mesh, incierta: boolean, generica = false, cubierta = false): MallaAnimable {
   const malla = m as MallaAnimable["malla"];
   const mat = malla.material;
+  if (generica) {
+    mat.color.copy(GRIS_GENERICA);
+    mat.metalness = 0.1;
+    mat.roughness = 0.7;
+  }
   mat.emissive.copy(ACTIVO);
   mat.emissiveIntensity = 0;
-  const geometria = new THREE.EdgesGeometry(malla.geometry, ANGULO_BORDES);
+  // Una carcasa tiene biseles, nervios y rejillas: con 30° era una maraña de líneas finas al abrirla.
+  const geometria = new THREE.EdgesGeometry(malla.geometry, cubierta ? ANGULO_BORDES_CUBIERTA : ANGULO_BORDES);
   let material: THREE.LineBasicMaterial;
-  if (incierta) {
+  if (incierta && !cubierta) {
     geometria.computeBoundingBox();
     const lado = geometria.boundingBox!.getSize(new THREE.Vector3()).toArray().reduce((a, b) => Math.max(a, b), 0);
     const trazo = Math.min(Math.max(lado * TRAZO_PUNTEADO, 0.3), 3);
@@ -206,7 +233,7 @@ function prepararMalla(m: THREE.Mesh, incierta: boolean): MallaAnimable {
     material = new THREE.LineBasicMaterial({ color: BORDE, transparent: true, opacity: 0.6 });
   }
   const borde = new THREE.LineSegments(geometria, material);
-  if (incierta) borde.computeLineDistances(); // sin esto, el punteado no se dibuja
+  if (incierta && !cubierta) borde.computeLineDistances(); // sin esto, el punteado no se dibuja
   borde.name = `${malla.name}__borde`;
   borde.raycast = () => {};
   malla.add(borde);
@@ -214,6 +241,7 @@ function prepararMalla(m: THREE.Mesh, incierta: boolean): MallaAnimable {
     malla,
     borde,
     incierta,
+    cubierta,
     color: mat.color.clone(),
     opacidad: mat.opacity,
     transparente: mat.transparent,
@@ -272,11 +300,10 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
     if (!e) continue;
 
     // Posición y giro.
-    const centro = (a.nodo.userData as DatosPieza).centro;
     const escalon = escena.despiece.subiendo ? a.orden : total - 1 - a.orden;
     const despiece = seguir(
       a.tw.despiece,
-      desplazamientoDespiece(centro, a.centroPadre, estado.despiece),
+      a.despiezado.map((v) => v * estado.despiece) as Vec3,
       ahora,
       DURACION.despiece,
       escalon * ESCALON_DESPIECE_MS,
@@ -302,11 +329,13 @@ export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: num
 }
 
 /** Una cubierta con el equipo abierto se ve así de translúcida como mucho (aunque su receta sea opaca, ej. una puerta). */
-const OPACIDAD_CUBIERTA_ABIERTA = 0.2;
+const OPACIDAD_CUBIERTA_ABIERTA = 0.12;
+/** Con el equipo abierto, los bordes de una tapa o carcasa se ven a esta fracción: no tapan lo de adentro. */
+const BORDE_CUBIERTA_ABIERTA = 0.45;
 
 /**
  * `cerrada`: null si no es una cubierta; si lo es, 1 = equipo cerrado (opaca aunque su receta o su
- * ubicación incierta la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
+ * la hagan translúcida) y 0 = abierto (translúcida, para ver adentro).
  */
 function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: number, latido: number, cubierta: number | null = null) {
   const cerrada = cubierta ?? 0;
@@ -316,9 +345,8 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   mat.roughness = lerp(m.roughness, 0.45, foco);
   mat.emissiveIntensity = foco * brilloActivo * latido;
 
-  const incierta = lerp(m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1, 1, cerrada);
   const base = cubierta === null ? m.opacidad : lerp(Math.min(m.opacidad, OPACIDAD_CUBIERTA_ABIERTA), 1, cerrada);
-  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible * incierta;
+  const opacidad = lerp(lerp(base, OPACIDAD_FANTASMA, fantasma), 1, foco) * visible;
   mat.opacity = opacidad;
   const transparente = (m.transparente && cerrada < 0.999) || opacidad < 0.999;
   if (mat.transparent !== transparente) {
@@ -330,8 +358,10 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
 
   const b = m.borde.material;
   b.color.copy(BORDE).lerp(BORDE_FANTASMA, fantasma).lerp(BORDE_ACTIVO, foco);
-  // El punteado se marca un poco más, para que se note aunque la pieza sea más transparente.
-  b.opacity = lerp(lerp(m.incierta ? 0.45 : 0.22, 0.4, fantasma), m.incierta ? 0.85 : 0.7, foco) * visible;
+  // El punteado se marca un poco más que el borde sólido: es la señal de "no verificado".
+  const punteado = m.incierta && !m.cubierta;
+  const bordeCubierta = m.cubierta && cubierta !== null ? lerp(BORDE_CUBIERTA_ABIERTA, 1, cerrada) : 1;
+  b.opacity = lerp(lerp(punteado ? 0.45 : 0.22, 0.4, fantasma), punteado ? 0.85 : 0.7, foco) * visible * bordeCubierta;
   m.borde.visible = b.opacity > 0.01;
 }
 
@@ -352,6 +382,11 @@ export function direccionDeCamara(tam: THREE.Vector3): THREE.Vector3 {
 }
 const DIRECCION_ISOMETRICA = new THREE.Vector3(1, 1, 1).normalize();
 
+/** Radio mínimo con que se encuadra una pieza (su entorno), en cm: en un equipo grande. */
+const ENTORNO_PIEZA_CM = 12;
+/** En un equipo chico, el entorno mínimo es esta parte de su radio (un celular: ~4 cm alrededor de la pieza). */
+const FRACCION_ENTORNO_PIEZA = 0.45;
+
 /** Lo que tapa la frase nunca deja menos que esto del lienzo para el 3D. */
 const FRACCION_LIBRE_MIN = 0.4;
 
@@ -363,6 +398,23 @@ const FRACCION_LIBRE_MIN = 0.4;
  * los objetos en pantalla, así que para bajar la pieza es negativo).
  * En un celular en vertical el ancho es el que limita: se encuadra para que entre en los dos ejes.
  */
+/** Con el despiece, el radio del equipo entero se toma casi completo (sin recortar las puntas). */
+const MARGEN_DESPIECE = 1;
+
+/** La caja del equipo con cada pieza donde la deja el despiece (`cantidad`), sin moverlas de verdad. */
+export function cajaDespiezada(escena: EscenaPreparada, cantidad: number): THREE.Box3 {
+  const antes = new Map<NodoAnimable, THREE.Vector3>();
+  for (const a of escena.nodos.values()) {
+    antes.set(a, a.nodo.position.clone());
+    a.nodo.position.set(a.reposo.x + a.despiezado[0] * cantidad, a.reposo.y + a.despiezado[1] * cantidad, a.reposo.z + a.despiezado[2] * cantidad);
+  }
+  escena.raiz.updateMatrixWorld(true);
+  const caja = new THREE.Box3().setFromObject(escena.raiz);
+  for (const [a, p] of antes) a.nodo.position.copy(p);
+  escena.raiz.updateMatrixWorld(true);
+  return caja;
+}
+
 export function encuadre(
   escena: EscenaPreparada,
   objetivo: string,
@@ -373,21 +425,30 @@ export function encuadre(
   reservadoArriba = 0,
 ) {
   const nodo = escena.nodos.get(objetivo)?.nodo ?? escena.raiz;
-  const caja = new THREE.Box3().setFromObject(nodo);
+  // Despiezado, el equipo entero se mide con cada pieza en su lugar final (no un margen fijo): lo que se
+  // abre hacia los costados (los aros de un parlante, las capas de un celular) entra en la pantalla.
+  const cajaEquipo = () => (despiece > 0 ? cajaDespiezada(escena, despiece) : new THREE.Box3().setFromObject(escena.raiz));
+  const caja = nodo === escena.raiz ? cajaEquipo() : new THREE.Box3().setFromObject(nodo);
   const esfera = caja.getBoundingSphere(new THREE.Sphere());
   // Una pieza se encuadra con su entorno para que se entienda dónde está.
   // Con el despiece las piezas suben y se abren: se deja más margen.
   // Un equipo alto (heladera) tiene que entrar entero a lo alto; uno chato (notebook) no cambia.
   // En una pantalla vertical (celular) la vista general va con el radio entero: con 0,8 un celular se salía por los costados.
-  // Una pieza nunca se encuadra más lejos que el equipo entero (en un celular, 12 cm de mínimo es más que el celular).
+  // Una pieza nunca se encuadra más lejos que el equipo entero. El mínimo (para que se vea su entorno) es
+  // 12 cm en un equipo grande, pero en uno chico es una parte del equipo (`FRACCION_ENTORNO_PIEZA`): con
+  // 12 cm, un conector de celular quedaba como un puntito al borde del celular entero (prueba real).
   const { width, height } = tamPantalla;
   const ajusteGeneral = width < height ? 1 : 0.8;
-  const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * (ajusteGeneral + 0.45 * despiece), (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
+  // Despiezado no se recorta nada (en horizontal, 0,8 cortaba las puntas del despiece).
+  const ajuste = despiece > 0 ? Math.max(ajusteGeneral, MARGEN_DESPIECE) : ajusteGeneral;
+  const radioGeneral = (c: THREE.Box3, e: THREE.Sphere) => Math.max(e.radius * ajuste, (c.getSize(new THREE.Vector3()).y / 2) * 1.15);
   let radio: number;
   if (nodo === escena.raiz) radio = radioGeneral(caja, esfera);
   else {
-    const cajaEquipo = new THREE.Box3().setFromObject(escena.raiz);
-    radio = Math.min(Math.max(esfera.radius * 2.6, 12), radioGeneral(cajaEquipo, cajaEquipo.getBoundingSphere(new THREE.Sphere())));
+    const equipo = cajaEquipo();
+    const esferaEquipo = equipo.getBoundingSphere(new THREE.Sphere());
+    const entorno = Math.min(ENTORNO_PIEZA_CM, esferaEquipo.radius * FRACCION_ENTORNO_PIEZA);
+    radio = Math.min(Math.max(esfera.radius * 2.6, entorno), radioGeneral(equipo, esferaEquipo));
   }
   const objetivoPos = esfera.center;
   const reservado = Math.min(Math.max(reservadoArriba, 0), height * (1 - FRACCION_LIBRE_MIN));
@@ -416,11 +477,23 @@ export type LadoEtiqueta = { h: "derecha" | "izquierda"; v: "arriba" | "abajo" }
 export const LINEA_ETIQUETA = { dx: 28, dy: 44 };
 const MARGEN_ETIQUETA = 8;
 
-/** Cuánto puede pasarse el lado actual antes de cambiar (px): evita que salte de lado en lado al girar. */
-const HISTERESIS_ETIQUETA = 16;
+/**
+ * Para cambiar de lado al girar, el lado actual tiene que pasarse del lienzo por más que esto Y el otro
+ * tiene que entrar al menos esto mejor (px): un cambio claro, no por unos píxeles.
+ */
+export const MARGEN_CAMBIO_ETIQUETA = 40;
+/** Y nunca dos cambios de lado (en el mismo eje) en menos que esto (ms): la etiqueta no "baila". */
+export const TIEMPO_MIN_LADO_MS = 1000;
+/** Suavizado del movimiento de la etiqueta (ms): llega al 63 % del camino en este tiempo. */
+const SUAVIZADO_ETIQUETA_MS = 90;
+
+/** Cuándo cambió de lado por última vez cada eje (ms), para `TIEMPO_MIN_LADO_MS`. */
+export type CambioLado = { h: number; v: number };
 
 export type UbicacionEtiqueta = {
   lado: LadoEtiqueta;
+  /** Cuándo cambió de lado cada eje (lo que hay que pasar en el próximo cuadro). */
+  cambio: CambioLado;
   /** Esquina superior izquierda del recuadro, en px relativos a la pieza (`ancla`). */
   caja: { x: number; y: number };
   /** Punta de la línea guía (la esquina del recuadro más cercana a la pieza), relativa a la pieza. */
@@ -428,9 +501,11 @@ export type UbicacionEtiqueta = {
 };
 
 /**
- * Dónde dibujar la etiqueta: el lado de `ladoEtiqueta`, pero sin cambiar de lado mientras el actual
- * todavía entre (histéresis: al girar el modelo no salta de lado en lado) y siempre ADENTRO del lienzo
- * y debajo de la franja reservada (si no entra, se corre hasta que entre: nunca se corta en el borde).
+ * Dónde dibujar la etiqueta: el lado de `ladoEtiqueta` la primera vez y después el mismo, salvo un cambio
+ * claro (el actual se pasa por más de `MARGEN_CAMBIO_ETIQUETA` y el otro entra por lo menos eso mejor) y
+ * nunca dos cambios en menos de `TIEMPO_MIN_LADO_MS` (con `tiempo`). Al girar el modelo no salta de lado
+ * en lado. Siempre ADENTRO del lienzo y debajo de la franja reservada (si no entra, se corre hasta que
+ * entre: nunca se corta en el borde).
  */
 export function colocarEtiqueta(
   ancla: { x: number; y: number },
@@ -438,6 +513,7 @@ export function colocarEtiqueta(
   lienzo: { width: number; height: number },
   reservadoArriba = 0,
   anterior?: LadoEtiqueta,
+  tiempo?: { ahora: number; cambio: CambioLado },
 ): UbicacionEtiqueta {
   const { dx, dy } = LINEA_ETIQUETA;
   const M = MARGEN_ETIQUETA;
@@ -448,10 +524,19 @@ export function colocarEtiqueta(
     izquierda: ancla.x - dx - etiqueta.ancho - M,
   };
   const nuevo = ladoEtiqueta(ancla, etiqueta, lienzo, reservadoArriba);
-  const lado: LadoEtiqueta = {
-    v: anterior && sobra[anterior.v] >= -HISTERESIS_ETIQUETA ? anterior.v : nuevo.v,
-    h: anterior && sobra[anterior.h] >= -HISTERESIS_ETIQUETA ? anterior.h : nuevo.h,
+  const ahora = tiempo?.ahora ?? 0;
+  const cambio: CambioLado = { ...(tiempo?.cambio ?? { h: -Infinity, v: -Infinity }) };
+  const eje = <K extends "h" | "v">(k: K): LadoEtiqueta[K] => {
+    const actual = anterior?.[k];
+    const candidato = nuevo[k];
+    if (!actual) return candidato;
+    const claro = sobra[actual] < -MARGEN_CAMBIO_ETIQUETA && sobra[candidato] - sobra[actual] > MARGEN_CAMBIO_ETIQUETA;
+    const pasoElTiempo = !tiempo || ahora - cambio[k] >= TIEMPO_MIN_LADO_MS;
+    if (candidato === actual || !claro || !pasoElTiempo) return actual;
+    cambio[k] = ahora;
+    return candidato;
   };
+  const lado: LadoEtiqueta = { v: eje("v"), h: eje("h") };
   const sx = lado.h === "derecha" ? 1 : -1;
   const sy = lado.v === "arriba" ? -1 : 1;
   // Recuadro en el lado elegido y, si igual se sale, corrido hasta que entre (en px del lienzo).
@@ -463,9 +548,17 @@ export function colocarEtiqueta(
   const caja = { x: x - ancla.x, y: y - ancla.y };
   return {
     lado,
+    cambio,
     caja,
     punta: { x: sx > 0 ? caja.x : caja.x + etiqueta.ancho, y: sy < 0 ? caja.y + etiqueta.alto : caja.y },
   };
+}
+
+/** Un paso del suavizado de la etiqueta: de `actual` hacia `objetivo` según el tiempo del cuadro (sin `actual`, salta). */
+export function suavizar(actual: { x: number; y: number } | null, objetivo: { x: number; y: number }, dtMs: number) {
+  if (!actual) return objetivo;
+  const k = 1 - Math.exp(-Math.max(dtMs, 0) / SUAVIZADO_ETIQUETA_MS);
+  return { x: actual.x + (objetivo.x - actual.x) * k, y: actual.y + (objetivo.y - actual.y) * k };
 }
 
 /**
@@ -488,4 +581,33 @@ export function ladoEtiqueta(
     v: sobraArriba >= 0 || sobraArriba >= sobraAbajo ? "arriba" : "abajo",
     h: sobraDerecha >= 0 || sobraDerecha >= sobraIzquierda ? "derecha" : "izquierda",
   };
+}
+
+/** Recuadro de una etiqueta en px del lienzo. */
+export type RectEtiqueta = { x: number; y: number; ancho: number; alto: number };
+/** Separación mínima entre dos etiquetas (px). */
+const SEPARACION_ETIQUETAS = 4;
+
+/**
+ * Varias piezas resaltadas a la vez: que sus etiquetas no se pisen (#179). En orden, cada recuadro que
+ * choca con uno ya puesto se corre en vertical lo mínimo (arriba o abajo de alguno de los puestos) sin
+ * salirse del lienzo ni meterse en la franja reservada. Si no hay lugar libre, queda donde estaba.
+ */
+export function separarEtiquetas(rects: RectEtiqueta[], lienzo: { width: number; height: number }, reservadoArriba = 0): RectEtiqueta[] {
+  const S = SEPARACION_ETIQUETAS;
+  const choca = (a: RectEtiqueta, b: RectEtiqueta) =>
+    a.x < b.x + b.ancho + S && b.x < a.x + a.ancho + S && a.y < b.y + b.alto + S && b.y < a.y + a.alto + S;
+  const minY = reservadoArriba + MARGEN_ETIQUETA;
+  const puestos: RectEtiqueta[] = [];
+  for (const r of rects) {
+    if (puestos.some((p) => choca(r, p))) {
+      const opciones = puestos
+        .flatMap((p) => [p.y + p.alto + S, p.y - r.alto - S])
+        .filter((y) => y >= minY && y + r.alto <= lienzo.height - MARGEN_ETIQUETA)
+        .sort((a, b) => Math.abs(a - r.y) - Math.abs(b - r.y));
+      const y = opciones.find((y) => !puestos.some((p) => choca({ ...r, y }, p)));
+      puestos.push(y === undefined ? r : { ...r, y });
+    } else puestos.push(r);
+  }
+  return puestos;
 }

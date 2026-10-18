@@ -84,9 +84,34 @@ export const planoCelular: PlanoDePiezas = {
       ["camara_trasera", [2.6, 0.7, 2.6], [-1.6, 1.4, -5.6]],
       ["camara_frontal", [0.8, 0.5, 0.8], [1.8, 1.3, -6.6]],
       ["placa_carga", [6, 0.2, 1.8], [0, 0.9, 6.8]],
-      ["conector_carga", [0.9, 0.32, 0.75], [0, 1.16, 7.4]],
-      ["parlante_inferior", [1.8, 0.35, 1], [-2.1, 1.08, 6.6]],
+      // El puerto con su tramo de flex (la boca en el borde de abajo) y el parlante con su rejilla: no son puntitos.
+      ["conector_carga", [1.5, 0.32, 1.78], [0, 1.16, 7.0]],
+      ["parlante_inferior", [2.2, 0.4, 1.3], [-2.2, 1.1, 6.6]],
       ["tapa_trasera", [7.3, 0.18, 15.7], [0, 1.9, 0]],
+    ]),
+  ],
+};
+
+/**
+ * Notebook SIN ventilador y con la placa integrada (memoria y almacenamiento soldados): dada vuelta como la
+ * genérica (la tapa de abajo arriba). Placa chica junto a la bisagra, batería de celdas pegadas que ocupa casi
+ * todo, teclado y trackpad del otro lado, parlantes a los costados. No tiene ventilador, RAM ni SSD sueltos.
+ */
+export const planoNotebookSinVentilador: PlanoDePiezas = {
+  modelo: "Notebook sin ventilador genérica (ejemplo del lab)",
+  unidades: "cm",
+  piezas: [
+    pieza("base", [30.4, 1.1, 21.2], [0, 0, 0]),
+    ...hijos("base", [
+      ["placa_madre", [18, 0.3, 6], [0, 0.7, -6.6]],
+      ["bateria", [26, 0.6, 11], [0, 0.85, 3.6]],
+      ["teclado_notebook", [27, 0.3, 10], [0, 0.35, -4]],
+      ["trackpad", [12, 0.3, 7.5], [0, 0.35, 5.5]],
+      ["parlante_izquierdo", [2, 0.7, 8], [-13.6, 0.85, -1.5]],
+      ["parlante_derecho", [2, 0.7, 8], [13.6, 0.85, -1.5]],
+      ["conector_usb_c", [0.9, 0.35, 0.8], [-14.6, 0.75, -6.5]],
+      ["cable_pantalla", [10, 0.1, 1], [0, 0.75, -10]],
+      ["tapa_inferior", [30.4, 0.2, 21.2], [0, 1.45, 0]],
     ]),
   ],
 };
@@ -486,7 +511,7 @@ export const planoTablet: PlanoDePiezas = {
       ["camara_trasera", [1.6, 0.6, 1.6], [-7, 1.25, -10.8]],
       ["parlante_izquierdo", [1.8, 0.4, 3.5], [-7.4, 0.9, 10.2]],
       ["parlante_derecho", [1.8, 0.4, 3.5], [7.4, 0.9, 10.2]],
-      ["conector_carga", [1.5, 0.32, 0.82], [0, 0.86, 12]],
+      ["conector_carga", [1.5, 0.32, 1.78], [0, 0.86, 11.5]],
       ["tapa_trasera", [17.4, 0.2, 24.7], [0, 1.6, 0]],
     ]),
   ],

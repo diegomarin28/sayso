@@ -17,7 +17,7 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
     <p
       key={texto}
       aria-live="polite"
-      className={`text-[clamp(1.75rem,6.5vw,2.75rem)] leading-[1.1] font-semibold tracking-tight text-balance ${className}`}
+      className={`font-titulo text-[clamp(1.75rem,6.5vw,2.75rem)] leading-[1.1] font-semibold tracking-tight text-balance ${className}`}
     >
       {texto.split(" ").map((p, i) => (
         // El espacio va afuera de la palabra animada: adentro, Safari dibuja restos entre palabras.
@@ -56,7 +56,8 @@ export function Encabezado({
         <Link href="/" aria-label="Sayso: volver al inicio">
           <Orbe estado={orbe} />
         </Link>
-        <div className="flex-1">
+        {/* min-w-0: con botones al lado (el experto), el progreso se achica en vez de pasar por debajo. */}
+        <div className="min-w-0 flex-1">
           <div className="flex gap-1.5" aria-hidden>
             {PASOS.map((_, i) => (
               <div
@@ -67,7 +68,7 @@ export function Encabezado({
               />
             ))}
           </div>
-          <p className="mt-2 truncate text-xs font-medium tracking-widest whitespace-nowrap text-texto-suave uppercase">
+          <p className="mt-2 truncate font-mono text-xs font-medium tracking-widest whitespace-nowrap text-texto-suave uppercase">
             {paso}/6 · {PASOS[paso - 1]}
           </p>
         </div>

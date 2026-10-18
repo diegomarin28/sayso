@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { KnowledgePack } from "@/shared";
 import type { Plano } from "../_datos/api";
+import { selloCita } from "../../../components/viewer/guia/conversacion";
 import { resumenOrigen, textoResumen, todoDelManual } from "../../../components/viewer/origen";
 import { AnimacionPreparando } from "./animacion-preparando";
 import { Alerta } from "./experto";
@@ -12,7 +14,7 @@ import { Alerta } from "./experto";
  * Muestra solo lo que vino en el pack: nada inventado.
  */
 
-const PASOS_A_MOSTRAR = 3;
+const PASOS_A_MOSTRAR = 4;
 const PIEZAS_A_MOSTRAR = 10;
 
 export function ResumenGuia({
@@ -30,6 +32,8 @@ export function ResumenGuia({
   const piezas = [...pack.piezas].sort((a, b) => Number(enPasos.has(b.id)) - Number(enPasos.has(a.id)));
   const pasos = [...pack.pasos].sort((a, b) => a.orden - b.orden);
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
+  const [todos, setTodos] = useState(false);
+  const visibles = todos ? pasos : pasos.slice(0, PASOS_A_MOSTRAR);
 
   return (
     <div className="aparece grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
@@ -90,32 +94,31 @@ export function ResumenGuia({
         {/* Primeros pasos */}
         {pasos.length > 0 && (
           <div>
-            <p className="mb-2 text-xs text-texto-suave">
-              {pasos.length > PASOS_A_MOSTRAR
-                ? `Lo que vamos a hacer (${pasos.length} pasos)`
-                : "Lo que vamos a hacer"}
+            <p className="text-xs text-texto-suave">
+              {pasos.length > 1 ? `Lo que vamos a hacer (${pasos.length} pasos)` : "Lo que vamos a hacer"}
             </p>
+            {/* El estado de los pasos, una vez arriba (en vez de un cartel en cada paso). */}
+            <p className="mt-0.5 mb-2 text-xs text-texto-suave">{resumenPasos(pack)}</p>
             <ol className="flex flex-col gap-2">
-              {pasos.slice(0, PASOS_A_MOSTRAR).map((p, i) => (
+              {visibles.map((p, i) => (
                 <li key={p.id} className="flex items-start gap-3 rounded-2xl bg-black/15 p-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-acento text-xs font-bold text-black">
                     {i + 1}
                   </span>
                   <p className="min-w-0 flex-1 text-sm leading-snug">{p.texto}</p>
-                  <span
-                    className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
-                      p.cita?.estado === "VERIFICADO" && p.cita.pagina
-                        ? "bg-texto/10 text-texto"
-                        : "bg-probable/15 text-probable"
-                    }`}
-                  >
-                    {p.cita?.estado === "VERIFICADO" && p.cita.pagina
-                      ? `p. ${p.cita.pagina}`
-                      : "NO VERIFICADO"}
-                  </span>
+                  <SelloPaso paso={p} />
                 </li>
               ))}
             </ol>
+            {pasos.length > PASOS_A_MOSTRAR && (
+              <button
+                type="button"
+                onClick={() => setTodos((t) => !t)}
+                className="mt-2 text-sm font-medium text-texto underline underline-offset-4"
+              >
+                {todos ? "Ver menos" : `Ver los ${pasos.length} pasos`}
+              </button>
+            )}
           </div>
         )}
 
@@ -125,7 +128,31 @@ export function ResumenGuia({
           </p>
         )}
       </div>
+      {/* Lugar para el botón "Ver al experto": aunque la barra de Safari achique la pantalla, la
+          advertencia del final se puede scrollear hasta arriba del botón y no queda tapada. */}
+      <div className="h-24 md:hidden" aria-hidden />
     </div>
+  );
+}
+
+/** El estado de los pasos en una línea: "Guía pública: 0 de 11 pasos con página del manual". */
+export function resumenPasos(pack: Pick<KnowledgePack, "pasos" | "verificado">): string {
+  const conPagina = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO" && p.cita.pagina).length;
+  const n = pack.pasos.length;
+  return `${pack.verificado ? "Manual" : "Guía pública"}: ${conPagina} de ${n} ${n === 1 ? "paso" : "pasos"} con página del manual`;
+}
+
+/** El sello de cada paso: el mismo de la tarjeta del paso de la guía (`selloCita`, carril B). */
+function SelloPaso({ paso }: { paso: KnowledgePack["pasos"][number] }) {
+  const { texto, verificada: verificado } = selloCita(paso);
+  return (
+    <span
+      className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
+        verificado ? "bg-confirmado/15 text-confirmado" : "bg-texto/10 text-texto-suave"
+      }`}
+    >
+      {texto}
+    </span>
   );
 }
 

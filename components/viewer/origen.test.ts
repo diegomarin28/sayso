@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planoEjemplo, type PlanoDePiezas } from "../../shared";
-import { resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
+import { piezasGenericas, resumenOrigen, textoOrigenPieza, textoResumen, todoDelManual } from "./origen";
 
 const con = (origenes: (PlanoDePiezas["piezas"][number]["origen"])[], medidas?: PlanoDePiezas["medidas"]): PlanoDePiezas => ({
   ...planoEjemplo,
@@ -35,5 +35,26 @@ describe("textoOrigenPieza", () => {
     expect(textoOrigenPieza({ origen: "estimada" })).toBe("Estimada");
     expect(textoOrigenPieza({ origen: "plantilla" })).toBe("Genérica");
     expect(textoOrigenPieza({})).toBe("Sin verificar");
+  });
+});
+
+describe("piezasGenericas", () => {
+  const plano: PlanoDePiezas = {
+    modelo: "láser",
+    unidades: "cm",
+    piezas: [
+      { pieza: "carcasa_impresora", forma: "caja", dim: [38, 22, 36], pos: [0, 11, 0], pivote: [0, 0, 0], origen: "estimada" },
+      { pieza: "cartucho_toner", forma: "caja", dim: [27, 9, 9], pos: [0, 12, 4], pivote: [0, 0, 0], padre: "carcasa_impresora", origen: "plantilla" },
+      { pieza: "unidad_fusora", forma: "caja", dim: [26, 6, 6], pos: [0, 10, -12], pivote: [0, 0, 0], padre: "carcasa_impresora", origen: "plantilla" },
+    ],
+  };
+
+  it("las de la plantilla que el pack no nombra (el tóner del pack, aunque esté ubicado por la plantilla, no)", () => {
+    expect([...piezasGenericas(plano, [{ id: "cartucho_toner" }])]).toEqual(["unidad_fusora"]);
+  });
+
+  it("sin pack (el lab), ninguna", () => {
+    expect(piezasGenericas(plano).size).toBe(0);
+    expect(piezasGenericas(plano, []).size).toBe(0);
   });
 });

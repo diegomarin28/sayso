@@ -28,14 +28,6 @@ import {
 
 /** Pantalla 1 — Qué se rompió. */
 
-/** Ejemplos que nombran el equipo (así el experto entiende de una). */
-const SUGERENCIAS = [
-  "Mi notebook se apaga sola",
-  "El celular no carga",
-  "El aire no enfría",
-  "El lavarropas no centrifuga",
-];
-
 /** Las opciones de "¿Qué equipo es?". `tipo` es lo que se pasa a fotos, etiqueta y 3D. */
 type Opcion = { clave: string; clase: Caso["clase"]; tipo: string; etiqueta: string; icono: IconoEquipo };
 
@@ -211,7 +203,9 @@ export default function QueSeRompio() {
               rows={3}
               aria-label="Lo que se rompió"
               placeholder={
-                dictado.escuchando ? "Te escucho…" : "Escribilo acá, o tocá el micrófono y contámelo."
+                dictado.escuchando
+                  ? "Te escucho…"
+                  : "Escribilo acá o tocá el micrófono. Ej.: «la heladera hace ruido y no enfría»"
               }
               className={`w-full resize-none rounded-2xl border bg-superficie/90 p-4 text-lg backdrop-blur placeholder:text-texto-suave/70 focus:border-acento focus:outline-none ${
                 dictado.escuchando ? "border-peligro/60" : "border-borde"
@@ -263,22 +257,6 @@ export default function QueSeRompio() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <p className="text-xs text-texto-suave">O tocá uno de estos:</p>
-              <div className="flex flex-wrap gap-2">
-                {SUGERENCIAS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={dictado.escuchando}
-                    onClick={() => setTexto(s)}
-                    className="rounded-full border border-borde bg-superficie/60 min-h-11 px-4 py-2 text-sm text-texto-suave transition hover:border-texto-suave hover:text-texto"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
             {cantidadCasos > 0 && (
               <button
                 type="button"

@@ -59,11 +59,27 @@ export const CASOS: Record<string, FuenteCompras> = {
     await demora(400);
     throw new ErrorCompras(MENSAJE_PAUSA);
   },
+  incompleta: async () => (await demora(800), { ...respuesta([]), motivo: "incompleta" }),
+  tardo: async () => {
+    await demora(400);
+    throw new ErrorCompras(MENSAJES.tardo);
+  },
+  ia: async () => {
+    await demora(400);
+    throw new ErrorCompras(MENSAJES.ia);
+  },
   rota: async () => (await demora(400), { opciones: TRES }) as unknown as RespuestaCompras,
 };
 
-export function LabCompras({ casoInicial }: { casoInicial?: string }) {
+/** Piezas de ejemplo: una sin número de parte (se busca por modelo) y una con. */
+export const PIEZAS = {
+  celular: { pieza: "conector_lightning", nombre: "Conector Lightning de carga", numeroParte: null, modelo: "iPhone 13", marca: "Apple" },
+  tv: { pieza: "placa_principal", nombre: "Placa principal", numeroParte: "40-MT56E1-MAB2HG", modelo: "55V6C", marca: "TCL" },
+} as const;
+
+export function LabCompras({ casoInicial, piezaInicial }: { casoInicial?: string; piezaInicial?: string }) {
   const [caso, setCaso] = useState(casoInicial && casoInicial in CASOS ? casoInicial : "tres");
+  const [pieza, setPieza] = useState<keyof typeof PIEZAS>(piezaInicial && piezaInicial in PIEZAS ? (piezaInicial as keyof typeof PIEZAS) : "celular");
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-6 bg-fondo px-4 py-6 text-texto">
       <div className="flex flex-wrap gap-2">
@@ -77,7 +93,18 @@ export function LabCompras({ casoInicial }: { casoInicial?: string }) {
           </button>
         ))}
       </div>
-      <OpcionesCompra key={caso} pieza="Ventilador" numeroParte="5F10S13875" modelo="NB-15" fuente={CASOS[caso]} buscarAlMontar />
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(PIEZAS) as Array<keyof typeof PIEZAS>).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPieza(p)}
+            className={`rounded-full border px-3 py-1 text-xs ${p === pieza ? "border-acento text-texto" : "border-borde text-texto-suave"}`}
+          >
+            {PIEZAS[p].nombre}
+          </button>
+        ))}
+      </div>
+      <OpcionesCompra key={`${caso}-${pieza}`} {...PIEZAS[pieza]} fuente={CASOS[caso]} buscarAlMontar />
     </main>
   );
 }

@@ -3,7 +3,9 @@ import { fichaEjemplo, PlanoDePiezas, type KnowledgePack, type PiezaPlano, type 
 import type { LlamarIA } from "../ia/claude";
 import { generarPlano } from "./generador";
 import { obtenerPlano } from "./obtener";
-import { PLANTILLAS_POR_TIPO } from "./plantillas/por-tipo";
+import { equivalentes, PLANTILLAS_POR_TIPO } from "./plantillas/por-tipo";
+import indice from "../../public/models/piezas/indice.json";
+import { IndicePiezas, tipoPara } from "./biblioteca";
 import { acotarMedidas, seguirPlantilla, VECES_LA_FORMA } from "./seguir-plantilla";
 
 /**
@@ -102,8 +104,9 @@ describe("TV (LG 43\", Samsung 65\"): la cara es la pantalla y la placa no se es
     const [px, py] = fraccion(plano, "pantalla_panel");
     expect(px).toBeGreaterThan(0.9);
     expect(py).toBeGreaterThan(0.8);
-    // La placa sigue siendo una placa (4,5 cm), no un tablón de medio metro.
-    expect(pieza(plano, "placa_principal_av")!.dim[1]).toBeLessThan(10);
+    // La placa principal toma la del esqueleto (nombre equivalente): una placa, no un tablón de medio metro.
+    expect(pieza(plano, "placa_principal_av")!.dim[1]).toBeLessThan(20);
+    expect(pieza(plano, "placa_principal_av")!.origen).toBe("plantilla");
   });
 });
 
@@ -146,6 +149,57 @@ describe("al generar (IA simulada, sin gastar): impresora láser y notebook de d
     expect(pieza(r.plano, "bateria")!.origen).toBe("plantilla");
     expect(pieza(r.plano, "ventilador")!.origen).toBe("manual");
     expect(pieza(r.plano, "ventilador")!.pos[0]).toBeCloseTo(0.6 * 18, 0); // donde lo vio la IA
+  });
+});
+
+describe("piezas genéricas: lo que el esqueleto del tipo tiene y el pack no nombra (#187)", () => {
+  const NOMBRES = Object.keys(IndicePiezas.parse(indice).tipos);
+  /** Las genéricas del plano: de la plantilla y fuera del pack (las que el visor pinta en gris). */
+  const genericas = (p: PlanoDePiezas, kp: KnowledgePack) => p.piezas.filter((x) => x.origen === "plantilla" && !kp.piezas.some((q) => q.id === x.pieza));
+
+  it.each([
+    ["Brother HL-L2350DW", 36, 36],
+    ["Samsung Xpress M2020", 33, 26],
+  ])("láser %s con solo tóner y rodillo en el pack: igual tiene fusora, unidad láser, placa y fuente", async (modelo, W, D) => {
+    const kp = pack(modelo, ["cartucho_toner", "rodillo_mp"]);
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo: `impresora láser ${modelo}` }, iaEstimada([["cartucho_toner", 0, 0, 0.1, 0.1]], W, D));
+    const ids = genericas(r.plano, kp).map((p) => p.pieza);
+    expect(ids).toEqual(expect.arrayContaining(["unidad_fusora", "unidad_laser", "placa_control", "fuente"]));
+    // Dentro de la carcasa del plano (escaladas a ella; la tapa de adelante va pegada por fuera), colgadas de la raíz.
+    for (const g of genericas(r.plano, kp)) {
+      expect(g.padre).toBe(raiz(r.plano).pieza);
+      g.pos.forEach((v, i) => expect(Math.abs(v - raiz(r.plano).pos[i]), `${g.pieza} eje ${i}`).toBeLessThanOrEqual(raiz(r.plano).dim[i] / 2 + 1));
+    }
+  });
+
+  it.each([
+    ["LG 43UQ7500", ["retroiluminacion", "placa_principal", "parlante"]],
+    ["Samsung UN65", ["pantalla_panel", "fuente_alimentacion"]],
+  ])("TV %s: suma lo que falta y nunca una segunda pieza del mismo tipo que una del pack", async (modelo, ids) => {
+    const kp = pack(modelo, ids);
+    const r = await generarPlano({ casoId: "c", knowledgePack: kp, tipoEquipo: "televisor" }, iaEstimada(ids.map((id) => [id, 0, 0, 0.1, 0.1]), 100, 8));
+    const gen = genericas(r.plano, kp);
+    expect(gen.length).toBeGreaterThan(0);
+    const tiposDelPack = new Set(ids.map((id) => tipoPara(id, NOMBRES)).filter(Boolean));
+    for (const g of gen) expect(tiposDelPack.has(tipoPara(g.pieza, NOMBRES)), g.pieza).toBe(false);
+  });
+});
+
+describe("un plano guardado con otro nombre para la misma pieza (pack de antes)", () => {
+  it.each([
+    ["Samsung Galaxy A54", "placa_logica", "placa_madre"],
+    ["Motorola Moto G84", "placa_principal", "placa_madre"],
+  ])("celular %s: «%s» del plano pasa a ser «%s» del pack, sin una segunda placa", async (modelo, vieja, delPack) => {
+    const kp = pack(modelo, ["bateria", delPack, "pantalla"]);
+    const guardado = planoViejo(7.4, 15.8, [
+      ["bateria", [5.6, 0.45, 8.6], [0, 1, 2.4]],
+      [vieja, [6, 0.25, 5.4], [0, 0.9, -4.6]],
+      ["pantalla", [7.1, 0.35, 15.5], [0, -0.2, 0]],
+    ]);
+    const plano = await leer(guardado, kp, "celular");
+    const placas = plano.piezas.filter((p) => equivalentes(p.pieza, delPack));
+    expect(placas.map((p) => p.pieza)).toEqual([delPack]);
+    expect(pieza(plano, vieja)).toBeUndefined();
   });
 });
 

@@ -123,3 +123,22 @@ export function Siguiente(p: PropsIcono) {
     </Icono>
   );
 }
+
+/** Globo de diálogo (la conversación con el experto). */
+export function Globo(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M4 5h16v11H9l-5 4z" />
+    </Icono>
+  );
+}
+
+/** Cubo (opciones del 3D: vista y de dónde sale cada ubicación). */
+export function Cubo(p: PropsIcono) {
+  return (
+    <Icono {...p}>
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" />
+      <path d="M4 7.5l8 4.5 8-4.5M12 12v9" />
+    </Icono>
+  );
+}

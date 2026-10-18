@@ -14,6 +14,7 @@ import {
 } from "../../../shared";
 import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
+import { pedidosSimulados } from "./pedidos-simulados";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -117,23 +118,7 @@ export async function pedidosDeFoto(
 ): Promise<z.infer<typeof RespPedidos>> {
   if (USAR_FIXTURE) {
     await esperar(300);
-    return RespPedidos.parse({
-      pedidos: [
-        {
-          tipo: "frente",
-          instruccion: "Sacale una foto de frente, con la tapa abierta.",
-        },
-        {
-          tipo: "etiqueta",
-          instruccion: "Dala vuelta y sacale una foto a la etiqueta de abajo. Que se lean las letras.",
-          advertencia: "Apagala y desenchufala antes de darla vuelta.",
-        },
-        {
-          tipo: "puertos",
-          instruccion: "Ahora los costados, donde están los puertos.",
-        },
-      ],
-    });
+    return RespPedidos.parse({ pedidos: pedidosSimulados(tipoEquipo, caso.sintoma) });
   }
   const tipo = tipoEquipo?.trim() || undefined;
   return unaVez(`pedidos|${caso.id}|${caso.clase}|${tipo ?? ""}`, () =>
@@ -194,8 +179,18 @@ export async function leerChapa(
   }
   if (USAR_FIXTURE) {
     await esperar(1800);
+    // Sin etiqueta, como la IA con la foto del frente: la marca (por el logo) queda probable y el
+    // modelo casi nunca se reconoce, así que lo escribe la persona.
+    const sinEtiqueta =
+      imagenes.length === 0
+        ? {
+            marca: { ...fichaEjemplo.marca, estado: "probable" as const, fuente: "foto" },
+            modelo: { valor: null, estado: "desconocido" as const },
+            serie: { valor: null, estado: "desconocido" as const },
+          }
+        : {};
     return RespChapa.parse({
-      ficha: { ...fichaEjemplo, casoId: caso.id, confirmadaPorUsuario: false },
+      ficha: { ...fichaEjemplo, ...sinEtiqueta, casoId: caso.id, clase: caso.clase, confirmadaPorUsuario: false },
     });
   }
   const etiqueta = imagenes.slice(0, 3);

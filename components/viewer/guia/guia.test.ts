@@ -60,7 +60,8 @@ describe("reproducir", () => {
     );
     // Cada paso se muestra y se dice antes del siguiente (la respuesta se lee entera: "buscando"
     // solo aparece si hay que esperar un paso que todavía no llegó).
-    expect(log.filter((l) => /^(paso|decir)/.test(l))).toEqual(["paso:1", "decir:Este es el", "paso:2", "decir:Aflojá los"]);
+    const inicio = (i: number) => `decir:${coreografiaEjemplo[i].dice.slice(0, 10)}`;
+    expect(log.filter((l) => /^(paso|decir)/.test(l))).toEqual(["paso:1", inicio(0), "paso:2", inicio(1)]);
     expect(log[0]).toBe("estado:pensando");
     expect(log.at(-1)).toBe("estado:esperando");
     expect(dicho).toEqual({ rol: "experto", texto: `${coreografiaEjemplo[0].dice} ${coreografiaEjemplo[1].dice}` });

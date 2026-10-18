@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
 import { piezasParaComprar } from "./piezas-compra";
 
 /**
- * Pantalla 6 — repuestos. Franja "Ver dónde comprar repuestos" con las piezas que se pueden comprar
+ * Pantalla 6 — repuestos. Ícono de carrito en el encabezado ("Ver dónde comprar repuestos (n)") con las piezas que se pueden comprar
  * (`piezasParaComprar`): las que tienen número de parte citado en el manual o, si el manual no los
  * trae, las de la guía para buscar por modelo. Cuando el experto dice que una pieza hay que
- * cambiarla (`piezaACambiar`, de onCambiarPieza de <GuiaExperto>), un aviso abre el panel con esa
- * pieza primero. Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar:
+ * cambiarla (`piezaACambiar`, de onCambiarPieza de <GuiaExperto>), el carrito se resalta y un aviso
+ * ("Hay que cambiar: X") abre el panel con esa pieza primero. Va encima de los íconos del 3D (#207: antes
+ * tapaba «Vista isométrica»), se cierra solo a los `AVISO_MS` y el carrito sigue resaltado. Para cada una, dónde comprarla (<OpcionesCompra>, Diego). Buscar se hace al tocar:
  * cada búsqueda cuesta. Nunca se compra ni se paga por la persona.
  */
+
+/** Cuánto queda a la vista el aviso "Hay que cambiar" (después queda el carrito resaltado). */
+const AVISO_MS = 8000;
 
 /** En modo fixture no se busca de verdad (gastaría IA y búsquedas web). */
 const fuenteApagada: FuenteCompras = async () => {
@@ -40,6 +44,12 @@ export function Repuestos({
   const [abierto, setAbierto] = useState(false);
   /** El aviso se cierra por pieza: si el experto pide cambiar otra, vuelve a aparecer. */
   const [avisoCerrado, setAvisoCerrado] = useState<string | null>(null);
+  // El globito se cierra solo; el carrito queda resaltado mientras haya una pieza a cambiar.
+  useEffect(() => {
+    if (!piezaACambiar) return;
+    const t = setTimeout(() => setAvisoCerrado(piezaACambiar), AVISO_MS);
+    return () => clearTimeout(t);
+  }, [piezaACambiar]);
   const modelo = ficha.modelo.valor;
 
   // Siempre hay un camino para comprar: si el manual no trae números de parte, se ofrecen las piezas
@@ -53,39 +63,53 @@ export function Repuestos({
 
   return (
     <>
-      {/* Franja visible (antes era un botón chico que en celular mostraba solo un número). */}
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-acento/50 bg-acento/10 px-4 text-sm font-medium text-texto transition hover:border-acento active:scale-[0.99]"
-      >
-        <Carrito /> Ver dónde comprar repuestos
-        <span className="rounded-full bg-acento px-1.5 text-xs font-semibold text-black">{items.length}</span>
-      </button>
+      {/* Ícono de carrito en el encabezado, con el número en una insignia (#199). Con una pieza a cambiar, se
+          resalta y el aviso sale arriba de los íconos del 3D (#207): no tapa ningún botón y se cierra solo. */}
+      <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          aria-label={
+            piezaACambiar
+              ? `Hay que cambiar: ${nombre(piezaACambiar)}. Ver dónde comprar repuestos (${items.length})`
+              : `Ver dónde comprar repuestos (${items.length})`
+          }
+          title="Ver dónde comprar repuestos"
+          className={`relative flex h-11 w-11 items-center justify-center rounded-full border bg-superficie text-texto transition hover:border-acento active:scale-95 ${
+            piezaACambiar ? "border-acento ring-2 ring-acento/60" : "border-acento/60"
+          }`}
+        >
+          <Carrito />
+          <span
+            aria-hidden
+            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-acento px-1 text-[11px] font-bold text-black"
+          >
+            {piezaACambiar ? "!" : items.length}
+          </span>
+        </button>
 
-      {/* Aviso (no tapa el 3D mientras el experto explica): abre el panel con esa pieza primero. */}
-      {avisar && (
-        <div className="aparece fixed inset-x-0 bottom-24 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-acento/60 bg-fondo/95 p-3 pl-4 shadow-2xl">
-          <p className="min-w-[8rem] flex-1 text-sm">
-            Hay que cambiar: <span className="font-semibold">{nombre(piezaACambiar)}</span>
-          </p>
-          <button
-            type="button"
-            onClick={() => setAbierto(true)}
-            className="h-10 shrink-0 rounded-xl bg-acento px-3 text-sm font-semibold text-black active:scale-95"
+        {avisar && (
+          <div
+            role="status"
+            // Abajo, encima de la fila de íconos del 3D (opciones, charla, «¿de dónde sale?») y del campo de
+            // pregunta: no tapa ningún botón ni la tarjeta del paso (antes, en bottom-24, tapaba «Vista isométrica»).
+            className="aparece fixed inset-x-0 bottom-[calc(8.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl items-center gap-1 rounded-2xl border border-acento/60 bg-fondo/95 p-1 pl-4 shadow-2xl backdrop-blur"
           >
-            Ver dónde comprar esta pieza
-          </button>
-          <button
-            type="button"
-            onClick={() => setAvisoCerrado(piezaACambiar)}
-            aria-label="Cerrar aviso"
-            className="h-10 w-8 shrink-0 text-texto-suave"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+            <button type="button" onClick={() => setAbierto(true)} className="min-h-11 min-w-0 flex-1 text-left text-sm leading-tight">
+              Hay que cambiar: <span className="font-semibold">{nombre(piezaACambiar)}</span>
+              <span className="block text-xs font-medium text-acento">Ver dónde comprar esta pieza</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAvisoCerrado(piezaACambiar)}
+              aria-label="Cerrar aviso"
+              className="flex h-11 w-11 shrink-0 items-center justify-center text-texto-suave"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Se oculta en vez de desmontarse: así no se pierden (ni se vuelven a pagar) las búsquedas. */}
       <div
@@ -148,6 +172,8 @@ export function Repuestos({
                 key={r.pieza}
                 casoId={casoId}
                 pieza={r.pieza}
+                // El nombre del pack ("Conector Lightning"): el título y la búsqueda lo usan, no el id (#195).
+                nombre={nombre(r.pieza)}
                 numeroParte={r.numeroParte}
                 modelo={modelo}
                 marca={ficha.marca.valor}
@@ -165,8 +191,8 @@ export function Repuestos({
 function Carrito() {
   return (
     <svg
-      width="18"
-      height="18"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

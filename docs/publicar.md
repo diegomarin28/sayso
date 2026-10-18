@@ -2,7 +2,7 @@
 
 > **Correr SOLO cuando Diego diga "publicamos la versión final".** Antes de eso no se publica.
 
-URL de la demo: **https://sayso-mu.vercel.app** (proyecto de Vercel de Iaio, `sayso6/sayso`). Se publica solo a mano: máximo unas 5 veces por día.
+URL de la demo: **https://sayso-mu.vercel.app** (proyecto de Vercel de Iaio, `sayso6/sayso`). Se publica solo a mano: máximo unas 5 veces por día. **Quedan pocas publicaciones** (unas 2 o 3): no republicar por cada arreglo; la última sale cuando Diego lo diga, con todo fusionado.
 
 ## Checklist
 
@@ -35,5 +35,5 @@ URL de la demo: **https://sayso-mu.vercel.app** (proyecto de Vercel de Iaio, `sa
 
 5. **Prueba rápida en el celular:**
    - Abrir https://sayso-mu.vercel.app en Safari o Chrome (no dentro de WhatsApp).
-   - `/lab/visor` y `/lab/guia` tienen que dar **404** (prueba de que no hay modo de prueba activo).
-   - La pantalla 1 tiene que responder con **IA real**: con *"mi notebook se apaga sola"* dice *"Entendí: es una notebook…"*, no *"No pude identificar el equipo"*.
+   - `/lab`, `/lab/campus`, `/lab/demo`, `/lab/visor` y `/lab/guia` tienen que dar **404** (prueba de que no hay modo de prueba activo). Desde una compu: `for r in lab lab/campus lab/demo lab/visor lab/guia; do curl -s -o /dev/null -w "$r %{http_code}\n" https://sayso-mu.vercel.app/$r; done` → todos `404`.
+   - La pantalla 1 tiene que responder con **IA real**: con *"mi notebook se apaga sola"* dice *"Entendí: es tu notebook…"* y aparece la tarjeta "Notebook" elegida; no *"No te entendí bien"*.

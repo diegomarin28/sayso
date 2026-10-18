@@ -195,3 +195,72 @@ function eventoPiezaDesconocida(pieza: string, accion: Accion, ctx: ContextoEven
     datos: { pieza, accion },
   };
 }
+
+/** Una pieza para armar el despiece: su centro y su tamaño en los ejes del equipo (los del plano). */
+export type PiezaDespiece = { id: string; centro: Vec3; dim: Vec3; padre: string | null };
+
+/** Un equipo es plano si su lado más chico mide menos que esto del siguiente (celular, tablet, notebook, TV). */
+const PLANO_SI = 0.3;
+/** Piezas cuya altura (sobre el eje fino) difiere menos que esto del grosor del equipo van en la misma capa. */
+const TOLERANCIA_CAPA = 0.12;
+/** Escalón de cada capa sobre el eje fino: el grosor de la carcasa, o esto del lado mayor si es más. */
+const ESCALON_MIN = 0.06;
+/** Cada capa también se corre esto de su lado (en el eje que la cámara ve vertical): abiertas como cartas. */
+const ABANICO = 0.28;
+
+/**
+ * Cuánto se mueve cada pieza en el despiece completo (`cantidad` 1), en ejes de su padre.
+ *
+ * - Equipo PLANO (por su forma, no por modelo): las piezas se agrupan en capas por su altura sobre el eje
+ *   fino (pantalla, carcasa, placa y batería, tapa trasera), en orden físico, con el mismo escalón entre
+ *   capas; y cada capa se corre de costado en el eje que la cámara ve vertical, así mirando de arriba (o de
+ *   frente, un TV) no quedan una tapando a la otra (#188). La carcasa raíz no se mueve.
+ * - Los demás: `desplazamientoDespiece` (suben un escalón y se alejan del centro del padre).
+ */
+export function despiezado(piezas: PiezaDespiece[]): Map<string, Vec3> {
+  const raiz = piezas.find((p) => !p.padre);
+  const porId = new Map(piezas.map((p) => [p.id, p]));
+  const res = new Map<string, Vec3>();
+  if (!raiz) return res;
+  const orden = [0, 1, 2].sort((a, b) => raiz.dim[a] - raiz.dim[b]);
+  const fino = orden[0];
+  if (raiz.dim[fino] >= PLANO_SI * raiz.dim[orden[1]]) {
+    for (const p of piezas) res.set(p.id, desplazamientoDespiece(p.centro, p.padre ? (porId.get(p.padre)?.centro ?? null) : null, 1));
+    return res;
+  }
+  // El eje del abanico: si el equipo está acostado (fino = y), la profundidad; si está parado, la altura.
+  const abanico = fino === 1 ? 2 : 1;
+  const grosor = Math.max(...piezas.map((p) => p.centro[fino] + p.dim[fino] / 2)) - Math.min(...piezas.map((p) => p.centro[fino] - p.dim[fino] / 2));
+  const tolerancia = Math.max(grosor * TOLERANCIA_CAPA, 1e-3);
+  // Capas: alturas ordenadas, cortadas donde hay un salto mayor que la tolerancia.
+  const otras = piezas.filter((p) => p !== raiz).sort((a, b) => a.centro[fino] - b.centro[fino]);
+  const capaDe = new Map<string, number>();
+  const capas: number[][] = [];
+  for (const p of otras) {
+    const ultima = capas.at(-1);
+    if (ultima && p.centro[fino] - ultima.at(-1)! <= tolerancia) ultima.push(p.centro[fino]);
+    else capas.push([p.centro[fino]]);
+    capaDe.set(p.id, capas.length - 1);
+  }
+  // Rango de cada capa respecto de la carcasa: las de abajo, negativas; las de arriba, positivas.
+  const centroCapa = capas.map((c) => c.reduce((a, b) => a + b, 0) / c.length);
+  const debajo = centroCapa.filter((c) => c < raiz.centro[fino]).length;
+  const rango = (i: number) => (i < debajo ? i - debajo : i - debajo + 1);
+  const escalon = Math.max(raiz.dim[fino], ESCALON_MIN * Math.max(...raiz.dim));
+  const corrimiento = ABANICO * raiz.dim[abanico];
+  const enMundo = new Map<string, Vec3>([[raiz.id, [0, 0, 0]]]);
+  for (const p of otras) {
+    const r = rango(capaDe.get(p.id)!);
+    const v: Vec3 = [0, 0, 0];
+    v[fino] = r * escalon;
+    v[abanico] = -r * corrimiento; // la de arriba (o la de atrás) se va hacia el fondo: en pantalla, más arriba
+    enMundo.set(p.id, v);
+  }
+  // En ejes del padre: lo que se mueve la pieza menos lo que ya se movió su padre.
+  for (const p of piezas) {
+    const propio = enMundo.get(p.id)!;
+    const delPadre = (p.padre && enMundo.get(p.padre)) || [0, 0, 0];
+    res.set(p.id, propio.map((v, i) => v - delPadre[i]) as Vec3);
+  }
+  return res;
+}
