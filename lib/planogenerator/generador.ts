@@ -31,6 +31,7 @@ import {
 import type { ManualRecortado } from "./recorte";
 import { palabras } from "./biblioteca";
 import { ES_TAPA } from "./cubiertas";
+import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
 import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
 import { ubicarTeclas } from "./teclas";
@@ -76,6 +77,8 @@ export const PropuestaPlano = z.object({
   base_prof_cm: z.number().nullable(),
   /** De dónde salen las medidas. Sin dato se toman como estimadas (ver medidas.ts). */
   medidas_fuente: z.enum(["manual", "estimada"]).nullable().optional(),
+  /** Con fotos del interior: por dónde se abrió el equipo en las fotos ("frente": sin la pantalla; "atras": sin la tapa). */
+  vista_fotos: z.enum(["frente", "atras"]).nullable().optional(),
   piezas: z.array(PiezaPropuesta),
 });
 export type PropuestaPlano = z.infer<typeof PropuestaPlano>;
@@ -181,7 +184,7 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     .map((p) => `- ${p.id}: ${p.nombre}. Ubicación según el manual: ${p.ubicacion}.${p.etiquetaManual ? ` N.º en el diagrama: ${p.etiquetaManual}.` : ""}`)
     .join("\n");
   const paginas = entrada.fotos
-    ? `Las imágenes NO son del manual: son ${entrada.imagenes?.length ?? 0} fotos del interior de este modelo, numeradas desde 1. En "pagina" poné el número de la foto donde ves la pieza (null si no la ves). Las fotos no dan medidas: "medidas_fuente" va "estimada".`
+    ? `Las imágenes NO son del manual: son ${entrada.imagenes?.length ?? 0} fotos del interior de este modelo, numeradas desde 1. En "pagina" poné el número de la foto donde ves la pieza (null si no la ves). Las fotos no dan medidas: "medidas_fuente" va "estimada". Ubicá las piezas con el equipo derecho (la parte de arriba del equipo arriba) aunque la foto esté girada. No ubiques la carcasa, el marco, la pantalla ni las tapas (en las fotos están corridas o a medio sacar): de eso se encarga el sistema. En "vista_fotos" decí por dónde está abierto el equipo en las fotos: "frente" si se sacó la pantalla o el frente, "atras" si se sacó la tapa trasera o inferior.`
     : entrada.paginas?.length ? `Las imágenes son las páginas ${entrada.paginas.join(", ")} del manual.` : "";
   const { recorte } = entrada;
   const manual = recorte ? undefined : entrada.manual;
@@ -233,6 +236,11 @@ export async function generarPlano(entrada: EntradaGenerador, llamar?: LlamarIA,
     // como planta y después parado (ver carcasa.ts).
     const tipo = elegirPlantilla(kp, entrada.tipoEquipo);
     const avisosCara: string[] = [];
+    if (entrada.fotos) {
+      // La envoltura (pantalla, marco, tapas) no sale de las fotos: la pone el esqueleto del tipo, en su cara.
+      propuesta = { ...propuesta, piezas: propuesta.piezas.filter((p) => !ENVOLTURA_EN_FOTOS.test(p.pieza)) };
+      if (tipo) propuesta = delLadoDeLaPlanta(propuesta, tipo, avisosCara);
+    }
     // Lo que la IA no ubicó se completa con la plantilla del tipo (la de notebook no sirve para un TV).
     const completar = tipo && tipo.id !== "notebook" ? propuestaDePlantillaDeTipo(kp.piezas.map((p) => p.id), tipo) : undefined;
     const armado = planoDesdePropuesta(kp, tipo?.parado ? conAltoDeLaCara(propuesta, tipo, avisosCara) : propuesta, planoNotebookBase, completar);
@@ -318,6 +326,23 @@ export function conAltoDeLaCara(propuesta: PropuestaPlano, plantilla: PlantillaD
       : `${alto} cm no puede ser el alto de ${plantilla.nombre} de ${ancho} cm de ancho (parece la profundidad): se estima en ${nuevo} cm.`,
   );
   return { ...propuesta, base_prof_cm: nuevo, medidas_fuente: "estimada" };
+}
+
+/**
+ * La planta del plano se mira desde arriba (+y). En los equipos acostados con la tapa arriba (celular, tablet,
+ * notebook dada vuelta) eso es mirarlos por atrás; con la tapa abajo (reloj), por el frente. Si las fotos
+ * muestran el equipo abierto por el otro lado (un iPad se abre por la pantalla), izquierda y derecha están
+ * espejadas: se da vuelta x. Por el tipo (dónde pone la tapa su esqueleto), nunca por el modelo.
+ */
+export function delLadoDeLaPlanta(propuesta: PropuestaPlano, tipo: PlantillaDeEquipo, avisos: string[]): PropuestaPlano {
+  if (tipo.parado || !propuesta.vista_fotos) return propuesta;
+  const raiz = tipo.plano.piezas.find((p) => !p.padre);
+  const tapa = tipo.plano.piezas.find((p) => ES_TAPA.test(p.pieza));
+  if (!raiz || !tapa) return propuesta;
+  const planta = tapa.pos[1] > raiz.pos[1] ? "atras" : "frente";
+  if (propuesta.vista_fotos === planta) return propuesta;
+  avisos.push(`Las fotos muestran el equipo abierto por ${propuesta.vista_fotos === "frente" ? "el frente" : "atrás"}: se espejan para ubicar las piezas.`);
+  return { ...propuesta, piezas: propuesta.piezas.map((p) => ({ ...p, x: -p.x })) };
 }
 
 /** La primera hoja del recorte es la vista interior; las demás, vistas explosionadas (ver `paginasRecorte`). */
