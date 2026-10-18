@@ -67,7 +67,7 @@ export function Encabezado({
               />
             ))}
           </div>
-          <p className="mt-2 text-xs font-medium tracking-widest text-texto-suave uppercase">
+          <p className="mt-2 truncate text-xs font-medium tracking-widest whitespace-nowrap text-texto-suave uppercase">
             {paso}/6 · {PASOS[paso - 1]}
           </p>
         </div>
@@ -220,6 +220,27 @@ export function Papelera({ size = 18 }: { size?: number }) {
       aria-hidden
     >
       <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+/** Aviso (triángulo): en lugar del emoji "⚠", con el mismo trazo que el resto de los íconos. */
+export function Alerta({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="shrink-0"
+    >
+      <path d="M12 3.5 2.5 20h19z" />
+      <path d="M12 10v4.5M12 17.5v.01" />
     </svg>
   );
 }

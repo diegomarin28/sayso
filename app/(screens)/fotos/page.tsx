@@ -11,6 +11,7 @@ import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
   BarraAccion,
   BotonPrincipal,
+  Alerta,
   BotonSecundario,
   Camara,
   Check,
@@ -217,8 +218,8 @@ export default function CapturaGuiada() {
       {pedido && !terminado && (
         <>
           {pedido.advertencia && !toma.url && (
-            <p className="rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm text-probable">
-              ⚠ {pedido.advertencia}
+            <p className="flex items-start gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm text-probable">
+              <Alerta /> {pedido.advertencia}
             </p>
           )}
 

@@ -102,7 +102,8 @@ export default function MisCasos() {
       )}
 
       <p className="mt-auto text-center text-xs text-texto-suave">
-        Se guardan solo en este dispositivo, sin cuenta ni datos personales.
+        Se guardan en este dispositivo y en nuestro servidor para que puedas retomarlos (con las
+        fotos, incluida la de la etiqueta del equipo). No pedimos cuenta.
       </p>
     </Pantalla>
   );

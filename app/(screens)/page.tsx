@@ -13,6 +13,7 @@ import { useFlujo } from "./_estado/flujo";
 import { useDictado } from "@/lib/voice/useDictado";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import {
+  Alerta,
   BotonPrincipal,
   BarraAccion,
   BotonSecundario,
@@ -366,7 +367,9 @@ export default function QueSeRompio() {
                 role="alert"
                 className="rounded-2xl border border-peligro/50 bg-peligro/10 p-4 text-peligro"
               >
-                <p className="font-semibold">⚠ Riesgo alto</p>
+                <p className="flex items-center gap-2 font-semibold">
+                  <Alerta /> Riesgo alto
+                </p>
                 <p className="mt-1 text-sm">
                   {bloqueo.derivacion ?? "Esto lo tiene que ver un técnico. No lo abras ni lo manipules."}
                 </p>
