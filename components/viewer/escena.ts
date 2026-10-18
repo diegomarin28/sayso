@@ -30,6 +30,20 @@ const OSCURO_BORDE_ACTIVO = 0.08;
 const BORDE_ACTIVO = ACTIVO.clone().multiplyScalar(OSCURO_BORDE_ACTIVO);
 const ANGULO_BORDES = 30; // grados: solo aristas marcadas, no las de superficies curvas
 
+/** Cuánto brilla la pieza activa con el naranja (por el que se ajustó el bloom). */
+const BRILLO_ACTIVO = 0.9;
+/**
+ * Un color de resaltado claro (el cian de Sayso tiene el doble de luminancia que el naranja) brilla
+ * menos, para que el bloom no lo lave a blanco: el brillo se escala a la luminancia del naranja.
+ */
+const LUMINANCIA_REFERENCIA = luminancia(new THREE.Color(ACTIVO_RESPALDO));
+let brilloActivo = BRILLO_ACTIVO;
+
+/** Luminancia relativa (espacio lineal). */
+function luminancia(c: THREE.Color) {
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+}
+
 /**
  * Color de resaltado (tema.ts lo lee de las variables CSS). Se llama antes de preparar la escena:
  * las mallas preparadas antes conservan el brillo del color anterior.
@@ -37,6 +51,7 @@ const ANGULO_BORDES = 30; // grados: solo aristas marcadas, no las de superficie
 export function usarColorActivo(color: string) {
   ACTIVO.set(color);
   BORDE_ACTIVO.copy(ACTIVO).multiplyScalar(OSCURO_BORDE_ACTIVO);
+  brilloActivo = BRILLO_ACTIVO * Math.min(1, LUMINANCIA_REFERENCIA / Math.max(luminancia(ACTIVO), 1e-3));
 }
 
 const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
@@ -300,7 +315,7 @@ function pintar(m: MallaAnimable, foco: number, fantasma: number, visible: numbe
   mat.color.copy(m.color).lerp(FANTASMA, fantasma).lerp(ACTIVO, foco);
   mat.metalness = lerp(m.metalness, 0.1, foco);
   mat.roughness = lerp(m.roughness, 0.45, foco);
-  mat.emissiveIntensity = foco * 0.9 * latido;
+  mat.emissiveIntensity = foco * brilloActivo * latido;
 
   const incierta = lerp(m.incierta ? lerp(OPACIDAD_INCIERTA, OPACIDAD_INCIERTA_ACTIVA, foco) : 1, 1, cerrada);
   const base = cubierta === null ? m.opacidad : lerp(Math.min(m.opacidad, OPACIDAD_CUBIERTA_ABIERTA), 1, cerrada);

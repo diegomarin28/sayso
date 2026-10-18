@@ -45,6 +45,28 @@ describe("escena: modo rayos X", () => {
     }
   });
 
+  it("un resaltado claro (cian) brilla igual que el naranja, no más: el bloom no lo lava a blanco", () => {
+    const brillo = (color: string) => {
+      usarColorActivo(color);
+      try {
+        const { escena, estado } = preparar();
+        const e = con(estado, { t: "resaltar", pieza: "ventilador" });
+        animar(escena, e, 0);
+        animar(escena, e, 5000);
+        const m = material(escena, "ventilador");
+        return { intensidad: m.emissiveIntensity, visto: m.emissiveIntensity * (0.2126 * m.emissive.r + 0.7152 * m.emissive.g + 0.0722 * m.emissive.b) };
+      } finally {
+        usarColorActivo(COLOR_ACTIVO);
+      }
+    };
+    const naranja = brillo(COLOR_ACTIVO);
+    const cian = brillo("#4fd1e0");
+    expect(cian.visto).toBeCloseTo(naranja.visto, 5);
+    expect(cian.intensidad).toBeLessThan(naranja.intensidad * 0.6);
+    // Un color más oscuro que el naranja no brilla de más.
+    expect(brillo("#7a2a00").intensidad).toBeCloseTo(naranja.intensidad, 5);
+  });
+
   it("sin piezas resaltadas todo vuelve a su material original", () => {
     const { escena, estado } = preparar();
     const original = material(escena, "placa_madre").color.getHexString();
