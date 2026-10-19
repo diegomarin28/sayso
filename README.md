@@ -2,7 +2,7 @@
 
 Hackatón Build 101 (17–18 oct 2026). Guía de reparación con IA: captura guiada, identificación del modelo, manual, 3D animado y voz.
 
-**Agentes (Claude Code / Codex): empezá por `CONTEXT.md`.**
+**Agentes (Claude Code / Codex): empezá por `CLAUDE.md` (cómo se trabaja) y `CONTEXT.md` (contexto y reglas).**
 
 ## Arrancar
 
@@ -17,7 +17,7 @@ npm run typecheck
 ```
 
 - Contratos y casos de ejemplo: `shared/`
-- Plan: `docs/plan-v4.md` · 3D: `docs/3d-estrategia.md`
+- Plan de la hackathon (referencia): `docs/plan-v4.md` · 3D: `docs/3d-estrategia.md`
 
 ## Probar en el celular (o con un navegador automático)
 

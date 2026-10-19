@@ -1,13 +1,13 @@
 # AGENTS.md
 
-Antes de hacer cualquier cosa, leé `CONTEXT.md` (en esta misma carpeta) entero y seguí sus instrucciones. Lo primero que tenés que hacer es preguntarle a la persona si es Diego, Juanma o Iaio.
+Este repositorio tiene una sola fuente de instrucciones para todos los agentes (Claude Code, Codex u otros):
 
-- El plan está en `docs/plan-v4.md` y la estrategia 3D en `docs/3d-estrategia.md`.
-- Si algo no está claro o falta una decisión, preguntá antes de construir.
-- Si la carpeta `shared/` todavía no existe, no inventes los contratos: avisale a la persona que Diego tiene que crearlos primero.
-- Seguí el MODO AUTÓNOMO y el "Ciclo de cada tarea" de `CONTEXT.md`: trabajás en bloques de ~1 hora, manejás git, PR y fusiones, y la persona da un solo OK por bloque.
-- No hagas commits directos a `main`.
-- Tu uso principal es revisar PRs y escribir tests.
+1. **`CLAUDE.md`**: cómo se trabaja. Inicio de sesión (preguntar si la persona es Diego, Juanma o Iaio), carriles y dueños, coordinación por GitHub Issues, un worktree por PR, cuándo preguntar a las personas y mensaje de salida.
+2. **`CONTEXT.md`**: contexto del producto y reglas permanentes (arquitectura, seguridad, gasto de IA, claves, stack).
+
+Leé los dos enteros antes de hacer nada y seguilos como si estuvieran escritos acá. Si algo de este archivo choca con `CLAUDE.md`, manda `CLAUDE.md`.
+
+- La cuenta de Codex no tiene dueño: su uso principal es revisar PRs y escribir tests, con las mismas reglas (sin IA real ni servicios pagos sin OK con monto en USD, sin commits a `main`, un worktree por PR).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
