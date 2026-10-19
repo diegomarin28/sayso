@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { PackParaElegir } from "../../lib/planogenerator/plantillas/por-tipo";
-import { IndicePiezas, archivosPara, bibliotecaDesdeEscena, type BibliotecaPiezas } from "../../lib/planogenerator";
+import { IndicePiezas, archivosDeFormas, bibliotecaDesdeEscena, formasPara, type BibliotecaPiezas, type PedidoForma } from "../../lib/planogenerator";
 import { cargadorGlb } from "../../lib/planogenerator/cargador";
+import type { PiezaPlano } from "../../shared";
 
 /** Piezas genéricas modeladas en Blender (`npm run modelos:piezas`): un GLB por familia + el índice. */
 export const URL_PIEZAS = "/models/piezas/";
@@ -43,13 +44,17 @@ function cargarFamilia(archivo: string): Promise<BibliotecaPiezas | null> {
   return p;
 }
 
-/** Solo las familias que necesitan estos ids (una heladera no baja las piezas de notebook). `null` = sin índice. */
-export async function cargarBiblioteca(ids: string[]): Promise<BibliotecaPiezas | null> {
+/**
+ * Solo las formas que el 3D puede elegir para estas piezas (`formasPara`: una heladera no baja las piezas de
+ * notebook, ni una notebook la pantalla del reloj) y solo las familias que las tienen. `null` = sin índice.
+ */
+export async function cargarBiblioteca(piezas: PedidoForma[], tipoEquipo?: string | null): Promise<BibliotecaPiezas | null> {
   const i = await cargarIndice();
   if (!i) return null;
-  const partes = await Promise.all(archivosPara(ids, i).map(cargarFamilia));
+  const formas = formasPara(piezas, i, tipoEquipo ?? undefined);
+  const partes = await Promise.all(archivosDeFormas(formas, i).map(cargarFamilia));
   const biblioteca: BibliotecaPiezas = new Map();
-  for (const p of partes) for (const [nombre, modelo] of p ?? []) biblioteca.set(nombre, modelo);
+  for (const p of partes) for (const [nombre, modelo] of p ?? []) if (formas.has(nombre)) biblioteca.set(nombre, modelo);
   return biblioteca;
 }
 
@@ -62,7 +67,8 @@ export async function cargarBiblioteca(ids: string[]): Promise<BibliotecaPiezas 
 export function precargarPiezas(tipoEquipo?: string | null, pack?: PackParaElegir | null): Promise<unknown> {
   if (!tipoEquipo?.trim() && !pack?.piezas.length) return Promise.resolve();
   return import("../../lib/planogenerator/plantillas/por-tipo")
-    .then(({ piezasProbables }) => cargarBiblioteca(piezasProbables(tipoEquipo, pack)))
+    // Sin medidas todavía: todas las variantes que deja el tipo de equipo (el visor elige entre ellas).
+    .then(({ piezasProbables }) => cargarBiblioteca(piezasProbables(tipoEquipo, pack).map((pieza) => ({ pieza })), tipoEquipo))
     .catch((e: unknown) => console.warn("[visor] no se pudo precargar las piezas:", e));
 }
 
@@ -77,26 +83,34 @@ export function usePrecargaPiezas(tipoEquipo?: string | null, pack?: PackParaEle
 
 type EstadoBiblioteca = { clave: string; biblioteca: BibliotecaPiezas | null };
 
+const mismasFormas = (a: BibliotecaPiezas, b: BibliotecaPiezas) => a.size === b.size && [...a.keys()].every((n) => b.has(n));
+
 /**
  * Qué usa el visor cuando llega algo para `clave`: lo primero que llega (la biblioteca o el plazo);
- * si antes llegó el plazo (primitivas) y después la biblioteca, la biblioteca reemplaza. Una
- * descarga fallida no reemplaza nada.
+ * si antes llegó el plazo (primitivas) y después la biblioteca, la biblioteca reemplaza. Con las mismas
+ * piezas pero otras formas posibles (cambiaron las medidas o el tipo de equipo), también reemplaza; con
+ * las mismas formas, no (no se rearma la escena). Una descarga fallida no reemplaza nada.
  */
 export function siguienteBiblioteca(actual: EstadoBiblioteca | undefined, clave: string, nueva: BibliotecaPiezas | null): EstadoBiblioteca | undefined {
   if (actual?.clave !== clave) return { clave, biblioteca: nueva };
-  if (actual.biblioteca === null && nueva !== null) return { clave, biblioteca: nueva };
+  if (nueva !== null && (actual.biblioteca === null || !mismasFormas(actual.biblioteca, nueva))) return { clave, biblioteca: nueva };
   return actual;
 }
 
-/** `undefined` mientras carga lo de estos ids (hasta el plazo); después la biblioteca o `null` (primitivas). */
-export function useBibliotecaPiezas(ids: string[]): BibliotecaPiezas | null | undefined {
-  const clave = [...new Set(ids)].sort().join(",");
+/**
+ * `undefined` mientras carga lo de estas piezas (hasta el plazo); después la biblioteca o `null` (primitivas).
+ * Solo vuelve a `undefined` si cambian los ids: con otras medidas, el visor sigue con lo que tiene mientras baja.
+ */
+export function useBibliotecaPiezas(piezas: PiezaPlano[], tipoEquipo?: string): BibliotecaPiezas | null | undefined {
+  const clave = [...new Set(piezas.flatMap((p) => [p.pieza, ...(p.formaBiblioteca ? [p.formaBiblioteca] : [])]))].sort().join(",");
+  const pedido = JSON.stringify([tipoEquipo ?? null, piezas.map(({ pieza, dim, formaBiblioteca }) => ({ pieza, dim, formaBiblioteca }))]);
   const [estado, setEstado] = useState<EstadoBiblioteca>();
   useEffect(() => {
     let vivo = true;
     const resolver = (b: BibliotecaPiezas | null) => vivo && setEstado((actual) => siguienteBiblioteca(actual, clave, b));
     const plazo = setTimeout(() => resolver(null), ESPERA_MAXIMA_MS);
-    void cargarBiblioteca(clave ? clave.split(",") : []).then((b) => {
+    const [tipo, pedidas] = JSON.parse(pedido) as [string | null, PedidoForma[]];
+    void cargarBiblioteca(pedidas, tipo).then((b) => {
       clearTimeout(plazo);
       resolver(b);
     });
@@ -104,6 +118,6 @@ export function useBibliotecaPiezas(ids: string[]): BibliotecaPiezas | null | un
       vivo = false;
       clearTimeout(plazo);
     };
-  }, [clave]);
+  }, [clave, pedido]);
   return estado?.clave === clave ? estado.biblioteca : undefined;
 }
