@@ -1,183 +1,99 @@
-# CONTEXT.md — Experto al lado (leer entero antes de hacer nada)
+# CONTEXT.md — Sayso: contexto y reglas permanentes
 
-> Este archivo lo leen **Claude Code y Codex** de cada integrante. El plan completo está en `docs/plan-v4.md`; la estrategia 3D en `docs/3d-estrategia.md`.
+> Lo leen **Claude Code y Codex** de cada integrante. **Cómo se trabaja** (inicio de sesión, carriles, issues, un worktree por PR, fusiones, mensaje de salida) está en `CLAUDE.md`, que manda si algo choca. Este archivo guarda lo estable: qué es el producto, reglas de arquitectura, seguridad, gasto, claves y stack.
 
-## PRIMERO: preguntá quién es la persona
+## Qué es Sayso
 
-Antes de escribir código, preguntale al usuario: **"¿Sos Diego, Juanma o Iaio?"** y esperá la respuesta. Después seguí solo las instrucciones de su carril. Si pide algo de otro carril, avisale quién es el dueño y hacelo solo si lo acuerdan.
+Nació como "Experto al lado" en la hackathon Build 101 (17–18 oct 2026). La persona dice qué se rompió → la IA pide fotos según el equipo → lee la chapa y confirma el modelo → busca el manual y guías del modelo → arma un 3D con piezas nombradas → guía paso a paso, resaltando, girando y moviendo piezas → la persona pregunta por voz o texto → los pasos peligrosos se bloquean.
 
-| Persona | Cuenta | Carril | Foco |
-|---|---|---|---|
-| **Diego** | Claude 100 USD | **B — 3D** + `shared/` + integración final | lo más complejo: modelos 3D, coreografía, decisiones de arquitectura |
-| **Juanma** (Windows) | Claude 20 USD | **A — Cerebro** | IA, captura guiada, chapa, knowledge pack, chat, seguridad |
-| **Iaio** | Claude 20 USD | **C — Producto** | app, pantallas, voz, deploy, demo y pitch |
+Ahora apunta a ser un producto B2C para el celular; las prioridades de cada carril están en `CLAUDE.md` §1. `docs/plan-v4.md` y `docs/3d-estrategia.md` explican las decisiones de la hackathon y siguen siendo útiles como referencia técnica, pero sus horarios, fases y rúbrica ya no rigen.
 
-El reparto es una propuesta de Diego: si cambia, se actualiza esta tabla en un PR. La cuenta de Codex (20 USD) todavía no tiene dueño: usarla para revisar PRs y escribir tests.
+## Personas y cuentas
 
-**Cuentas de 20 USD:** son limitadas. Reglas de ahorro para Juanma e Iaio: usar Sonnet para escribir, Haiku para clasificar, no pegar PDFs enteros en el chat de desarrollo (usar scripts que corten las páginas), pedir cambios chicos y pequeños commits, y cuando se acaba el cupo pasarle el trabajo a Diego avisando en el grupo.
+| Persona | Cuenta | Carril |
+|---|---|---|
+| **Diego** (Mac) | Claude 100 USD | **B — 3D** + `shared/` |
+| **Juanma** (Windows) | Claude 20 USD | **A — Cerebro** |
+| **Iaio** (Mac) | Claude 20 USD | **C — Producto** |
+
+Dueños de carpetas: `CLAUDE.md` §2. La cuenta de Codex (20 USD) no tiene dueño: se usa para revisar PRs y escribir tests.
+
+**Cuentas de 20 USD:** son limitadas. Juanma e Iaio: usar Sonnet para escribir y Haiku para clasificar, no pegar PDFs enteros en el chat de desarrollo (usar scripts que corten las páginas), pedir cambios chicos. Si se acaba el cupo, dejar el estado en el issue o PR y avisar a Diego con un issue `carril-b`.
 
 **Juanma tiene poca RAM** (decisión de Diego, 18/10):
-- En su máquina no corre `npm run build`, ni la app (`next dev`/`next start`), ni navegadores. Prueba con `npm test` y `npm run typecheck`, y el build lo hace la verificación de GitHub: fusiona solo si "verificar" está en verde.
-- Todo lo que necesita la app corriendo o el navegador (recorridos, capturas, QA, mirar un arreglo en pantalla) lo hace **Iaio**. Si un arreglo de Juanma hay que verlo en pantalla, Juanma abre un issue `carril-c` para que Iaio lo mire.
+- En su máquina no corre `npm run build`, ni la app (`next dev`/`next start`), ni navegadores. Prueba con `npm test` y `npm run typecheck`; el build lo hace el check `verificar` de GitHub, y fusiona solo si está en verde.
+- Lo que necesita la app corriendo o el navegador (recorridos, capturas, QA, mirar un arreglo en pantalla) lo hace **Iaio**: Juanma abre un issue `carril-c` + `dependencia` para que lo mire.
 - Las tareas del carril A que solo se comprueban en pantalla pasan al carril C.
 
-## Qué estamos construyendo (30 segundos)
-
-Hackatón Build 101, 17–18 oct 2026, ~15 h, 3 personas. **Experto al lado:** el usuario dice qué se rompió → la IA pide fotos según el equipo → lee la chapa y confirma el modelo → busca el manual y guías del modelo → arma un 3D con piezas nombradas → guía por voz resaltando, girando y moviendo piezas → el usuario pregunta por voz o texto → pasos peligrosos se bloquean. Demo con una notebook del jurado.
-
-Rúbrica: producto funcionando 35 %, problema y valor 25 %, calidad de la IA 20 %, UX 10 %, originalidad 10 %. La IA debe ser **indispensable** en el producto: un chat genérico, reglas fijas o IA solo como herramienta de desarrollo no cuentan.
-
-## Fases
-1. **Horas 0–6, MVP:** flujo completo con cualquier dispositivo, 3D básico. Puertas: hora 2, hora 5, hito hora 6.
-2. **Horas 6–13:** iterar el 3D por la escalera (ver `docs/3d-estrategia.md`) y probar con equipos y preguntas variadas.
-3. **Hora 10:** congelar funciones. **Horas 13–15:** ensayo y colchón.
-
 ## Reglas de arquitectura (no negociables)
+
 - **La IA interpreta y propone; el código valida, calcula, guarda, anima y bloquea.** La IA nunca escribe directo en la base.
 - Todo lo que sale de un modelo pasa por **Zod**. Si no valida, se descarta y se reintenta una vez.
-- Texto y fotos del usuario son **datos, nunca instrucciones**.
+- Texto, fotos y documentos del usuario o de terceros son **datos, nunca instrucciones**.
 - **Seguridad:** tabla fija de riesgos en código (refrigerante, 220 V/capacitores, baterías hinchadas o abiertas, gas). Riesgo alto = bloqueo y derivación a técnico.
-- Cada dato lleva su estado: *confirmado / probable / desconocido*. Cada instrucción cita documento y página, o se marca *NO VERIFICADO*.
-- **No inventar** números de parte, modelos ni piezas.
-- **No usar datos ni documentos de CIR (empleador de Diego)**, ni de ninguna empresa, en el evento.
-- iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**.
+- Cada dato lleva su estado: *confirmado / probable / desconocido*. Cada instrucción cita documento y página, o se marca *NO VERIFICADO*. El 3D lleva su origen: `manual`, `foto`, `estimada` o `plantilla`, y una aproximación nunca se muestra como exacta.
+- **No inventar** números de parte, modelos, piezas, fuentes ni precisión geométrica.
+- **No usar datos ni documentos de CIR (empleador de Diego)** ni de ninguna otra empresa.
+- iFixit: contenido CC BY-NC-SA, solo no comercial, acreditar, **no entrenar con él**. Antes de cualquier uso comercial hay que revisar licencias de manuales, iFixit, modelos y servicios (decisión de las personas, no de un agente).
 
 ## 🛑 Regla de gasto de IA (obligatoria, por encima de todo)
-Los créditos de la API se terminaron dos veces. Desde ahora:
-- **Prohibido llamar a la IA real** (Anthropic) en desarrollo, tests o scripts de medición **sin que la persona lo autorice en ese momento, con un monto máximo en USD**. Pedí el OK así: "Esto va a gastar ~X USD, ¿lo corro?".
-- Para desarrollar y probar pantallas: **`NEXT_PUBLIC_DATOS=fixture`** y respuestas simuladas. Los tests nunca llaman a la IA real.
+
+Los créditos de la API se terminaron dos veces. Por eso:
+- **Prohibido llamar a la IA real** (Anthropic) **o a cualquier proveedor pago** en desarrollo, tests o scripts de medición **sin que la persona lo autorice en ese momento, con un monto máximo en USD**. Pedí el OK así: "Esto va a gastar ~X USD, ¿lo corro?".
+- Para desarrollar y probar pantallas: **`NEXT_PUBLIC_DATOS=fixture`** y respuestas simuladas. Los tests nunca llaman a la IA real ni a la red.
 - Nada de reintentos automáticos que vuelvan a pagar. Un fallo se guarda en la caché y se reusa.
 - Siempre los mismos modelos de prueba, para que salgan de la caché.
 - Si ves que algo gasta más de lo esperado, **pará y avisá**.
 
 ## Nada hardcodeado (regla de producto)
-El producto tiene que funcionar con **cualquier equipo que traiga el jurado**. Por eso:
-- **Ningún dato de un equipo, modelo, manual, página o posición de pieza escrito en el código.** Todo sale en tiempo real de los agentes (identificador, bibliotecario, cartógrafo, experto, seguridad) o de lo que esos agentes ya guardaron en Supabase.
+
+El producto tiene que funcionar con **cualquier equipo** que traiga una persona:
+- **Ningún dato de un equipo, modelo, manual, página o posición de pieza escrito en el código.** Todo sale de los agentes (identificador, bibliotecario, cartógrafo, experto, seguridad) o de lo que esos agentes ya guardaron en Supabase. Los arreglos se hacen por tipo de equipo, nunca por modelo.
 - **Si un paso necesita criterio, usá un agente** (Claude con herramientas y salida validada con Zod), no una lista de reglas ni un `if` por marca.
-- **Caché, no catálogo:** lo que un agente encuentra (manual, páginas de la vista explosionada, plano de piezas) se guarda en Supabase por marca+modelo, con su fuente y estado. La próxima vez se reusa. Nadie lo carga a mano.
-- **Fixtures solo para tests, `/lab` y desarrollo**, detrás de `NEXT_PUBLIC_DATOS=fixture`. En Vercel esa variable no existe: producción siempre usa IA real.
+- **Caché, no catálogo:** lo que un agente encuentra (manual, páginas de la vista explosionada, plano de piezas) se guarda en Supabase por marca+modelo, con su fuente y estado, y se reusa. Nadie lo carga a mano.
+- **Fixtures solo para tests, `/lab` y desarrollo**, detrás de `NEXT_PUBLIC_DATOS=fixture`. En Vercel esa variable no existe: producción usa IA real.
 - **Plantilla genérica solo como red de seguridad** cuando el agente falla, y la pantalla lo dice ("esquema genérico, no es tu modelo exacto").
 - **Configuración en un solo lugar:** modelos, umbrales y límites en `lib/ia/claude.ts` o en variables de entorno, nunca repetidos en el código.
-- **Pendiente conocido:** `lib/knowledge/manuales.ts` tiene una lista fija de manuales (`CONOCIDOS`). Carril A la reemplaza por la caché en Supabase llenada por el bibliotecario.
 
 ## Claves y `.env.local` (obligatorio)
-- Formato: `NOMBRE=valor`, sin espacios alrededor del `=` y sin comillas.
+
+- Formato: `NOMBRE=valor`, sin espacios alrededor del `=` y sin comillas. Los nombres de las variables están en `.env.example`.
 - `NEXT_PUBLIC_SUPABASE_URL` es la URL completa (`https://<proyecto>.supabase.co`), no solo el código del proyecto.
-- **Nunca** hagas `source` de `.env.local`, ni `cat`, ni imprimas su contenido. Para scripts usá Next.js o `dotenv`. Para comprobar una clave mostrá solo si está cargada y su largo, nunca el valor.
-- Si una clave aparece en la terminal o en el chat, avisá a la persona: hay que rotarla (Anthropic: Diego; Supabase y Vercel: Iaio).
+- **Nunca** hagas `source` de `.env.local`, ni `cat`, ni imprimas su contenido. Para scripts usá Next.js o `dotenv`. Para comprobar una clave mostrá solo si está cargada y su largo, nunca el valor. En un worktree nuevo se copia con `cp` sin abrirlo (`CLAUDE.md` §4).
+- Nunca le pidas a la persona que pegue claves en el chat.
+- Si una clave aparece en la terminal o en el chat, avisá: hay que rotarla (Anthropic: Diego; Supabase y Vercel: Iaio).
 
 ## Stack
-Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Realtime) · Claude Sonnet (visión, chat, herramientas) y Haiku (cortos) · Zod · three.js + React Three Fiber + drei · ElevenLabs Scribe v2 Realtime (voz a texto) y TTS Flash (texto a voz), con Web Speech API como plan B y campo de texto siempre disponible.
 
-## Estructura del repo y dueños
-
-```
-/shared            Diego   tipos Zod y fixtures (contratos). Se cambia solo por PR con etiqueta "contrato" y aviso al grupo.
-/app/api/intake    Juanma  captura guiada, calidad de fotos, lectura de chapa
-/app/api/ficha     Juanma
-/lib/knowledge     Juanma  armado y caché del knowledge pack, verificación de citas
-/app/api/chat      Juanma  conversación con el manual, emite texto + coreografía
-/lib/safety        Juanma  tabla de riesgos y bloqueo
-/components/viewer Diego   visor 3D, reproductor de coreografía
-/assets/models     Diego   GLB y plantillas
-/lib/planogenerator Diego  generador 3D desde el manual
-/app/(screens)     Iaio    las 6 pantallas
-/lib/voice         Iaio    entrada/salida de voz, subtítulos
-/lib/supabase      Iaio    cliente, esquema, migraciones
-/docs              todos   plan, estrategia, notas
-```
+Next.js (TypeScript, Tailwind, PWA) en Vercel · Supabase (Postgres, Storage, Realtime) · Claude Sonnet (visión, chat, herramientas) y Haiku (cortos) · Zod · three.js + React Three Fiber + drei · ElevenLabs Scribe v2 Realtime (voz a texto) y TTS Flash (texto a voz), con Web Speech API como plan B y campo de texto siempre disponible. Node 22 (`.nvmrc`).
 
 ## Contratos (en `/shared`)
-`Caso`, `Foto`, `Ficha`, `KnowledgePack`, `PlanoDePiezas`, `Coreografia`, `Evento`. Todos con **fixtures** de un caso de notebook completo: con eso cada carril trabaja desde la hora 1 sin esperar a los demás.
+
+`Caso`, `Foto`, `Ficha`, `KnowledgePack`, `PlanoDePiezas`, `Coreografia`, `Evento`, con **fixtures** de casos completos para que cada carril trabaje sin esperar a los demás. Se cambian solo como dice `CLAUDE.md` §2 (PR `contrato`).
 
 Acciones de coreografía permitidas: `camara`, `resaltar`, `rotar`, `desplazar`, `ocultar`, `despiezar`, `restaurar`. Si la IA nombra una pieza que no existe en el GLB, el reproductor la ignora y registra un evento.
 
-## MODO AUTÓNOMO (cómo trabajás)
+## Cómo hablarle a la persona
 
-Tenemos poco tiempo y la persona **no va a revisar código**. Vos manejás git, tests, PR y fusiones, y **trabajás en bloques largos (~1 hora) sin frenar**.
+- Español simple, **un paso por vez**.
+- Si tiene que hacer algo fuera de la terminal (crear una cuenta, pegar una clave en `.env.local`, probar en el navegador), dale el paso exacto: dónde tocar, qué copiar, qué debería ver.
+- Comandos según su sistema: **Juanma usa Windows (PowerShell)**; Diego e Iaio, Mac.
+- Si `gh` falla, guiá la instalación (`brew install gh` en Mac, `winget install --id GitHub.cli` en Windows) y `gh auth login`.
 
-1. **Al arrancar la sesión, una sola vez:** comprobá que la máquina está bien (`git fetch`, `npm install` si falta, `.env.local` existe sin leer su contenido, `npm test` pasa). Si algo falla, guiá a la persona para arreglarlo.
-2. **Proponé el bloque:** las próximas 2–4 tareas del carril, cada una con 2–3 líneas de qué vas a hacer. La persona da **un solo OK** para todo el bloque.
-3. **Ejecutá el bloque entero seguido**, tarea tras tarea, con el ciclo de abajo. **Fusioná solo** cuando todo pase en verde y solo tocaste archivos de tu carril. No pidas OK para cada fusión.
-4. **Solo frenás y preguntás si:**
-   - hace falta una cuenta, una clave o un gasto,
-   - hay un conflicto con otro carril o hace falta cambiar `shared/`,
-   - una decisión cambia el alcance o el plan,
-   - algo falla dos veces seguidas y no sabés por qué,
-   - necesitás que la persona pruebe algo en el navegador, el micrófono o la cámara.
-5. **Al terminar el bloque:** resumen en 3–5 líneas (qué se fusionó, qué falta, qué hay que avisar al grupo) y proponé el siguiente bloque.
+## Git, Orca y repositorio
 
-Cuando le hables a la persona:
-- Explicá en español simple, **un paso por vez**.
-- Si hace falta que la persona haga algo fuera de la terminal (crear una cuenta, pegar una clave, probar en el navegador), dale el paso exacto: dónde tocar, qué copiar, qué debería ver.
-- Comandos según su sistema: **Juanma usa Windows (PowerShell)**; Diego e Iaio usan Mac. Si no sabés el sistema, preguntá.
-- Nunca le pidas que pegue claves en el chat. Las claves van en `.env.local`.
-- Al final de cada tarea, decile en una o dos líneas qué quedó hecho y cuál es la próxima.
-
-## Ciclo de cada tarea (lo hacés vos, sin que la persona toque git)
-
-1. **Sincronizar:** `git fetch origin` y crear la rama de la tarea desde `origin/main`, en el mismo worktree: `git switch -c <carril>/<tarea> origin/main`. Si hay cambios sin guardar, avisá antes.
-2. **Plan:** si la tarea ya está dentro del bloque aprobado, seguí sin preguntar.
-3. **Construir** solo dentro de las carpetas del carril. Commits chicos.
-4. **Verificar:** `npm test`, `npm run typecheck` y `npm run build`. Si algo falla, lo arreglás antes de seguir. Si es una pantalla, pedile a la persona que la mire en `npm run dev` y confirme. (Juanma: sin `build` ni `dev` local, ver "Juanma tiene poca RAM".)
-5. **Actualizar con main:** `git fetch origin` y `git rebase origin/main`, y volver a verificar.
-   - Si el conflicto es en archivos de **otro carril o en `shared/`**: no lo resuelvas vos. Pará y decile a la persona que avise en el grupo.
-6. **PR:** `gh pr create --base main` con título claro y 2–3 líneas de qué cambió.
-7. **Fusionar:** si los tests, los tipos, el build y la verificación de GitHub (CI) están en verde, `gh pr merge --squash --delete-branch`. Para ver la CI: `gh pr checks --watch`.
-   - Si `gh` falla, guiá la instalación (`brew install gh` en Mac, `winget install --id GitHub.cli` en Windows) y `gh auth login`.
-8. **Avisar:** decile a la persona que escriba en el grupo: "Fusioné <tarea>, hagan pull". Cuando la persona te diga que otro fusionó, corré `git fetch origin` y `git rebase origin/main` en tu rama.
-9. **Siguiente tarea:** volvés al paso 1 con la próxima del carril, en el mismo worktree (no hace falta crear uno nuevo ni volver a copiar `.env.local`).
-
-Reglas de fusión:
-- `main` siempre tiene que compilar y pasar los tests. Nunca fusiones algo rojo.
-- Nunca hagas `push --force` a `main` ni commits directos a `main`.
-- Los cambios en `shared/` los hace solo el Claude de Diego, con aviso al grupo antes de fusionar.
-- Si GitHub tiene la verificación automática (CI) en rojo, no fusiones.
-
-## Coordinación entre carriles
-
-Flujo de trabajo desde ahora (tu carril es el de la persona con la que hablás: Juanma = `carril-a`, Diego = `carril-b`, Iaio = `carril-c`). Etiquetas en GitHub: `carril-a`, `carril-b`, `carril-c`, `pregunta`, `decision`.
-
-**Al empezar cualquier tarea:** `git pull` y `gh issue list --state open --label <tu carril>`. Primero va lo que te pidieron los otros, después lo pendiente en `docs/hallazgos-prueba-real-1.md`.
-
-**Al terminar una tarea:**
-1. Probá lo máximo: tests, typecheck, build y recorrido en tamaño iPhone con el fixture (capturas).
-2. PR a `main`. Si "verificar" está en verde: `git pull --rebase origin main`, y si hubo cambios volvé a probar y empujar. Después fusioná con squash. Si el conflicto es en un archivo de otro carril, no lo toques: abrí un issue para ese carril.
-3. Marcá [x] en los hallazgos con el número de PR y cerrá los issues que resolviste con un comentario que diga el PR.
-4. Si tu cambio afecta o necesita algo de otro carril, abrí un issue con la etiqueta de ese carril: qué cambió, qué tiene que hacer y qué PR o archivos mirar. No le pidas a la persona que lo mande a mano.
-
-**Preguntas:** si necesitás algo de otro carril, abrí un issue con la etiqueta de ese carril + `pregunta` y seguí con otra cosa mientras tanto, sin bloquearte. Si es una decisión de producto, de contratos (`shared/`) o de gasto de IA, va con las etiquetas `carril-b` + `decision`, porque la decide Diego.
-
-**Después:** proponé las 3 tareas siguientes más importantes de tu carril que nadie esté haciendo (mirá issues y PR abiertos), con qué archivos tocan, cuánto tardan y si gastan IA. Esperá la elección de la persona.
-
-**Reglas de siempre:** nada de IA real sin OK con monto en USD, nada hardcodeado, no tocar archivos de otro PR abierto.
-
-## Cómo trabajamos con Orca y git
-- **Orca** (gratis, código abierto): cada persona tiene un worktree con su agente. Todos sobre **el mismo repositorio**.
-- Rama por tarea: `a/<tarea>`, `b/<tarea>`, `c/<tarea>`.
-- Nunca tocar archivos de otro carril sin avisar.
-- Secretos en `.env.local` (no se sube). Mantener `.env.example` con los nombres de las variables.
-- No subir PDFs de manuales completos al repo (copyright); se bajan al vuelo o se guardan en Supabase Storage de la demo.
-
-## Qué hacer al arrancar la sesión
-1. Preguntar quién es la persona (y su sistema si no lo sabés).
-   Después, `gh issue list --state open --label <su carril>` (ver "Coordinación entre carriles").
-2. Leer `docs/plan-v4.md`, la sección de su carril, y `git log --oneline -15` de `origin/main` para ver qué ya está hecho.
-3. Decirle en dos líneas dónde está el carril y proponer **la próxima tarea** (la más cercana a la próxima puerta del cronograma).
-4. Seguir el ciclo de arriba.
-
-## Tareas por carril (resumen; detalle en el plan)
-
-**A — Juanma:** A1 captura guiada y calidad · A2 ficha con estados · A3 knowledge pack con citas verificadas · A4 `/api/chat` con coreografía en el stream · A5 seguridad · A6 repuestos (P1).
-
-**B — Diego:** B1 `shared/` y fixtures (hora 0–1, con todos) · B2 notebook básico en GLB con nodos nombrados · B3 visor y reproductor de coreografía · B4 generador 3D desde el manual · B5 escalera 3D (carcasa desde fotos, segmentación) · B6 integración final.
-
-**C — Iaio:** C1 esqueleto, deploy, Supabase · C2 las 6 pantallas · C3 voz y subtítulos que se desvanecen · C4 feed de actividad y estados de carga · C5 set de pruebas y guion de demo · C6 pitch.
+- **Orca:** cada persona crea sus worktrees y agentes desde Orca, todos sobre el mismo repositorio. Un worktree por PR (`CLAUDE.md` §4).
+- Ramas: `a/<slug>`, `b/<slug>`, `c/<slug>`.
+- `main` siempre compila y pasa los tests. Nunca `push --force`, nunca commits directos a `main`, nunca fusionar con el check `verificar` en rojo.
+- Los worktrees de una máquina comparten las referencias remotas: `origin/main` puede cambiar sin que hagas fetch. Antes de subir, revisá `git diff --stat origin/main...HEAD`.
+- Secretos en `.env.local` (no se sube). No subir PDFs de manuales completos (copyright): se bajan al vuelo o se guardan en Supabase Storage.
+- `docs/hallazgos-prueba-real-1.md` es la lista de hallazgos de la hackathon: si cerrás uno, marcalo `[x]` con el número de PR. El trabajo nuevo se registra en issues.
 
 ## Herramientas
-- **Usamos:** Orca, ElevenLabs, ifixit-mcp (solo lectura), Blender MCP (solo Diego, para plantillas 3D), servidor MCP propio con las herramientas del producto (`pedir_foto`, `leer_chapa`, `guardar_ficha`, `buscar_manual`, `leer_pagina_manual`, `resaltar_pieza`, `listar_repuestos`).
-- **Opcionales:** Wispr Flow (dictar prompts al agente, no es parte del producto), OpenUI (UI generativa, solo si sobra tiempo), Jev (modelo de decisión: las altas estaban pausadas, plan B con Haiku).
-- **Kiro:** no es la herramienta principal; su flujo de especificaciones consume tiempo y créditos. Se puede usar el plan gratis para redactar una especificación, nada más.
+
+- **Usamos:** Orca, ElevenLabs, ifixit-mcp (solo lectura), Blender MCP (Diego, para plantillas 3D), servidor MCP propio con las herramientas del producto (`pedir_foto`, `leer_chapa`, `guardar_ficha`, `buscar_manual`, `leer_pagina_manual`, `resaltar_pieza`, `listar_repuestos`).
+- Herramientas o servicios nuevos (IA, 3D, hosting, pagos): se evalúan con pruebas acotadas y se adoptan solo con OK de las personas (`CLAUDE.md` §5).
 
 ## Definición de terminado de una tarea
-Compila · tipos y Zod validan · probado con el fixture · sin secretos en el commit · PR abierto con una línea de qué cambió y cómo probarlo.
+
+Compila · tipos y Zod validan · tests y fixtures pasan · probado sin APIs pagas · sin secretos en el commit · criterio de aceptación de la tarea cumplido · PR con qué cambió, cómo probarlo y riesgos · issues de coordinación respondidos.
