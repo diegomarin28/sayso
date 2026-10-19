@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
+import { instruccionDeToma } from "../_datos/instruccion-foto";
 import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
@@ -88,7 +89,8 @@ export default function CapturaGuiada() {
     }));
   }
 
-  async function alSacar(archivo: File | undefined) {
+  /** `alternativa`: la que se acaba de elegir (el estado todavía no la tiene); si no, la de la toma. */
+  async function alSacar(archivo: File | undefined, alternativa = toma.alternativa) {
     if (!archivo || !pedido || !caso) return;
     const i = actual;
     const intento = toma.intentos + 1;
@@ -103,7 +105,8 @@ export default function CapturaGuiada() {
       const imagen = await prepararImagen(archivo);
       actualizar(i, { url: vistaPrevia(imagen) });
       // La URL definitiva la pone /api/casos al subir la foto a Supabase.
-      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento, pedido.instruccion);
+      // Se juzga contra lo que se le pidió sacar: la alternativa elegida, si hay (#315).
+      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento, instruccionDeToma(pedido.instruccion, alternativa));
       agregarFoto(r.foto, imagen);
       agregarEventos(r.eventos);
       actualizar(i, { revisando: false, resultado: r.foto });
@@ -141,7 +144,7 @@ export default function CapturaGuiada() {
     if (!archivo) return;
     setBuscarOtro(false);
     actualizar(actual, { alternativa });
-    void alSacar(archivo);
+    void alSacar(archivo, alternativa);
   }
 
   // Sin fotos no se puede reconocer el equipo: hace falta la etiqueta o, al menos, el frente.
@@ -155,9 +158,7 @@ export default function CapturaGuiada() {
   // También después de un rechazo (#255): la foto rechazada sigue en `toma.url` y antes el panel no se abría.
   const mostrarOtros = buscarOtro && pedido?.tipo === "etiqueta" && !toma.revisando && !aceptada;
   /** Qué hay que sacar ahora (si es de otro lugar, eso). */
-  const queSacar = toma.alternativa
-    ? `Sacale una foto a ${toma.alternativa.charAt(0).toLowerCase()}${toma.alternativa.slice(1)}, que se lea el modelo.`
-    : pedido?.instruccion;
+  const queSacar = pedido ? instruccionDeToma(pedido.instruccion, toma.alternativa) : undefined;
 
   const dice = errorPedidos
     ? errorPedidos
