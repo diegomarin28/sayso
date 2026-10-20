@@ -153,6 +153,8 @@ export default function Cuenta() {
   const cerrarSesion = () =>
     hacer(async () => {
       await salir();
+      // Los casos siguen en el servidor y vuelven al entrar; en un celular compartido no quedan a la vista.
+      borrarLocal();
       olvidarSesion();
       await recargar();
       setAviso("Saliste de tu cuenta en este celular. Podés seguir usando la app sin cuenta.");

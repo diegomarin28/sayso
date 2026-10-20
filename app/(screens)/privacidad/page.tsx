@@ -3,8 +3,9 @@ import { VERSION_LEGALES } from "../../../lib/supabase/credenciales";
 import { PaginaLegal } from "../_ui/legal";
 
 /**
- * Política de privacidad. BORRADOR: sale de docs/privacidad.md (#350) y de docs/login.md §5,
- * actualizado con Login 2/3. Lo revisan las personas antes de publicar (Ley 25.326).
+ * Política de privacidad. BORRADOR: es el texto vigente (docs/privacidad.md tiene solo las notas para
+ * quien revisa), escrito desde docs/login.md §5 y actualizado con Login 3/3. Lo revisan las personas
+ * antes de publicar (Ley 25.326).
  */
 
 export const metadata: Metadata = { title: "Privacidad · Sayso" };
@@ -57,6 +58,10 @@ export default function Privacidad() {
           <strong>Los eventos del caso</strong>: qué pasos se hicieron y cómo terminó.
         </li>
         <li>
+          <strong>La guía y el modelo 3D de tu caso</strong>: para que puedas retomarlo tal como lo viste, también en
+          otro celular, sin volver a generarlo.
+        </li>
+        <li>
           <strong>Tu IP, solo transformada</strong> (un hash que cambia cada día): para poner topes de uso y frenar
           abusos. No se puede volver a leer la IP.
         </li>
@@ -77,12 +82,12 @@ export default function Privacidad() {
       <h2>Dónde se guardan</h2>
       <ul>
         <li>
-          <strong>En nuestro servidor</strong> (Supabase, en San Pablo, Brasil): tu cuenta, tus casos, fotos, fichas y
-          eventos.
+          <strong>En nuestro servidor</strong> (Supabase, en San Pablo, Brasil): tu cuenta, tus casos, fotos, fichas,
+          eventos y guías.
         </li>
         <li>
           <strong>En tu celular</strong>: una copia de tus últimos 30 casos, con la guía y el 3D, para abrirlos rápido
-          y sin conexión. Se borra si borrás los datos del navegador.
+          y sin conexión. Se borra al salir de tu cuenta o si borrás los datos del navegador.
         </li>
       </ul>
 
@@ -117,8 +122,8 @@ export default function Privacidad() {
       <h2>Cuánto tiempo los guardamos</h2>
       <ul>
         <li>
-          <strong>Sin cuenta</strong> (sesión anónima): [COMPLETAR: hoy no vencen; está previsto borrarlas con sus
-          casos y fotos después de 90 días sin actividad].
+          <strong>Sin cuenta</strong> (sesión anónima): se borra con sus casos y fotos después de 90 días sin
+          actividad. [COMPLETAR: hoy el borrado se corre a mano; programarlo antes de publicar]
         </li>
         <li>
           <strong>Con cuenta</strong>: hasta que la borres.
@@ -131,15 +136,16 @@ export default function Privacidad() {
       <h2>Cómo borrar o llevarte tus datos</h2>
       <ul>
         <li>
-          <strong>Borrar tu cuenta</strong>: en Cuenta → Borrar cuenta. Borra tu cuenta, tus casos, fotos, fichas y
-          eventos. No se puede deshacer.
+          <strong>Borrar tu cuenta</strong>: en Cuenta → Borrar cuenta. Borra tu cuenta, tus casos, fotos, fichas,
+          eventos y guías. No se puede deshacer.
         </li>
         <li>
-          <strong>Descargar una copia</strong>: en Cuenta → Tus datos. Un archivo con tu cuenta, tus casos, fichas y
-          eventos, y enlaces a tus fotos que vencen a los pocos minutos.
+          <strong>Descargar una copia</strong>: en Cuenta → Tus datos. Un archivo con tu cuenta, tus casos, fichas,
+          eventos y guías, y enlaces a tus fotos que vencen a los pocos minutos.
         </li>
         <li>
-          <strong>La copia de tu celular</strong>: se borra borrando los datos del navegador para Sayso.
+          <strong>La copia de tu celular</strong>: se borra al salir de tu cuenta, al borrarla o borrando los datos
+          del navegador para Sayso.
         </li>
       </ul>
       <p>

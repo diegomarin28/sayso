@@ -145,7 +145,15 @@
 - Descartado: guardar solo referencias a los cachés. Si el caché se regenera, el caso viejo cambia sin aviso.
 - **Hecho (servidor, `c/guias-servidor`, parte de #347):** esquema en `lib/supabase/guia.ts`, `POST /api/casos`
   con `guia` (tope de 500 KB, `TOPES.bytesGuia`), `GET /api/casos` y `GET /api/casos/[id]`. La lista trae
-  `tieneGuia` en vez de la guía. Falta que Mis casos lea del servidor (próximo PR).
+  `tieneGuia` en vez de la guía.
+- **Hecho (pantallas, `c/mis-casos-servidor`, cierra #347):** «Mis casos» trae `GET /api/casos` al abrirse y
+  lo mezcla con el `localStorage` por `actualizadoEn` (`mezclarCasos`, la guía local nunca se pisa). Un caso
+  con la guía solo en el servidor la baja de `GET /api/casos/[id]` al tocarlo; si no llega, avisa y no
+  sigue (armarla de nuevo gastaría IA). Decisiones de Iaio, 20/10:
+  - Si la persona cambia de equipo dentro de un caso, el caso pasa a tener **id nuevo** (`flujo.tsx`): el
+    anterior queda con su guía y la regla de «una guía por caso» no cambia.
+  - Al **salir de la cuenta** se borra la copia local de los casos: siguen en el servidor y vuelven al
+    entrar, y en un celular compartido no quedan a la vista.
 
 ## Implementación (3 PR, en orden)
 

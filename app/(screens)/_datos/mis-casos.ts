@@ -3,8 +3,9 @@ import { Caso, Ficha } from "../../../shared";
 import { Guia } from "../../../lib/supabase/guia";
 
 /**
- * "Mis casos": los casos de este celular, guardados en el propio celular (localStorage), sin datos
- * personales. En el servidor son de la sesión (docs/login.md). Retomar un caso usa lo guardado: no gasta IA.
+ * "Mis casos": copia en el celular (localStorage) de los casos de la sesión, para abrir rápido y sin
+ * red. En el servidor son de la sesión (docs/login.md §6): la lista del servidor se mezcla con la local
+ * por `actualizadoEn` (`mezclarCasos`). Retomar un caso usa lo guardado: no gasta IA.
  * Si el navegador no deja guardar (modo privado, almacenamiento lleno), la app sigue igual.
  */
 
@@ -31,12 +32,26 @@ export const CasoGuardado = z.object({
   ficha: Ficha.nullable().default(null),
   guia: Guia.nullable().default(null),
   cierre: Cierre.nullable().default(null),
+  /** El servidor tiene la guía (vino de otro celular): se baja al abrir el caso, sin IA. */
+  guiaEnServidor: z.boolean().default(false),
   actualizadoEn: z.string(),
 });
 export type CasoGuardado = z.infer<typeof CasoGuardado>;
 export type GuiaGuardada = z.infer<typeof Guia>;
 
+/** Un caso de `GET /api/casos`: lo mismo que lo local, sin la guía. */
+export const ResumenServidor = z.object({
+  caso: Caso,
+  tipoEquipo: z.string().nullable(),
+  ficha: Ficha.nullable(),
+  cierre: Cierre.nullable(),
+  tieneGuia: z.boolean(),
+  actualizadoEn: z.string(),
+});
+export type ResumenServidor = z.infer<typeof ResumenServidor>;
+
 let memoria: CasoGuardado[] = []; // si localStorage no está disponible
+const oyentes = new Set<() => void>();
 
 function leerTodos(): CasoGuardado[] {
   try {
@@ -59,6 +74,15 @@ function escribirTodos(casos: CasoGuardado[]) {
   } catch {
     // modo privado o lleno: queda en memoria mientras dure la pestaña
   }
+  oyentes.forEach((o) => o());
+}
+
+/** Para `useSyncExternalStore`: avisa cuando cambia la lista (por ejemplo, al llegar la del servidor). */
+export function suscribirCasos(oyente: () => void) {
+  oyentes.add(oyente);
+  return () => {
+    oyentes.delete(oyente);
+  };
 }
 
 /**
@@ -114,7 +138,45 @@ export function guardarLocal(cambio: Cambio) {
   escribirTodos([r.data, ...todos.filter((c) => c.caso.id !== cambio.caso.id)]);
 }
 
-/** Borra la copia local de los casos (después de borrar la cuenta). */
+/**
+ * Junta la lista del servidor con la local. Por caso gana el lado actualizado más reciente, sin
+ * borrar lo que el otro tiene y él no (ficha, cierre). La guía local nunca se pisa: el servidor no la
+ * cambia una vez escrita. Los casos que solo están en un lado quedan.
+ */
+export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[]): CasoGuardado[] {
+  const porId = new Map(locales.map((c) => [c.caso.id, c]));
+  for (const { tieneGuia, ...s } of servidor) {
+    const local = porId.get(s.caso.id);
+    if (!local) {
+      porId.set(s.caso.id, { ...s, guia: null, guiaEnServidor: tieneGuia });
+      continue;
+    }
+    const nuevo = s.actualizadoEn > local.actualizadoEn ? s : local;
+    const viejo = nuevo === s ? local : s;
+    porId.set(s.caso.id, {
+      caso: nuevo.caso,
+      tipoEquipo: nuevo.tipoEquipo ?? viejo.tipoEquipo,
+      ficha: nuevo.ficha ?? viejo.ficha,
+      cierre: nuevo.cierre ?? viejo.cierre,
+      guia: local.guia,
+      guiaEnServidor: tieneGuia,
+      actualizadoEn: nuevo.actualizadoEn,
+    });
+  }
+  return [...porId.values()];
+}
+
+/** Guarda en el celular la lista de casos que trajo el servidor. */
+export function mezclarDelServidor(servidor: ResumenServidor[]) {
+  escribirTodos(mezclarCasos(leerTodos(), servidor));
+}
+
+/** La guía bajada del servidor al abrir un caso: no cambia `actualizadoEn` (abrir no es un cambio). */
+export function guardarGuiaBajada(id: string, guia: GuiaGuardada) {
+  escribirTodos(leerTodos().map((c) => (c.caso.id === id ? { ...c, guia } : c)));
+}
+
+/** Borra la copia local de los casos (al borrar la cuenta o salir de ella: siguen en el servidor). */
 export function borrarLocal() {
   memoria = [];
   try {
@@ -122,6 +184,7 @@ export function borrarLocal() {
   } catch {
     // sin localStorage solo estaban en memoria
   }
+  oyentes.forEach((o) => o());
 }
 
 export const TEXTO_ESTADO: Record<EstadoCierre | "en_curso", string> = {
