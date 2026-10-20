@@ -12,6 +12,7 @@ import { repoManuales } from "../knowledge/manuales";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { paginaOriginal, paginasDelArchivo } from "../knowledge/extracto";
 import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, manualGuardado, urlsDeFuente, type DepsConsulta, type FuenteConsulta } from "../knowledge/consulta";
+import { puedeCambiar } from "../knowledge/triage";
 import { Segmentador, type Segmento } from "./segmentos";
 
 /**
@@ -60,7 +61,7 @@ const marcas3D = (piezas: string[]) => `Para mover el 3D, poné marcas AL PRINCI
 [[ocultar:PIEZA]]  [[despiezar:0.6]]  [[restaurar]]
 Piezas que existen en el 3D (usá solo estas): ${piezas.join(", ")}.
 Ejemplo: "[[camara:ssd|1.6]] [[resaltar:ssd]] El SSD está abajo a la izquierda, debajo de la tapa."
-Si según el manual o el knowledge pack hay que REEMPLAZAR una pieza por una nueva, poné [[cambiar:PIEZA]] en esa frase (una sola vez). Si no hay que cambiar nada, no la pongas.`;
+Si según el manual o el knowledge pack hay que REEMPLAZAR una pieza por una nueva, poné [[cambiar:PIEZA]] en esa frase (una sola vez). Si no hay que cambiar nada, no la pongas. Si el knowledge pack trae "sospechosas", solo se cambia una de esas piezas.`;
 
 const COMUNES = `Sos un técnico experto que guía por voz a una persona sin experiencia a reparar su equipo en casa, mientras un modelo 3D muestra las piezas.
 Respondé en español rioplatense (voseo), en frases cortas, como se habla: sin listas, sin markdown, sin títulos. Nunca copies frases en inglés: traducilas.
@@ -206,7 +207,8 @@ function emitir(s: Segmento, ctx: Contexto): EventoChat {
     acciones,
     riesgo: "bajo",
     ...(cita ? { cita } : {}),
-    ...(s.cambiar ? { cambiar: s.cambiar } : {}),
+    // Solo una pieza sospechosa del síntoma: comprar una batería no arregla un ventilador.
+    ...(s.cambiar && puedeCambiar(s.cambiar, ctx.pack.sospechosas) ? { cambiar: s.cambiar } : {}),
   }, { tipoEquipo: ctx.tipoEquipo });
   return evaluacion.bloqueado ? { tipo: "bloqueo", coreografia, clases: evaluacion.clases } : { tipo: "paso", coreografia };
 }
