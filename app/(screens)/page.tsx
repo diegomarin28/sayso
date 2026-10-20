@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos } from "./_datos/mis-casos";
@@ -153,7 +154,8 @@ export default function QueSeRompio() {
 
   // Con la sesión iniciada saluda por el nombre que la persona puso al crear la cuenta.
   const [cuenta, recargarCuenta] = useCuenta();
-  const saludo = cuenta?.sesion && !cuenta.anonima && cuenta.nombre ? `Hola, ${cuenta.nombre}.` : "Hola.";
+  const conCuenta = !!cuenta?.sesion && !cuenta.anonima;
+  const saludo = conCuenta && cuenta.nombre ? `Hola, ${cuenta.nombre}.` : "Hola.";
   const nombreEquipo = entendido ? (entendido.clase !== "otro" ? NOMBRE_CLASE[entendido.clase] : tipo) : "";
   const dice = pensando
     ? "Dejame entender…"
@@ -188,6 +190,12 @@ export default function QueSeRompio() {
         <div className="aparece flex flex-col gap-2">
           <Marca tam={44} conSimbolo={false} />
           <p className="text-sm text-texto-suave">{LEMA}</p>
+          {/* Quien no tiene cuenta todavía no conoce la app (con cuenta está en el menú, "Saber más"). */}
+          {!conCuenta && (
+            <Link href="/como-funciona" className="self-start text-sm text-texto-suave underline underline-offset-4">
+              ¿Cómo funciona?
+            </Link>
+          )}
         </div>
       )}
 
