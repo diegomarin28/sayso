@@ -1,4 +1,4 @@
-import { COOKIE_RECLAMO, noDisponible } from "../../../../lib/supabase/cuenta";
+import { noDisponible } from "../../../../lib/supabase/cuenta";
 import { authDelPedido, borrarCookiesDeSesion, sesionVerificada } from "../../../../lib/supabase/sesion";
 
 /**
@@ -16,6 +16,6 @@ export async function POST() {
     return Response.json({ error: "Guardá tus casos con tu email antes de salir.", codigo: "anonima" }, { status: 409 });
   }
   if (s) await pedido.auth.auth.signOut({ scope: "local" }).catch(() => null);
-  borrarCookiesDeSesion(pedido.almacen, [COOKIE_RECLAMO]);
+  borrarCookiesDeSesion(pedido.almacen);
   return Response.json({ salido: true });
 }

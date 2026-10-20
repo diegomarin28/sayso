@@ -1,23 +1,39 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUCKET_FOTOS_USUARIOS, ErrorSupabase, urlFirmadaFoto } from "./repo";
+import type { Sesion } from "./sesion";
 
 /**
  * Cuenta de la persona (docs/login.md §4 y §5), para las rutas de `app/api/cuenta`. Todo con la
  * clave secreta y siempre sobre el uid de la sesión verificada, nunca sobre uno del cuerpo.
  */
 
-/**
- * Cookie httpOnly con el JWT de la sesión anónima mientras la persona inicia sesión con un email que
- * ya tiene cuenta (§4). Vive 15 minutos: menos que el JWT recién refrescado (1 hora).
- */
-export const COOKIE_RECLAMO = "sayso-reclamo";
-export const VIDA_RECLAMO_SEG = 15 * 60;
-
 /** Casos de una sesión anónima que pasan a la cuenta con email. Devuelve cuántos pasaron. */
 export async function pasarCasos(db: SupabaseClient, de: string, a: string): Promise<number> {
   const { data, error } = await db.from("casos").update({ dueno: a }).eq("dueno", de).select("id");
   if (error) throw new ErrorSupabase(`pasar casos: ${error.message}`);
   return data?.length ?? 0;
+}
+
+/**
+ * Reclamo desde otra cuenta (docs/login.md §4): al entrar a una cuenta que ya existía, los casos de
+ * la sesión anónima de antes (verificada en el mismo pedido, antes de cambiar de sesión) pasan a la
+ * cuenta, y ese usuario anónimo, ya vacío, se borra. Nunca reclama de una sesión con email: lo
+ * confirma con Auth, porque el JWT puede ser de antes de que esa sesión sumara un email.
+ * Si algo falla no frena el inicio de sesión: los casos quedan donde estaban y se registra.
+ */
+export async function reclamarAnonima(db: SupabaseClient, viejo: Sesion | null, nuevo: string): Promise<number> {
+  if (!viejo?.anonima || viejo.uid === nuevo) return 0;
+  try {
+    const { data, error } = await db.auth.admin.getUserById(viejo.uid);
+    if (error || !data.user?.is_anonymous) return 0;
+    const reclamados = await pasarCasos(db, viejo.uid, nuevo);
+    const borrado = await db.auth.admin.deleteUser(viejo.uid);
+    if (borrado.error) console.warn("[cuenta] no pude borrar la sesión anónima reclamada:", borrado.error.message);
+    return reclamados;
+  } catch (e) {
+    console.error("[cuenta] reclamar:", e instanceof ErrorSupabase ? e.message : e);
+    return 0;
+  }
 }
 
 async function idsDeCasos(db: SupabaseClient, uid: string): Promise<string[]> {
@@ -57,7 +73,7 @@ async function filasDe(db: SupabaseClient, tabla: "fotos" | "fichas" | "eventos"
 }
 
 /**
- * "Exportar mis casos": casos con su ficha, fotos (URL firmadas de 5 minutos), eventos y guía.
+ * "Exportar mis casos": la cuenta (email, nombre y apellido) y los casos con su ficha, fotos (URL firmadas de 5 minutos), eventos y guía.
  * Sin las columnas internas (`dueno`, `dispositivo`).
  */
 export async function exportarCuenta(db: SupabaseClient, uid: string) {
@@ -76,8 +92,16 @@ export async function exportarCuenta(db: SupabaseClient, uid: string) {
     }),
   );
   const de = (filas: Fila[], id: string) => filas.filter((f) => f.caso_id === id).map((f) => f.datos ?? f);
+  const usuario = await db.auth.admin.getUserById(uid).catch(() => null);
+  const u = usuario?.data?.user;
+  const meta = (u?.user_metadata ?? {}) as { nombre?: unknown; apellido?: unknown };
   return {
     exportadoEn: new Date().toISOString(),
+    cuenta: {
+      email: u?.email ?? null,
+      nombre: typeof meta.nombre === "string" ? meta.nombre : null,
+      apellido: typeof meta.apellido === "string" ? meta.apellido : null,
+    },
     aviso: "Las URL de las fotos vencen a los 5 minutos: para bajarlas, volvé a exportar.",
     casos: casos.map((fila) => {
       const c = Object.fromEntries(Object.entries(fila).filter(([k]) => k !== "dueno" && k !== "dispositivo"));
@@ -102,6 +126,13 @@ export function respuestaAuth(error: { code?: string; status?: number; message: 
       return r(400, "captcha", "No pudimos comprobar que sos una persona. Probá de nuevo.");
     case "otp_expired":
       return r(400, "codigo", "El código no es válido o ya venció. Pedí uno nuevo.");
+    case "invalid_credentials":
+      return r(400, "credenciales", "El email o la contraseña no son correctos.");
+    case "weak_password":
+      return r(400, "contrasena", "La contraseña tiene que tener 8 o más caracteres, con letras y números.");
+    case "email_exists":
+    case "user_already_exists":
+      return r(409, "existe", "Ese email ya tiene cuenta. Iniciá sesión.");
     case "email_address_invalid":
     case "validation_failed":
       return r(400, "email", "Revisá el email.");

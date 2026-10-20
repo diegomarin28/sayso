@@ -3,7 +3,14 @@
  * vive en cookies httpOnly y el navegador nunca ve el token ni habla con Supabase.
  */
 
-export type EstadoCuenta = { configurado: boolean; sesion: boolean; anonima: boolean; email: string | null };
+export type EstadoCuenta = {
+  configurado: boolean;
+  sesion: boolean;
+  anonima: boolean;
+  email: string | null;
+  /** Para el saludo ("Hola, Ana"); solo con cuenta. */
+  nombre: string | null;
+};
 
 /** Respuesta de error de las rutas: `codigo` dice qué pasó (captcha, codigo, limite, no_disponible…). */
 export class ErrorCuenta extends Error {
@@ -29,13 +36,22 @@ async function pedir<T>(ruta: string, init?: { metodo?: string; cuerpo?: unknown
 }
 
 export const leerCuenta = () => pedir<EstadoCuenta>("/api/cuenta");
-export const pedirCodigo = (email: string, captchaToken?: string) =>
-  pedir<{ enviado: true }>("/api/cuenta/codigo", { cuerpo: { email, captchaToken } });
-export const verificarCodigo = (email: string, codigo: string) =>
-  pedir<{ verificado: true; email: string; reclamoPendiente: boolean }>("/api/cuenta/verificar", {
-    cuerpo: { email, codigo },
+export const crearCuenta = (email: string, contrasena: string) =>
+  pedir<{ enviado: true }>("/api/cuenta/crear", { cuerpo: { email, contrasena, acepta: true } });
+export const entrar = (email: string, contrasena: string, captchaToken?: string) =>
+  pedir<{ entrado: true; reclamados: number }>("/api/cuenta/entrar", { cuerpo: { email, contrasena, captchaToken } });
+export const recuperar = (email: string, captchaToken?: string) =>
+  pedir<{ enviado: true }>("/api/cuenta/recuperar", { cuerpo: { email, captchaToken } });
+export const verificarCodigo = (
+  motivo: "crear" | "recuperar" | "cambiar",
+  email: string,
+  codigo: string,
+  contrasena: string,
+  perfil?: { nombre: string; apellido: string; acepta: true },
+) =>
+  pedir<{ verificado: true; reclamados: number }>("/api/cuenta/verificar", {
+    cuerpo: { motivo, email, codigo, contrasena, ...perfil },
   });
-export const reclamarCasos = () => pedir<{ reclamados: number }>("/api/cuenta/reclamar", { cuerpo: {} });
 export const salir = () => pedir<{ salido: true }>("/api/cuenta/salir", { cuerpo: {} });
 export const borrarCuenta = () =>
   pedir<{ borrado: true; casos: number }>("/api/cuenta", { metodo: "DELETE", cuerpo: { confirmar: "borrar" } });

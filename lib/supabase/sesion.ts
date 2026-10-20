@@ -41,7 +41,7 @@ export async function authDelPedido() {
   return auth ? { auth, almacen } : null;
 }
 
-export type Sesion = { uid: string; anonima: boolean; email: string | null };
+export type Sesion = { uid: string; anonima: boolean; email: string | null; nombre: string | null };
 
 /**
  * La sesión verificada (`getClaims()` valida la firma del JWT), o null sin sesión válida.
@@ -51,7 +51,9 @@ export async function sesionVerificada(auth: SupabaseClient, jwt?: string): Prom
   const { data, error } = await auth.auth.getClaims(jwt);
   const c = data?.claims;
   if (error || !c?.sub) return null;
-  return { uid: c.sub, anonima: c.is_anonymous === true, email: c.email || null };
+  // El nombre lo guarda la persona al crear la cuenta (user_metadata, docs/login.md §5).
+  const nombre = typeof c.user_metadata?.nombre === "string" ? c.user_metadata.nombre : null;
+  return { uid: c.sub, anonima: c.is_anonymous === true, email: c.email || null, nombre };
 }
 
 /** uid de la sesión verificada del pedido, o null. */

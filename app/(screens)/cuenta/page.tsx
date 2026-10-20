@@ -2,89 +2,152 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { contrasenaValida, emailValido, nombreValido, REGLA_CONTRASENA } from "../../../lib/supabase/credenciales";
 import {
+  asegurarSesion,
   borrarCuenta,
+  crearCuenta,
+  entrar,
   ErrorCuenta,
   leerCuenta,
   olvidarSesion,
-  pedirCodigo,
-  reclamarCasos,
-  RUTA_EXPORTAR,
+  recuperar,
   salir,
   verificarCodigo,
   type EstadoCuenta,
 } from "../_datos/cuenta";
 import { borrarLocal } from "../_datos/mis-casos";
 import { useCaptcha } from "../_ui/captcha";
-import { BotonPrincipal, BotonSecundario, DiceExperto, Flecha, FlechaAtras, Pantalla } from "../_ui/experto";
+import { AjustesCuenta } from "./ajustes";
+import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla } from "../_ui/experto";
 
 /**
- * Cuenta (docs/login.md §2, §4 y §5): "Guardar mis casos" con un código por email, y con la cuenta
- * ya guardada, salir, exportar y borrar. Todo por `/api/cuenta/*`: la sesión es una cookie httpOnly.
+ * Cuenta (docs/login.md §2, §4 y §5): iniciar sesión con email y contraseña, crear la cuenta
+ * (confirmando el email con un código) y "Olvidé mi contraseña". Con la cuenta ya iniciada: salir,
+ * exportar y borrar. Todo por `/api/cuenta/*`: la sesión es una cookie httpOnly. La app se usa
+ * igual sin cuenta (sesión anónima); la cuenta sirve para no perder los casos.
  */
 
-type Paso = "email" | "codigo";
+type Modo = "entrar" | "crear" | "recuperar";
+type Paso = "datos" | "codigo";
 
 const ENTRADA =
   "h-14 w-full rounded-2xl border border-borde bg-superficie px-4 text-lg focus:border-acento/60 focus:outline-none";
+
+const TEXTO: Record<Modo, Record<Paso, string>> = {
+  entrar: {
+    datos: "Iniciá sesión para retomar tus casos desde cualquier celular. También podés seguir sin cuenta.",
+    codigo: "",
+  },
+  crear: {
+    datos: "Creá tu cuenta para no perder tus casos. Los de este celular quedan guardados en ella.",
+    codigo: "Te mandamos un código al email. Escribilo para confirmar que es tuyo.",
+  },
+  recuperar: {
+    datos: "Te mandamos un código al email para que elijas una contraseña nueva.",
+    codigo: "Si ese email tiene cuenta, te mandamos un código. Escribilo y elegí la contraseña nueva.",
+  },
+};
 
 export default function Cuenta() {
   const router = useRouter();
   const captcha = useCaptcha();
   const [cuenta, setCuenta] = useState<EstadoCuenta | null>(null);
-  const [paso, setPaso] = useState<Paso>("email");
+  const [modo, setModo] = useState<Modo>("entrar");
+  const [paso, setPaso] = useState<Paso>("datos");
   const [email, setEmail] = useState("");
+  const [contrasena, setContrasena] = useState("");
+  const [repetida, setRepetida] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [acepta, setAcepta] = useState(false);
+  const [ver, setVer] = useState(false);
   const [codigo, setCodigo] = useState("");
+  const [tocado, setTocado] = useState({ email: false, contrasena: false, repetida: false, nombre: false });
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** La verificación de Cloudflare falló (en el navegador o al revisarla Supabase): aviso aparte, no error. */
+  const [falloCaptcha, setFalloCaptcha] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
 
   const recargar = useCallback(async () => {
     try {
       setCuenta(await leerCuenta());
     } catch {
-      setCuenta({ configurado: false, sesion: false, anonima: false, email: null });
+      setCuenta({ configurado: false, sesion: false, anonima: false, email: null, nombre: null });
     }
   }, []);
   useEffect(() => {
-    // Leer la sesión al entrar: el estado sale del servidor, no hay otra forma de saberlo.
+    // "Registrarte" y "Guardar mis casos" llegan con ?modo=crear; la sesión sale del servidor.
+    const pedido = new URLSearchParams(window.location.search).get("modo");
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (pedido === "crear" || pedido === "recuperar") setModo(pedido);
     void recargar();
   }, [recargar]);
+
+  /** Cambia entre entrar, crear y recuperar. El email escrito se mantiene. */
+  function cambiarModo(m: Modo, { limpiarError = true } = {}) {
+    setModo(m);
+    setPaso("datos");
+    setCodigo("");
+    setTocado({ email: false, contrasena: false, repetida: false, nombre: false });
+    setRepetida("");
+    if (limpiarError) setError(null);
+    setAviso(null);
+  }
 
   async function hacer(accion: () => Promise<void>) {
     setOcupado(true);
     setError(null);
     setAviso(null);
+    setFalloCaptcha(false);
     try {
       await accion();
     } catch (e) {
+      if (e instanceof ErrorCuenta && e.codigo === "captcha") {
+        setFalloCaptcha(true);
+        captcha.reintentar();
+        return;
+      }
       setError(e instanceof ErrorCuenta ? e.message : "No se pudo. Probá de nuevo.");
+      // "Ese email ya tiene cuenta": pasa a entrar con el email ya escrito.
+      if (e instanceof ErrorCuenta && e.codigo === "existe") cambiarModo("entrar", { limpiarError: false });
     } finally {
       setOcupado(false);
     }
   }
 
-  const mandarCodigo = () =>
+  /** Después de entrar o de crear la cuenta se vuelve al inicio, que ya saluda por el nombre. */
+  const alInicio = () => {
+    olvidarSesion();
+    router.push("/");
+  };
+
+
+
+  const enviarDatos = () =>
     hacer(async () => {
-      await pedirCodigo(email, await captcha.obtener());
-      setPaso("codigo");
-      setCodigo("");
+      if (modo === "entrar") {
+        await entrar(email, contrasena, await captcha.obtener());
+        alInicio();
+      } else if (modo === "crear") {
+        // La cuenta nace de la sesión anónima de este celular: si todavía no hay, se pide.
+        await asegurarSesion();
+        await crearCuenta(email, contrasena);
+        setPaso("codigo");
+      } else {
+        await recuperar(email, await captcha.obtener());
+        setPaso("codigo");
+      }
     });
 
   const confirmarCodigo = () =>
     hacer(async () => {
-      const r = await verificarCodigo(email, codigo);
-      let mensaje = "Listo: tus casos quedan guardados con tu email.";
-      if (r.reclamoPendiente) {
-        const { reclamados } = await reclamarCasos();
-        if (reclamados > 0) mensaje = `Listo: pasamos ${reclamados === 1 ? "1 caso" : `${reclamados} casos`} a tu cuenta.`;
-      }
-      olvidarSesion();
-      setPaso("email");
-      await recargar();
-      setAviso(mensaje);
+      const motivo = modo === "crear" ? "crear" : "recuperar";
+      const perfil =
+        motivo === "crear" ? { nombre: nombre.trim(), apellido: apellido.trim(), acepta: true as const } : undefined;
+      await verificarCodigo(motivo, email, codigo, contrasena, perfil);
+      alInicio();
     });
 
   const cerrarSesion = () =>
@@ -92,7 +155,7 @@ export default function Cuenta() {
       await salir();
       olvidarSesion();
       await recargar();
-      setAviso("Saliste de tu cuenta en este celular.");
+      setAviso("Saliste de tu cuenta en este celular. Podés seguir usando la app sin cuenta.");
     });
 
   const borrar = () =>
@@ -100,32 +163,56 @@ export default function Cuenta() {
       await borrarCuenta();
       borrarLocal();
       olvidarSesion();
-      setConfirmarBorrado(false);
       await recargar();
       setAviso("Borramos tu cuenta, tus casos y sus fotos.");
     });
 
   const conEmail = cuenta?.sesion && !cuenta.anonima;
+  // Crear pide la contraseña con el email; recuperar, con el código (es la nueva).
+  const pideContrasena = paso === "datos" ? modo !== "recuperar" : modo === "recuperar";
+  const contrasenaNueva = modo !== "entrar";
+  const emailMal = tocado.email && !emailValido(email);
+  const contrasenaMal = contrasenaNueva && tocado.contrasena && !contrasenaValida(contrasena);
+  // Entrar y pedir el código de "Olvidé mi contraseña" llevan la verificación de Cloudflare.
+  // ("Mandar otro código" también la usa: el widget queda montado en los dos pasos.)
+  const conCaptcha = modo !== "crear";
+  const esperandoCaptcha = conCaptcha && paso === "datos" && !captcha.listo;
+  // Crear pide además nombre, apellido y repetir la contraseña.
+  const pidePerfil = modo === "crear" && paso === "datos";
+  const nombreMal = pidePerfil && tocado.nombre && (!nombreValido(nombre) || !nombreValido(apellido));
+  const repetidaMal = pidePerfil && tocado.repetida && repetida !== contrasena;
+  const puedeEnviar =
+    (!pidePerfil || (nombreValido(nombre) && nombreValido(apellido) && repetida === contrasena && acepta)) &&
+    emailValido(email) &&
+    (!pideContrasena || (contrasenaNueva ? contrasenaValida(contrasena) : contrasena.length > 0)) &&
+    (paso === "datos" || codigo.length >= 6);
+
   const texto = !cuenta
     ? "Un segundo…"
     : !cuenta.configurado
-      ? "Guardar tus casos con tu email todavía no está disponible. Mientras, quedan en este celular."
+      ? "Las cuentas todavía no están disponibles. Podés usar la app igual: tus casos quedan en este celular."
       : conEmail
-        ? `Tus casos están guardados con ${cuenta.email ?? "tu email"}. Podés retomarlos desde cualquier celular.`
-        : paso === "codigo"
-          ? `Te mandamos un código a ${email}. Escribilo acá.`
-          : "Guardá tus casos con tu email para no perderlos si cambiás de celular o se borran los datos.";
+        ? `${cuenta.nombre ? `Hola, ${cuenta.nombre}. ` : ""}Tus casos quedan guardados en tu cuenta.`
+        : TEXTO[modo][paso];
+
+  const titulo = conEmail ? "Cuenta" : { entrar: "Iniciar sesión", crear: "Crear cuenta", recuperar: "Contraseña" }[modo];
+  const boton =
+    paso === "codigo"
+      ? modo === "crear"
+        ? "Confirmar"
+        : "Guardar contraseña"
+      : { entrar: "Entrar", crear: "Crear cuenta", recuperar: "Mandarme el código" }[modo];
 
   return (
     <Pantalla>
       <header className="flex items-center gap-3">
         <button
-          onClick={() => router.push("/casos")}
+          onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
           className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium"
         >
-          <FlechaAtras /> Mis casos
+          <FlechaAtras /> Volver
         </button>
-        <p className="text-xs font-medium tracking-widest text-texto-suave uppercase">Cuenta</p>
+        <p className="text-xs font-medium tracking-widest text-texto-suave uppercase">{titulo}</p>
       </header>
 
       <DiceExperto texto={texto} />
@@ -141,118 +228,227 @@ export default function Cuenta() {
         </p>
       )}
 
-      {cuenta?.configurado && !conEmail && paso === "email" && (
+      {cuenta?.configurado && !conEmail && (
         <form
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-4"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
-            void mandarCodigo();
+            setTocado({ email: true, contrasena: true, repetida: true, nombre: true });
+            if (puedeEnviar) void (paso === "datos" ? enviarDatos() : confirmarCodigo());
           }}
         >
-          <label className="flex flex-col gap-2 text-sm">
-            <span className="text-texto-suave">Tu email</span>
-            <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nombre@ejemplo.com"
-              className={ENTRADA}
-            />
-          </label>
-          <BotonPrincipal type="submit" disabled={ocupado || !email.includes("@")}>
-            {ocupado ? "Mandando…" : "Mandarme el código"} <Flecha />
-          </BotonPrincipal>
-          <p className="text-xs text-texto-suave">
-            Si ya tenés cuenta, usá el mismo email: los casos de este celular pasan a tu cuenta. No usamos tu
-            email para nada más.
-          </p>
-        </form>
-      )}
-
-      {cuenta?.configurado && !conEmail && paso === "codigo" && (
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void confirmarCodigo();
-          }}
-        >
-          <label className="flex flex-col gap-2 text-sm">
-            <span className="text-texto-suave">Código</span>
-            <input
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]*"
-              maxLength={10}
-              required
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-              placeholder="123456"
-              className={`${ENTRADA} tracking-[0.4em]`}
-            />
-          </label>
-          <BotonPrincipal type="submit" disabled={ocupado || codigo.length < 6}>
-            {ocupado ? "Revisando…" : "Confirmar"} <Flecha />
-          </BotonPrincipal>
-          <div className="flex justify-between gap-3 text-sm">
-            <button type="button" className="underline" disabled={ocupado} onClick={() => setPaso("email")}>
-              Cambiar el email
-            </button>
-            <button type="button" className="underline" disabled={ocupado} onClick={() => void mandarCodigo()}>
-              Mandar otro código
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Un solo widget para los dos pasos: "Mandar otro código" reusa el mismo. */}
-      {cuenta?.configurado && !conEmail && captcha.elemento}
-
-      {cuenta?.sesion && (
-        <section className="mt-auto flex flex-col gap-3">
-          <a
-            href={RUTA_EXPORTAR}
-            download
-            className="flex h-14 w-full items-center justify-center rounded-2xl border border-borde text-lg font-medium"
-          >
-            Exportar mis casos
-          </a>
-          {conEmail && (
-            <BotonSecundario disabled={ocupado} onClick={() => void cerrarSesion()}>
-              Salir en este celular
-            </BotonSecundario>
+          {pidePerfil && (
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-2">
+                  <span className="text-texto-suave">Nombre</span>
+                  <input
+                    autoComplete="given-name"
+                    placeholder="Ana"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    onBlur={() => setTocado((t) => ({ ...t, nombre: true }))}
+                    className={`${ENTRADA} ${nombreMal && !nombreValido(nombre) ? "border-peligro/60" : ""}`}
+                  />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-texto-suave">Apellido</span>
+                  <input
+                    autoComplete="family-name"
+                    placeholder="Pérez"
+                    value={apellido}
+                    onChange={(e) => setApellido(e.target.value)}
+                    onBlur={() => setTocado((t) => ({ ...t, nombre: true }))}
+                    className={`${ENTRADA} ${nombreMal && !nombreValido(apellido) ? "border-peligro/60" : ""}`}
+                  />
+                </label>
+              </div>
+              {nombreMal && <span className="text-peligro">Escribí tu nombre y tu apellido, solo con letras.</span>}
+            </div>
           )}
-          {confirmarBorrado ? (
-            <div className="flex flex-col gap-3 rounded-2xl border border-peligro/40 p-4">
-              <p className="text-sm">
-                Se borran para siempre tus casos, sus fotos y {conEmail ? "tu cuenta" : "lo guardado en nuestro servidor"},
-                también la copia de este celular. No se puede deshacer.
+
+          {paso === "datos" && (
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="text-texto-suave">Email</span>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTocado((t) => ({ ...t, email: true }))}
+                placeholder="nombre@ejemplo.com"
+                aria-invalid={emailMal}
+                className={`${ENTRADA} ${emailMal ? "border-peligro/60" : ""}`}
+              />
+              {emailMal && <span className="text-peligro">Revisá el email: tiene que ser como nombre@ejemplo.com.</span>}
+            </label>
+          )}
+
+          {paso === "codigo" && (
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="text-texto-suave">Código que llegó a {email}</span>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={10}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
+                placeholder="123456"
+                className={`${ENTRADA} tracking-[0.4em]`}
+              />
+            </label>
+          )}
+
+          {pideContrasena && (
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="text-texto-suave">{modo === "recuperar" ? "Contraseña nueva" : "Contraseña"}</span>
+              <div className="relative">
+                <input
+                  type={ver ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete={contrasenaNueva ? "new-password" : "current-password"}
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  onBlur={() => setTocado((t) => ({ ...t, contrasena: true }))}
+                  aria-invalid={contrasenaMal}
+                  className={`${ENTRADA} pr-20 ${contrasenaMal ? "border-peligro/60" : ""}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVer((v) => !v)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm text-texto-suave"
+                >
+                  {ver ? "Ocultar" : "Ver"}
+                </button>
+              </div>
+              {contrasenaNueva && (
+                <span className={contrasenaMal ? "text-peligro" : "text-texto-suave"}>{REGLA_CONTRASENA}</span>
+              )}
+            </label>
+          )}
+
+          {pidePerfil && (
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="text-texto-suave">Repetí la contraseña</span>
+              <div className="relative">
+                <input
+                  type={ver ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  value={repetida}
+                  onChange={(e) => setRepetida(e.target.value)}
+                  onBlur={() => setTocado((t) => ({ ...t, repetida: true }))}
+                  aria-invalid={repetidaMal}
+                  className={`${ENTRADA} pr-20 ${repetidaMal ? "border-peligro/60" : ""}`}
+                />
+                {/* El mismo "Ver" que la contraseña: muestra u oculta las dos. */}
+                <button
+                  type="button"
+                  onClick={() => setVer((v) => !v)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm text-texto-suave"
+                >
+                  {ver ? "Ocultar" : "Ver"}
+                </button>
+              </div>
+              {repetidaMal && <span className="text-peligro">Las contraseñas no coinciden.</span>}
+            </label>
+          )}
+
+          {pidePerfil && (
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={acepta}
+                onChange={(e) => setAcepta(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--acento)]"
+              />
+              <span className={tocado.nombre && !acepta ? "text-peligro" : "text-texto-suave"}>
+                Acepto los{" "}
+                <a href="/terminos" target="_blank" rel="noopener" className="font-medium text-texto underline">
+                  Términos y condiciones
+                </a>{" "}
+                y la{" "}
+                <a href="/privacidad" target="_blank" rel="noopener" className="font-medium text-texto underline">
+                  Política de privacidad
+                </a>
+                .
+              </span>
+            </label>
+          )}
+
+          {/* El recuadro de Cloudflare, si pide tocarlo, queda justo antes del botón que espera. */}
+          {conCaptcha && captcha.elemento}
+          {conCaptcha && (falloCaptcha || captcha.estado === "fallo") && (
+            <div role="status" className="flex flex-col gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm">
+              <p className="font-medium text-probable">No pudimos confirmar que sos una persona</p>
+              <p className="text-texto-suave">
+                Suele pasar con bloqueadores de anuncios o con el modo privado. Desactivalos para esta página o
+                probá con otro navegador.
               </p>
               <button
                 type="button"
-                disabled={ocupado}
-                onClick={() => void borrar()}
-                className="h-12 rounded-xl bg-peligro font-semibold text-black active:scale-[0.98] disabled:opacity-30"
+                className="self-start font-medium text-texto underline"
+                onClick={() => {
+                  setFalloCaptcha(false);
+                  captcha.reintentar();
+                }}
               >
-                {ocupado ? "Borrando…" : "Sí, borrar todo"}
-              </button>
-              <button type="button" className="text-sm underline" onClick={() => setConfirmarBorrado(false)}>
-                Cancelar
+                Volver a intentar
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              className="h-11 text-sm text-peligro underline"
-              onClick={() => setConfirmarBorrado(true)}
-            >
-              {conEmail ? "Borrar mi cuenta" : "Borrar mis datos"}
-            </button>
           )}
-        </section>
+
+          <BotonPrincipal type="submit" disabled={ocupado || esperandoCaptcha}>
+            {ocupado ? "Un segundo…" : boton} <Flecha />
+          </BotonPrincipal>
+          {esperandoCaptcha && captcha.estado === "verificando" && (
+            <p className="-mt-2 text-center text-xs text-texto-suave">Comprobando que sos una persona…</p>
+          )}
+
+          <div className="flex flex-col items-center gap-3 text-sm">
+            {paso === "codigo" && (
+              <button type="button" className="underline" disabled={ocupado} onClick={() => void enviarDatos()}>
+                Mandar otro código
+              </button>
+            )}
+            {modo === "entrar" && (
+              <>
+                <button type="button" className="underline" onClick={() => cambiarModo("recuperar")}>
+                  Olvidé mi contraseña
+                </button>
+                <p className="text-texto-suave">
+                  ¿No tenés cuenta?{" "}
+                  <button type="button" className="font-medium text-texto underline" onClick={() => cambiarModo("crear")}>
+                    Registrate
+                  </button>
+                </p>
+              </>
+            )}
+            {modo !== "entrar" && (
+              <p className="text-texto-suave">
+                ¿Ya tenés cuenta?{" "}
+                <button type="button" className="font-medium text-texto underline" onClick={() => cambiarModo("entrar")}>
+                  Iniciar sesión
+                </button>
+              </p>
+            )}
+          </div>
+          <p className="text-center text-xs text-texto-suave">Tu email es solo para entrar y recuperar tus casos.</p>
+        </form>
+      )}
+
+      {/* Con cuenta: secciones de cuenta, seguridad, datos y borrar (como en la configuración de cualquier página). */}
+      {conEmail && (
+        <AjustesCuenta
+          email={cuenta.email ?? ""}
+          nombre={cuenta.nombre}
+          ocupado={ocupado}
+          alSalir={() => void cerrarSesion()}
+          alBorrar={() => void borrar()}
+        />
       )}
     </Pantalla>
   );

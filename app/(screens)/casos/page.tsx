@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { leerCuenta } from "../_datos/cuenta";
 import { firmaCasos, listarCasos, TEXTO_ESTADO, type CasoGuardado } from "../_datos/mis-casos";
 import { useFlujo } from "../_estado/flujo";
-import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla } from "../_ui/experto";
+import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla, Persona } from "../_ui/experto";
 
 /**
  * "Mis casos": los casos de este celular. Tocar uno lo retoma en la pantalla del
@@ -57,9 +57,9 @@ export default function MisCasos() {
         <p className="text-xs font-medium tracking-widest text-texto-suave uppercase">Mis casos</p>
         <button
           onClick={() => router.push("/cuenta")}
-          className="ml-auto flex h-11 shrink-0 items-center rounded-full border border-borde bg-superficie px-4 text-sm font-medium"
+          className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium"
         >
-          Cuenta
+          <Persona /> Cuenta
         </button>
       </header>
 
@@ -73,12 +73,12 @@ export default function MisCasos() {
 
       {conEmail === false && casos.length > 0 && (
         <button
-          onClick={() => router.push("/cuenta")}
+          onClick={() => router.push("/cuenta?modo=crear")}
           className="flex w-full items-center justify-between gap-3 rounded-2xl border border-acento/40 bg-acento/10 p-4 text-left"
         >
           <span>
             <span className="block font-semibold">Guardar mis casos</span>
-            <span className="block text-sm text-texto-suave">Con tu email, para no perderlos si cambiás de celular.</span>
+            <span className="block text-sm text-texto-suave">Creá tu cuenta para no perderlos si cambiás de celular.</span>
           </span>
           <Flecha />
         </button>
@@ -131,8 +131,7 @@ export default function MisCasos() {
 
       <p className="mt-auto text-center text-xs text-texto-suave">
         Se guardan en este celular y en nuestro servidor para que puedas retomarlos (con las fotos,
-        incluida la de la etiqueta del equipo). El email es opcional: sirve para no perderlos. Podés
-        exportarlos o borrarlos desde Cuenta.
+        incluida la de la etiqueta del equipo). La cuenta es opcional: sirve para no perderlos.
       </p>
     </Pantalla>
   );

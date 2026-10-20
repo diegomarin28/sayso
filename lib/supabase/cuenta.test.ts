@@ -50,6 +50,10 @@ const db = {
   },
   auth: {
     admin: {
+      getUserById: async (uid: string) => ({
+        data: { user: { id: uid, email: "yo@ejemplo.com", user_metadata: { nombre: "Ana", apellido: "Pérez" } } },
+        error: null,
+      }),
       deleteUser: async (uid: string) => {
         pasos.push(`usuario:${uid}`);
         return { error: null };
@@ -101,6 +105,7 @@ describe("borrarCuenta", () => {
 describe("exportarCuenta", () => {
   it("solo sus casos, sin columnas internas y con las fotos firmadas", async () => {
     const r = await exportarCuenta(db, YO);
+    expect(r.cuenta).toEqual({ email: "yo@ejemplo.com", nombre: "Ana", apellido: "Pérez" });
     expect(r.casos).toHaveLength(1);
     const [c] = r.casos;
     expect(c).not.toHaveProperty("dueno");

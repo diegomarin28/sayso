@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** Cookies del pedido y respuesta de getClaims de cada prueba. */
 let galletas: { name: string; value: string }[] = [];
-let claims: { data: { claims: { sub?: string; is_anonymous?: boolean; email?: string } } | null; error: { message: string } | null };
+let claims: {
+  data: { claims: { sub?: string; is_anonymous?: boolean; email?: string; user_metadata?: Record<string, unknown> } } | null; error: { message: string } | null };
 const getClaims = vi.fn<(jwt?: string) => Promise<typeof claims>>(async () => claims);
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => galletas, set: () => {} }) }));
 vi.mock("@supabase/ssr", () => ({ createServerClient: () => ({ auth: { getClaims } }) }));
@@ -45,9 +46,12 @@ describe("sesionVerificada (Login 2/3)", () => {
 
   it("dice si es anónima y su email, del JWT verificado", async () => {
     claims = { data: { claims: { sub: "uid-1", is_anonymous: true } }, error: null };
-    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-1", anonima: true, email: null });
-    claims = { data: { claims: { sub: "uid-2", is_anonymous: false, email: "yo@x.com" } }, error: null };
-    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-2", anonima: false, email: "yo@x.com" });
+    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-1", anonima: true, email: null, nombre: null });
+    claims = {
+      data: { claims: { sub: "uid-2", is_anonymous: false, email: "yo@x.com", user_metadata: { nombre: "Ana" } } },
+      error: null,
+    };
+    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-2", anonima: false, email: "yo@x.com", nombre: "Ana" });
   });
 
   it("verifica un JWT dado (el de la cookie de reclamo), no el de la sesión", async () => {

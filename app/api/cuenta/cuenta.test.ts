@@ -1,43 +1,45 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { VERSION_LEGALES } from "../../../lib/supabase/credenciales";
 import { contadorEnMemoria, usarContador } from "../../../lib/supabase/limite";
-import { COOKIE_RECLAMO } from "../../../lib/supabase/cuenta";
 
 const ANON = "11111111-1111-4111-8111-111111111111";
 const CUENTA = "22222222-2222-4222-8222-222222222222";
 
-type S = { uid: string; anonima: boolean; email: string | null } | null;
+type S = { uid: string; anonima: boolean; email: string | null; nombre?: string | null } | null;
 
-/** Sesión del pedido (cookie httpOnly) y sesiones que verifican por JWT (la de la cookie de reclamo). */
+/** Sesión verificada del pedido (cookie httpOnly) y lo que responde Supabase Auth en cada prueba. */
 let sesion: S;
-let porJwt: Record<string, S>;
 let galletas: Map<string, string>;
-const llamadas: string[] = [];
 let errores: Record<string, { code?: string; status?: number; message: string } | null>;
+const llamadas: string[] = [];
 
 const auth = {
   auth: {
     updateUser: vi.fn(async () => ({ error: errores.updateUser ?? null })),
-    refreshSession: vi.fn(async () => ({ data: { session: { access_token: "jwt-anon" } }, error: null })),
-    signInWithOtp: vi.fn(async () => ({ error: errores.signInWithOtp ?? null })),
+    refreshSession: vi.fn(async () => ({ data: { session: {} }, error: null })),
+    signInWithPassword: vi.fn(async () => ({
+      data: { user: errores.signInWithPassword ? null : { id: CUENTA } },
+      error: errores.signInWithPassword ?? null,
+    })),
+    resetPasswordForEmail: vi.fn(async () => ({ error: errores.resetPasswordForEmail ?? null })),
     signInAnonymously: vi.fn(async () => ({ error: errores.signInAnonymously ?? null })),
-    verifyOtp: vi.fn(async () => ({ error: errores.verifyOtp ?? null })),
+    verifyOtp: vi.fn(async () => ({
+      data: { user: { id: sesion?.anonima ? sesion.uid : CUENTA } },
+      error: errores.verifyOtp ?? null,
+    })),
     signOut: vi.fn(async () => ({ error: null })),
   },
 };
 const almacen = {
   getAll: () => [...galletas].map(([name, value]) => ({ name, value })),
-  get: (n: string) => (galletas.has(n) ? { name: n, value: galletas.get(n)! } : undefined),
-  has: (n: string) => galletas.has(n),
-  set: (n: string, v: string) => void galletas.set(n, v),
   delete: (n: string) => void galletas.delete(n),
 };
 vi.mock("../../../lib/supabase/sesion", () => ({
-  OPCIONES_COOKIE: {},
   authDelPedido: async () => ({ auth, almacen }),
-  sesionVerificada: async (_a: unknown, jwt?: string) => (jwt === undefined ? sesion : (porJwt[jwt] ?? null)),
+  sesionVerificada: async () => sesion,
   tieneCookieDeSesion: (n: string[]) => n.some((x) => x.startsWith("sb-")),
-  borrarCookiesDeSesion: (a: typeof almacen, otras: string[] = []) => {
-    for (const { name } of a.getAll()) if (name.startsWith("sb-") || otras.includes(name)) a.delete(name);
+  borrarCookiesDeSesion: (a: typeof almacen) => {
+    for (const { name } of a.getAll()) if (name.startsWith("sb-")) a.delete(name);
   },
 }));
 
@@ -67,19 +69,20 @@ const db = {
 };
 vi.mock("../../../lib/supabase/cliente", () => ({ supabaseServidor: () => db }));
 
-const codigo = await import("./codigo/route");
+const crear = await import("./crear/route");
+const entrar = await import("./entrar/route");
+const recuperar = await import("./recuperar/route");
 const verificar = await import("./verificar/route");
-const reclamar = await import("./reclamar/route");
 const anonima = await import("./anonima/route");
 const salir = await import("./salir/route");
 const cuenta = await import("./route");
 
 const post = (cuerpo: unknown) =>
   new Request("http://x/api/cuenta", { method: "POST", body: JSON.stringify(cuerpo), headers: { "x-real-ip": "1.2.3.4" } });
+const BUENA = "clave1234";
 
 beforeEach(() => {
   sesion = { uid: ANON, anonima: true, email: null };
-  porJwt = { "jwt-anon": { uid: ANON, anonima: true, email: null } };
   galletas = new Map([["sb-x-auth-token", "sesion"]]);
   errores = {};
   anonimoEnAuth = true;
@@ -111,94 +114,162 @@ describe("POST /api/cuenta/anonima", () => {
   });
 });
 
-describe("POST /api/cuenta/codigo", () => {
-  it("sesión anónima y email nuevo: convierte la misma sesión (updateUser), sin reclamo", async () => {
-    const r = await codigo.POST(post({ email: " Yo@Ejemplo.com " }));
+describe("POST /api/cuenta/crear", () => {
+  it("la sesión anónima pide el código para su email; la contraseña todavía no se guarda", async () => {
+    const r = await crear.POST(post({ email: " Yo@Ejemplo.com ", contrasena: BUENA, acepta: true }));
     expect(await r.json()).toEqual({ enviado: true });
     expect(auth.auth.updateUser).toHaveBeenCalledWith({ email: "yo@ejemplo.com" });
-    expect(auth.auth.signInWithOtp).not.toHaveBeenCalled();
-    expect(galletas.has(COOKIE_RECLAMO)).toBe(false);
   });
 
-  it("email que ya tiene cuenta: guarda el JWT anónimo para el reclamo y manda el código de inicio", async () => {
-    errores.updateUser = { code: "email_exists", message: "ya existe" };
-    const r = await codigo.POST(post({ email: "yo@ejemplo.com", captchaToken: "tok" }));
-    // La misma respuesta: no cuenta si el email tiene cuenta.
-    expect(await r.json()).toEqual({ enviado: true });
-    expect(galletas.get(COOKIE_RECLAMO)).toBe("jwt-anon");
-    expect(auth.auth.signInWithOtp).toHaveBeenCalledWith({
-      email: "yo@ejemplo.com",
-      options: { shouldCreateUser: false, captchaToken: "tok" },
-    });
-  });
-
-  it("con la sesión ya con email → 409", async () => {
-    sesion = { uid: CUENTA, anonima: false, email: "yo@ejemplo.com" };
-    expect((await codigo.POST(post({ email: "otro@ejemplo.com" }))).status).toBe(409);
-  });
-
-  it("email inválido → 400 sin llamar a Supabase", async () => {
-    expect((await codigo.POST(post({ email: "no-es-email" }))).status).toBe(400);
+  it.each([
+    ["sin números", "solamenteletras"],
+    ["sin letras", "12345678"],
+    ["corta", "abc12"],
+  ])("contraseña %s → 400 sin llamar a Supabase", async (_n, contrasena) => {
+    const r = await crear.POST(post({ email: "yo@ejemplo.com", contrasena, acepta: true }));
+    expect(r.status).toBe(400);
+    expect((await r.json()).codigo).toBe("contrasena");
     expect(auth.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it.each(["no-es-email", "yo@", "@ejemplo.com", "yo@ejemplo"])("email inválido %s → 400", async (email) => {
+    const r = await crear.POST(post({ email, contrasena: BUENA, acepta: true }));
+    expect(r.status).toBe(400);
+    expect((await r.json()).codigo).toBe("email");
+  });
+
+  it("email que ya tiene cuenta → 409 para iniciar sesión", async () => {
+    errores.updateUser = { code: "email_exists", message: "ya existe" };
+    const r = await crear.POST(post({ email: "yo@ejemplo.com", contrasena: BUENA, acepta: true }));
+    expect(r.status).toBe(409);
+    expect((await r.json()).codigo).toBe("existe");
+  });
+
+  it("sin aceptar los términos → 400 sin llamar a Supabase", async () => {
+    const r = await crear.POST(post({ email: "yo@ejemplo.com", contrasena: BUENA }));
+    expect(r.status).toBe(400);
+    expect((await r.json()).codigo).toBe("acepta");
+    expect(auth.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("sin sesión → 401; con la sesión ya con email → 409", async () => {
+    sesion = null;
+    expect((await crear.POST(post({ email: "yo@ejemplo.com", contrasena: BUENA, acepta: true }))).status).toBe(401);
+    sesion = { uid: CUENTA, anonima: false, email: "yo@ejemplo.com" };
+    expect((await crear.POST(post({ email: "otro@ejemplo.com", contrasena: BUENA, acepta: true }))).status).toBe(409);
   });
 });
 
 describe("POST /api/cuenta/verificar", () => {
-  it("sesión anónima sin reclamo: email_change", async () => {
-    const r = await verificar.POST(post({ email: "yo@ejemplo.com", codigo: "123456" }));
-    expect(await r.json()).toMatchObject({ verificado: true, reclamoPendiente: false });
+  const CREAR = {
+    motivo: "crear",
+    email: "yo@ejemplo.com",
+    codigo: "123456",
+    contrasena: BUENA,
+    nombre: " Ana ",
+    apellido: "Pérez",
+    acepta: true,
+  };
+
+  it("crear: verifica el email (email_change) y recién ahí guarda contraseña, nombre y apellido, sin reclamo", async () => {
+    const r = await verificar.POST(post(CREAR));
+    expect(await r.json()).toEqual({ verificado: true, reclamados: 0 });
     expect(auth.auth.verifyOtp).toHaveBeenCalledWith({ email: "yo@ejemplo.com", token: "123456", type: "email_change" });
+    expect(auth.auth.updateUser).toHaveBeenCalledWith({
+      password: BUENA,
+      data: { nombre: "Ana", apellido: "Pérez", legales: { version: VERSION_LEGALES, aceptadoEn: expect.any(String) } },
+    });
+    expect(casos.find((c) => c.id === "c1")?.dueno).toBe(ANON);
   });
 
-  it("con reclamo pendiente: inicio de sesión (email) y avisa el reclamo", async () => {
-    galletas.set(COOKIE_RECLAMO, "jwt-anon");
-    const r = await verificar.POST(post({ email: "yo@ejemplo.com", codigo: "123456" }));
-    expect(await r.json()).toMatchObject({ reclamoPendiente: true });
-    expect(auth.auth.verifyOtp).toHaveBeenCalledWith(expect.objectContaining({ type: "email" }));
-  });
-
-  it("código equivocado → 400 con mensaje de código vencido", async () => {
+  it("código equivocado → 400 y no toca la contraseña", async () => {
     errores.verifyOtp = { status: 403, message: "Token has expired or is invalid" };
-    const r = await verificar.POST(post({ email: "yo@ejemplo.com", codigo: "000000" }));
+    const r = await verificar.POST(post({ ...CREAR, codigo: "000000" }));
     expect(r.status).toBe(400);
     expect((await r.json()).codigo).toBe("codigo");
+    expect(auth.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["sin nombre", { nombre: undefined }],
+    ["con números en el apellido", { apellido: "P3rez" }],
+    ["sin aceptar los términos", { acepta: undefined }],
+  ])("crear %s → 400 sin verificar el código", async (_n, cambio) => {
+    const r = await verificar.POST(post({ ...CREAR, ...cambio }));
+    expect(r.status).toBe(400);
+    expect(auth.auth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it("cambiar: con la sesión iniciada, solo para su propio email; no guarda nombre", async () => {
+    sesion = { uid: CUENTA, anonima: false, email: "yo@ejemplo.com" };
+    auth.auth.verifyOtp.mockResolvedValueOnce({ data: { user: { id: CUENTA } }, error: null });
+    const ok = await verificar.POST(post({ motivo: "cambiar", email: "yo@ejemplo.com", codigo: "123456", contrasena: BUENA, acepta: true }));
+    expect(await ok.json()).toEqual({ verificado: true, reclamados: 0 });
+    expect(auth.auth.updateUser).toHaveBeenCalledWith({ password: BUENA });
+    const ajeno = await verificar.POST(post({ motivo: "cambiar", email: "otro@ejemplo.com", codigo: "123456", contrasena: BUENA, acepta: true }));
+    expect(ajeno.status).toBe(400);
+  });
+
+  it("recuperar: entra con la contraseña nueva y pasa los casos de la sesión anónima", async () => {
+    // La sesión anónima de antes es ANON; verifyOtp de recuperar entra a CUENTA.
+    auth.auth.verifyOtp.mockResolvedValueOnce({ data: { user: { id: CUENTA } }, error: null });
+    const r = await verificar.POST(post({ motivo: "recuperar", email: "yo@ejemplo.com", codigo: "123456", contrasena: BUENA, acepta: true }));
+    expect(await r.json()).toEqual({ verificado: true, reclamados: 1 });
+    expect(auth.auth.verifyOtp).toHaveBeenCalledWith(expect.objectContaining({ type: "recovery" }));
+    expect(llamadas).toEqual([`borrar:${ANON}`]);
   });
 });
 
-describe("POST /api/cuenta/reclamar", () => {
-  beforeEach(() => {
-    sesion = { uid: CUENTA, anonima: false, email: "yo@ejemplo.com" };
-    galletas.set(COOKIE_RECLAMO, "jwt-anon");
-  });
-
-  it("pasa los casos de la sesión anónima, borra ese usuario y la cookie", async () => {
-    expect(await (await reclamar.POST()).json()).toEqual({ reclamados: 1 });
+describe("POST /api/cuenta/entrar", () => {
+  it("entra con CAPTCHA y pasa los casos de la sesión anónima, que se borra", async () => {
+    const r = await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: "vieja", captchaToken: "tok" }));
+    expect(await r.json()).toEqual({ entrado: true, reclamados: 1 });
+    expect(auth.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: "yo@ejemplo.com",
+      password: "vieja",
+      options: { captchaToken: "tok" },
+    });
     expect(casos.every((c) => c.dueno === CUENTA)).toBe(true);
     expect(llamadas).toEqual([`borrar:${ANON}`]);
-    expect(galletas.has(COOKIE_RECLAMO)).toBe(false);
   });
 
-  it("nunca reclama de una sesión con email (aunque el JWT verifique)", async () => {
-    porJwt["jwt-anon"] = { uid: ANON, anonima: false, email: "otra@ejemplo.com" };
-    expect(await (await reclamar.POST()).json()).toEqual({ reclamados: 0 });
+  it("contraseña incorrecta → 400 y no reclama nada", async () => {
+    errores.signInWithPassword = { code: "invalid_credentials", message: "x" };
+    const r = await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: "mala" }));
+    expect(r.status).toBe(400);
+    expect((await r.json()).codigo).toBe("credenciales");
     expect(casos.find((c) => c.id === "c1")?.dueno).toBe(ANON);
-    expect(llamadas).toEqual([]);
   });
 
-  it("si Auth dice que ya no es anónima (JWT viejo), no reclama", async () => {
+  it("si Auth dice que la sesión de antes ya no es anónima, no reclama", async () => {
     anonimoEnAuth = false;
-    expect(await (await reclamar.POST()).json()).toEqual({ reclamados: 0 });
+    expect(await (await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: "x" }))).json()).toEqual({
+      entrado: true,
+      reclamados: 0,
+    });
     expect(llamadas).toEqual([]);
   });
 
-  it("un JWT que no verifica no reclama nada", async () => {
-    galletas.set(COOKIE_RECLAMO, "falso");
-    expect(await (await reclamar.POST()).json()).toEqual({ reclamados: 0 });
+  it("sin sesión anónima antes, entra sin reclamar", async () => {
+    sesion = null;
+    expect(await (await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: "x" }))).json()).toEqual({
+      entrado: true,
+      reclamados: 0,
+    });
   });
 
-  it("la sesión nueva tiene que tener email", async () => {
-    sesion = { uid: ANON, anonima: true, email: null };
-    expect((await reclamar.POST()).status).toBe(409);
+  it("frena después de muchos intentos al mismo email", async () => {
+    errores.signInWithPassword = { code: "invalid_credentials", message: "x" };
+    for (let i = 0; i < 10; i++) await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: `x${i}` }));
+    expect((await entrar.POST(post({ email: "yo@ejemplo.com", contrasena: "otra" }))).status).toBe(429);
+  });
+});
+
+describe("POST /api/cuenta/recuperar", () => {
+  it("manda el código con CAPTCHA y responde igual tenga o no cuenta", async () => {
+    const r = await recuperar.POST(post({ email: "yo@ejemplo.com", captchaToken: "tok" }));
+    expect(await r.json()).toEqual({ enviado: true });
+    expect(auth.auth.resetPasswordForEmail).toHaveBeenCalledWith("yo@ejemplo.com", { captchaToken: "tok" });
   });
 });
 
@@ -230,6 +301,6 @@ describe("salir y borrar", () => {
 
   it("GET dice si la sesión es anónima, sin el token", async () => {
     const r = await (await cuenta.GET()).json();
-    expect(r).toEqual({ configurado: true, sesion: true, anonima: true, email: null });
+    expect(r).toEqual({ configurado: true, sesion: true, anonima: true, email: null, nombre: null });
   });
 });

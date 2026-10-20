@@ -34,6 +34,9 @@ export const TOPES = {
   /** Intentos de código por IP y por email: frena probar códigos de a uno. */
   verificacionesPorDia: 30,
   verificacionesPorEmailPorDia: 10,
+  /** Intentos de contraseña por IP y por cuenta: frena probar contraseñas (además del CAPTCHA). */
+  entradasPorDia: 50,
+  entradasPorEmailPorDia: 10,
 } as const;
 
 const MINUTO_MS = 60_000;
@@ -111,7 +114,14 @@ export function usarContador(c: ContadorUso | null): void {
 
 // ---------- Topes ----------
 
-export type MotivoLimite = "pedidos" | "imagenes" | "fotos_por_caso" | "sesiones" | "codigos" | "verificaciones";
+export type MotivoLimite =
+  | "pedidos"
+  | "imagenes"
+  | "fotos_por_caso"
+  | "sesiones"
+  | "codigos"
+  | "verificaciones"
+  | "entradas";
 
 export type Excedido = { motivo: MotivoLimite; reintentarEnSeg: number };
 
@@ -149,7 +159,7 @@ export async function revisarPorIp(
  */
 export async function revisarCuenta(
   req: Request,
-  accion: "sesion" | "codigo" | "verificar",
+  accion: "sesion" | "codigo" | "verificar" | "entrar",
   email?: string,
   ahora = new Date(),
   env: Record<string, string | undefined> = process.env,
@@ -160,6 +170,7 @@ export async function revisarCuenta(
     sesion: [TOPES.sesionesPorDia, Infinity, "sesiones"] as const,
     codigo: [TOPES.codigosPorDia, TOPES.codigosPorEmailPorDia, "codigos"] as const,
     verificar: [TOPES.verificacionesPorDia, TOPES.verificacionesPorEmailPorDia, "verificaciones"] as const,
+    entrar: [TOPES.entradasPorDia, TOPES.entradasPorEmailPorDia, "entradas"] as const,
   }[accion];
   const [ip, deEmail] = await Promise.all([
     c.sumar(`${accion}:${hashIp(ipDelPedido(req), ahora, env)}`, dia.inicio, 1),
@@ -200,6 +211,7 @@ const MENSAJES: Record<MotivoLimite, string> = {
   sesiones: "Demasiadas sesiones nuevas desde esta conexión. Probá de nuevo mañana.",
   codigos: "Ya mandamos muchos códigos. Probá de nuevo mañana.",
   verificaciones: "Demasiados intentos con el código. Probá de nuevo mañana.",
+  entradas: "Demasiados intentos para entrar. Probá de nuevo mañana o cambiá la contraseña.",
 };
 
 export function respuestaLimite(e: Excedido): Response {
