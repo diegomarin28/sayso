@@ -7,8 +7,8 @@ import type { ManualWeb, Seccion } from "./manualweb";
  * 1. `equipoIfixit`: el equipo en iFixit (categoría). Solo se acepta si los códigos de modelo dichos
  *    ("55v6c", "m1", "s21") aparecen en su título o descripción: un TCL 55C722 no es un TCL 55V6C. Sin códigos,
  *    su título trae todas las palabras del modelo (salvo la marca): una palabra en común es otro equipo.
- * 2. `ordenarGuias`: las guías de ese equipo, de la que mejor cuadra con el síntoma (por el tema: Battery,
- *    Screen…) a la que menos; se usa la primera que tenga pasos.
+ * 2. `ordenarGuias` / `guiasDelSintoma`: las guías de ese equipo, de la que mejor cuadra con el síntoma (por el
+ *    tema: Battery, Fan…) a la que menos; para la guía del síntoma, solo las de su tema (`esDelTema`).
  * 3. `guiaIfixit`: los pasos (texto, avisos y fotos), herramientas y piezas.
  * 4. `manualWebDeIfixit`: la guía como `ManualWeb` (una sección por paso, con su URL), para leerla con
  *    citas igual que un manual web (`bloquesManualWeb`).
@@ -132,38 +132,74 @@ async function equipoExacto(equipo: string, f: Fetch): Promise<EquipoIfixit | nu
 }
 
 /**
- * Qué temas de iFixit (en inglés, como los nombra iFixit) corresponden a cada palabra del síntoma.
- * Por pieza o falla, no por modelo.
+ * Qué temas de iFixit (en inglés, como los nombra iFixit) corresponden a lo que dice el síntoma. Por pieza o
+ * falla, no por modelo. `pieza`: palabras que nombran la pieza ("ventilador"): pesan más. `senal`: síntomas que
+ * pueden venir de varias piezas ("se apaga": batería o temperatura): pesan menos, así "se calienta y se apaga, el
+ * ventilador hace ruido" va a la guía del ventilador y no a la de la batería.
+ * Cada término es el comienzo de una palabra ("apag" → apaga, apagó, apagando); con espacio, una frase.
  */
-const TEMAS: Array<[string[], string[]]> = [
-  [["bateria", "pila", "dura", "descarga", "hinchada", "apaga", "autonomia"], ["battery"]],
-  [["pantalla", "display", "tactil", "touch", "vidrio", "rota", "roto", "imagen", "lineas", "brillo"], ["screen", "display", "digitizer", "lcd", "panel"]],
-  [["carga", "cargar", "cargador", "puerto", "conector", "enchufe", "usb"], ["charging", "port", "usb", "lightning", "connector", "dc", "jack", "battery"]],
-  [["ventilador", "ruido", "calienta", "caliente", "temperatura", "sobrecalienta", "fan"], ["fan", "heat", "thermal", "heatsink"]],
-  [["parlante", "sonido", "audio", "escucha", "altavoz", "volumen"], ["speaker", "loudspeaker", "earpiece", "audio"]],
-  [["microfono", "graba"], ["microphone"]],
-  [["camara", "foto", "fotos", "lente"], ["camera", "lens"]],
-  [["teclado", "tecla", "teclas"], ["keyboard", "key"]],
-  [["touchpad", "trackpad", "mouse"], ["trackpad", "touchpad"]],
-  [["joystick", "palanca", "drift", "stick", "analogico"], ["joystick", "thumbstick", "analog", "stick"]],
-  [["boton", "botones", "gatillo"], ["button", "trigger"]],
-  [["disco", "almacenamiento", "ssd", "memoria"], ["ssd", "hard", "drive", "storage", "ram", "memory"]],
-  [["wifi", "senal", "antena", "bluetooth"], ["antenna", "wifi", "airport", "wireless"]],
-  [["prende", "enciende", "arranca", "muerto"], ["battery", "power", "logic", "motherboard", "board"]],
-  [["agua", "mojado", "liquido"], ["water", "liquid", "corrosion"]],
+const TEMAS: Array<{ pieza: string[]; senal: string[]; en: string[] }> = [
+  { pieza: ["bateria", "pila"], senal: ["dura poco", "dura nada", "no dura", "descarg", "hinchad", "autonomia", "apag"], en: ["battery"] },
+  { pieza: ["pantalla", "display", "tactil", "touch", "vidrio"], senal: ["rota", "roto", "imagen", "lineas", "brillo"], en: ["screen", "display", "digitizer", "lcd", "panel"] },
+  { pieza: ["cargador", "puerto", "conector", "enchufe", "usb"], senal: ["carga", "cargar"], en: ["charging", "port", "usb", "lightning", "connector", "dc", "jack", "battery"] },
+  { pieza: ["ventilador", "fan", "cooler", "disipador"], senal: ["ruido", "calient", "calent", "recalient", "sobrecalient", "temperatura", "apag"], en: ["fan", "heat", "thermal", "heatsink"] },
+  { pieza: ["parlante", "altavoz"], senal: ["sonido", "audio", "escucha", "volumen"], en: ["speaker", "loudspeaker", "earpiece", "audio"] },
+  { pieza: ["microfono"], senal: ["graba"], en: ["microphone"] },
+  { pieza: ["camara", "lente"], senal: ["foto"], en: ["camera", "lens"] },
+  { pieza: ["teclado", "tecla"], senal: [], en: ["keyboard", "key"] },
+  { pieza: ["touchpad", "trackpad", "mouse"], senal: [], en: ["trackpad", "touchpad"] },
+  { pieza: ["joystick", "palanca", "stick", "analogico"], senal: ["drift"], en: ["joystick", "thumbstick", "analog", "stick"] },
+  { pieza: ["boton", "botones", "gatillo"], senal: [], en: ["button", "trigger"] },
+  { pieza: ["disco", "almacenamiento", "ssd", "memoria"], senal: [], en: ["ssd", "hard", "drive", "storage", "ram", "memory"] },
+  { pieza: ["antena", "wifi", "bluetooth"], senal: ["senal"], en: ["antenna", "wifi", "airport", "wireless"] },
+  { pieza: [], senal: ["prend", "enciend", "encend", "arranc", "muert"], en: ["battery", "power", "logic", "motherboard", "board"] },
+  { pieza: [], senal: ["agua", "mojad", "liquido"], en: ["water", "liquid", "corrosion"] },
 ];
+const PESO = { pieza: 3, senal: 1 };
+
+/** Cuánto pesa cada tema de iFixit para este síntoma (vacío: el síntoma no nombra ninguna pieza ni falla). */
+export function temasDelSintoma(sintoma: string): Map<string, number> {
+  const dichas = palabras(sintoma);
+  const frase = ` ${dichas.join(" ")} `;
+  const dice = (t: string) => (t.includes(" ") ? frase.includes(` ${t} `) : dichas.some((d) => d.startsWith(t)));
+  const pesos = new Map<string, number>();
+  for (const t of TEMAS) {
+    // Cada señal dicha suma: "se calienta y se apaga" es más de temperatura (2) que de batería (1).
+    const peso = (t.pieza.some(dice) ? PESO.pieza : 0) + t.senal.filter(dice).length * PESO.senal;
+    for (const en of peso ? t.en : []) pesos.set(en, (pesos.get(en) ?? 0) + peso);
+  }
+  return pesos;
+}
+
+/** Puntaje de una guía para el síntoma: el peso de cada tema que nombra (una vez por palabra). 0 = no es del tema. */
+function puntajeGuia(g: GuiaEnLista, temas: Map<string, number>): number {
+  return [...new Set(palabras(`${g.tema} ${g.titulo}`))].reduce((s, p) => s + (temas.get(p) ?? 0), 0);
+}
 
 /**
- * Las guías de la lista, de la que mejor cuadra con el síntoma (por el tema) a la que menos. Sin pistas
- * en el síntoma, primero la de batería (la falla más común en lo que se trae en la mano) y las de reemplazo.
+ * Las guías de la lista, de la que mejor cuadra con el síntoma (por el tema) a la que menos; a igual tema,
+ * primero las de reemplazo. Sin pistas en el síntoma, primero la de batería: sirve de respaldo para "cómo abrir
+ * el equipo" (es la que más lo desarma), nunca como guía del síntoma (ver `guiasDelSintoma`).
  */
 export function ordenarGuias(guias: GuiaEnLista[], sintoma: string): GuiaEnLista[] {
-  const dichas = palabras(sintoma);
-  const buscados = new Set(TEMAS.filter(([es]) => es.some((p) => dichas.some((d) => d.startsWith(p)))).flatMap(([, en]) => en));
-  const respaldo = buscados.size ? buscados : new Set(["battery"]);
-  const puntaje = (g: GuiaEnLista) => palabras(`${g.tema} ${g.titulo}`).filter((p) => respaldo.has(p)).length * 10 + (g.tipo === "replacement" ? 1 : 0);
+  const temas = temasDelSintoma(sintoma);
+  const usar = temas.size ? temas : new Map([["battery", 1]]);
+  const puntaje = (g: GuiaEnLista) => puntajeGuia(g, usar) * 10 + (g.tipo === "replacement" ? 1 : 0);
   return [...guias].sort((a, b) => puntaje(b) - puntaje(a));
 }
+
+/**
+ * Solo las guías que son del tema del síntoma, ordenadas. Vacío si el síntoma no nombra una pieza o falla
+ * ("se tilda", "anda lento") o si ninguna guía es de eso: mejor otra fuente que los pasos de otra pieza
+ * (ej. cambiar la batería cuando el problema era el ventilador).
+ */
+export function guiasDelSintoma(guias: GuiaEnLista[], sintoma: string): GuiaEnLista[] {
+  const temas = temasDelSintoma(sintoma);
+  return ordenarGuias(guias, sintoma).filter((g) => puntajeGuia(g, temas) > 0);
+}
+
+/** ¿La guía es del tema del síntoma? (una guía ya guardada para otro síntoma del mismo equipo puede no serlo). */
+export const esDelTema = (g: { titulo: string; tema: string }, sintoma: string): boolean => puntajeGuia({ id: 0, tipo: "", ...g }, temasDelSintoma(sintoma)) > 0;
 
 /** La que mejor cuadra con el síntoma (ver `ordenarGuias`). */
 export const elegirGuia = (guias: GuiaEnLista[], sintoma: string): GuiaEnLista | null => ordenarGuias(guias, sintoma)[0] ?? null;
@@ -214,10 +250,15 @@ export async function guiaIfixit(id: number, f: Fetch = fetch): Promise<GuiaIfix
 /** Cuántas guías se prueban si las primeras vienen vacías (algunas de la lista son alias sin pasos). */
 const GUIAS_A_PROBAR = 3;
 
-/** Equipo → guía para el síntoma, o `null` (no está en iFixit o no es ese modelo): sigue la búsqueda de siempre. */
-export async function buscarGuiaIfixit(equipo: string, sintoma: string, f: Fetch = fetch): Promise<GuiaIfixit | null> {
+/**
+ * Equipo → guía para el síntoma, o `null` (no está en iFixit, no es ese modelo o no hay guía del tema): sigue la
+ * búsqueda de siempre. `delTema`: solo una guía del tema del síntoma (la guía del síntoma); sin eso, cualquiera
+ * sirve de respaldo (para una parte del procedimiento, como abrir el equipo).
+ */
+export async function buscarGuiaIfixit(equipo: string, sintoma: string, f: Fetch = fetch, opciones: { delTema?: boolean } = {}): Promise<GuiaIfixit | null> {
   const e = await equipoIfixit(equipo, f);
-  for (const g of e ? ordenarGuias(e.guias, sintoma).slice(0, GUIAS_A_PROBAR) : []) {
+  const candidatas = e ? (opciones.delTema ? guiasDelSintoma(e.guias, sintoma) : ordenarGuias(e.guias, sintoma)) : [];
+  for (const g of candidatas.slice(0, GUIAS_A_PROBAR)) {
     const guia = await guiaIfixit(g.id, f);
     if (guia) return guia;
   }

@@ -15,8 +15,10 @@ const INDICE = "https://soporte.ej.com/manual";
 const SECCIONES = ["Safety", "Introduction", "Display", "Battery", "Charging Port", "Speaker", "Camera", "Taptic Engine", "SIM Tray"];
 const urlSeccion = (i: number) => `https://soporte.ej.com/manual/${i}`;
 const GUIA_URL = "https://www.ifixit.com/Guide/Fono+X21+Charging+Port/3";
+const GUIA_FAN_URL = "https://www.ifixit.com/Guide/Fono+X21+Fan/4";
 
-function red(): typeof fetch {
+/** `conVentilador`: el equipo en iFixit también tiene la guía del ventilador. */
+function red(conVentilador = false): typeof fetch {
   return (async (url: string | URL) => {
     const u = String(url);
     if (u === INDICE) {
@@ -28,7 +30,20 @@ function red(): typeof fetch {
     const api = decodeURIComponent(u.replace("https://www.ifixit.com/api/2.0", ""));
     if (/^\/search\/.*x21.*\?filter=category/i.test(api)) return Response.json({ results: [{ title: "Fono X21" }] });
     if (api === "/wikis/CATEGORY/Fono X21") {
-      return Response.json({ title: "Fono X21", description: "Repair guides for the Fono X21 smartphone.", guides: [{ guideid: 3, title: "Fono X21 Charging Port Replacement", subject: "Charging Port", type: "replacement" }] });
+      const guias = [{ guideid: 3, title: "Fono X21 Charging Port Replacement", subject: "Charging Port", type: "replacement" }];
+      if (conVentilador) guias.push({ guideid: 4, title: "Fono X21 Fan Replacement", subject: "Fan", type: "replacement" });
+      return Response.json({ title: "Fono X21", description: "Repair guides for the Fono X21 smartphone.", guides: guias });
+    }
+    if (api === "/guides/4" && conVentilador) {
+      return Response.json({
+        guideid: 4,
+        title: "Fono X21 Fan Replacement",
+        url: GUIA_FAN_URL,
+        category: "Fono X21",
+        subject: "Fan",
+        author: { username: "Autora" },
+        steps: [{ stepid: 400, title: "Remove the fan", lines: [{ bullet: "black", text_raw: "Lift the fan out of its bracket." }] }],
+      });
     }
     if (api === "/guides/3") {
       return Response.json({
@@ -125,6 +140,27 @@ describe("guía pública del síntoma (sin pasos en el manual oficial)", () => {
     expect(c.etapas.filter((e) => e.startsWith("bibliotecario: buscar") || e === "bibliotecario").length).toBe(antes);
     expect(r2.pack.pasos[0].cita?.url).toBe(`${GUIA_URL}#s300`);
     expect(r2.eventos.map((e) => e.tipo)).toContain("guia_publica_en_cache");
+  });
+
+  it("una guía guardada para otro síntoma no se reusa si no es del tema: busca la del síntoma (batería ≠ ventilador)", async () => {
+    const manuales = repoEnMemoria();
+    const c = claude(false);
+    const deps = { enviar: c.enviar, fetch: red(true), cache: sinCache, manuales, subir: async () => "f" };
+    await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, deps);
+    expect(await manuales.buscar("Fono", "X21")).toMatchObject({ fuentes_publicas: [GUIA_URL] });
+
+    const r2 = await armarKnowledgePack({ ficha, sintoma: "se calienta y el ventilador hace ruido", tipoEquipo: "celular" }, deps);
+    expect(r2.pack.pasos[0].cita?.url).toBe(`${GUIA_FAN_URL}#s400`);
+    expect(r2.eventos.map((e) => e.tipo)).toContain("guia_ifixit_del_tema");
+    expect(r2.eventos.map((e) => e.tipo)).not.toContain("guia_publica_en_cache");
+  });
+
+  it("sin guía del tema en iFixit no usa la de otra pieza: sigue con la guía pública", async () => {
+    const c = claude(false);
+    const r = await armarKnowledgePack({ ficha, sintoma: "el ventilador hace ruido", tipoEquipo: "celular" }, { enviar: c.enviar, fetch: red(), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f" });
+    expect(c.etapas).not.toContain("bibliotecario: guía de iFixit");
+    expect(c.etapas).toContain("bibliotecario: guía pública");
+    expect(r.pack.pasos.some((p) => p.cita?.url?.startsWith(GUIA_URL))).toBe(false);
   });
 
   it("si el manual solo dio chequeos sin cita (los habituales del tipo), no cuenta como guía del manual: sigue con iFixit", async () => {
