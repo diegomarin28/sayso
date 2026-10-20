@@ -128,6 +128,9 @@
 - El `localStorage` sigue como caché para abrir rápido y sin red. Si hay sesión, la lista sale del
   servidor y se mezcla con lo local por `actualizadoEn`.
 - Descartado: guardar solo referencias a los cachés. Si el caché se regenera, el caso viejo cambia sin aviso.
+- **Hecho (servidor, `c/guias-servidor`, parte de #347):** esquema en `lib/supabase/guia.ts`, `POST /api/casos`
+  con `guia` (tope de 500 KB, `TOPES.bytesGuia`), `GET /api/casos` y `GET /api/casos/[id]`. La lista trae
+  `tieneGuia` en vez de la guía. Falta que Mis casos lea del servidor (después del Login 2/3).
 
 ## Implementación (3 PR, en orden)
 

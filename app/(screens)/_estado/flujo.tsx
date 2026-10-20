@@ -103,16 +103,22 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         setPreparado: (p) => {
           setPreparado(p);
           ultimo.current.preparado = p;
-          // La guía y el plano se guardan juntos en "Mis casos" (para retomar sin IA).
+          // La guía y el plano se guardan juntos en "Mis casos" y en el servidor (para retomar sin IA).
           const { caso: c, plano: pl } = ultimo.current;
-          if (c && p && pl) guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
+          if (c && p && pl) {
+            guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
+            guardar({ guia: { casoId: c.id, preparado: p, plano: pl } });
+          }
         },
         plano,
         setPlano: (p) => {
           setPlano(p);
           ultimo.current.plano = p;
           const { caso: c, preparado: pr } = ultimo.current;
-          if (c && p && pr) guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
+          if (c && p && pr) {
+            guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
+            guardar({ guia: { casoId: c.id, preparado: pr, plano: p } });
+          }
         },
         captura,
         setCaptura,

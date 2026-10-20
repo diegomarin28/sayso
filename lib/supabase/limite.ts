@@ -26,6 +26,8 @@ export const TOPES = {
   fotosPorCaso: 20,
   /** La app manda una foto por pedido. */
   fotosPorPedido: 2,
+  /** Guía de un caso en JSON (pack, páginas y plano): una real ronda las decenas de KB. Pasado esto, 400. */
+  bytesGuia: 500_000,
 } as const;
 
 const MINUTO_MS = 60_000;
