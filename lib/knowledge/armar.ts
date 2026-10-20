@@ -10,6 +10,7 @@ import { evento } from "../intake/entrada";
 import { buscarManual, type ManualEncontrado } from "./buscar";
 import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, urlsDeFuente, type FuenteConsulta } from "./consulta";
 import { descargarPdf, type Fetch, type Pdf } from "./descargar";
+import { manualDelModelo, sinVerificar, TEXTO_SIN_CONFIRMAR, type Confirmacion } from "./fuentes";
 import { nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, prepararExtracto, type Extracto } from "./extracto";
 import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
 import { atribucion, buscarGuiaIfixit, fotosPorPaso, guiaIfixit, manualWebDeIfixit, type GuiaIfixit } from "./ifixit";
@@ -231,13 +232,24 @@ export async function armarKnowledgePack(
   const clave = claveCache(ficha, sintoma);
   const guardado = await cache.get(clave);
   if (guardado) {
+    const eventosCache = [evento(casoId, "bibliotecario", "pack_en_cache", "Ya tenía la guía de este modelo.")];
+    // Una guía guardada antes de esta regla puede traer citas VERIFICADO de un manual que no es el oficial del
+    // modelo: se revisa con la misma regla (sin IA y sin volver a armarla).
+    const conVerificadas = guardado.pack.pasos.some((p) => p.cita?.estado === "VERIFICADO") || guardado.pack.repuestos.some((r) => r.cita.estado === "VERIFICADO");
+    const registroCache = conVerificadas ? await (deps.manuales ?? repoManuales()).buscar(ficha.marca.valor, modelo) : null;
+    // El manual va último en las fuentes (solo, o después de la guía pública a la que iba adjunto).
+    const ultima = guardado.pack.fuentes.at(-1);
+    const delManual = registroCache && !esSoloGuia(registroCache) ? registroCache : ultima ? { titulo: ultima.doc, url: ultima.url ?? "" } : null;
+    const revision = conVerificadas && delManual ? manualDelModelo(modelo, delManual) : null;
+    const listo = revision && !revision.oficial ? sinVerificarArmado(guardado) : guardado;
+    if (revision && !revision.oficial) eventosCache.push(eventoSinConfirmar(casoId, revision, delManual!.titulo));
     return {
-      ...guardado,
-      vistas: guardado.vistas ?? SIN_VISTAS,
-      vistaInterior: guardado.vistaInterior ?? null,
-      imagenesPaginas: guardado.imagenesPaginas ?? {},
+      ...listo,
+      vistas: listo.vistas ?? SIN_VISTAS,
+      vistaInterior: listo.vistaInterior ?? null,
+      imagenesPaginas: listo.imagenesPaginas ?? {},
       desdeCache: true,
-      eventos: [evento(casoId, "bibliotecario", "pack_en_cache", "Ya tenía la guía de este modelo.")],
+      eventos: eventosCache,
     };
   }
 
@@ -336,11 +348,15 @@ export async function armarKnowledgePack(
     }
   }
   const fuenteManual = manual ?? manualWeb;
+  // ¿Es el manual oficial de ESTE modelo? Si no, se lee igual (mismo flujo, mismo costo) y sus citas van NO VERIFICADO.
+  const confirmacion: Confirmacion | null = encontrado ? manualDelModelo(modelo, encontrado) : null;
+  const oficial = confirmacion?.oficial !== false;
   eventos.push(
     fuenteManual
-      ? evento(casoId, "bibliotecario", "manual_encontrado", `Tengo el manual: ${fuenteManual.titulo}.`, { url: fuenteManual.url })
+      ? evento(casoId, "bibliotecario", "manual_encontrado", `Tengo el manual: ${fuenteManual.titulo}.`, { url: fuenteManual.url, oficial })
       : evento(casoId, "bibliotecario", "manual_no_encontrado", "No encontré el manual oficial; uso guías públicas (NO VERIFICADO)."),
   );
+  if (fuenteManual && confirmacion && !confirmacion.oficial) eventos.push(eventoSinConfirmar(casoId, confirmacion, fuenteManual.titulo));
 
   // 3. Lectura del pack. Las vistas que faltan se piden en la misma lectura (sin llamada extra).
   //    Nunca se reintenta la misma lectura: si el manual no da pasos, se cae en la guía pública.
@@ -512,7 +528,7 @@ export async function armarKnowledgePack(
   if (completar && contenido.faltantes.length && contenido.pasos.length && aTiempoDeCompletar) {
     try {
       const manualConocido = encontrado
-        ? { url: encontrado.url, titulo: encontrado.titulo, ...(encontrado.formato === "pdf" ? { pdf: encontrado.pdf } : { indice: encontrado.indice }) }
+        ? { url: encontrado.url, titulo: encontrado.titulo, oficial, ...(encontrado.formato === "pdf" ? { pdf: encontrado.pdf } : { indice: encontrado.indice }) }
         : null;
       const r = await completarFaltantes(contenido, { equipo: equipoDescrito, nombreEquipo, sintoma, tipo: tipoEquipo ?? ficha.clase, enviar, deps, manual: manualConocido, resta });
       if (r) {
@@ -532,6 +548,10 @@ export async function armarKnowledgePack(
       console.error("[knowledge] no pude completar la guía:", (e as Error).message);
     }
   }
+  // Un manual que no es el oficial de este modelo no da citas VERIFICADO (ni las del manual adjunto a una guía pública).
+  // Se rebajan recién acá: hasta ahora el flujo (escalar, guía pública) es el mismo que con el oficial.
+  const citaElManual = contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO");
+  if (!oficial) contenido = { ...contenido, pasos: sinVerificar(contenido.pasos), repuestos: sinVerificar(contenido.repuestos) };
   // Las páginas solo tienen sentido con lo que se leyó del PDF del manual.
   // Si la lectura no marcó alguna vista, queda la que eligió el bibliotecario al armar el extracto.
   const elegidas: Vistas = {
@@ -556,7 +576,7 @@ export async function armarKnowledgePack(
         : [
             ...(fuentesGuia.length ? fuentesGuia : fuentesWeb(lectura.bloques).length ? fuentesWeb(lectura.bloques) : fuentesPublicas.map((url) => ({ doc: url, url }))),
             // Si algún paso salió del manual oficial adjunto, el manual también es fuente.
-            ...(fuenteManual && contenido.pasos.some((p) => p.cita?.estado === "VERIFICADO") ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }] : []),
+            ...(fuenteManual && citaElManual ? [{ doc: fuenteManual.titulo, url: fuenteManual.url }] : []),
           ],
     piezas: contenido.piezas,
     pasos: contenido.pasos,
@@ -585,7 +605,7 @@ export async function armarKnowledgePack(
       url: manualWeb.url,
       titulo: manualWeb.titulo,
       ...columnasVistas(SIN_VISTAS),
-      verificado: (manualDeCache && registro?.verificado === true) || pack.verificado,
+      verificado: oficial && ((manualDeCache && registro?.verificado === true) || pack.verificado),
       fuente: encontrado?.fuente ?? "fabricante",
     });
   }
@@ -596,7 +616,8 @@ export async function armarKnowledgePack(
     // Imágenes reales de páginas del manual (sin IA): la vista interior y las páginas citadas en los pasos.
     // Se dibujan desde el extracto (todas están ahí). VERIFICADO si la cita de la lectura confirmó la vista interior.
     if (extracto) {
-      const citadas = pack.pasos.map((p) => (p.cita?.estado === "VERIFICADO" ? p.cita.pagina : undefined));
+      // Las páginas citadas del manual (VERIFICADO, o NO_VERIFICABLE si no es el oficial de este modelo).
+      const citadas = pack.pasos.map((p) => (p.cita?.estado !== "NO_ENCONTRADO" ? p.cita?.pagina : undefined));
       const paginas = [...new Set([vistas.interior, ...citadas].filter((n): n is number => typeof n === "number"))];
       const hojas = paginas
         .map((pagina) => ({ pagina, hoja: paginaEnExtracto(manual.paginas, pagina) }))
@@ -604,18 +625,19 @@ export async function armarKnowledgePack(
       imagenesPaginas = await imagenesDePaginas(extracto.datos, { marca: ficha.marca.valor, modelo }, hojas, deps.subirPng);
       const url = vistas.interior !== null ? imagenesPaginas[vistas.interior] : undefined;
       if (url && vistas.interior !== null) {
-        vistaInterior = { url, pagina: vistas.interior, estado: contenido.vistas.interior === vistas.interior ? "VERIFICADO" : "NO_VERIFICADO" };
+        vistaInterior = { url, pagina: vistas.interior, estado: oficial && contenido.vistas.interior === vistas.interior ? "VERIFICADO" : "NO_VERIFICADO" };
       }
     }
 
-    // 5. Se guarda el manual para la próxima vez. Un manual ya verificado no pierde esa marca.
+    // 5. Se guarda el manual para la próxima vez. Un manual ya verificado no pierde esa marca, salvo que no sea el
+    //    oficial de este modelo (una fila de antes de esta regla).
     await repo.guardar({
       marca: ficha.marca.valor ?? "",
       modelo,
       url: manual.url,
       titulo: manual.titulo,
       ...columnasVistas(vistas),
-      verificado: (manualDeCache && registro?.verificado === true) || pack.verificado,
+      verificado: oficial && ((manualDeCache && registro?.verificado === true) || pack.verificado),
       fuente: manual.fuente,
     });
   }
@@ -624,6 +646,25 @@ export async function armarKnowledgePack(
   // Solo se guarda una guía con pasos y sin fallas: un pack vacío no puede volver como "ya tenía la guía".
   if (!huboFalla && pack.pasos.length > 0) await cache.set(clave, armado);
   return { ...armado, desdeCache: false, eventos };
+}
+
+function eventoSinConfirmar(casoId: string, c: Extract<Confirmacion, { oficial: false }>, titulo: string): Evento {
+  return evento(
+    casoId,
+    "bibliotecario",
+    "manual_sin_confirmar",
+    `No puedo confirmar que «${titulo}» sea el manual oficial de tu modelo (${TEXTO_SIN_CONFIRMAR[c.motivo]}): uso sus pasos, pero van NO VERIFICADO.`,
+    { motivo: c.motivo },
+  );
+}
+
+/** Guía guardada cuyo manual no es el oficial del modelo: sus citas y su vista interior pasan a no verificadas. */
+function sinVerificarArmado(a: Armado): Armado {
+  return {
+    ...a,
+    pack: { ...a.pack, verificado: false, pasos: sinVerificar(a.pack.pasos), repuestos: sinVerificar(a.pack.repuestos) },
+    ...(a.vistaInterior ? { vistaInterior: { ...a.vistaInterior, estado: "NO_VERIFICADO" as const } } : {}),
+  };
 }
 
 /**
