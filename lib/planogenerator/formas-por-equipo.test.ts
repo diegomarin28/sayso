@@ -81,17 +81,13 @@ describe("formasPara: el visor baja solo las formas que puede elegir (#313)", ()
       for (const [nombre, modelo] of familia) expect(modelo.equipos, nombre).toEqual(palabras(indice.tipos[nombre].equipos));
   });
 
-  it("con las formas posibles, cada pieza elige la misma forma que con todas las familias de antes", () => {
-    let casos = 0;
-    for (const [id, plano, tipo] of PLANOS) {
-      const antes = bibliotecaDeAntes(plano);
-      for (const t of [tipo, ...OTROS_TIPOS]) {
-        expect(elegidas(plano, bibliotecaDeAhora(plano, t), t), `${id} · ${t}`).toEqual(elegidas(plano, antes, t));
-        casos++;
-      }
-    }
-    expect(casos).toBeGreaterThan(500);
-  });
+  // Uno por plano (con todos los tipos de equipo): en la CI, todos juntos pasan el plazo de 5 s.
+  it.each(PLANOS)("%s: con las formas posibles, cada pieza elige la misma forma que con todas las familias de antes", (id, plano, tipo) => {
+    const antes = bibliotecaDeAntes(plano);
+    for (const t of [tipo, ...OTROS_TIPOS]) expect(elegidas(plano, bibliotecaDeAhora(plano, t), t), `${id} · ${t}`).toEqual(elegidas(plano, antes, t));
+  }, 30000);
+
+  it("cubre todos los planos en tres tamaños", () => expect(PLANOS.length * (1 + OTROS_TIPOS.length)).toBeGreaterThan(500));
 
   it("una notebook ya no baja el reloj, la calculadora ni la tablet; un celular, la notebook ni el reloj", () => {
     const notebook = archivosDeFormas(formasPara(EJEMPLOS.notebook.plano.piezas, indice, "notebook"), indice);
