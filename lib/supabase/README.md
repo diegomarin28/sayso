@@ -17,10 +17,13 @@ Cliente, esquema y migraciones de Supabase.
   | `007_mis_casos.sql` | C | columnas `dispositivo`, `tipo_equipo`, `cierre`, `actualizado_en` en `casos` ("Mis casos") | sí (20/10) |
   | `008_manuales_fuentes_publicas.sql` | A | columna `fuentes_publicas` en `manuales` (guía pública sin manual) | sí (#154) |
   | `009_solo_servidor.sql` | C | todo solo para el servidor: sin lectura pública de `eventos` ni Realtime, sin permisos para `anon`/`authenticated` en ninguna tabla (también las futuras) | sí (20/10) |
+  | `010_fotos_privadas.sql` | C | bucket privado `fotos-usuarios` para las fotos de las personas (#330); `fotos` queda público solo para las páginas del manual (`manuales/`). Después: `scripts/fotos-privadas/correr.ts --aplicar` mueve las fotos viejas | no |
 
   Para una migración nueva: siguiente número (`010_…`), sumarla a esta tabla y avisar para que alguien la corra. Desde la 009 las tablas nuevas nacen sin permisos para la clave pública: si alguna vez el navegador tiene que leer algo, va con una política explícita y revisada.
 - `cliente.ts`: `supabaseServidor()` (clave secreta, solo en rutas de API). El navegador no habla con Supabase: todo pasa por las rutas de API. Si faltan variables devuelve `null` y nada se guarda: Supabase nunca frena la demo. `NEXT_PUBLIC_SUPABASE_ANON_KEY` queda en `.env.example` para el login.
-- `repo.ts`: `guardarCaso`, `guardarFoto`, `subirImagen`, `guardarFicha`, `guardarEventos`, `listarEventos`. Todo pasa por los esquemas de `shared/`.
+- `repo.ts`: `guardarCaso`, `guardarFoto`, `subirFotoUsuario`, `urlFirmadaFoto`, `subirImagen`, `guardarFicha`, `guardarEventos`, `listarEventos`. Todo pasa por los esquemas de `shared/`.
+- Fotos: las de las personas van al bucket **privado** `fotos-usuarios` con `subirFotoUsuario`, y `Foto.url` guarda la referencia (`fotos-usuarios/<casoId>/<fotoId>.<ext>`), no una URL. Para mostrarlas, `urlFirmadaFoto` (vence en 5 minutos) desde una ruta de API. `subirImagen` (bucket público `fotos`) es solo para páginas del manual.
+- Fotos viejas en el bucket público: `npx tsx --env-file=.env.local scripts/fotos-privadas/correr.ts` lista sin tocar nada; con `--aplicar` las mueve y actualiza la tabla `fotos`.
 - Escritura desde las pantallas: `POST /api/casos { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? }`, que llaman en segundo plano desde `app/(screens)/_estado/flujo.tsx`.
 
 **Para el carril A:** la caché del knowledge pack en Supabase se pasa así:

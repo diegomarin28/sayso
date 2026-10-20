@@ -8,12 +8,13 @@ import {
   guardarEventos,
   guardarFicha,
   guardarFoto,
-  subirImagen,
+  subirFotoUsuario,
 } from "../../../lib/supabase/repo";
 
 /**
  * POST { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? } → { guardado, fotos: [{ id, url }] }
- * Guarda el avance del caso en Supabase (dueño: Iaio). Si Supabase no está configurado
+ * Guarda el avance del caso en Supabase (dueño: Iaio). Las fotos van al bucket privado y `url`
+ * es su referencia (`fotos-usuarios/…`), no una URL pública. Si Supabase no está configurado
  * responde `guardado: false` y la app sigue igual.
  */
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     const urls: { id: string; url: string }[] = [];
     for (const { foto, imagen } of fotos) {
       const url = imagen
-        ? await subirImagen(db, foto.casoId, foto.id, imagen.base64, imagen.mediaType)
+        ? await subirFotoUsuario(db, foto.casoId, foto.id, imagen.base64, imagen.mediaType)
         : null;
       await guardarFoto(db, url ? { ...foto, url } : foto);
       if (url) urls.push({ id: foto.id, url });
