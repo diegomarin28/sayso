@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { subirArchivo, type LlamarIA, type SubirArchivo } from "../ia/claude";
 import { descargarPdf, type Fetch, type Pdf } from "./descargar";
 import { nombreExtracto, prepararExtracto } from "./extracto";
+import { manualDelModelo } from "./fuentes";
 import { buscarGuiaIfixit, manualWebDeIfixit } from "./ifixit";
 import { bloqueManual } from "./lector";
 import { esSoloGuia, type RegistroManual, type RepoManuales } from "./manuales";
@@ -11,17 +12,20 @@ import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, parec
  * Consulta puntual del experto ("¿cómo cambio el conector de carga?"): si el knowledge pack no alcanza,
  * el código arma una fuente chica PARA ESA PREGUNTA, no la del síntoma:
  * 1. El manual oficial del equipo (el que guardó el bibliotecario): PDF → extracto con las páginas del
- *    procedimiento de esa pieza; manual web → las secciones de esa pieza. Citas VERIFICADO.
+ *    procedimiento de esa pieza; manual web → las secciones de esa pieza. Citas VERIFICADO, salvo que el manual no
+ *    sea el oficial de este modelo (`manualDelModelo`): se lee igual, con citas NO_VERIFICABLE.
  * 2. Si el manual no cubre la pieza (o no hay manual): la guía de iFixit para esa pregunta (guía pública,
  *    citas NO_VERIFICABLE).
  * "Consultá el manual" nunca es la respuesta: el manual lo lee el experto.
  */
 
-export type FuenteConsulta =
+/** `origen`: el manual guardado del equipo o una guía de iFixit. `oficial`: sus citas cuentan como VERIFICADO. */
+export type FuenteConsulta = { origen: "manual" | "ifixit"; oficial: boolean } & (
   /** Extracto del manual en PDF subido a la Files API; `paginas` = las del manual completo. */
-  | { tipo: "pdf"; titulo: string; url: string; fileId: string; paginas: number[]; oficial: true }
+  | { tipo: "pdf"; titulo: string; url: string; fileId: string; paginas: number[] }
   /** Secciones de texto (manual web o guía pública); cada cita lleva la URL de su sección. */
-  | { tipo: "web"; titulo: string; url: string; manual: ManualWeb; oficial: boolean };
+  | { tipo: "web"; titulo: string; url: string; manual: ManualWeb }
+);
 
 export type DepsConsulta = {
   manuales?: RepoManuales;
@@ -64,9 +68,10 @@ export function olvidarConsultas() {
 /**
  * Fuente del manual oficial enfocada en la pregunta (o en una parte del procedimiento que falta), o null si no se
  * pudo bajar o leer. `previo`: el PDF o el índice web que ya se bajaron (al armar la guía), para no volver a bajarlos.
+ * `r.oficial`: si ya se sabe (al armar la guía); si no, se decide con el modelo y la fuente del registro.
  */
 export async function fuenteDelManual(
-  r: Pick<RegistroManual, "url" | "titulo">,
+  r: Pick<RegistroManual, "url" | "titulo"> & Partial<Pick<RegistroManual, "modelo" | "fuente">> & { oficial?: boolean },
   equipo: string,
   pregunta: string,
   deps: DepsConsulta = {},
@@ -75,19 +80,20 @@ export async function fuenteDelManual(
   const clave = claveDe(r.url, pregunta);
   const guardada = fuentes.get(clave);
   if (guardada) return guardada;
+  const oficial = r.oficial ?? (r.modelo ? manualDelModelo(r.modelo, r).oficial : true);
   const pdf = previo.pdf ?? pdfs.get(r.url) ?? (previo.indice ? null : await descargarPdf(r.url, deps.fetch));
   if (pdf) {
     recordar(pdfs, r.url, pdf, MAX_EN_MEMORIA.pdfs);
     const e = await prepararExtracto(new Uint8Array(pdf.datos), equipo, pregunta, [], deps.llamar, "pregunta");
     const fileId = await (deps.subir ?? subirArchivo)(Buffer.from(e.datos), nombreExtracto(e.paginas));
-    return recordar(fuentes, clave, { tipo: "pdf", titulo: r.titulo, url: r.url, fileId, paginas: e.paginas, oficial: true }, MAX_EN_MEMORIA.fuentes);
+    return recordar(fuentes, clave, { tipo: "pdf", origen: "manual", titulo: r.titulo, url: r.url, fileId, paginas: e.paginas, oficial }, MAX_EN_MEMORIA.fuentes);
   }
   const indice = previo.indice ?? (await leerPaginaWeb(r.url, deps.fetch));
   if (!pareceIndice(indice)) return null;
   const secciones = await elegirSecciones(indice, equipo, pregunta, deps.llamar, "pregunta");
   const manual = await armarManualWeb(indice, secciones, deps.fetch);
   if (!manual.secciones.length) return null;
-  return recordar(fuentes, clave, { tipo: "web", titulo: r.titulo, url: r.url, manual: { ...manual, titulo: r.titulo }, oficial: true }, MAX_EN_MEMORIA.fuentes);
+  return recordar(fuentes, clave, { tipo: "web", origen: "manual", titulo: r.titulo, url: r.url, manual: { ...manual, titulo: r.titulo }, oficial }, MAX_EN_MEMORIA.fuentes);
 }
 
 /** La guía de iFixit para la pregunta (guía pública), o null si no hay una de ese modelo. Sin IA. */
@@ -98,7 +104,7 @@ export async function fuenteIfixit(equipo: string, pregunta: string, f?: Fetch):
   const guia = await buscarGuiaIfixit(equipo, pregunta, f);
   if (!guia) return null;
   const manual = manualWebDeIfixit(guia);
-  return recordar(fuentes, clave, { tipo: "web", titulo: guia.titulo, url: guia.url, manual, oficial: false }, MAX_EN_MEMORIA.fuentes);
+  return recordar(fuentes, clave, { tipo: "web", origen: "ifixit", titulo: guia.titulo, url: guia.url, manual, oficial: false }, MAX_EN_MEMORIA.fuentes);
 }
 
 /** Documentos para la lectura (con citas y caché de prompts). */

@@ -25,6 +25,9 @@ const CATEGORIAS: Record<string, { description: string; guides: { guideid: numbe
   "Tele 55C722": { description: "A 55 inch TV.", guides: [{ guideid: 30, title: "Tele 55C722 Screen Replacement", subject: "Screen", type: "replacement" }] },
   "Tablo 6": { description: "The sixth generation Tablo.", guides: [{ guideid: 50, title: "Tablo 6 Battery Replacement", subject: "Battery", type: "replacement" }] },
   "Tablo Air 4": { description: "Tablo Air, 4th generation.", guides: [{ guideid: 51, title: "Tablo Air 4 Battery Replacement", subject: "Battery", type: "replacement" }] },
+  // Otro equipo que comparte UNA palabra con un modelo sin números (un proyector «Luminous Superior»).
+  "Aspira Elite Superior": { description: "Commercial vacuum cleaner.", guides: [{ guideid: 60, title: "Aspira Elite Superior Capacitor Repair", subject: "Capacitor", type: "repair" }] },
+  "Proyecta Lux": { description: "Ceiling projector.", guides: [{ guideid: 61, title: "Proyecta Lux Lamp Replacement", subject: "Lamp", type: "replacement" }] },
   Mando: {
     description: "Game controller.",
     guides: [
@@ -94,6 +97,15 @@ describe("equipoIfixit: el equipo exacto, o nada", () => {
   it("otro modelo de la misma línea no sirve (55V6C no es 55C722): mejor nada que la guía equivocada", async () => {
     expect(await equipoIfixit("Tele 55V6C", api())).toBeNull();
     expect(await equipoIfixit("Impresora LaserX M404", api())).toBeNull();
+  });
+
+  it("un modelo sin números no se confunde con otro equipo por una palabra en común (la guía de una aspiradora para un proyector)", async () => {
+    expect(await equipoIfixit("MarcaV Luminous Superior", api())).toBeNull();
+    expect(await buscarGuiaIfixit("MarcaV Luminous Superior", "no prende", api())).toBeNull();
+  });
+
+  it("un modelo sin números sí se encuentra si están todas sus palabras (la marca puede faltar)", async () => {
+    expect((await equipoIfixit("MarcaV Proyecta Lux", api()))?.titulo).toBe("Proyecta Lux");
   });
 
   it("si la red falla, null (sigue la búsqueda de siempre)", async () => {
