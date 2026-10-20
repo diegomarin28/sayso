@@ -13,7 +13,7 @@ import { descargarPdf, type Fetch, type Pdf } from "./descargar";
 import { manualDelModelo, sinVerificar, TEXTO_SIN_CONFIRMAR, type Confirmacion } from "./fuentes";
 import { nombreExtracto, paginaEnExtracto, paginaOriginal, paginasConDibujo, prepararExtracto, type Extracto } from "./extracto";
 import { imagenesDePaginas, type SubirPng, type VistaInteriorImagen } from "./imagen";
-import { atribucion, buscarGuiaIfixit, fotosPorPaso, guiaIfixit, manualWebDeIfixit, type GuiaIfixit } from "./ifixit";
+import { atribucion, buscarGuiaIfixit, esDelTema, fotosPorPaso, guiaIfixit, manualWebDeIfixit, type GuiaIfixit } from "./ifixit";
 import { bloqueManual, leerDocumentos, leerManual, leerManualWeb, SYSTEM_LECTOR, type Lectura } from "./lector";
 import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb, type PaginaWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
@@ -432,10 +432,17 @@ export async function armarKnowledgePack(
   };
   const idIfixit = registro && esSoloGuia(registro) ? idDeGuiaIfixit(registro.fuentes_publicas[0]) : null;
   if (!conManual && idIfixit !== null && seguir()) {
-    // Guía de iFixit ya conocida: se vuelve a pedir por su API (gratis), sin buscar en la web.
+    // Guía de iFixit ya conocida: se vuelve a pedir por su API (gratis), sin buscar en la web. Se guardó para otro
+    // síntoma del mismo equipo: si no es del tema de este (la de batería para un ventilador), se busca la del tema.
     try {
-      const guia = await guiaIfixit(idIfixit, deps.fetch);
-      if (guia && (await conIfixit(guia))) eventos.push(evento(casoId, "bibliotecario", "guia_publica_en_cache", "Ya tenía la guía de iFixit de este equipo: la releo sin buscar en la web (NO VERIFICADO)."));
+      const guardada = await guiaIfixit(idIfixit, deps.fetch);
+      const guia = guardada && esDelTema(guardada, sintoma) ? guardada : await buscarGuiaIfixit(nombreEquipo, sintoma, deps.fetch, { delTema: true });
+      if (guia && (await conIfixit(guia)))
+        eventos.push(
+          guia === guardada
+            ? evento(casoId, "bibliotecario", "guia_publica_en_cache", "Ya tenía la guía de iFixit de este equipo: la releo sin buscar en la web (NO VERIFICADO).")
+            : evento(casoId, "bibliotecario", "guia_ifixit_del_tema", `La guía de iFixit que tenía de este equipo era de otra pieza: uso "${guia.titulo}", la del síntoma.`, { url: guia.url }),
+        );
     } catch (e) {
       if (e instanceof IAEnPausa) throw e;
       console.error("[knowledge] no pude releer la guía de iFixit:", (e as Error).message);
@@ -465,7 +472,7 @@ export async function armarKnowledgePack(
   if (!conManual && fuentesPublicas.length === 0 && !esSoloGuia(registro) && seguir()) {
     // iFixit antes que la búsqueda web: gratis, con pasos y fotos. Se guarda para no volver a buscar el manual.
     try {
-      const guia = await buscarGuiaIfixit(nombreEquipo, sintoma, deps.fetch);
+      const guia = await buscarGuiaIfixit(nombreEquipo, sintoma, deps.fetch, { delTema: true });
       if (guia && (await conIfixit(guia)) && !encontrado && !registro) {
         await repo.guardar({
           marca: ficha.marca.valor ?? "",
