@@ -654,6 +654,10 @@ describe("guía completa del síntoma: tres partes", () => {
     expect(t).toMatch(/FALTA\|parte del procedimiento que el manual no trae/);
     expect(t).toMatch(/NO escribas que falta, que el manual no lo detalla ni que hay que consultar/);
     expect(t).toMatch(/Lo de riesgo alto va al FINAL de la parte 2/);
+    // Pasos con hilo, sin irse a otra pieza, y la herramienta dicha en la frase (no definida aparte).
+    expect(t).toMatch(/Para llegar al ventilador, sacá los tornillos/);
+    expect(t).toMatch(/nunca indiques cambiar ni sacar una pieza que no hace falta/);
+    expect(t).toMatch(/decí qué es en pocas palabras dentro de la misma frase/);
   });
 
   it("una línea FALTA no es un paso: queda anotada con su lugar (y llega al feed)", async () => {

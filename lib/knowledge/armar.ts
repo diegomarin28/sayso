@@ -18,6 +18,7 @@ import { bloqueManual, leerDocumentos, leerManual, leerManualWeb, SYSTEM_LECTOR,
 import { armarManualWeb, bloquesManualWeb, elegirSecciones, leerPaginaWeb, pareceIndice, type ManualWeb, type PaginaWeb } from "./manualweb";
 import { lineasConCitas, parsearContenido, type ClaseVista, type Contenido, type Vistas } from "./lineas";
 import { columnasVistas, esSoloGuia, repoManuales, vistasDe, type RepoManuales } from "./manuales";
+import { ESTILO_PASOS } from "./estilo";
 import { combinar, instruccionesVistas, SIN_VISTAS } from "./vistas";
 
 /**
@@ -110,6 +111,7 @@ ${tiposParaPrompt()}
 - Si ${fuente} lista las piezas que se pueden pedir con su número de parte, agregá un REPUESTO por cada pieza que tenga que ver con el síntoma (el número tal cual figura).
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto. Desconectar el cable de una batería sana o sacarla como indica el manual es riesgo medio.
 - Lo de riesgo alto va al FINAL de la parte 2, después de todo lo que se puede hacer sin riesgo: en ese paso la guía se corta y se deriva a un técnico. Una precaución ("si la batería está hinchada, no la uses") no es un paso de riesgo alto.
+${ESTILO_PASOS}
 
 <equipo>${equipo}</equipo>
 <sintoma>${sintoma}</sintoma>`;
@@ -690,6 +692,7 @@ Reglas:
 - Piezas que ya tiene la guía (usá estos ids si es la misma pieza): ${ids.join(", ") || "ninguna"}. Una PIEZA nueva: id en minúsculas con guion bajo que EMPIECE con el tipo de pieza.
 - Todo en castellano rioplatense: traducí, nunca copies frases en inglés, sin negritas ni markdown.
 - Si un paso implica gas refrigerante, 220 V, capacitores, abrir la fuente o una batería dañada, marcalo riesgo alto.
+${ESTILO_PASOS}
 
 <equipo>${equipo}</equipo>
 <sintoma>${sintoma}</sintoma>`;

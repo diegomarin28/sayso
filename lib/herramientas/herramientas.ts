@@ -143,21 +143,6 @@ export function describir(h: Herramienta): string {
   return `Es ${h.que}; sirve para ${h.paraQue}. ${h.como}.`;
 }
 
-/** Una línea para quien nunca la vio, con el nombre adelante (para sumarla al texto de un paso). */
-export function explicar(h: Herramienta): string {
-  return `${h.nombre}: ${describir(h).replace(/^Es/, "es")}`;
-}
-
-/**
- * El texto del paso con la explicación de cada herramienta que nombra y que todavía no se explicó en esta
- * guía (`explicadas` se actualiza): así no se repite en cada paso.
- */
-export function conExplicacion(texto: string, explicadas: Set<string>): string {
-  const nuevas = herramientasEn(texto).filter((h) => !explicadas.has(h.id));
-  for (const h of nuevas) explicadas.add(h.id);
-  return nuevas.length ? `${texto} ${nuevas.map(explicar).join(" ")}` : texto;
-}
-
 /** Las herramientas que nombran los pasos de un caso (para "Herramientas que necesitás"). */
 export function herramientasDePasos(pasos: ReadonlyArray<{ texto: string }>): Herramienta[] {
   const ids = new Set(pasos.flatMap((p) => herramientasEn(p.texto).map((h) => h.id)));

@@ -1,5 +1,4 @@
 import type { Accion, Coreografia, KnowledgePack, PlanoDePiezas } from "../../../shared";
-import { conExplicacion } from "../../../lib/herramientas/herramientas";
 import { conArticulo } from "./conversacion";
 
 /**
@@ -125,10 +124,9 @@ export function pasosDelPack(pack: KnowledgePack, plano: PlanoDePiezas): Coreogr
 }
 
 /**
- * Numera los pasos y, la primera vez que uno nombra una herramienta (iOpener, púa, cinta…), le suma una línea
- * con qué es, para qué sirve y cómo se usa (#230). Un paso de riesgo alto (frenamos) no se toca.
+ * Numera los pasos. Las herramientas no se explican acá: el paso las nombra con qué son dentro de la misma frase
+ * (lo pide la lectura del manual), y el detalle está en "Herramientas que necesitás" (#230).
  */
 function numerar(salida: Omit<Coreografia, "paso">[]): Coreografia[] {
-  const explicadas = new Set<string>();
-  return salida.map((c, i) => ({ paso: i + 1, ...c, dice: c.riesgo === "alto" ? c.dice : conExplicacion(c.dice, explicadas) }));
+  return salida.map((c, i) => ({ paso: i + 1, ...c }));
 }
