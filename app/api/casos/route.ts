@@ -11,16 +11,21 @@ import {
   guardarFoto,
   subirFotoUsuario,
 } from "../../../lib/supabase/repo";
-import { respuestaDueno, revisarDueno } from "../../../lib/supabase/dueno";
+import { reclamarDispositivo, respuestaDueno, respuestaSinSesion, revisarDueno } from "../../../lib/supabase/dueno";
 import { respuestaLimite, revisarFotosPorCaso, revisarPorIp, TOPES } from "../../../lib/supabase/limite";
+import { uidDeSesion } from "../../../lib/supabase/sesion";
+import { ErrorImagen, sinMetadatos, TIPOS_IMAGEN } from "../../../lib/supabase/sin-metadatos";
 
 /**
- * POST { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? } → { guardado, fotos: [{ id, url }] }
+ * POST { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos?, dispositivo? }
+ *   → { guardado, fotos: [{ id, url }], dispositivoReclamado? }
  * Guarda el avance del caso en Supabase (dueño: Iaio). Las fotos van al bucket privado y `url`
  * es su referencia (`fotos-usuarios/…`), no una URL pública. Si Supabase no está configurado
  * responde `guardado: false` y la app sigue igual. Pasado un tope de uso (lib/supabase/limite.ts)
- * responde 429 sin guardar nada. Cada pedido trae `dispositivo`, el dueño de sus casos
- * (lib/supabase/dueno.ts): si algún caso es de otro dispositivo responde 403 sin guardar nada.
+ * responde 429 sin guardar nada. El dueño es el uid de la sesión (lib/supabase/sesion.ts), nunca el
+ * cuerpo: sin sesión válida responde 401, y si algún caso es de otro responde 403, sin guardar nada.
+ * `dispositivo` (el id anónimo de antes del login) solo sirve para reclamar sus casos una vez; con
+ * `dispositivoReclamado: true` el celular lo borra. Las imágenes se suben sin EXIF ni otros metadatos.
  */
 
 const Entrada = ExtraCaso.extend({
@@ -29,7 +34,9 @@ const Entrada = ExtraCaso.extend({
     .array(
       z.object({
         foto: Foto,
-        imagen: z.object({ base64: z.string().min(1).max(LIMITES.foto.maxBase64), mediaType: z.string() }).optional(),
+        imagen: z
+          .object({ base64: z.string().min(1).max(LIMITES.foto.maxBase64), mediaType: z.enum(TIPOS_IMAGEN) })
+          .optional(),
       }),
     )
     .max(TOPES.fotosPorPedido)
@@ -46,32 +53,45 @@ export async function POST(req: Request) {
   const db = supabaseServidor();
   if (!db) return Response.json({ guardado: false, fotos: [] });
 
+  const uid = await uidDeSesion();
+  if (!uid) return respuestaSinSesion();
+
   const { caso, fotos, ficha, eventos, dispositivo, tipoEquipo, cierre } = r.data;
+  // Las fotos sin metadatos (GPS) antes de escribir nada: una que no se puede limpiar frena el pedido.
+  let limpias: (string | undefined)[];
+  try {
+    limpias = fotos.map(
+      ({ imagen }) => imagen && sinMetadatos(Buffer.from(imagen.base64, "base64"), imagen.mediaType).toString("base64"),
+    );
+  } catch (e) {
+    if (!(e instanceof ErrorImagen)) throw e;
+    return Response.json({ error: "Imagen inválida", detalle: e.message }, { status: 400 });
+  }
   try {
     // Los topes antes de escribir nada.
     const excedido =
       (await revisarPorIp(req, fotos.filter((f) => f.imagen).length)) ??
       (fotos.length > 0 ? await revisarFotosPorCaso(db, fotos.map((f) => f.foto)) : null);
     if (excedido) return respuestaLimite(excedido);
-    // El dueño después de los topes: sus consultas también quedan bajo el tope por IP.
-    const ajeno = await revisarDueno(db, dispositivo, { caso, fotos: fotos.map((f) => f.foto), ficha, eventos });
+    // El reclamo antes del dueño: los casos del dispositivo ya son de este uid. También bajo el tope.
+    if (dispositivo) await reclamarDispositivo(db, uid, dispositivo);
+    const ajeno = await revisarDueno(db, uid, { caso, fotos: fotos.map((f) => f.foto), ficha, eventos });
     if (ajeno) {
       console.warn("[casos] rechazado por dueño:", ajeno);
       return respuestaDueno();
     }
     // El caso primero: fotos, ficha y eventos lo referencian.
-    if (caso) await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre });
+    if (caso) await guardarCaso(db, caso, { tipoEquipo, cierre }, uid);
     const urls: { id: string; url: string }[] = [];
-    for (const { foto, imagen } of fotos) {
-      const url = imagen
-        ? await subirFotoUsuario(db, foto.casoId, foto.id, imagen.base64, imagen.mediaType)
-        : null;
+    for (const [i, { foto, imagen }] of fotos.entries()) {
+      const base64 = limpias[i];
+      const url = imagen && base64 ? await subirFotoUsuario(db, foto.casoId, foto.id, base64, imagen.mediaType) : null;
       await guardarFoto(db, url ? { ...foto, url } : foto);
       if (url) urls.push({ id: foto.id, url });
     }
     if (ficha) await guardarFicha(db, ficha);
     await guardarEventos(db, eventos);
-    return Response.json({ guardado: true, fotos: urls });
+    return Response.json({ guardado: true, fotos: urls, ...(dispositivo ? { dispositivoReclamado: true } : {}) });
   } catch (e) {
     console.error("[casos]", e instanceof ErrorSupabase ? e.message : e);
     return Response.json({ error: "No se pudo guardar" }, { status: 500 });

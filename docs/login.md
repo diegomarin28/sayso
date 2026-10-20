@@ -1,6 +1,6 @@
 # Login, sesiones y casos por persona (carril C)
 
-> Diseño aprobado por Iaio el 20/10/2026 (#343). Todavía no está implementado: se hace en los 3 PR del final.
+> Diseño aprobado por Iaio el 20/10/2026 (#343). Se implementa en los 3 PR del final; el 1/3 (#345) ya está.
 > Cambiar una decisión de acá es un PR a este archivo con el OK de Iaio.
 
 ## Punto de partida (main en `ac5e2f4`)
@@ -19,16 +19,21 @@
 
 ### 1. Identidad: sesión anónima de Supabase Auth desde el primer uso
 
-- Al abrir la app por primera vez, el navegador llama a `supabase.auth.signInAnonymously()` y obtiene un
-  `auth.uid()`. La persona no ve nada: el flujo de emergencia sigue sin registro.
+- Al abrir la app por primera vez, el navegador pide una sesión anónima a una ruta de API propia, que
+  llama a `supabase.auth.signInAnonymously()` en el servidor y deja un `auth.uid()`. La persona no ve
+  nada: el flujo de emergencia sigue sin registro.
 - "Guardar mis casos" (en Mis casos y al terminar un caso) convierte esa sesión en una cuenta con email.
   **El uid no cambia**, así que los casos no se migran.
-- El navegador vuelve a usar `NEXT_PUBLIC_SUPABASE_ANON_KEY`, **solo para Auth**. Las tablas siguen
-  cerradas por la 009 (sin permisos para `anon` ni `authenticated`). Se evaluó y se descartó leerlas
-  desde el navegador con RLS por `auth.uid()`: todo sigue pasando por las rutas de API.
+- **El navegador sigue sin hablar con Supabase, tampoco para Auth** (decisión de Iaio, 20/10, en #345):
+  la sesión anónima, el código por email y el reclamo pasan por rutas de API (`/api/cuenta/*`), que
+  usan `NEXT_PUBLIC_SUPABASE_ANON_KEY` en el servidor y escriben la sesión en cookies **httpOnly**. El
+  JavaScript de la página nunca ve el token, así que un XSS no puede robar la sesión. Se descartó el
+  cliente de Auth en el navegador (`createBrowserClient`): necesita leer la cookie y no puede ser httpOnly.
+- Las tablas siguen cerradas por la 009 (sin permisos para `anon` ni `authenticated`). Se evaluó y se
+  descartó leerlas desde el navegador con RLS por `auth.uid()`: todo sigue pasando por las rutas de API.
 - Contra el abuso, se crean demasiadas sesiones anónimas:
   - **CAPTCHA en `signInAnonymously`** con Cloudflare Turnstile (gratis; es un servicio nuevo: cuenta y
-    clave de Iaio).
+    clave de Iaio). El widget corre en la página y su token viaja a la ruta, que lo pasa como `captchaToken`.
   - Además, el tope de Supabase de inicios anónimos por IP por hora.
 - Descartados:
   - Mantener `dispositivo` + login opcional: el token al portador seguiría vivo.
@@ -37,7 +42,7 @@
 ### 2. Inicio de sesión: email con código de 6 dígitos (OTP)
 
 - `signInWithOtp({ email })` / `verifyOtp({ email, token, type })`; para convertir la sesión anónima,
-  `updateUser({ email })` y verificar el código (`type: "email_change"`).
+  `updateUser({ email })` y verificar el código (`type: "email_change"`). Todo desde rutas de API (§1).
 - **No** enlace mágico: en una PWA en el celular el enlace suele abrirse en otro navegador y la sesión
   queda allá. Google se puede sumar después (`linkIdentity`), sin cambiar este diseño.
 - El correo que trae Supabase alcanza para probar (pocos mails por hora). **Para producción hace falta un
@@ -46,9 +51,9 @@
 
 ### 3. Sesión en el servidor
 
-- Sesión en cookies httpOnly con `@supabase/ssr` (dependencia nueva, aprobada con este diseño). El
-  refresco de la sesión va en el proxy/middleware de Next: antes de escribirlo, leer la guía de Next 16
-  en `node_modules/next/dist/docs/` (ahí cambió el nombre y la forma).
+- Sesión en cookies httpOnly con `@supabase/ssr` (dependencia nueva, aprobada con este diseño):
+  `lib/supabase/sesion.ts`. El refresco va en `proxy.ts` (en Next 16 el middleware se llama proxy), que
+  solo corre en `/api/casos` y `/api/cuenta/*`: las páginas y los modelos 3D no pasan por ahí.
 - Las rutas leen el uid de la sesión verificada (`auth.getClaims()` o `auth.getUser()`), **nunca
   `getSession()` sin verificar ni un campo del cuerpo**. `POST /api/casos` deja de leer `dispositivo`
   como dueño.
@@ -65,13 +70,14 @@
 - **Reclamo del dispositivo** (una sola vez por celular): el primer pedido con sesión manda también el
   `dispositivo` viejo. El servidor pone `dueno = uid` en los casos con ese `dispositivo` y `dueno is null`,
   y les borra el `dispositivo`. Desde ahí el dispositivo no da permiso sobre nada. El cliente borra
-  `sayso:dispositivo` cuando el servidor confirma. Riesgo aceptado: quien tenga el UUID antes del reclamo
+  `sayso:dispositivo` cuando el servidor confirma (`dispositivoReclamado: true`), y ya no crea
+  dispositivos nuevos. Riesgo aceptado: quien tenga el UUID antes del reclamo
   puede reclamar esos casos, el mismo poder que tiene hoy.
 - **Email que ya tiene cuenta** (por ejemplo, en un celular nuevo): `updateUser` falla, la persona inicia
-  sesión con OTP y queda con otro uid. Antes de cambiar de sesión, el cliente guarda el token de la
-  sesión anónima y lo manda a `POST /api/cuenta/reclamar` junto con la cookie de la sesión nueva. El
-  servidor verifica las dos, comprueba que la vieja sea anónima (`is_anonymous`) y pasa sus casos al
-  uid nuevo. Nunca se reclaman casos de una cuenta con email.
+  sesión con OTP y queda con otro uid. Como el navegador no ve el token (§1), es la ruta la que, antes de
+  cambiar de sesión, guarda el token de la sesión anónima en otra cookie httpOnly de vida corta y lo usa
+  en `POST /api/cuenta/reclamar`. El servidor verifica las dos sesiones, comprueba que la vieja sea
+  anónima (`is_anonymous`) y pasa sus casos al uid nuevo. Nunca se reclaman casos de una cuenta con email.
 - **Casos viejos sin `dispositivo`** (antes de la 007): quedan huérfanos y de solo lectura, y los borra
   la retención de abajo.
 
@@ -135,6 +141,8 @@
    - Sesión anónima con Turnstile.
    - "Guardar mis casos" con OTP y el reclamo desde otra cuenta (`/api/cuenta/reclamar`).
    - Pantalla de cuenta (salir, borrar, exportar).
+   - Entre el 1/3 y el 2/3, `POST /api/casos` responde 401 (todavía no hay sesión) y los casos quedan
+     solo en el celular: **no se publica** hasta que esté el 2/3 (decisión de Iaio, 20/10).
 3. **`c/casos-en-servidor`:**
    - Escribir y leer `guias`, y Mis casos desde el servidor.
    - Retención de 90 días.

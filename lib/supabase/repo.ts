@@ -20,7 +20,7 @@ function revisar(error: { message: string } | null, que: string) {
 
 /** Datos de "Mis casos" que viajan con el caso (columnas de la migración 007). */
 export const ExtraCaso = z.object({
-  /** Id anónimo del dispositivo: agrupa los casos sin login ni datos personales. */
+  /** Id anónimo del dispositivo de antes del login: solo sirve para reclamar sus casos (dueno.ts). */
   dispositivo: z.string().uuid().optional(),
   tipoEquipo: z.string().max(60).nullable().optional(),
   cierre: z
@@ -43,16 +43,19 @@ function esColumnaFaltante(error: { message: string; code?: string }) {
   );
 }
 
+/** `dueno`: uid de la sesión verificada (migración 012); lo revisó antes dueno.ts. */
 export async function guardarCaso(
   db: SupabaseClient | null,
   caso: Caso,
-  extra: ExtraCaso = {},
+  extra: Omit<ExtraCaso, "dispositivo"> = {},
+  dueno?: string,
 ): Promise<void> {
   if (!db) return;
   const c = Caso.parse(caso);
-  const e = ExtraCaso.parse(extra);
+  const e = ExtraCaso.omit({ dispositivo: true }).parse(extra);
   const base = {
     id: c.id,
+    ...(dueno ? { dueno } : {}),
     clase: c.clase,
     sintoma: c.sintoma,
     estado: c.estado,
@@ -62,14 +65,13 @@ export async function guardarCaso(
   // Solo se escriben las columnas que vinieron (un upsert sin ellas no las borra).
   const extras = {
     actualizado_en: new Date().toISOString(),
-    ...(e.dispositivo ? { dispositivo: e.dispositivo } : {}),
     ...(e.tipoEquipo !== undefined ? { tipo_equipo: e.tipoEquipo } : {}),
     ...(e.cierre ? { cierre: e.cierre } : {}),
   };
   let { error } = await db.from("casos").upsert({ ...base, ...extras });
   if (error && esColumnaFaltante(error)) {
     // Sin la migración 007 todavía: se guarda el caso igual, sin los datos de "Mis casos".
-    console.warn("[supabase] falta la migración 007_mis_casos: guardo el caso sin dispositivo ni cierre");
+    console.warn("[supabase] falta la migración 007_mis_casos: guardo el caso sin tipo de equipo ni cierre");
     ({ error } = await db.from("casos").upsert(base));
   }
   revisar(error, "guardar caso");
