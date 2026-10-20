@@ -8,7 +8,7 @@ import { Volver } from "../_ui/volver";
 /**
  * "Cómo funciona": los pasos, qué es y qué no es Sayso, y quiénes lo hicimos. Sale de la
  * presentación de la hackatón, sin sus números (no se los prometemos a quien usa la app).
- * Los LinkedIn y el link al PDF todavía no: el PDF dice "no pide cuenta", que con el login ya no vale.
+ * El link al PDF todavía no: el PDF dice "no pide cuenta", que con el login ya no vale.
  */
 
 export const metadata: Metadata = { title: "Cómo funciona · Sayso" };
@@ -45,11 +45,23 @@ const PASOS: { titulo: string; texto: string; icono: ReactNode }[] = [
   },
 ];
 
-/** Los nombres, con el OK de los tres (20/10/2026). */
+/** Los nombres y LinkedIn, con el OK de los tres (20/10/2026). */
 const EQUIPO = [
-  { nombre: "Ignacio Iglesia", hizo: "Las pantallas, la voz y la experiencia en el celular." },
-  { nombre: "Diego Marin", hizo: "El producto, el 3D y la búsqueda de repuestos." },
-  { nombre: "Juan Martín Noguez", hizo: "La inteligencia artificial que arma la guía y la seguridad." },
+  {
+    nombre: "Ignacio Iglesia",
+    hizo: "Las pantallas, la voz y la experiencia en el celular.",
+    linkedin: "https://www.linkedin.com/in/ignacio-iglesia-2271733a2/",
+  },
+  {
+    nombre: "Diego Marin",
+    hizo: "El producto, el 3D y la búsqueda de repuestos.",
+    linkedin: "https://www.linkedin.com/in/diegomarin2805/",
+  },
+  {
+    nombre: "Juan Martín Noguez",
+    hizo: "La inteligencia artificial que arma la guía y la seguridad.",
+    linkedin: "https://www.linkedin.com/in/juan-mart%C3%ADn-noguez-berdun/",
+  },
 ];
 
 export default function ComoFunciona() {
@@ -123,9 +135,23 @@ export default function ComoFunciona() {
         </p>
         <ul className="flex flex-col gap-2">
           {EQUIPO.map((p) => (
-            <li key={p.nombre} className="rounded-2xl border border-borde bg-superficie/70 px-4 py-3">
-              <p className="font-semibold">{p.nombre}</p>
-              <p className="text-sm text-texto-suave">{p.hizo}</p>
+            <li
+              key={p.nombre}
+              className="flex items-center gap-3 rounded-2xl border border-borde bg-superficie/70 py-3 pr-3 pl-4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{p.nombre}</p>
+                <p className="text-sm text-texto-suave">{p.hizo}</p>
+              </div>
+              <a
+                href={p.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`LinkedIn de ${p.nombre}`}
+                className="flex h-11 shrink-0 items-center rounded-full border border-borde px-3 text-xs font-medium text-texto-suave transition hover:text-texto active:scale-95"
+              >
+                LinkedIn
+              </a>
             </li>
           ))}
         </ul>
