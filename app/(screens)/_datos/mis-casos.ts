@@ -2,8 +2,8 @@ import { z } from "zod";
 import { Caso, Ficha, KnowledgePack, PlanoDePiezas } from "../../../shared";
 
 /**
- * "Mis casos": los casos de este dispositivo, guardados en el propio celular (localStorage) con
- * un id anónimo, sin login ni datos personales. Retomar un caso usa lo guardado: no gasta IA.
+ * "Mis casos": los casos de este celular, guardados en el propio celular (localStorage), sin datos
+ * personales. En el servidor son de la sesión (docs/login.md). Retomar un caso usa lo guardado: no gasta IA.
  * Si el navegador no deja guardar (modo privado, almacenamiento lleno), la app sigue igual.
  */
 
@@ -59,7 +59,6 @@ export type CasoGuardado = z.infer<typeof CasoGuardado>;
 export type GuiaGuardada = z.infer<typeof Guia>;
 
 let memoria: CasoGuardado[] = []; // si localStorage no está disponible
-let idEnMemoria: string | null = null;
 
 function leerTodos(): CasoGuardado[] {
   try {
@@ -84,17 +83,24 @@ function escribirTodos(casos: CasoGuardado[]) {
   }
 }
 
-/** Id anónimo de este dispositivo (no identifica a la persona; solo agrupa sus casos). */
-export function idDispositivo(): string {
+/**
+ * Id anónimo de antes del login (#331), si este celular tiene uno. Ya no se crean: solo se manda
+ * para que el servidor pase sus casos a la sesión (reclamo, docs/login.md §4) y después se borra.
+ */
+export function dispositivoViejo(): string | undefined {
   try {
-    let id = localStorage.getItem(CLAVE_DISPOSITIVO);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(CLAVE_DISPOSITIVO, id);
-    }
-    return id;
+    return localStorage.getItem(CLAVE_DISPOSITIVO) ?? undefined;
   } catch {
-    return (idEnMemoria ??= crypto.randomUUID());
+    return undefined;
+  }
+}
+
+/** El servidor ya reclamó los casos del dispositivo: desde ahí no da permiso sobre nada. */
+export function olvidarDispositivo(id: string) {
+  try {
+    if (localStorage.getItem(CLAVE_DISPOSITIVO) === id) localStorage.removeItem(CLAVE_DISPOSITIVO);
+  } catch {
+    // sin localStorage no había dispositivo
   }
 }
 
