@@ -5,7 +5,8 @@ import type { ManualWeb, Seccion } from "./manualweb";
  * Guías de iFixit por su API pública (sin clave y SIN IA: no gasta). Para lo que más se trae en la mano
  * (celulares, notebooks, consolas, auriculares) hay guías paso a paso con fotos, herramientas y piezas.
  * 1. `equipoIfixit`: el equipo en iFixit (categoría). Solo se acepta si los códigos de modelo dichos
- *    ("55v6c", "m1", "s21") aparecen en su título o descripción: un TCL 55C722 no es un TCL 55V6C.
+ *    ("55v6c", "m1", "s21") aparecen en su título o descripción: un TCL 55C722 no es un TCL 55V6C. Sin códigos,
+ *    su título trae todas las palabras del modelo (salvo la marca): una palabra en común es otro equipo.
  * 2. `ordenarGuias`: las guías de ese equipo, de la que mejor cuadra con el síntoma (por el tema: Battery,
  *    Screen…) a la que menos; se usa la primera que tenga pasos.
  * 3. `guiaIfixit`: los pasos (texto, avisos y fotos), herramientas y piezas.
@@ -42,9 +43,9 @@ export const LICENCIA = "CC BY-NC-SA 3.0";
 export const atribucion = (g: GuiaIfixit) => `"${g.titulo}", de ${g.autor} en iFixit (${g.url}), ${LICENCIA}`;
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-const palabras = (s: string) => sinTildes(s).split(/[^a-z0-9]+/).filter(Boolean);
+export const palabras = (s: string) => sinTildes(s).split(/[^a-z0-9]+/).filter(Boolean);
 /** Códigos de modelo: palabras con números ("55v6c", "m1", "s21", "13"). Los que se dijeron tienen que estar. */
-const codigos = (s: string) => palabras(s).filter((p) => /\d/.test(p));
+export const codigos = (s: string) => palabras(s).filter((p) => /\d/.test(p));
 
 async function pedir<T>(ruta: string, f: Fetch): Promise<T | null> {
   try {
@@ -59,7 +60,7 @@ type Resultados = { results?: { title?: string; url?: string }[] };
 type Wiki = { title?: string; description?: string; guides?: { guideid?: number; title?: string; subject?: string; type?: string }[] };
 
 /** "(6.ª generación)", "(6th generation)", "6ª gen" → "6": iFixit nombra la generación con el número solo ("iPad Mini 6"). */
-const GENERACION = /\(?\s*(?:de\s+(?:la\s+)?)?(\d{1,2})\s*(?:\.?\s*[ªºa°]|st|nd|rd|th)?\.?\s*(?:generaci[oó]n|generation|gen)\b\.?\s*\)?/gi;
+export const GENERACION = /\(?\s*(?:de\s+(?:la\s+)?)?(\d{1,2})\s*(?:\.?\s*[ªºa°]|st|nd|rd|th)?\.?\s*(?:generaci[oó]n|generation|gen)\b\.?\s*\)?/gi;
 /** Código de la etiqueta ("A2567", "SM-T500"): letras y 3 o más números. iFixit no los pone en el nombre. */
 const CODIGO_ETIQUETA = /\b[A-Z]{1,3}(?:-[A-Z]{0,2})?\d{3,}[A-Z0-9/-]*/g;
 
@@ -117,6 +118,10 @@ async function equipoExacto(equipo: string, f: Fetch): Promise<EquipoIfixit | nu
     if (!wiki) continue;
     const texto = palabras(`${c.titulo} ${wiki.description ?? ""}`);
     if (!codigosDichos.every((k) => texto.includes(k))) continue;
+    // Sin códigos ("Luminous Superior") no hay número que confirmar: el título tiene que traer todas las palabras
+    // del modelo, salvo la primera (la marca, que iFixit no siempre nombra). Una sola en común es otro equipo.
+    const enTitulo = palabras(c.titulo);
+    if (!codigosDichos.length && !dichas.slice(1).every((p) => enTitulo.includes(p))) continue;
     const guias = (wiki.guides ?? [])
       .filter((g) => g.guideid && g.title)
       .map((g) => ({ id: g.guideid!, titulo: g.title!, tema: g.subject ?? "", tipo: g.type ?? "" }));

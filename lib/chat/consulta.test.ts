@@ -182,6 +182,18 @@ describe("consulta puntual: el experto da los pasos de la pieza, no manda al man
     expect(ev.at(-1)).toMatchObject({ tipo: "fin", pasos: 6 });
   });
 
+  it("un manual guardado que no es el oficial del modelo (copia en otro sitio) se lee igual, pero sin VERIFICADO", async () => {
+    const manuales = repoEnMemoria();
+    await manuales.guardar({ marca: "Fono", modelo: "X21", url: INDICE, titulo: "Fono X21 Repair Manual", verificado: true, fuente: "otro" });
+    const stream = guion([["[[manual]]"], seisPasos(0)]);
+    const llamar = eleccion({ secciones: [urlSeccion(4)] });
+    const ev = await todos(conversar({ casoId: "c1", pack, historial, pregunta, tipoEquipo: "celular" }, stream, undefined, { manuales, fetch: red(), llamar }));
+    const pasos = dichos(ev);
+    expect(pasos).toHaveLength(6);
+    expect(pasos[0].cita).toEqual({ doc: "Sección 0", url: urlSeccion(4), estado: "NO_VERIFICABLE" });
+    expect(JSON.stringify(stream.pedidos[1].system)).toMatch(/no está confirmado que sea el oficial de este modelo exacto/);
+  });
+
   it("si el manual no cubre la pieza, lo dice y da los pasos de iFixit, marcados como guía pública", async () => {
     const stream = guion([["[[manual]]"], ["[[no_cubre]]"], [citaTexto(1, "Unscrew the port bracket and pull the port out."), "Desatornillá el soporte del puerto. "]]);
     const llamar = eleccion({ secciones: [urlSeccion(5)] });

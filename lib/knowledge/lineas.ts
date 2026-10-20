@@ -51,14 +51,15 @@ export function lineasConCitas(bloques: Bloque[]): Linea[] {
 export type Verificable = boolean | ((documento: number) => boolean);
 
 export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[], verificable: Verificable = true): Cita | null {
+  // Manual oficial del modelo: VERIFICADO. Guía pública, o un manual que no es el oficial de este modelo: se cita,
+  // pero NO_VERIFICABLE.
+  const oficial = (documento: number) => (typeof verificable === "function" ? verificable(documento) : verificable);
   if (c.type === "page_location" && c.cited_text.trim().length >= 8) {
-    return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: "VERIFICADO" };
+    return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: oficial(c.document_index) ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "char_location" && c.cited_text.trim().length >= 8) {
     const url = urls?.[c.document_index];
-    // Texto de un manual oficial: VERIFICADO. De una guía pública guardada: se cita, pero NO_VERIFICABLE.
-    const oficial = typeof verificable === "function" ? verificable(c.document_index) : verificable;
-    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: oficial ? "VERIFICADO" : "NO_VERIFICABLE" };
+    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: oficial(c.document_index) ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "web_search_result_location") {
     return { doc: c.title ?? c.url, url: c.url, estado: "NO_VERIFICABLE" };
