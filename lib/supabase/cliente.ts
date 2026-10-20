@@ -7,7 +7,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Solo se recuerda el cliente ya creado: si faltaban variables, se vuelve a mirar en la próxima llamada.
 let servidor: SupabaseClient | null = null;
-let navegador: SupabaseClient | null = null;
 
 /** Solo en el servidor (rutas de API): usa la clave secreta y saltea RLS. */
 export function supabaseServidor(): SupabaseClient | null {
@@ -18,16 +17,6 @@ export function supabaseServidor(): SupabaseClient | null {
     servidor = urlValida(url) && clave ? createClient(url, clave, { auth: { persistSession: false } }) : null;
   }
   return servidor;
-}
-
-/** En el navegador: clave pública, solo puede leer eventos (feed en vivo). */
-export function supabaseNavegador(): SupabaseClient | null {
-  if (!navegador) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const clave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    navegador = urlValida(url) && clave ? createClient(url, clave) : null;
-  }
-  return navegador;
 }
 
 /** Una URL mal cargada (ej. solo el código del proyecto) no debe romper la app. */
