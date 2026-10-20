@@ -26,6 +26,8 @@ function falso(error: { message: string } | null = null) {
           if (!error) filas.push(...(Array.isArray(f) ? f : [f]));
           return { error };
         },
+        // guardarCaso: el update condicionado al dueño encuentra el caso recién creado.
+        update: () => ({ eq: () => ({ eq: () => ({ select: async () => ({ data: error ? null : [{}], error }) }) }) }),
         select: () => ({
           eq: (col: string, val: unknown) => {
             const encontradas = filas.filter((f) => f[col] === val);
@@ -41,9 +43,11 @@ function falso(error: { message: string } | null = null) {
   return { db: db as unknown as SupabaseClient, tablas };
 }
 
+const dueno = { dispositivo: "11111111-1111-4111-8111-111111111111" };
+
 describe("lib/supabase/repo", () => {
   it("sin Supabase configurado no hace nada", async () => {
-    await guardarCaso(null, casoEjemplo);
+    expect(await guardarCaso(null, casoEjemplo, dueno)).toBe(false);
     await guardarEventos(null, eventosEjemplo);
     expect(await listarEventos(null, casoEjemplo.id)).toEqual([]);
     expect(await cachePacksSupabase(null).get("x")).toBeUndefined();
@@ -51,13 +55,14 @@ describe("lib/supabase/repo", () => {
 
   it("guarda caso, foto y ficha con columnas sueltas y el objeto entero en datos", async () => {
     const { db, tablas } = falso();
-    await guardarCaso(db, casoEjemplo);
+    expect(await guardarCaso(db, casoEjemplo, dueno)).toBe(true);
     await guardarFoto(db, fotosEjemplo[0]);
     await guardarFicha(db, fichaEjemplo);
     expect(tablas.casos[0]).toMatchObject({
       id: casoEjemplo.id,
       clase: casoEjemplo.clase,
       datos: casoEjemplo,
+      dispositivo: dueno.dispositivo,
     });
     expect(tablas.fotos[0]).toMatchObject({
       caso_id: fotosEjemplo[0].casoId,
@@ -81,12 +86,12 @@ describe("lib/supabase/repo", () => {
 
   it("no guarda datos que no cumplen el contrato", async () => {
     const { db } = falso();
-    await expect(guardarCaso(db, { ...casoEjemplo, clase: "heladera" as never })).rejects.toThrow();
+    await expect(guardarCaso(db, { ...casoEjemplo, clase: "heladera" as never }, dueno)).rejects.toThrow();
   });
 
   it("un error de Supabase se informa como ErrorSupabase", async () => {
     const { db } = falso({ message: "sin permiso" });
-    await expect(guardarCaso(db, casoEjemplo)).rejects.toBeInstanceOf(ErrorSupabase);
+    await expect(guardarCaso(db, casoEjemplo, dueno)).rejects.toBeInstanceOf(ErrorSupabase);
   });
 
   it("la caché de packs guarda y devuelve por clave", async () => {

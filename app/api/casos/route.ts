@@ -12,16 +12,20 @@ import {
   subirFotoUsuario,
 } from "../../../lib/supabase/repo";
 import { respuestaLimite, revisarFotosPorCaso, revisarPorIp, TOPES } from "../../../lib/supabase/limite";
+import { esDelDispositivo, respuestaAjeno } from "../../../lib/supabase/dueno";
 
 /**
- * POST { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? } → { guardado, fotos: [{ id, url }] }
+ * POST { dispositivo, caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? } → { guardado, fotos: [{ id, url }] }
  * Guarda el avance del caso en Supabase (dueño: Iaio). Las fotos van al bucket privado y `url`
  * es su referencia (`fotos-usuarios/…`), no una URL pública. Si Supabase no está configurado
  * responde `guardado: false` y la app sigue igual. Pasado un tope de uso (lib/supabase/limite.ts)
- * responde 429 sin guardar nada.
+ * responde 429 sin guardar nada. Si algo del pedido es de un caso de otro dispositivo (o de un caso
+ * sin dueño, de antes de la 007), responde 403 sin guardar nada (lib/supabase/dueno.ts, #331).
  */
 
 const Entrada = ExtraCaso.extend({
+  // Obligatorio: sin dueño no se puede saber de quién es el caso.
+  dispositivo: z.string().uuid(),
   caso: Caso.optional(),
   fotos: z
     .array(
@@ -51,8 +55,16 @@ export async function POST(req: Request) {
       (await revisarPorIp(req, fotos.filter((f) => f.imagen).length)) ??
       (fotos.length > 0 ? await revisarFotosPorCaso(db, fotos.map((f) => f.foto)) : null);
     if (excedido) return respuestaLimite(excedido);
-    // El caso primero: fotos, ficha y eventos lo referencian.
-    if (caso) await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre });
+    // Todo lo del pedido tiene que ser de este dispositivo, antes de escribir nada.
+    const propio = await esDelDispositivo(db, dispositivo, {
+      casoId: caso?.id,
+      referenciados: [...fotos.map((f) => f.foto.casoId), ...(ficha ? [ficha.casoId] : []), ...eventos.map((e) => e.casoId)],
+      fotos: fotos.map((f) => ({ id: f.foto.id, casoId: f.foto.casoId })),
+      eventos: eventos.map((e) => ({ id: e.id, casoId: e.casoId })),
+    });
+    if (!propio) return respuestaAjeno();
+    // El caso primero: fotos, ficha y eventos lo referencian. guardarCaso vuelve a revisar el dueño al escribir.
+    if (caso && !(await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre }))) return respuestaAjeno();
     const urls: { id: string; url: string }[] = [];
     for (const { foto, imagen } of fotos) {
       const url = imagen

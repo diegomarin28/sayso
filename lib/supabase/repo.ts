@@ -34,45 +34,44 @@ export const ExtraCaso = z.object({
 });
 export type ExtraCaso = z.infer<typeof ExtraCaso>;
 
-/** Postgres 42703 / PostgREST PGRST204: la columna no existe (falta correr una migración). */
-function esColumnaFaltante(error: { message: string; code?: string }) {
-  return (
-    error.code === "42703" ||
-    error.code === "PGRST204" ||
-    /column .* (does not exist|not find)/i.test(error.message)
-  );
-}
-
+/**
+ * Guarda el caso solo si es de `dispositivo` (#331): si es nuevo lo crea con ese dueño, y si ya
+ * existe lo actualiza solo cuando el dueño coincide. Los casos sin dueño (antes de la 007) no se
+ * tocan. Devuelve false si el caso es de otro (no escribe nada).
+ */
 export async function guardarCaso(
   db: SupabaseClient | null,
   caso: Caso,
-  extra: ExtraCaso = {},
-): Promise<void> {
-  if (!db) return;
+  extra: ExtraCaso & { dispositivo: string },
+): Promise<boolean> {
+  if (!db) return false;
   const c = Caso.parse(caso);
-  const e = ExtraCaso.parse(extra);
-  const base = {
+  const e = ExtraCaso.required({ dispositivo: true }).parse(extra);
+  // Solo se escriben las columnas que vinieron (un update sin ellas no las borra).
+  const fila = {
     id: c.id,
     clase: c.clase,
     sintoma: c.sintoma,
     estado: c.estado,
     creado_en: c.creadoEn,
     datos: c,
-  };
-  // Solo se escriben las columnas que vinieron (un upsert sin ellas no las borra).
-  const extras = {
+    dispositivo: e.dispositivo,
     actualizado_en: new Date().toISOString(),
-    ...(e.dispositivo ? { dispositivo: e.dispositivo } : {}),
     ...(e.tipoEquipo !== undefined ? { tipo_equipo: e.tipoEquipo } : {}),
     ...(e.cierre ? { cierre: e.cierre } : {}),
   };
-  let { error } = await db.from("casos").upsert({ ...base, ...extras });
-  if (error && esColumnaFaltante(error)) {
-    // Sin la migración 007 todavía: se guarda el caso igual, sin los datos de "Mis casos".
-    console.warn("[supabase] falta la migración 007_mis_casos: guardo el caso sin dispositivo ni cierre");
-    ({ error } = await db.from("casos").upsert(base));
-  }
+  // Nuevo: se crea con este dueño. Si ya existe, no se toca (on conflict do nothing).
+  const { error } = await db.from("casos").upsert(fila, { onConflict: "id", ignoreDuplicates: true });
   revisar(error, "guardar caso");
+  // Existente: se actualiza solo si es de este dispositivo. En una sola sentencia, así dos pedidos a la vez no se pisan.
+  const { data, error: errorUpdate } = await db
+    .from("casos")
+    .update(fila)
+    .eq("id", c.id)
+    .eq("dispositivo", e.dispositivo)
+    .select("id");
+  revisar(errorUpdate, "guardar caso");
+  return (data ?? []).length > 0;
 }
 
 /** Sube la imagen al bucket público `fotos` y devuelve su URL. Solo para páginas del manual, nunca fotos de personas. */

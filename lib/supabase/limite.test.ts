@@ -30,7 +30,10 @@ function falso(opciones: { fotosGuardadas?: { id: string; caso_id: string }[]; e
               error: null,
             }),
           }),
+          // Revisión del dueño (#331): ningún caso ni foto guardados de antes.
+          in: async () => ({ data: [], error: null }),
         }),
+        update: () => ({ eq: () => ({ eq: () => ({ select: async () => ({ data: [{}], error: null }) }) }) }),
         upsert: async () => {
           upserts.push(tabla);
           return { error: null };
@@ -160,7 +163,7 @@ describe("POST /api/casos", () => {
     POST(new Request("http://x/api/casos", {
       method: "POST",
       headers: { "x-real-ip": "200.1.2.3" },
-      body: JSON.stringify(cuerpo),
+      body: JSON.stringify({ dispositivo: "11111111-1111-4111-8111-111111111111", ...(cuerpo as object) }),
     }));
 
   it("pasado el tope de pedidos responde 429 con Retry-After y no guarda nada", async () => {
