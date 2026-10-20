@@ -1,4 +1,27 @@
-import { Rasgos3D, type KnowledgePack, type PlanoDePiezas } from '../../shared';
+import { Rasgos3D, type KnowledgePack, type PiezaPlano, type PlanoDePiezas } from '../../shared';
+import indice from '../../public/models/piezas/indice.json';
+
+const CAJAS:Record<string,{caja?:number[]}>=indice.tipos;
+const CAJA_RELOJ=/^caja_reloj(?:_dato)?@(cuadrada|redonda)(?:_[cs][012])?$/;
+
+/**
+ * Los botones de `caja_reloj_dato@…` salen hacia +X: la caja crece solo de ese lado y el cuerpo queda del
+ * mismo tamaño y en el mismo lugar que con la caja de hoy (y al revés, al volver a ella).
+ */
+function cambiarCaja(p:PiezaPlano,a:string):PiezaPlano {
+  const de=CAJAS[p.formaBiblioteca ?? '']?.caja, hacia=CAJAS[a]?.caja;
+  if(!de || !hacia) return {...p,formaBiblioteca:a};
+  const dim=p.dim.map((v,i)=>v*hacia[i]/de[i]) as PiezaPlano['dim'];
+  return {...p,formaBiblioteca:a,dim,pos:[p.pos[0]+(dim[0]-p.dim[0])/2,p.pos[1],p.pos[2]]};
+}
+
+/** La caja de reloj de un pack anterior vuelve a la de hoy (con sus medidas) antes de seguir la plantilla. */
+export function sinCajaDeRasgos(plano: PlanoDePiezas): PlanoDePiezas {
+  const raiz=plano.piezas.find(p=>!p.padre);
+  const forma=raiz?.formaBiblioteca?.startsWith('caja_reloj_dato@') && CAJA_RELOJ.exec(raiz.formaBiblioteca)?.[1];
+  if(!raiz || !forma) return plano;
+  return {...plano,piezas:plano.piezas.map(p=>p===raiz?cambiarCaja(p,'caja_reloj@'+forma):p)};
+}
 
 /** Solo datos explícitos y validados; no se consulta marca, modelo ni palabras del pack. */
 export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'rasgos3D'> & Partial<Pick<KnowledgePack,'piezas'>>, tipo?: string): PlanoDePiezas {
@@ -9,6 +32,7 @@ export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'
     if(!p.formaBiblioteca?.match(/^(pantalla_tablet_dato|carcasa_tv_dato|carcasa_auricular_dato|camara_celular_dato|pantalla_celular_dato|marco_celular_dato)@/))return p;
     const {formaBiblioteca: _anterior,...base}=p;return base;
   })};
+  plano=sinCajaDeRasgos(plano);
   const datos=Rasgos3D.safeParse(pack.rasgos3D);
   if(!datos.success) return plano;
   if(tipo==='auriculares_vincha' && datos.data.auriculares?.formato==='over_ear') {
@@ -41,6 +65,19 @@ export function aplicarRasgos3D(plano: PlanoDePiezas, pack: Pick<KnowledgePack,'
       if(!p.padre && celular.bordes)return {...p,formaBiblioteca:'marco_celular_dato@'+celular.bordes};
       return p;
     })};
+  }
+  const reloj=datos.data.reloj;
+  if(tipo==='reloj' && reloj && (typeof reloj.corona==='boolean' || reloj.botonesLaterales!==undefined)) {
+    // Lo que no vino es como hoy: con corona y sin botones. La cuadrada de hoy no tiene puerto de corona.
+    const corona=reloj.corona ?? true, botones=reloj.botonesLaterales ?? 0;
+    const raiz=plano.piezas.find(p=>!p.padre);
+    const forma=raiz?.formaBiblioteca && CAJA_RELOJ.exec(raiz.formaBiblioteca)?.[1];
+    const nueva=forma && (botones || (!corona && forma==='redonda')) ? `caja_reloj_dato@${forma}_${corona?'c':'s'}${botones}` : null;
+    // Sin corona se saca la de la plantilla; no la que nombra el pack ni la que se vio en el manual o una foto.
+    const pedidas=new Set(pack.piezas?.map(p=>p.id) ?? []);
+    const sacar=(p:PiezaPlano)=>!corona && p.pieza==='corona_reloj' && !pedidas.has(p.pieza) && p.origen!=='manual' && p.origen!=='foto';
+    if(!nueva && !plano.piezas.some(sacar)) return plano;
+    return {...plano,piezas:plano.piezas.filter(p=>!sacar(p)).map(p=>p===raiz && nueva?cambiarCaja(p,nueva):p)};
   }
   if(tipo==='tablet' && typeof datos.data.tablet?.botonFrontal==='boolean') {
     const nombre='pantalla_tablet_dato@'+(datos.data.tablet.botonFrontal?'con_boton':'sin_boton');

@@ -19,7 +19,8 @@
   "tablet_variantes": "tablet_variantes.glb",
   "tv_variantes": "tv_variantes.glb",
   "auriculares_variantes": "auriculares_variantes.glb",
-  "celular_variantes": "celular_variantes.glb"
+  "celular_variantes": "celular_variantes.glb",
+  "reloj_variantes": "reloj_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3705,6 +3706,105 @@
     7.4,
     0.8,
     15.86
+   ]
+  },
+  "caja_reloj_dato@cuadrada_c1": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_c2": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_s1": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_s2": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@redonda_c1": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_c2": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.601,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s0": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s1": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.83,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s2": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.768,
+    1.1,
+    4.8
    ]
   }
  }

@@ -1,0 +1,26 @@
+{
+  "familia": "reloj_variantes",
+  "tipo": "reloj",
+  "dato_pack": "rasgos3D.reloj",
+  "campos": {
+    "corona": [true, false],
+    "botonesLaterales": [0, 1, 2]
+  },
+  "variantes": [
+    {"forma": "cuadrada", "corona": true, "botones": 0, "nodo": "caja_reloj@cuadrada (la de hoy)"},
+    {"forma": "cuadrada", "corona": false, "botones": 0, "nodo": "caja_reloj@cuadrada (la de hoy, sin corona_reloj)"},
+    {"forma": "cuadrada", "corona": true, "botones": 1, "nodo": "caja_reloj_dato@cuadrada_c1"},
+    {"forma": "cuadrada", "corona": true, "botones": 2, "nodo": "caja_reloj_dato@cuadrada_c2"},
+    {"forma": "cuadrada", "corona": false, "botones": 1, "nodo": "caja_reloj_dato@cuadrada_s1"},
+    {"forma": "cuadrada", "corona": false, "botones": 2, "nodo": "caja_reloj_dato@cuadrada_s2"},
+    {"forma": "redonda", "corona": true, "botones": 0, "nodo": "caja_reloj@redonda (la de hoy)"},
+    {"forma": "redonda", "corona": true, "botones": 1, "nodo": "caja_reloj_dato@redonda_c1"},
+    {"forma": "redonda", "corona": true, "botones": 2, "nodo": "caja_reloj_dato@redonda_c2"},
+    {"forma": "redonda", "corona": false, "botones": 0, "nodo": "caja_reloj_dato@redonda_s0"},
+    {"forma": "redonda", "corona": false, "botones": 1, "nodo": "caja_reloj_dato@redonda_s1"},
+    {"forma": "redonda", "corona": false, "botones": 2, "nodo": "caja_reloj_dato@redonda_s2"}
+  ],
+  "sin_dato": "Conservar la caja y la corona de hoy; cada campo que falta toma el valor de hoy (con corona, 0 botones)",
+  "casos": "Todas las combinaciones en las dos formas, a escala 1 y 0,86, plano nuevo y de caché, y con marca/modelo cambiados",
+  "coordinacion": 302
+}

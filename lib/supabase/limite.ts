@@ -72,11 +72,10 @@ export function contadorSupabase(db: SupabaseClient): ContadorUso {
   return {
     async sumar(clave, ventana, cantidad) {
       const enMemoria = await memoria.sumar(clave, ventana, cantidad);
-      const { data, error } = await db.rpc("sumar_limite_uso", {
-        p_clave: clave,
-        p_ventana: ventana,
-        p_cantidad: cantidad,
-      });
+      // Un error lanzado (no solo el devuelto) también cae en memoria: el límite nunca hace fallar el guardado.
+      const { data, error } = await Promise.resolve()
+        .then(() => db.rpc("sumar_limite_uso", { p_clave: clave, p_ventana: ventana, p_cantidad: cantidad }))
+        .catch((e: Error) => ({ data: null, error: { message: e.message } }));
       if (error) {
         if (!avisado) console.warn(`[limite] no pude contar en Supabase (${error.message}): cuento en memoria. ¿Falta la migración 011?`);
         avisado = true;
@@ -143,11 +142,9 @@ export async function revisarFotosPorCaso(db: SupabaseClient, fotos: Foto[]): Pr
   const porCaso = new Map<string, Set<string>>();
   for (const f of fotos) porCaso.set(f.casoId, (porCaso.get(f.casoId) ?? new Set()).add(f.id));
   for (const [casoId, ids] of porCaso) {
-    const { data, error } = await db
-      .from("fotos")
-      .select("id")
-      .eq("caso_id", casoId)
-      .limit(TOPES.fotosPorCaso + TOPES.fotosPorPedido);
+    const { data, error } = await Promise.resolve()
+      .then(() => db.from("fotos").select("id").eq("caso_id", casoId).limit(TOPES.fotosPorCaso + TOPES.fotosPorPedido))
+      .catch((e: Error) => ({ data: null, error: { message: e.message } }));
     if (error) {
       console.warn("[limite] no pude contar las fotos del caso:", error.message);
       continue;

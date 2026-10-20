@@ -10,6 +10,9 @@ import {
   guardarFicha,
   guardarFoto,
   listarEventos,
+  subirFotoUsuario,
+  subirImagen,
+  urlFirmadaFoto,
 } from "./repo";
 
 /** Supabase de mentira: anota cada upsert y devuelve las filas guardadas al hacer select. */
@@ -92,5 +95,66 @@ describe("lib/supabase/repo", () => {
     await cache.set("lenovo|t480|ruido", { pack: "ok" });
     expect(await cache.get("lenovo|t480|ruido")).toEqual({ pack: "ok" });
     expect(await cache.get("otra")).toBeUndefined();
+  });
+});
+
+/** Storage de mentira: anota subidas por bucket y responde el error que se le pida. */
+function storageFalso(error: { message: string; statusCode?: string } | null = null) {
+  const subidas: { bucket: string; ruta: string; contentType?: string }[] = [];
+  const publicas: string[] = [];
+  const db = {
+    storage: {
+      from: (bucket: string) => ({
+        upload: async (ruta: string, _b: Buffer, o: { contentType?: string }) => {
+          if (!error) subidas.push({ bucket, ruta, contentType: o.contentType });
+          return { error };
+        },
+        getPublicUrl: (ruta: string) => {
+          publicas.push(`${bucket}/${ruta}`);
+          return { data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/${bucket}/${ruta}` } };
+        },
+        createSignedUrl: async (ruta: string, segundos: number) => ({
+          data: { signedUrl: `https://x.supabase.co/storage/v1/object/sign/${bucket}/${ruta}?exp=${segundos}` },
+          error: null,
+        }),
+      }),
+    },
+  };
+  return { db: db as unknown as SupabaseClient, subidas, publicas };
+}
+
+describe("fotos de personas en el bucket privado (#330)", () => {
+  it("suben a fotos-usuarios y devuelven la referencia, nunca una URL pública", async () => {
+    const { db, subidas, publicas } = storageFalso();
+    const ref = await subirFotoUsuario(db, "caso-1", "foto-1", "aGk=", "image/jpeg");
+    expect(ref).toBe("fotos-usuarios/caso-1/foto-1.jpeg");
+    expect(subidas).toEqual([{ bucket: "fotos-usuarios", ruta: "caso-1/foto-1.jpeg", contentType: "image/jpeg" }]);
+    expect(publicas).toEqual([]);
+  });
+
+  it("las páginas del manual siguen en el bucket público fotos", async () => {
+    const { db, subidas } = storageFalso();
+    const url = await subirImagen(db, "manuales", "pagina-3", "aGk=", "image/png");
+    expect(subidas[0].bucket).toBe("fotos");
+    expect(url).toContain("/object/public/fotos/manuales/pagina-3.png");
+  });
+
+  it("sin la migración 010 (bucket inexistente) no sube y devuelve null", async () => {
+    const { db } = storageFalso({ message: "Bucket not found", statusCode: "404" });
+    expect(await subirFotoUsuario(db, "c", "f", "aGk=", "image/jpeg")).toBeNull();
+  });
+
+  it("cualquier otro error al subir se informa", async () => {
+    const { db } = storageFalso({ message: "mime type not supported", statusCode: "415" });
+    await expect(subirFotoUsuario(db, "c", "f", "aGk=", "image/svg+xml")).rejects.toBeInstanceOf(ErrorSupabase);
+  });
+
+  it("URL firmada solo para referencias del bucket privado", async () => {
+    const { db } = storageFalso();
+    expect(await urlFirmadaFoto(db, "fotos-usuarios/caso-1/foto-1.jpeg", 60)).toBe(
+      "https://x.supabase.co/storage/v1/object/sign/fotos-usuarios/caso-1/foto-1.jpeg?exp=60",
+    );
+    expect(await urlFirmadaFoto(db, "pendiente:foto-1")).toBeNull();
+    expect(await urlFirmadaFoto(null, "fotos-usuarios/x.jpeg")).toBeNull();
   });
 });

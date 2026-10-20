@@ -63,6 +63,10 @@ const rasgos: Array<[string, string, Rasgos3D]> = [
   ["tablet", "tablet", { tablet: { botonFrontal: true } }],
   ["tablet", "tablet", { tablet: { botonFrontal: false } }],
   ["auriculares_vincha", "auriculares_vincha", { auriculares: { formato: "over_ear" } }],
+  ["reloj", "reloj", { reloj: { corona: true, botonesLaterales: 2 } }],
+  ["reloj", "reloj", { reloj: { corona: false, botonesLaterales: 1 } }],
+  ["reloj_redondo", "reloj", { reloj: { corona: false, botonesLaterales: 0 } }],
+  ["reloj_redondo", "reloj", { reloj: { corona: true, botonesLaterales: 1 } }],
 ];
 
 /** Planos de todos los tipos (ejemplos, plantillas y con rasgos del pack), cada uno en tres tamaños. */
