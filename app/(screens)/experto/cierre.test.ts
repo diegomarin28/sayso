@@ -8,15 +8,31 @@ import { fuenteConCierre, fuenteConRetomar, pasosAlRetomar, pasosDeCierre, pieza
 const pieza = knowledgePackEjemplo.pasos.find((p) => p.piezas.length)!.piezas[0];
 
 describe("retomar un caso que esperaba el repuesto (sin IA)", () => {
-  it("arranca con la bienvenida y sigue desde el primer paso que usa esa pieza", () => {
+  it("arranca desde el primer paso que usa esa pieza, con la bienvenida delante y su cita", () => {
     const eventos = pasosAlRetomar(knowledgePackEjemplo, planoEjemplo, pieza);
-    expect(eventos[0].tipo).toBe("paso");
-    const pasos = eventos.filter((e) => e.tipo === "paso").slice(1);
     const primero = [...knowledgePackEjemplo.pasos]
       .sort((a, b) => a.orden - b.orden)
       .find((p) => p.piezas.includes(pieza))!;
-    expect(pasos[0].tipo === "paso" && pasos[0].coreografia.dice).toBe(primero.texto);
+    const [uno] = eventos;
+    expect(uno.tipo === "paso" && uno.coreografia.dice).toMatch(/^Ya tenés el repuesto \(.+\): sigamos desde el cambio\. /);
+    expect(uno.tipo === "paso" && uno.coreografia.dice.endsWith(primero.texto)).toBe(true);
+    // La bienvenida no es un paso aparte: el primero conserva la cita de la guía (no sale «Guía pública»).
+    expect(primero.cita).toBeDefined();
+    expect(uno.tipo === "paso" && uno.coreografia.cita).toEqual(primero.cita);
+    expect(uno.tipo === "paso" && uno.coreografia.paso).toBe(1);
     expect(eventos.at(-1)?.tipo).toBe("fin");
+  });
+
+  it("si el primer paso es de riesgo alto, bloquea sin bienvenida; sin pasos, queda solo la bienvenida", () => {
+    const alto = {
+      ...knowledgePackEjemplo,
+      pasos: [{ id: "a", orden: 1, texto: "Abrí la batería.", piezas: [pieza], riesgo: "alto" as const }],
+    };
+    const [bloqueo] = pasosAlRetomar(alto, planoEjemplo, pieza);
+    expect(bloqueo.tipo).toBe("bloqueo");
+    expect(bloqueo.tipo === "bloqueo" && bloqueo.coreografia.dice).toBe("Abrí la batería.");
+    const vacio = pasosAlRetomar({ ...knowledgePackEjemplo, pasos: [] }, planoEjemplo, pieza);
+    expect(vacio.map((e) => e.tipo)).toEqual(["paso", "fin"]);
   });
 
   it("solo resalta piezas que existen en el plano", () => {
@@ -37,7 +53,7 @@ describe("retomar un caso que esperaba el repuesto (sin IA)", () => {
       ],
     };
     const tipos = pasosAlRetomar(pack, planoEjemplo, pieza).map((e) => e.tipo);
-    expect(tipos).toEqual(["paso", "paso", "bloqueo", "fin"]);
+    expect(tipos).toEqual(["paso", "bloqueo", "fin"]);
   });
 
   it("la fuente responde la pregunta de retomar sin llamar a la base; lo demás va a la base", async () => {
