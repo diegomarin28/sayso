@@ -5,7 +5,7 @@ import type { Caso, Evento, Ficha, Foto, PedidoDeFoto } from "@/shared";
 import type { Plano, Preparado } from "../_datos/api";
 import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
-import { guardarLocal, idDispositivo, type CasoGuardado, type Cierre } from "../_datos/mis-casos";
+import { guardarLocal, type CasoGuardado, type Cierre } from "../_datos/mis-casos";
 
 /**
  * Estado del recorrido en memoria del navegador. Cada cambio también se guarda en
@@ -146,7 +146,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           if (c) {
             const t = tipo !== undefined ? tipo : c.id === caso?.id ? tipoEquipo : null;
             guardarLocal({ caso: c, tipoEquipo: t });
-            guardar({ caso: c, dispositivo: idDispositivo(), tipoEquipo: t });
+            guardar({ caso: c, tipoEquipo: t });
           }
         },
         agregarFoto: (f, imagen) => {
@@ -174,7 +174,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           };
           setCaso(cerrado);
           guardarLocal({ caso: cerrado, cierre: c });
-          guardar({ caso: cerrado, cierre: c, dispositivo: idDispositivo() });
+          guardar({ caso: cerrado, cierre: c });
         },
         ultimaCompra,
         setUltimaCompra,

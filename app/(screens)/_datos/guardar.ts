@@ -1,17 +1,16 @@
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
 import type { ImagenB64 } from "./imagen";
-import type { Cierre } from "./mis-casos";
+import { idDispositivo, type Cierre } from "./mis-casos";
 
 /**
  * Guarda el avance del caso en Supabase vía `/api/casos`, en segundo plano y en orden
  * (el caso tiene que existir antes que sus fotos y eventos). Si falla, solo se registra:
- * guardar nunca frena el recorrido.
+ * guardar nunca frena el recorrido. Cada pedido lleva el id anónimo del dispositivo: el servidor
+ * solo deja escribir los casos de ese dispositivo (#331).
  */
 
 type Cambio = {
   caso?: Caso;
-  /** Id anónimo del dispositivo ("Mis casos"), sin login. */
-  dispositivo?: string;
   tipoEquipo?: string | null;
   cierre?: Cierre;
   fotos?: { foto: Foto; imagen?: ImagenB64 }[];
@@ -31,7 +30,7 @@ export function guardar(cambio: Cambio): void {
       const res = await fetch("/api/casos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cambio),
+        body: JSON.stringify({ ...cambio, dispositivo: idDispositivo() }),
       });
       if (!res.ok) console.warn("[guardar]", res.status, await res.text().catch(() => ""));
     })
