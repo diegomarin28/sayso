@@ -1,0 +1,117 @@
+{
+  "tipo": "impresora",
+  "tipoEquipo": "impresora",
+  "equipo": "Epson EcoTank L3250",
+  "pack": {
+    "modelo": "Epson EcoTank L3250",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "cabezal_impresion",
+        "nombre": "cabezal impresion",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "carro_impresion",
+        "nombre": "carro impresion",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "rodillo_arrastre",
+        "nombre": "rodillo arrastre",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "rodillo_recogida",
+        "nombre": "rodillo recogida",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tanque_tinta",
+        "nombre": "tanque tinta",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa_control",
+        "nombre": "placa control",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "fuente",
+        "nombre": "fuente",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bandeja_papel",
+        "nombre": "bandeja papel",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": []
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 37.5,
+    "y": 17.9,
+    "z": 34.7,
+    "fuente": "https://cdn.panacompu.com/doc/pd/ficha-tecnica-epson-ecotank-l3250.pdf",
+    "nota": "Ficha técnica de Epson (copia en PDF de un comercio): «Dimensiones (ancho x profundidad x altura) … Cerrado: 37.5 cm x 34.7 cm x 17.9 cm» (abierto, con las bandejas desplegadas: 37.5 × 57.8 × 25.3 cm). Coinciden Alza, Grupo CVA e Intcomex. La página de Epson Argentina no muestra las medidas sin JavaScript."
+  },
+  "fotos": [
+    {
+      "archivo": "impresora-frente.jpg",
+      "url": "https://mediaserver.goepson.com/adaptivemedia/rendition?id=e5000728dfb2a9d61375803b4256efee5c4411d9&vid=e5000728dfb2a9d61375803b4256efee5c4411d9&prid=original&clid=SAPDAM&prclid=productpictures&assetDescr=L3250_headon-output-scan_690x460",
+      "pagina": "https://epson.com.ar/Impresoras/Impresoras-de-Tanque-de-Tinta/Impresora-Multifuncional-Epson-EcoTank-L3250/p/C11CJ67303",
+      "licencia": "© Seiko Epson Corporation (foto de producto), uso interno de evaluación, no se sube",
+      "descripcion": "de frente, tapa del escáner entreabierta y bandeja de salida con una hoja; tanques de tinta a la derecha",
+      "derecha": "+x",
+      "abajo": "-y",
+      "marco": "tapa_impresora",
+      "esquinas": {
+        "ai": [
+          88,
+          148
+        ],
+        "ad": [
+          602,
+          148
+        ],
+        "bd": [
+          602,
+          388
+        ],
+        "bi": [
+          88,
+          385
+        ]
+      },
+      "piezas": {
+        "tanque_tinta": [
+          543,
+          345
+        ],
+        "bandeja_papel": [
+          320,
+          383
+        ]
+      },
+      "nota": "Contorno = cara frontal del cuerpo, sin la tapa del escáner levantada (borde de arriba en el panel de control). bandeja_papel = la bandeja de SALIDA (abajo al frente, bajo la hoja); la de entrada es trasera, arriba, y no se ve. tanque_tinta = centro de las 4 ventanas de los tanques (el bloque de tanques va de x≈480 a 602). Foto de 690×460 con leve vista desde arriba."
+    }
+  ]
+}

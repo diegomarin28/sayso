@@ -1,0 +1,161 @@
+{
+  "tipo": "reloj",
+  "tipoEquipo": "reloj inteligente",
+  "equipo": "Samsung Galaxy Watch4 40 mm",
+  "pack": {
+    "modelo": "Samsung Galaxy Watch4 40 mm",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "pantalla_reloj",
+        "nombre": "pantalla reloj",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bateria",
+        "nombre": "bateria",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa",
+        "nombre": "placa",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "sensor_optico",
+        "nombre": "sensor optico",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bobina_carga",
+        "nombre": "bobina carga",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "motor_vibracion",
+        "nombre": "motor vibracion",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tapa_reloj",
+        "nombre": "tapa reloj",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "correa_reloj",
+        "nombre": "correa reloj",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": [],
+    "formaPantalla": "redonda",
+    "rasgos3D": {
+      "reloj": {
+        "corona": false,
+        "botonesLaterales": 2
+      }
+    }
+  },
+  "fuera": [
+    "correa"
+  ],
+  "medidas": {
+    "x": 4.04,
+    "y": 0.98,
+    "z": 3.93,
+    "fuente": "https://www.o2.co.uk/help/phones-sims-and-devices/samsung/galaxy-watch4-android-wear-os/specifications",
+    "nota": "Ficha: 40.4 x 39.3 x 9.8 mm (40 mm), sin correa. La ficha no dice qué número es ancho y cuál alto (otra página lo rotula L x W x D al revés); se tomó la convención de Samsung W x H x D. Las dos difieren 3 %. Se eligió el de 40 mm porque las fotos de iFixit son de ese tamaño (dice «40mm ALUMINIUM CASE», SM-R860)."
+  },
+  "fotos": [
+    {
+      "archivo": "reloj-atras.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/ds3Zrry4BmkM4wQH.huge",
+      "pagina": "https://www.ifixit.com/Guide/Samsung+Galaxy+Watch4+Battery+Replacement/146399",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit): uso interno de evaluación, no se sube",
+      "descripcion": "por atrás, tapa cerrada: tapa trasera con el sensor óptico en el centro (Watch4 40 mm, sin correa)",
+      "derecha": "-x",
+      "abajo": "+z",
+      "marco": "caja_reloj",
+      "esquinas": {
+        "ai": [
+          440,
+          255
+        ],
+        "ad": [
+          1157,
+          255
+        ],
+        "bd": [
+          1157,
+          960
+        ],
+        "bi": [
+          440,
+          960
+        ]
+      },
+      "piezas": {
+        "sensor_optico": [
+          800,
+          606
+        ],
+        "tapa_reloj": [
+          800,
+          608
+        ]
+      },
+      "nota": "Vista desde la tapa (la cámara mira hacia +y). Los botones quedan a la izquierda, así que las 12 están arriba. Esquinas = cuadrado que encierra el cuerpo redondo, sin las asas ni los botones."
+    },
+    {
+      "archivo": "reloj-abierto.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/ErvfegsRao3RUki4.huge",
+      "pagina": "https://www.ifixit.com/Guide/Samsung+Galaxy+Watch4+Battery+Replacement/146399",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit): uso interno de evaluación, no se sube",
+      "descripcion": "por atrás, sin la tapa trasera: placa a la vista (Watch4 40 mm)",
+      "derecha": "+x",
+      "abajo": "-z",
+      "marco": "caja_reloj",
+      "esquinas": {
+        "ai": [
+          363,
+          166
+        ],
+        "ad": [
+          1240,
+          166
+        ],
+        "bd": [
+          1240,
+          1027
+        ],
+        "bi": [
+          363,
+          1027
+        ]
+      },
+      "piezas": {
+        "placa": [
+          827,
+          595
+        ]
+      },
+      "nota": "Vista desde atrás pero girada 180° respecto de reloj-atras.jpg: los botones están a la derecha, así que las 12 quedan abajo. La batería y el motor están debajo de la placa y no se ven."
+    }
+  ]
+}

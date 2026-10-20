@@ -1,0 +1,101 @@
+{
+  "auriculares": {
+    "puntajes": {
+      "geometria": 91,
+      "posicion": 33,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 247448,
+    "triangulos": 12744
+  },
+  "celular": {
+    "puntajes": {
+      "geometria": 66,
+      "posicion": 80,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 460736,
+    "triangulos": 8963
+  },
+  "consola": {
+    "puntajes": {
+      "geometria": 80,
+      "posicion": 17,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 554720,
+    "triangulos": 3754
+  },
+  "heladera": {
+    "puntajes": {
+      "geometria": 94,
+      "posicion": 80,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 419440,
+    "triangulos": 13578
+  },
+  "impresora": {
+    "puntajes": {
+      "geometria": 85,
+      "posicion": 50,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 456144,
+    "triangulos": 6942
+  },
+  "microondas": {
+    "puntajes": {
+      "geometria": 92,
+      "posicion": 42,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 548676,
+    "triangulos": 8042
+  },
+  "notebook": {
+    "puntajes": {
+      "geometria": 83,
+      "posicion": 44,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 785868,
+    "triangulos": 19826
+  },
+  "reloj": {
+    "puntajes": {
+      "geometria": 79,
+      "posicion": 100,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 662020,
+    "triangulos": 6314
+  },
+  "televisor": {
+    "puntajes": {
+      "geometria": 81,
+      "posicion": 20,
+      "certeza": 100,
+      "evidencia": 0,
+      "rendimiento": 100
+    },
+    "bytes": 321628,
+    "triangulos": 15798
+  }
+}
