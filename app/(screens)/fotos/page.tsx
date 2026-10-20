@@ -41,7 +41,17 @@ const DE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
   otro: "que te pedí",
 };
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function CapturaGuiada() {
+  const { caso } = useFlujo();
+  return <CapturaGuiadaDelCaso key={caso?.id ?? "sin-caso"} />;
+}
+
+function CapturaGuiadaDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { agregarFoto, agregarEventos, captura, setCaptura, tipoEquipo } = useFlujo();

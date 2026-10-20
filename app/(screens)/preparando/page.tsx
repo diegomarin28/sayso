@@ -42,7 +42,17 @@ const VOLVER_DESDE_MS = 10_000;
 /** Antes del reintento automático se ve "Probar de nuevo" un momento: la persona entiende qué pasó. */
 const PAUSA_REINTENTO_MS = 1500;
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function Preparando() {
+  const { caso } = useFlujo();
+  return <PreparandoDelCaso key={caso?.id ?? "sin-caso"} />;
+}
+
+function PreparandoDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos, tipoEquipo } = useFlujo();

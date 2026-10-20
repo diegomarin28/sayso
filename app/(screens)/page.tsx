@@ -49,7 +49,18 @@ const NOMBRE_CLASE: Record<Exclude<Caso["clase"], "otro">, string> = {
 const NO_TE_ENTENDI =
   "No te entendí bien. ¿Me contás de nuevo qué equipo es y qué le pasa? Por ejemplo: “mi celular no carga”.";
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function QueSeRompio() {
+  const { caso, cierre } = useFlujo();
+  // Un caso cerrado no se retoma desde acá (ver abajo): arranca limpia, como sin caso.
+  return <QueSeRompioDelCaso key={(!cierre && caso?.id) || "sin-caso"} />;
+}
+
+function QueSeRompioDelCaso() {
   const router = useRouter();
   const { caso: casoEnCurso, cierre, setCaso, agregarEventos, tipoEquipo } = useFlujo();
   // Un caso ya cerrado no se retoma desde acá: la pantalla 1 arranca limpia (está en "Mis casos").
