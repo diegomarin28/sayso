@@ -2,7 +2,7 @@
 
 Dueño: Iaio
 
-Cliente, esquema y migraciones de Supabase.
+Cliente, esquema y migraciones de Supabase. Diseño del login, las sesiones y los casos por persona: `docs/login.md`.
 
 - `migraciones/`: una sola carpeta para todos los carriles, numeradas en orden. Se aplican a mano en Supabase (**SQL Editor → New query → pegar → Run**), en orden, y se guarda la query con el nombre del archivo.
 
