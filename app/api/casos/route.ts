@@ -11,6 +11,7 @@ import {
   guardarFoto,
   subirFotoUsuario,
 } from "../../../lib/supabase/repo";
+import { respuestaDueno, revisarDueno } from "../../../lib/supabase/dueno";
 import { respuestaLimite, revisarFotosPorCaso, revisarPorIp, TOPES } from "../../../lib/supabase/limite";
 
 /**
@@ -18,7 +19,8 @@ import { respuestaLimite, revisarFotosPorCaso, revisarPorIp, TOPES } from "../..
  * Guarda el avance del caso en Supabase (dueño: Iaio). Las fotos van al bucket privado y `url`
  * es su referencia (`fotos-usuarios/…`), no una URL pública. Si Supabase no está configurado
  * responde `guardado: false` y la app sigue igual. Pasado un tope de uso (lib/supabase/limite.ts)
- * responde 429 sin guardar nada.
+ * responde 429 sin guardar nada. Cada pedido trae `dispositivo`, el dueño de sus casos
+ * (lib/supabase/dueno.ts): si algún caso es de otro dispositivo responde 403 sin guardar nada.
  */
 
 const Entrada = ExtraCaso.extend({
@@ -51,6 +53,12 @@ export async function POST(req: Request) {
       (await revisarPorIp(req, fotos.filter((f) => f.imagen).length)) ??
       (fotos.length > 0 ? await revisarFotosPorCaso(db, fotos.map((f) => f.foto)) : null);
     if (excedido) return respuestaLimite(excedido);
+    // El dueño después de los topes: sus consultas también quedan bajo el tope por IP.
+    const ajeno = await revisarDueno(db, dispositivo, { caso, fotos: fotos.map((f) => f.foto), ficha, eventos });
+    if (ajeno) {
+      console.warn("[casos] rechazado por dueño:", ajeno);
+      return respuestaDueno();
+    }
     // El caso primero: fotos, ficha y eventos lo referencian.
     if (caso) await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre });
     const urls: { id: string; url: string }[] = [];

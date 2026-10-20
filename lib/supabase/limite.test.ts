@@ -30,6 +30,8 @@ function falso(opciones: { fotosGuardadas?: { id: string; caso_id: string }[]; e
               error: null,
             }),
           }),
+          // El dueño (dueno.ts): ningún caso, foto ni evento guardado todavía.
+          in: async () => ({ data: [], error: null }),
         }),
         upsert: async () => {
           upserts.push(tabla);
@@ -49,6 +51,7 @@ function falso(opciones: { fotosGuardadas?: { id: string; caso_id: string }[]; e
 
 const ENV = { LIMITE_CLAVE_HASH: "clave-de-prueba" };
 const AHORA = new Date("2026-10-20T12:00:30Z");
+const DISPOSITIVO = "11111111-1111-4111-8111-111111111111";
 const pedido = (ip = "200.1.2.3") => new Request("http://x/api/casos", { headers: { "x-real-ip": ip } });
 const foto = (id: string): Foto => ({ ...fotosEjemplo[0], id, casoId: casoEjemplo.id });
 
@@ -160,7 +163,7 @@ describe("POST /api/casos", () => {
     POST(new Request("http://x/api/casos", {
       method: "POST",
       headers: { "x-real-ip": "200.1.2.3" },
-      body: JSON.stringify(cuerpo),
+      body: JSON.stringify({ dispositivo: DISPOSITIVO, ...(cuerpo as object) }),
     }));
 
   it("pasado el tope de pedidos responde 429 con Retry-After y no guarda nada", async () => {
