@@ -215,7 +215,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       else r.descartadas.push(l.texto);
     } else if (tipo === "RASGO" && campos.length === 4) {
       const [, equipo, campo, texto] = campos;
-      const valor = /^(si|sí|true)$/.test(texto.toLowerCase()) ? true : /^(no|false)$/.test(texto.toLowerCase()) ? false : /^[123]$/.test(texto) ? Number(texto) : texto;
+      const valor = /^(si|sí|true)$/.test(texto.toLowerCase()) ? true : /^(no|false)$/.test(texto.toLowerCase()) ? false : /^[0-3]$/.test(texto) ? Number(texto) : texto;
       const validado = Rasgos3D.safeParse({ [equipo]: { [campo]: valor } });
       const entrada = validado.success ? (validado.data as Record<string, Record<string, unknown>>)[equipo] : undefined;
       if (entrada && Object.hasOwn(entrada, campo)) {

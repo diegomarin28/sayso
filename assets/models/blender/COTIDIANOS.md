@@ -391,3 +391,15 @@ conexión al pack y caché integrada (#302). Renders frontales de 46 y 32 pulgad
 ## Celular: cámaras, muesca y perfil por dato explícito
 
 `celular_variantes.glb` aporta módulos de 1/2/3 cámaras, dos pantallas y dos marcos. `rasgos3D.celular.camarasTraseras`, `muesca` y `bordes` se validan y se aplican de manera independiente: sin uno de esos campos sigue la forma anterior de esa pieza. Los nombres aislados terminan en `_dato` y no se ofrecen como IDs al bibliotecario. Todas las combinaciones se prueban en dos tamaños y con datos de marca/modelo cambiados.
+
+## Reloj: corona y botones laterales por dato explícito
+
+`rasgos3D.reloj.corona` (sí/no) y `botonesLaterales` (0, 1 o 2, sin contar la corona) se aplican solo si el
+pack los trae; lo que no vino es como hoy (con corona, sin botones). `reloj_variantes.glb` publica
+`caja_reloj_dato@{cuadrada|redonda}_{c|s}{0|1|2}`, reutilizando las cajas actuales con pulsadores del lado de la
+corona (+X); la redonda sin corona no tiene el puerto. Con corona y sin botones no hay variante: sigue la caja de hoy.
+Sin corona se saca `corona_reloj`, salvo que el pack la nombre o que venga del manual o de una foto. La caja
+cambia de medidas en el plano para que el cuerpo quede del mismo tamaño y en el mismo lugar; un plano de la caché
+vuelve a la caja de hoy antes de seguir la plantilla (`sinCajaDeRasgos`). Los nombres terminan en `_dato` y no se
+ofrecen al bibliotecario. Renders en `renders/reloj_variantes/`; capturas del visor a 390 × 844, cerrado y
+despiezado, en `renders/reloj_variantes/capturas/` (#302).
