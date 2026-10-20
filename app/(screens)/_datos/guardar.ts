@@ -1,4 +1,5 @@
 import type { Caso, Evento, Ficha, Foto } from "@/shared";
+import type { GuiaDeCaso } from "@/lib/supabase/repo";
 import { asegurarSesion, olvidarSesion } from "./cuenta";
 import type { ImagenB64 } from "./imagen";
 import { dispositivoViejo, olvidarDispositivo, type Cierre } from "./mis-casos";
@@ -17,6 +18,8 @@ type Cambio = {
   cierre?: Cierre;
   fotos?: { foto: Foto; imagen?: ImagenB64 }[];
   ficha?: Ficha;
+  /** Una sola vez por caso: el servidor no pisa una guía ya guardada. */
+  guia?: GuiaDeCaso;
   eventos?: Evento[];
 };
 

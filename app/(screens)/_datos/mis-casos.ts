@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { Caso, Ficha, KnowledgePack, PlanoDePiezas } from "../../../shared";
+import { Caso, Ficha } from "../../../shared";
+import { Guia } from "../../../lib/supabase/guia";
 
 /**
  * "Mis casos": los casos de este celular, guardados en el propio celular (localStorage), sin datos
@@ -23,29 +24,6 @@ export const Cierre = z.object({
   ts: z.string(),
 });
 export type Cierre = z.infer<typeof Cierre>;
-
-const Guia = z.object({
-  preparado: z.object({
-    pack: KnowledgePack,
-    manualUrl: z.string().nullable(),
-    manualFileId: z.string().nullable(),
-    paginasVistaExplosionada: z.array(z.number()).default([]),
-    paginaVistaInterior: z.number().nullable().default(null),
-    /** Página del manual → URL del PNG (vista interior y páginas citadas; nunca fotos de la persona). */
-    imagenesPaginas: z.record(z.string(), z.string()).default({}),
-    fotosPasos: z.record(z.string(), z.string()).default({}),
-    vistaInterior: z
-      .object({ url: z.string(), pagina: z.number(), estado: z.enum(["VERIFICADO", "NO_VERIFICADO"]) })
-      .nullable()
-      .default(null),
-    desdeCache: z.boolean(),
-  }),
-  plano: z.object({
-    plano: PlanoDePiezas,
-    origen: z.enum(["ia", "plantilla"]),
-    avisos: z.array(z.string()).default([]),
-  }),
-});
 
 export const CasoGuardado = z.object({
   caso: Caso,

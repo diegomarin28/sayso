@@ -1,27 +1,52 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { casoEjemplo, fotosEjemplo } from "../../../shared";
-import { contadorEnMemoria, usarContador } from "../../../lib/supabase/limite";
+import { casoEjemplo, fichaEjemplo, fotosEjemplo, knowledgePackEjemplo, planoEjemplo } from "../../../shared";
+import { Guia } from "../../../lib/supabase/guia";
+import { contadorEnMemoria, TOPES, usarContador } from "../../../lib/supabase/limite";
 
 const MIO = "11111111-1111-4111-8111-111111111111";
 const OTRO = "22222222-2222-4222-8222-222222222222";
 
-/** Supabase de mentira para la ruta: tablas con upsert por id (o caso_id) y subidas por bucket. */
+/** Supabase de mentira para las rutas: tablas con upsert por id (o caso_id), consultas y subidas por bucket. */
 const tablas: Record<string, Record<string, unknown>[]> = {};
 const subidas: string[] = [];
 const bytesSubidos: Buffer[] = [];
 const clave = (f: Record<string, unknown>) => f.id ?? f.caso_id;
+type Fila = Record<string, unknown>;
+/** select encadenable (eq, in, is, order desc, limit) que se resuelve al esperarlo o con maybeSingle. */
+function consulta(tabla: string) {
+  const filtros: ((f: Fila) => boolean)[] = [];
+  let orden: string | undefined;
+  let tope = Infinity;
+  const filas = () => {
+    const r = (tablas[tabla] ?? []).filter((f) => filtros.every((p) => p(f)));
+    if (orden) r.sort((a, b) => String(b[orden!]).localeCompare(String(a[orden!])));
+    return r.slice(0, tope);
+  };
+  const q = {
+    eq: (col: string, val: unknown) => (filtros.push((f) => f[col] === val), q),
+    in: (col: string, vals: unknown[]) => (filtros.push((f) => vals.includes(f[col])), q),
+    is: (col: string, val: unknown) => (filtros.push((f) => (f[col] ?? null) === val), q),
+    order: (col: string) => ((orden = col), q),
+    limit: (n: number) => ((tope = n), q),
+    maybeSingle: async () => ({ data: filas()[0] ?? null, error: null }),
+    then: (ok: (r: { data: Fila[]; error: null }) => unknown, mal?: (e: unknown) => unknown) =>
+      Promise.resolve({ data: filas(), error: null }).then(ok, mal),
+  };
+  return q;
+}
 const db = {
   from: (tabla: string) => ({
-    upsert: async (f: Record<string, unknown> | Record<string, unknown>[]) => {
+    upsert: async (f: Fila | Fila[], opciones?: { ignoreDuplicates?: boolean }) => {
       const filas = (tablas[tabla] ??= []);
       for (const fila of Array.isArray(f) ? f : [f]) {
         const i = filas.findIndex((x) => clave(x) === clave(fila));
+        if (i >= 0 && opciones?.ignoreDuplicates) continue;
         if (i >= 0) filas[i] = { ...filas[i], ...fila };
         else filas.push(fila);
       }
       return { error: null };
     },
-    update: (cambio: Record<string, unknown>) => ({
+    update: (cambio: Fila) => ({
       eq: (col: string, val: unknown) => ({
         is: (col2: string, val2: unknown) => ({
           select: async () => {
@@ -32,15 +57,7 @@ const db = {
         }),
       }),
     }),
-    select: () => ({
-      in: async (col: string, ids: string[]) => ({
-        data: (tablas[tabla] ?? []).filter((f) => ids.includes(f[col] as string)),
-        error: null,
-      }),
-      eq: (col: string, val: string) => ({
-        limit: async () => ({ data: (tablas[tabla] ?? []).filter((f) => f[col] === val), error: null }),
-      }),
-    }),
+    select: () => consulta(tabla),
   }),
   storage: {
     from: (bucket: string) => ({
@@ -49,6 +66,10 @@ const db = {
         bytesSubidos.push(bytes);
         return { error: null };
       },
+      createSignedUrl: async (ruta: string, segundos: number) => ({
+        data: { signedUrl: `https://firmada.test/${bucket}/${ruta}?vence=${segundos}` },
+        error: null,
+      }),
       getPublicUrl: () => {
         throw new Error("las fotos de personas no tienen URL pública");
       },
@@ -60,7 +81,8 @@ vi.mock("../../../lib/supabase/cliente", () => ({ supabaseServidor: () => db }))
 let sesion: string | null = MIO;
 vi.mock("../../../lib/supabase/sesion", () => ({ uidDeSesion: async () => sesion }));
 
-const { POST } = await import("./route");
+const { GET: listar, POST } = await import("./route");
+const { GET: leer } = await import("./[id]/route");
 
 const enviar = (cuerpo: unknown) =>
   POST(new Request("http://x/api/casos", { method: "POST", body: JSON.stringify(cuerpo) }));
@@ -174,5 +196,114 @@ describe("POST /api/casos: reclamo del dispositivo (#345)", () => {
     casoDelDispositivo();
     expect((await enviar({ caso: casoEjemplo })).status).toBe(403);
     expect(tablas.casos[0].dueno).toBeNull();
+  });
+});
+
+const guia = {
+  casoId: casoEjemplo.id,
+  preparado: { pack: knowledgePackEjemplo, manualUrl: null, manualFileId: null, desdeCache: false },
+  plano: { plano: planoEjemplo, origen: "ia" as const },
+};
+
+describe("POST /api/casos: guía del caso (#347)", () => {
+  it("la guarda validada, y una vez escrita no la pisa otra", async () => {
+    expect((await enviar({ caso: casoEjemplo, guia })).status).toBe(200);
+    const otra = { ...guia, plano: { ...guia.plano, origen: "plantilla", avisos: ["otra"] } };
+    expect((await enviar({ guia: otra })).status).toBe(200);
+    expect(tablas.guias).toHaveLength(1);
+    const { preparado, plano } = Guia.parse(guia);
+    expect(tablas.guias[0]).toEqual({ caso_id: casoEjemplo.id, preparado, plano });
+  });
+
+  it("con las reglas de dueño: la guía de un caso ajeno o inexistente es 403 y no se guarda", async () => {
+    expect((await enviar({ guia })).status).toBe(403);
+    await enviar({ caso: casoEjemplo });
+    sesion = OTRO;
+    expect((await enviar({ guia })).status).toBe(403);
+    expect(tablas.guias).toBeUndefined();
+  });
+
+  it("sin sesión: 401", async () => {
+    sesion = null;
+    expect((await enviar({ caso: casoEjemplo, guia })).status).toBe(401);
+    expect(tablas).toEqual({});
+  });
+
+  it("una guía que no valida o que pasa el tope de tamaño: 400 sin guardar nada", async () => {
+    const grande = { ...guia, plano: { ...guia.plano, avisos: ["x".repeat(TOPES.bytesGuia)] } };
+    for (const mala of [{ ...guia, plano: null }, grande]) {
+      expect((await enviar({ caso: casoEjemplo, guia: mala })).status).toBe(400);
+    }
+    expect(tablas).toEqual({});
+  });
+});
+
+describe("GET /api/casos y /api/casos/[id] (#347)", () => {
+  const AJENO = "ajeno-1";
+  const pedir = (id: string) => leer(new Request(`http://x/api/casos/${id}`), { params: Promise.resolve({ id }) });
+
+  /** Dos casos míos (el más viejo con guía) y uno de otra sesión. */
+  async function preparar() {
+    await enviar({ caso: casoEjemplo, ficha: { ...fichaEjemplo, casoId: casoEjemplo.id }, guia });
+    await enviar({ caso: { ...casoEjemplo, id: "nuevo-1" } });
+    sesion = OTRO;
+    await enviar({ caso: { ...casoEjemplo, id: AJENO } });
+    sesion = MIO;
+    tablas.casos.find((c) => c.id === casoEjemplo.id)!.actualizado_en = "2026-10-01T10:00:00.000Z";
+    tablas.casos.find((c) => c.id === "nuevo-1")!.actualizado_en = "2026-10-02T10:00:00.000Z";
+  }
+
+  it("sin sesión: 401 en las dos", async () => {
+    await preparar();
+    sesion = null;
+    expect((await listar()).status).toBe(401);
+    expect((await pedir(casoEjemplo.id)).status).toBe(401);
+  });
+
+  it("la lista trae solo los casos de la sesión, el más reciente primero y sin la guía", async () => {
+    await preparar();
+    const res = await listar();
+    expect(res.headers.get("cache-control")).toContain("no-store");
+    const { casos } = await res.json();
+    expect(casos.map((c: { caso: { id: string } }) => c.caso.id)).toEqual(["nuevo-1", casoEjemplo.id]);
+    expect(casos[1]).toMatchObject({ tieneGuia: true, ficha: { marca: fichaEjemplo.marca } });
+    expect(casos[0].tieneGuia).toBe(false);
+    for (const c of casos) expect(c).not.toHaveProperty("guia");
+    expect(JSON.stringify(casos)).not.toContain(knowledgePackEjemplo.pasos[0].texto);
+  });
+
+  it("un caso ajeno y uno inexistente dan el mismo 404", async () => {
+    await preparar();
+    const [ajeno, inexistente] = [await pedir(AJENO), await pedir("no-existe")];
+    expect(ajeno.status).toBe(404);
+    expect(inexistente.status).toBe(404);
+    expect(await ajeno.json()).toEqual(await inexistente.json());
+  });
+
+  it("el caso trae su ficha, la guía tal como se guardó y fotos firmadas por 5 minutos, nunca una URL pública", async () => {
+    await preparar();
+    const sinImagen = { ...foto, id: "foto-sin-imagen", aceptada: false };
+    await enviar({ fotos: [{ foto, imagen }, { foto: sinImagen }] });
+    // Una foto vieja con URL pública (antes de la 010) no sale tal cual.
+    const vieja = { ...foto, id: "foto-vieja", url: "https://p.supabase.co/storage/v1/object/public/fotos/x.jpg" };
+    tablas.fotos.push({ id: vieja.id, caso_id: casoEjemplo.id, datos: vieja });
+
+    const res = await pedir(casoEjemplo.id);
+    expect(res.status).toBe(200);
+    const c = await res.json();
+    expect(c.caso).toEqual(casoEjemplo);
+    expect(c.ficha.casoId).toBe(casoEjemplo.id);
+    expect(c.guia).toEqual(Guia.parse(guia));
+    const url = (id: string) => c.fotos.find((f: { id: string }) => f.id === id).url;
+    expect(url(foto.id)).toBe(`https://firmada.test/fotos-usuarios/${casoEjemplo.id}/${foto.id}.jpeg?vence=300`);
+    expect(url(sinImagen.id)).toBeNull();
+    expect(url(vieja.id)).toBeNull();
+    expect(JSON.stringify(c)).not.toContain("/object/public/");
+  });
+
+  it("un caso sin guía devuelve guia: null (no se regenera nada)", async () => {
+    await preparar();
+    const c = await (await pedir("nuevo-1")).json();
+    expect(c).toMatchObject({ guia: null, fotos: [], ficha: null });
   });
 });
