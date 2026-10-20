@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { IndicePiezas, archivosPara } from "../../lib/planogenerator";
+import { IndicePiezas, archivosDeFormas, formasPara } from "../../lib/planogenerator";
+import { planoCelular } from "../../lib/planogenerator/plantillas/equipos";
 import { piezasProbables } from "../../lib/planogenerator/plantillas/por-tipo";
 import { cargarBiblioteca, precargarPiezas } from "./biblioteca";
 
@@ -50,12 +51,18 @@ describe("precargarPiezas: el visor encuentra las formas ya bajadas", () => {
 
   it("con el tipo de equipo baja las familias de su esqueleto, una vez; después el visor no baja nada", async () => {
     await precargarPiezas("Samsung Galaxy S23");
-    const esperadas = archivosPara(piezasProbables("celular"), indice);
+    const pedidas = piezasProbables("celular").map((pieza) => ({ pieza }));
+    const esperadas = archivosDeFormas(formasPara(pedidas, indice, "Samsung Galaxy S23"), indice);
     expect([...bajados].sort()).toEqual([...esperadas].sort());
+    // Solo las variantes de celular o sin equipo: ni la notebook ni el reloj (#313).
+    expect(bajados).not.toContain("notebook_demo.glb");
+    expect(bajados).not.toContain("relojes_demo.glb");
     const antes = bajados.length;
-    const biblioteca = await cargarBiblioteca(piezasProbables("celular"));
+    const biblioteca = await cargarBiblioteca(planoCelular.piezas, "Samsung Galaxy S23");
     expect(bajados.length).toBe(antes);
     expect(biblioteca?.size).toBeGreaterThan(0);
+    // La biblioteca trae solo las formas que el visor puede elegir para ese plano.
+    expect(new Set(biblioteca!.keys())).toEqual(formasPara(planoCelular.piezas, indice, "Samsung Galaxy S23"));
   });
 
   it("sin tipo ni pack no baja nada", async () => {

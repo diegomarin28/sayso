@@ -35,6 +35,13 @@ describe("siguienteBiblioteca: las piezas que llegan tarde reemplazan a las prim
     const tras = siguienteBiblioteca(undefined, "ssd", null);
     expect(siguienteBiblioteca(tras, "ssd", null)).toBe(tras);
   });
+  it("mismas piezas con otras formas posibles (otras medidas): reemplaza; con las mismas formas, no rearma", () => {
+    const una = new Map([["ssd", {}]]) as unknown as BibliotecaPiezas;
+    const otra = new Map([["ssd@m2", {}]]) as unknown as BibliotecaPiezas;
+    const tras = siguienteBiblioteca(undefined, "ssd", una);
+    expect(siguienteBiblioteca(tras, "ssd", new Map(una))).toBe(tras);
+    expect(siguienteBiblioteca(tras, "ssd", otra)?.biblioteca).toBe(otra);
+  });
 });
 
 describe("continuarAnimacion: cambiar primitivas por piezas reales a mitad de un paso", () => {
