@@ -37,6 +37,8 @@ export const TOPES = {
   /** Intentos de contraseña por IP y por cuenta: frena probar contraseñas (además del CAPTCHA). */
   entradasPorDia: 50,
   entradasPorEmailPorDia: 10,
+  /** Guía de un caso en JSON (pack, páginas y plano): una real ronda las decenas de KB. Pasado esto, 400. */
+  bytesGuia: 500_000,
 } as const;
 
 const MINUTO_MS = 60_000;

@@ -9,12 +9,14 @@ import { ErrorSupabase } from "./repo";
  * - Un caso que ya existe solo lo escribe su dueño; los que no tienen dueño (sin reclamar, o viejos
  *   de antes de la 007) no los escribe nadie.
  * - Una foto o un evento que ya existe no se reescribe desde otro caso.
+ * - La guía va al caso que dice, con la misma regla (y una vez escrita no cambia: repo.ts).
  * Al revés que los topes, si la consulta falla no deja seguir: lanza y la ruta responde 500.
  */
 
 export type MotivoDueno = "caso_ajeno" | "caso_inexistente" | "id_ajeno";
 
-export type Pedido = { caso?: Caso; fotos: Foto[]; ficha?: Ficha; eventos: Evento[] };
+/** `guia`: solo importa a qué caso va (la tabla `guias` es una fila por caso). */
+export type Pedido = { caso?: Caso; fotos: Foto[]; ficha?: Ficha; guia?: { casoId: string }; eventos: Evento[] };
 
 /** Filas `{ id, caso_id }` de esa tabla con esos ids. */
 async function casoDeCadaId(db: SupabaseClient, tabla: "fotos" | "eventos", ids: string[]) {
@@ -28,12 +30,13 @@ async function casoDeCadaId(db: SupabaseClient, tabla: "fotos" | "eventos", ids:
 export async function revisarDueno(
   db: SupabaseClient,
   uid: string,
-  { caso, fotos, ficha, eventos }: Pedido,
+  { caso, fotos, ficha, guia, eventos }: Pedido,
 ): Promise<MotivoDueno | null> {
   const casoIds = new Set([
     ...(caso ? [caso.id] : []),
     ...fotos.map((f) => f.casoId),
     ...(ficha ? [ficha.casoId] : []),
+    ...(guia ? [guia.casoId] : []),
     ...eventos.map((e) => e.casoId),
   ]);
   if (casoIds.size === 0) return null;
