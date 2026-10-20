@@ -44,11 +44,14 @@ export function Encabezado({
   orbe = "quieto",
   alVolver,
   volverApagado = false,
+  accion,
 }: {
   paso: number;
   orbe?: EstadoOrbe;
   alVolver?: () => void;
   volverApagado?: boolean;
+  /** Arriba a la derecha, al lado del progreso (en el inicio, "Iniciar sesión"). */
+  accion?: ReactNode;
 }) {
   return (
     <header className="flex flex-col gap-3">
@@ -74,6 +77,7 @@ export function Encabezado({
             <span className="hidden @[6rem]:inline"> · {PASOS[paso - 1]}</span>
           </p>
         </div>
+        {accion}
       </div>
       {alVolver && <BotonVolver onClick={alVolver} disabled={volverApagado} />}
     </header>
@@ -158,6 +162,25 @@ export function Flecha() {
       aria-hidden
     >
       <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function Persona({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }

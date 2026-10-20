@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** Cookies del pedido y respuesta de getClaims de cada prueba. */
 let galletas: { name: string; value: string }[] = [];
-let claims: { data: { claims: { sub?: string } } | null; error: { message: string } | null };
-const getClaims = vi.fn(async () => claims);
+let claims: {
+  data: { claims: { sub?: string; is_anonymous?: boolean; email?: string; user_metadata?: Record<string, unknown> } } | null; error: { message: string } | null };
+const getClaims = vi.fn<(jwt?: string) => Promise<typeof claims>>(async () => claims);
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => galletas, set: () => {} }) }));
 vi.mock("@supabase/ssr", () => ({ createServerClient: () => ({ auth: { getClaims } }) }));
 
-const { uidDeSesion } = await import("./sesion");
+const { sesionVerificada, supabaseAuth, uidDeSesion } = await import("./sesion");
 
 beforeEach(() => {
   galletas = [{ name: "sb-x-auth-token", value: "jwt" }];
@@ -37,5 +38,24 @@ describe("uidDeSesion (#345)", () => {
   it("sin las variables de Supabase no hay sesión", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
     expect(await uidDeSesion()).toBeNull();
+  });
+});
+
+describe("sesionVerificada (Login 2/3)", () => {
+  const cliente = () => supabaseAuth({ getAll: () => [], setAll: () => {} })!;
+
+  it("dice si es anónima y su email, del JWT verificado", async () => {
+    claims = { data: { claims: { sub: "uid-1", is_anonymous: true } }, error: null };
+    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-1", anonima: true, email: null, nombre: null });
+    claims = {
+      data: { claims: { sub: "uid-2", is_anonymous: false, email: "yo@x.com", user_metadata: { nombre: "Ana" } } },
+      error: null,
+    };
+    expect(await sesionVerificada(cliente())).toEqual({ uid: "uid-2", anonima: false, email: "yo@x.com", nombre: "Ana" });
+  });
+
+  it("verifica un JWT dado (el de la cookie de reclamo), no el de la sesión", async () => {
+    await sesionVerificada(cliente(), "jwt-viejo");
+    expect(getClaims).toHaveBeenCalledWith("jwt-viejo");
   });
 });

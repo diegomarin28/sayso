@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos } from "./_datos/mis-casos";
+import { BotonSesion, useCuenta } from "./_ui/boton-sesion";
 import { CargaEntender } from "./_ui/carga-entender";
 import { IconoDeEquipo, type IconoEquipo } from "./_ui/iconos-equipo";
 import { LEMA, Marca } from "./_ui/marca";
@@ -150,6 +151,9 @@ export default function QueSeRompio() {
   const sinElegir = !!entendido && otro === null && !opciones.some(elegida);
   const listo = !!entendido && (otro !== null ? !!otro.trim() : !sinElegir);
 
+  // Con la sesión iniciada saluda por el nombre que la persona puso al crear la cuenta.
+  const [cuenta, recargarCuenta] = useCuenta();
+  const saludo = cuenta?.sesion && !cuenta.anonima && cuenta.nombre ? `Hola, ${cuenta.nombre}.` : "Hola.";
   const nombreEquipo = entendido ? (entendido.clase !== "otro" ? NOMBRE_CLASE[entendido.clase] : tipo) : "";
   const dice = pensando
     ? "Dejame entender…"
@@ -165,7 +169,7 @@ export default function QueSeRompio() {
             ? "No me quedó claro qué equipo es. Elegilo acá abajo."
             : entendido
               ? `Entendí: es tu ${nombreEquipo} y “${sintomaParaCitar(entendido.sintoma)}”. ¿Es así?`
-              : "Hola. Contame qué se rompió.";
+              : `${saludo} Contame qué pasó.`;
 
   // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,
   // así el navegador deja reproducir audio).
@@ -177,7 +181,7 @@ export default function QueSeRompio() {
 
   return (
     <Pantalla>
-      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} />
+      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
 
       {/* La marca, solo al empezar (en el resto del recorrido queda el símbolo del encabezado). */}
       {!entendido && !pensando && !error && !noEntendi && (
@@ -207,7 +211,7 @@ export default function QueSeRompio() {
               }}
               readOnly={dictado.escuchando}
               rows={3}
-              aria-label="Lo que se rompió"
+              aria-label="Lo que pasó"
               placeholder={
                 dictado.escuchando
                   ? "Te escucho…"
@@ -259,7 +263,7 @@ export default function QueSeRompio() {
                       ? "Abriendo el micrófono…"
                       : hayAlgo
                         ? "Tocá para agregar algo más con tu voz"
-                        : "Tocá y contame qué se rompió")}
+                        : "Tocá y contame qué pasó")}
               </p>
             </div>
 

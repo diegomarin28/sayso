@@ -39,15 +39,29 @@
   - Mantener `dispositivo` + login opcional: el token al portador seguiría vivo.
   - Login obligatorio antes del primer caso: frena a quien tiene el equipo roto en ese momento.
 
-### 2. Inicio de sesión: email con código de 6 dígitos (OTP)
+### 2. Inicio de sesión: email y contraseña, con el email confirmado por código
 
-- `signInWithOtp({ email })` / `verifyOtp({ email, token, type })`; para convertir la sesión anónima,
-  `updateUser({ email })` y verificar el código (`type: "email_change"`). Todo desde rutas de API (§1).
-- **No** enlace mágico: en una PWA en el celular el enlace suele abrirse en otro navegador y la sesión
-  queda allá. Google se puede sumar después (`linkIdentity`), sin cambiar este diseño.
+> Cambio de Iaio, 20/10 (#353): antes era solo código por email (OTP), sin contraseña.
+
+- **Crear cuenta:** nombre, apellido, email, contraseña (repetida) y aceptar los Términos y la Política de privacidad (`/terminos`, `/privacidad`; se guarda la versión aceptada y la fecha en `user_metadata.legales`, `VERSION_LEGALES` en `credenciales.ts`). Los dos textos son **borradores** para que los revisen las personas antes de publicar. La sesión anónima pide `updateUser({ email })`, que manda un
+  código de 6 dígitos; con el código (`verifyOtp`, `type: "email_change"`) se confirma que el email es de
+  la persona y recién ahí se guarda la contraseña (`updateUser({ password })`): Supabase no deja ponerle
+  contraseña a una sesión anónima sin el email verificado. El uid no cambia. Mientras tanto la contraseña
+  vive solo en la memoria de la pantalla. Si el email ya tiene cuenta, se pide iniciar sesión.
+- **Iniciar sesión:** `signInWithPassword`, con CAPTCHA y topes por IP y por email.
+- **Olvidé mi contraseña:** `resetPasswordForEmail` (con CAPTCHA) manda un código; con el código
+  (`type: "recovery"`) se elige la contraseña nueva. Responde igual tenga o no cuenta el email.
+- Contraseña: 8 o más caracteres, con letras y números (`lib/supabase/credenciales.ts`), y la misma regla
+  en Supabase (Password requirements). El control de contraseñas filtradas de Supabase es del plan pago.
+- Todo desde rutas de API (§1). Sin enlace mágico: en una PWA el enlace suele abrirse en otro navegador.
+  Google se puede sumar después (`linkIdentity`).
+- Con cuenta: el inicio saluda por el nombre, y Cuenta tiene secciones de cuenta (salir), seguridad
+  (cambiar la contraseña con un código por email), tus datos (descargar) y borrar la cuenta.
+- La app se sigue usando sin cuenta (sesión anónima). En la compu el inicio muestra "Iniciar sesión" y
+  "Registrarte"; en el celular, solo "Iniciar sesión", y desde ahí se llega a registrarse.
 - El correo que trae Supabase alcanza para probar (pocos mails por hora). **Para producción hace falta un
   SMTP propio** (cuenta nueva, con plan gratis; decide Iaio). Sin eso no se publica el login.
-- Plantilla del mail: solo el código y "si no lo pediste, ignoralo". Nada del caso.
+- Plantillas (Change Email Address y Reset Password): solo el código y "si no lo pediste, ignoralo".
 
 ### 3. Sesión en el servidor
 
@@ -73,11 +87,11 @@
   `sayso:dispositivo` cuando el servidor confirma (`dispositivoReclamado: true`), y ya no crea
   dispositivos nuevos. Riesgo aceptado: quien tenga el UUID antes del reclamo
   puede reclamar esos casos, el mismo poder que tiene hoy.
-- **Email que ya tiene cuenta** (por ejemplo, en un celular nuevo): `updateUser` falla, la persona inicia
-  sesión con OTP y queda con otro uid. Como el navegador no ve el token (§1), es la ruta la que, antes de
-  cambiar de sesión, guarda el token de la sesión anónima en otra cookie httpOnly de vida corta y lo usa
-  en `POST /api/cuenta/reclamar`. El servidor verifica las dos sesiones, comprueba que la vieja sea
-  anónima (`is_anonymous`) y pasa sus casos al uid nuevo. Nunca se reclaman casos de una cuenta con email.
+- **Entrar a una cuenta que ya existía** (por ejemplo, en un celular nuevo): la persona queda con otro uid.
+  La ruta (`/entrar`, o `/verificar` al recuperar la contraseña) verifica la sesión anónima de antes en el
+  mismo pedido, antes de cambiar de sesión, y después del inicio de sesión pasa sus casos al uid nuevo y
+  borra ese usuario anónimo, ya vacío (decisión de Iaio, 20/10). Confirma con Auth que siga siendo
+  anónima: nunca se reclaman casos de una cuenta con email. No guarda ningún token aparte.
 - **Casos viejos sin `dispositivo`** (antes de la 007): quedan huérfanos y de solo lectura, y los borra
   la retención de abajo.
 
@@ -86,13 +100,14 @@
 | Dato | Dónde | Por qué | Cómo se protege |
 |---|---|---|---|
 | Email | `auth.users` | iniciar sesión y recuperar casos | solo quien guarda sus casos; no se muestra a nadie ni va en los casos |
+| Nombre y apellido | `auth.users` (`user_metadata`) | el saludo ("Hola, Ana") | se piden solo al crear la cuenta (decisión de Iaio, 20/10, #353); solo los ve la persona; se borran con la cuenta y van en la copia descargable |
 | Síntoma (texto libre) | `casos` | el caso | puede traer datos personales: solo el dueño lo ve, por la API |
 | Fotos | bucket privado `fotos-usuarios` | identificar y guiar | URL firmada de 5 min (#330). **EXIF:** el navegador ya lo saca al reescalar con canvas (`_datos/imagen.ts`), pero el servidor acepta cualquier base64; hay que sacarlo también en el servidor antes de subir (GPS) |
 | Ficha (marca, modelo, **serie**) | `fichas` | el caso | la serie identifica el equipo: solo el dueño |
 | Eventos | `eventos` | historial del caso | solo el dueño |
 | IP | `limite_uso`, como HMAC | topes | nunca en claro; se borra a los 2 días (011) |
 
-- **No se guardan** nombre, teléfono, dirección ni ubicación.
+- **No se guardan** teléfono, dirección ni ubicación. Nombre y apellido, solo en la cuenta (fila de arriba), nunca en los casos.
 - **Borrar cuenta** (`DELETE /api/cuenta`): borra sus casos (en cascada: fotos, ficha, eventos, guías),
   **los archivos de `fotos-usuarios/<casoId>/`**, que la cascada de Postgres no toca, y el usuario de Auth.
 - **Exportar mis casos** (`GET /api/cuenta/exportar`): JSON con los casos, fichas y eventos, y las fotos
@@ -130,7 +145,7 @@
 - Descartado: guardar solo referencias a los cachés. Si el caché se regenera, el caso viejo cambia sin aviso.
 - **Hecho (servidor, `c/guias-servidor`, parte de #347):** esquema en `lib/supabase/guia.ts`, `POST /api/casos`
   con `guia` (tope de 500 KB, `TOPES.bytesGuia`), `GET /api/casos` y `GET /api/casos/[id]`. La lista trae
-  `tieneGuia` en vez de la guía. Falta que Mis casos lea del servidor (después del Login 2/3).
+  `tieneGuia` en vez de la guía. Falta que Mis casos lea del servidor (próximo PR).
 
 ## Implementación (3 PR, en orden)
 
@@ -142,7 +157,7 @@
    - Tests sin red (Supabase simulado, como `dueno.test.ts`).
 2. **`c/login-pantallas`:**
    - Sesión anónima con Turnstile.
-   - "Guardar mis casos" con OTP y el reclamo desde otra cuenta (`/api/cuenta/reclamar`).
+   - Crear cuenta e iniciar sesión con email y contraseña (código para confirmar el email) y el reclamo desde otra cuenta.
    - Pantalla de cuenta (salir, borrar, exportar).
    - Entre el 1/3 y el 2/3, `POST /api/casos` responde 401 (todavía no hay sesión) y los casos quedan
      solo en el celular: **no se publica** hasta que esté el 2/3 (decisión de Iaio, 20/10).
