@@ -1,0 +1,176 @@
+{
+  "tipo": "microondas",
+  "tipoEquipo": "microondas",
+  "equipo": "Samsung MS23K3513AK",
+  "pack": {
+    "modelo": "Samsung MS23K3513AK",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "puerta",
+        "nombre": "puerta",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "panel_control",
+        "nombre": "panel control",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "magnetron",
+        "nombre": "magnetron",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "transformador",
+        "nombre": "transformador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "capacitor",
+        "nombre": "capacitor",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ventilador_magnetron",
+        "nombre": "ventilador magnetron",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "plato_giratorio",
+        "nombre": "plato giratorio",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "motor_plato",
+        "nombre": "motor plato",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa_control",
+        "nombre": "placa control",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "fusible",
+        "nombre": "fusible",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": []
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 48.9,
+    "y": 27.5,
+    "z": 37.4,
+    "fuente": "https://www.samsung.com/uk/cooking-appliances/microwave-solo-ms23k3513ak/",
+    "nota": "Ficha de Samsung UK (MS23K3513AK/EU): medidas exteriores 489 × 275 × 374 mm (ancho × alto × profundidad)."
+  },
+  "fotos": [
+    {
+      "archivo": "microondas-frente.png",
+      "url": "https://images.samsung.com/is/image/samsung/uk-microwave-solo-ms23k3513ak-ms23k3513ak-eu-frontblack-71689181?$ORIGIN_PNG$",
+      "pagina": "https://www.samsung.com/uk/cooking-appliances/microwave-solo-ms23k3513ak/",
+      "licencia": "© Samsung Electronics, uso interno de evaluación, no se sube",
+      "descripcion": "frente, puerta cerrada, panel a la derecha (foto de producto, cámara un poco por encima)",
+      "derecha": "-x",
+      "abajo": "-y",
+      "marco": "carcasa_microondas",
+      "esquinas": {
+        "ai": [
+          97,
+          238
+        ],
+        "ad": [
+          1823,
+          238
+        ],
+        "bd": [
+          1823,
+          1142
+        ],
+        "bi": [
+          97,
+          1142
+        ]
+      },
+      "piezas": {
+        "puerta": [
+          773,
+          690
+        ],
+        "panel_control": [
+          1636,
+          690
+        ]
+      },
+      "nota": "Contorno = cara frontal (se ve un poco del techo; no entra). En el plano la puerta y el panel están en -z: el frente real es la cara -z (derecha = -x)."
+    },
+    {
+      "archivo": "microondas-lado.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/7e/SilverCrest_SMW_800_D4_-_case_opened-2375.jpg",
+      "pagina": "https://commons.wikimedia.org/wiki/File:SilverCrest_SMW_800_D4_-_case_opened-2375.jpg",
+      "licencia": "CC BY-SA 4.0, Raimond Spekking (Wikimedia Commons)",
+      "descripcion": "lado derecho (el del panel) sin la carcasa: frente a la izquierda, atrás a la derecha; magnetrón, transformador, capacitor y ventilador",
+      "derecha": "+z",
+      "abajo": "-y",
+      "marco": "carcasa_microondas",
+      "esquinas": {
+        "ai": [
+          630,
+          595
+        ],
+        "ad": [
+          4340,
+          620
+        ],
+        "bd": [
+          4340,
+          3570
+        ],
+        "bi": [
+          650,
+          3550
+        ]
+      },
+      "piezas": {
+        "magnetron": [
+          2829,
+          1509
+        ],
+        "transformador": [
+          2703,
+          2829
+        ],
+        "capacitor": [
+          3717,
+          2933
+        ],
+        "ventilador_magnetron": [
+          3855,
+          1760
+        ]
+      },
+      "nota": "OTRO MODELO (SilverCrest SMW 800 D4, panel a la derecha): no se encontró una foto del interior del Samsung. Contorno = chasis con el frente, sin la tapa en U. Algo de perspectiva desde arriba (se ve el techo). ventilador_magnetron = conducto blanco del ventilador con su motor, detrás del magnetrón. derecha = +z porque el frente del plano es -z."
+    }
+  ]
+}
