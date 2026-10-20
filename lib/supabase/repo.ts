@@ -9,7 +9,10 @@ import { Caso, Evento, Ficha, Foto } from "../../shared";
 
 export class ErrorSupabase extends Error {}
 
+/** Público: solo páginas del manual (lib/knowledge/imagen.ts, en `manuales/`). */
 const BUCKET_FOTOS = "fotos";
+/** Privado (migración 010): fotos de las personas. Solo el servidor lo lee. */
+export const BUCKET_FOTOS_USUARIOS = "fotos-usuarios";
 
 function revisar(error: { message: string } | null, que: string) {
   if (error) throw new ErrorSupabase(`${que}: ${error.message}`);
@@ -72,7 +75,7 @@ export async function guardarCaso(
   revisar(error, "guardar caso");
 }
 
-/** Sube la imagen al bucket `fotos` y devuelve su URL pública. */
+/** Sube la imagen al bucket público `fotos` y devuelve su URL. Solo para páginas del manual, nunca fotos de personas. */
 export async function subirImagen(
   db: SupabaseClient | null,
   casoId: string,
@@ -88,6 +91,52 @@ export async function subirImagen(
     .upload(ruta, Buffer.from(base64, "base64"), { contentType: mediaType, upsert: true });
   revisar(error, "subir foto");
   return db.storage.from(BUCKET_FOTOS).getPublicUrl(ruta).data.publicUrl;
+}
+
+/** Supabase responde así cuando el bucket no existe (falta correr una migración). */
+function esBucketFaltante(error: { message: string; statusCode?: string | number }) {
+  return String(error.statusCode) === "404" || /bucket not found/i.test(error.message);
+}
+
+/**
+ * Sube la foto de una persona al bucket privado `fotos-usuarios` y devuelve su referencia
+ * (`fotos-usuarios/<casoId>/<fotoId>.<ext>`), nunca una URL pública: para verla, `urlFirmadaFoto`.
+ * Sin la migración 010 todavía, no sube nada y devuelve null (Supabase no frena la app).
+ */
+export async function subirFotoUsuario(
+  db: SupabaseClient | null,
+  casoId: string,
+  fotoId: string,
+  base64: string,
+  mediaType: string,
+): Promise<string | null> {
+  if (!db) return null;
+  const extension = mediaType.split("/")[1] ?? "jpg";
+  const ruta = `${casoId}/${fotoId}.${extension}`;
+  const { error } = await db.storage
+    .from(BUCKET_FOTOS_USUARIOS)
+    .upload(ruta, Buffer.from(base64, "base64"), { contentType: mediaType, upsert: true });
+  if (error && esBucketFaltante(error)) {
+    console.warn("[supabase] falta la migración 010_fotos_privadas: guardo la foto sin imagen");
+    return null;
+  }
+  revisar(error, "subir foto");
+  return `${BUCKET_FOTOS_USUARIOS}/${ruta}`;
+}
+
+/** URL firmada de vencimiento corto para una referencia de `subirFotoUsuario` (null si no es una). */
+export async function urlFirmadaFoto(
+  db: SupabaseClient | null,
+  referencia: string,
+  segundos = 300,
+): Promise<string | null> {
+  const prefijo = `${BUCKET_FOTOS_USUARIOS}/`;
+  if (!db || !referencia.startsWith(prefijo)) return null;
+  const { data, error } = await db.storage
+    .from(BUCKET_FOTOS_USUARIOS)
+    .createSignedUrl(referencia.slice(prefijo.length), segundos);
+  revisar(error, "firmar foto");
+  return data?.signedUrl ?? null;
 }
 
 export async function guardarFoto(db: SupabaseClient | null, foto: Foto): Promise<void> {
