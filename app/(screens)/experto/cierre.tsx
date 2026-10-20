@@ -160,7 +160,7 @@ export function pasosAlRetomar(pack: KnowledgePack, plano: PlanoDePiezas, pieza:
       tipo: "paso",
       coreografia: Coreografia.parse({
         paso: 1,
-        dice: `Bienvenido de vuelta. Ya tenés ${nombre.toLowerCase()}: sigamos desde el cambio.`,
+        dice: `Ya tenés el repuesto (${nombre.toLowerCase()}): sigamos desde el cambio.`,
         acciones: acciones([pieza]),
         riesgo: "bajo",
       }),

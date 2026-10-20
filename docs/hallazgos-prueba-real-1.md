@@ -98,6 +98,25 @@ Medido a 390×844 con el fixture y "Mis casos" de `/lab/demo` (iPhone 13), con c
 
 - [x] B9. La etiqueta de la pieza ("Conector Lightning de carga") saltaba de derecha a izquierda al girar. Ahora el lado cambia solo con un cambio claro (40 px), nunca dos veces en menos de 1 s, y el movimiento va suavizado. Medido arrastrando 3 s: 25 cambios de lado antes, 0 después. — PR #192
 - [x] B10. El 3D se veía chico. Tarjeta del paso compacta (3 líneas con "ver más", controles en una fila, puntitos chicos); vista y origen en un ícono en la esquina del 3D; "Conversación (n)" y "¿De dónde sale esto?" como íconos junto al campo de pregunta; las sugerencias, solo sin un paso a la vista; las etiquetas no tapan los íconos. **3D a la vista: 54 % del alto (456 de 844 px) con el paso visible**, antes ~30 %. — PR #202
-  - [ ] "Ver dónde comprar repuestos (n)" como ícono en el encabezado (carril C, suma ~50 px más al 3D). — issue #199
+  - [x] "Ver dónde comprar repuestos (n)" como ícono en el encabezado (carril C, suma ~50 px más al 3D). — issue #199, PR #212
 - [x] B11. La pieza nombrada era un puntito al borde: la cámara se acerca con su entorno (mínimo 12 cm en equipos grandes, 0,45 del equipo en uno chico). El conector de un celular mide ≥ 15 % del ancho. — PR #192
 - [x] B12. Sello de la tarjeta: "Guía pública" (gris) sin cita, "Manual ✓ p. N" con cita verificada y "Manual p. N · sin verificar" si no se pudo verificar (`selloCita`). La lista de pasos de Preparando, igual (carril C, #199). — PR #202
+
+## Recorrido móvil con login y Mis casos desde el servidor (20/10 — Iaio)
+
+Recorrido de punta a punta con `NEXT_PUBLIC_DATOS=fixture` (build de producción) en **iPhone 13 (WebKit, 390 × 844)** y **Pixel 7 (Chromium, 412 × 915)**, con Playwright y sin claves (no puede salir ninguna llamada paga). Se recorrió: problema → «¿Es así?» → fotos (con una rechazada) → ficha (con una corrección) → Preparando → experto (pregunta escrita) → «Terminar» con cada cierre → Mis casos → retomar (después de «Terminar» y desde el inicio) → un segundo caso desde cero → Cuenta, Cómo funciona y Privacidad. En las dos vueltas no hubo errores de consola, pedidos fallidos ni scroll horizontal.
+
+### Iaio (carril C)
+- [x] C13. **Mis casos no retomaba un caso cerrado** (resuelto, esperando repuesto o derivado): volvía al inicio. Al entrar a Mis casos después de «Terminar» se limpiaba el flujo cada vez que aparecía un `cierre`, y `retomar` trae el del caso, así que borraba lo que se acababa de retomar. Ahora se limpia una sola vez, al entrar. Esto rompía entero el «Pedí el repuesto → cuando llegue, retomás». — PR de este recorrido
+- [x] C14. **El experto volvía con el estado viejo.** Con `cacheComponents`, Next 16 no desmonta las pantallas: las esconde con `<Activity>` y guarda hasta 3 rutas con su estado. Al retomar, el experto aparecía con el panel «¿Cómo quedó?» abierto y con la guía de la primera vez, no desde el cambio de la pieza. Ahora el experto arranca de nuevo con cada navegación (`key={bfcacheId}`); el «atrás» del navegador sí lo conserva. — PR de este recorrido
+- [x] C15. Al retomar decía «Bienvenido de vuelta. Ya tenés carcasa inferior»: sin artículo y en masculino. Ahora: «Ya tenés el repuesto (carcasa inferior): sigamos desde el cambio.» — PR de este recorrido
+- [ ] C16. Al retomar, el paso de bienvenida sale con el sello «Guía pública», aunque no es un paso de ninguna guía (no tiene cita). Opciones: sumar la frase al primer paso real (que conserva su cita) o que el visor no ponga sello a un paso sin texto de la guía (carril B).
+- [ ] C17. Las demás pantallas (fotos, ficha, Preparando, inicio) también quedan vivas con `<Activity>`. En este recorrido no se vio nada mal (un caso nuevo arranca limpio y la ficha no arrastra correcciones del anterior), pero el estado local de esas pantallas puede sobrevivir a idas y vueltas cortas. Revisarlo pantalla por pantalla.
+
+### No se pudo probar con el fixture
+- Login, sesión anónima con Turnstile, guardar y bajar casos del servidor: con el fixture no hay sesión ni Supabase. Hay que probarlo en el celular cuando la demo tenga publicado el login (#355).
+- Voz, micrófono y cámara reales.
+
+### Para B (solo aviso)
+- La consola avisa `THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.` al montar el 3D. No rompe nada.
+
