@@ -19,6 +19,7 @@ import {
   preguntaAlRetomar,
 } from "./cierre";
 import { Repuestos } from "./repuestos";
+import { AyudaExperto, useAyudaExperto } from "./ayuda";
 
 /**
  * Pantallas 5 y 6 — Experto en 3D y conversación. Todo lo hace <GuiaExperto> (carril B):
@@ -62,6 +63,7 @@ function ExpertoDelCaso() {
     setUltimaCompra,
   } = useFlujo();
   const [cerrando, setCerrando] = useState(false);
+  const [ayuda, cerrarAyuda] = useAyudaExperto();
   // Al retomar desde "Mis casos" un caso que esperaba el repuesto, el experto sigue desde el paso
   // de cambiar esa pieza con la guía guardada (sin IA). Si no, la pregunta inicial es el síntoma,
   // una sola vez por caso: al volver a esta pantalla no se repite (ni /api/chat ni la voz).
@@ -217,6 +219,7 @@ function ExpertoDelCaso() {
           {dictado.error}
         </p>
       )}
+      {ayuda && !cerrando && <AyudaExperto onCerrar={cerrarAyuda} />}
       {cerrando && (
         <PanelCierre
           pack={preparado.pack}

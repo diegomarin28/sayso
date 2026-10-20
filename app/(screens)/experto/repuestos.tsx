@@ -192,7 +192,7 @@ export function Repuestos({
   );
 }
 
-function Carrito() {
+export function Carrito() {
   return (
     <svg
       width="20"
