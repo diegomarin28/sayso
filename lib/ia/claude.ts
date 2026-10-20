@@ -32,6 +32,8 @@ export const MODELO_DE = {
   chapa: MODELOS.corto as string,
   /** Reconocer el equipo por la foto del frente. */
   reconocer: MODELOS.corto as string,
+  /** ¿El modelo confirmado es una familia ("MacBook Air") o una sola versión? Y armar el nombre con la respuesta. */
+  precisar: MODELOS.corto as string,
   /** Guía pública con búsqueda web (cuando no hay manual). */
   guiaPublica: MODELOS.corto as string,
   /**

@@ -57,6 +57,8 @@
   Google se puede sumar después (`linkIdentity`).
 - Con cuenta: el inicio saluda por el nombre, y Cuenta tiene secciones de cuenta (salir), seguridad
   (cambiar la contraseña con un código por email), tus datos (descargar) y borrar la cuenta.
+- La sesión queda abierta en el celular hasta tocar «Salir en este celular» (la cookie de `@supabase/ssr` dura 400
+  días). Sin recuadro de «Mantener la sesión»: se avisa con un texto en el login y en Cuenta (decisión de Iaio, 20/10).
 - La app se sigue usando sin cuenta (sesión anónima). En la compu el inicio muestra "Iniciar sesión" y
   "Registrarte"; en el celular, solo "Iniciar sesión", y desde ahí se llega a registrarse.
 - El correo que trae Supabase alcanza para probar (pocos mails por hora). **Para producción hace falta un

@@ -87,6 +87,7 @@ export function AjustesCuenta({
         <p className="text-sm text-texto-suave">
           Email: <span className="break-all text-texto">{email}</span>
         </p>
+        <p className="text-sm text-texto-suave">La sesión queda abierta en este celular hasta que salgas.</p>
         <BotonSecundario disabled={ocupado} onClick={alSalir}>
           Salir en este celular
         </BotonSecundario>

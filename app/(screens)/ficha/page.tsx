@@ -46,7 +46,17 @@ const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
   },
 };
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function FichaDelEquipo() {
+  const { caso } = useFlujo();
+  return <FichaDelEquipoDelCaso key={caso?.id ?? "sin-caso"} />;
+}
+
+function FichaDelEquipoDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { fotos, imagenes, ficha, setFicha, agregarEventos, preparado, setPreparado, setPlano, tipoEquipo } =

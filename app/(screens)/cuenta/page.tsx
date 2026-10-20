@@ -438,7 +438,10 @@ export default function Cuenta() {
               </p>
             )}
           </div>
-          <p className="text-center text-xs text-texto-suave">Tu email es solo para entrar y recuperar tus casos.</p>
+          <p className="text-center text-xs text-texto-suave">
+            Tu email es solo para entrar y recuperar tus casos. La sesión queda abierta en este celular hasta que
+            toques «Salir en este celular» en Cuenta.
+          </p>
         </form>
       )}
 

@@ -33,10 +33,12 @@ export default function MisCasos() {
   const router = useRouter();
   const { retomar, cierre, reiniciar } = useFlujo();
   // Si se llega acá después de "Terminar", el caso cerrado ya está guardado: se limpia el flujo
-  // para que "Inicio" arranque un problema nuevo, sin arrastrar el anterior.
+  // para que "Inicio" arranque un problema nuevo, sin arrastrar el anterior. Solo al entrar: retomar un
+  // caso cerrado también trae su `cierre`, y limpiarlo ahí lo borraba y la app volvía al inicio.
   useEffect(() => {
     if (cierre) reiniciar();
-  }, [cierre, reiniciar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo con el cierre que había al entrar
+  }, []);
   // localStorage solo existe en el navegador: en el servidor la lista sale vacía y no hay desajuste.
   const firma = useSyncExternalStore(suscribirCasos, firmaCasos, () => "[]");
   const casos = useMemo(() => (firma === "[]" ? [] : listarCasos()), [firma]);

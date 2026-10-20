@@ -34,7 +34,18 @@ async function decir(texto: string, senal: AbortSignal) {
   await voz.termino;
 }
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El experto
+ * arranca de nuevo con cada navegación (`bfcacheId`): si no, al retomar un caso desde "Mis casos"
+ * volvía con el panel de cierre abierto y sin seguir desde el repuesto. Con "atrás" del navegador sí
+ * se conserva.
+ */
 export default function Experto() {
+  const { bfcacheId } = useRouter();
+  return <ExpertoDelCaso key={bfcacheId} />;
+}
+
+function ExpertoDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const {
