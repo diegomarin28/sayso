@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Caso, Evento, Ficha, Foto } from "../../../shared";
+import { LIMITES } from "../../../lib/ia/claude";
 import { supabaseServidor } from "../../../lib/supabase/cliente";
 import {
   ErrorSupabase,
@@ -10,12 +11,14 @@ import {
   guardarFoto,
   subirFotoUsuario,
 } from "../../../lib/supabase/repo";
+import { respuestaLimite, revisarFotosPorCaso, revisarPorIp, TOPES } from "../../../lib/supabase/limite";
 
 /**
  * POST { caso?, fotos?: [{ foto, imagen? }], ficha?, eventos? } → { guardado, fotos: [{ id, url }] }
  * Guarda el avance del caso en Supabase (dueño: Iaio). Las fotos van al bucket privado y `url`
  * es su referencia (`fotos-usuarios/…`), no una URL pública. Si Supabase no está configurado
- * responde `guardado: false` y la app sigue igual.
+ * responde `guardado: false` y la app sigue igual. Pasado un tope de uso (lib/supabase/limite.ts)
+ * responde 429 sin guardar nada.
  */
 
 const Entrada = ExtraCaso.extend({
@@ -24,10 +27,10 @@ const Entrada = ExtraCaso.extend({
     .array(
       z.object({
         foto: Foto,
-        imagen: z.object({ base64: z.string().min(1).max(7_000_000), mediaType: z.string() }).optional(),
+        imagen: z.object({ base64: z.string().min(1).max(LIMITES.foto.maxBase64), mediaType: z.string() }).optional(),
       }),
     )
-    .max(10)
+    .max(TOPES.fotosPorPedido)
     .default([]),
   ficha: Ficha.optional(),
   eventos: z.array(Evento).max(50).default([]),
@@ -43,6 +46,11 @@ export async function POST(req: Request) {
 
   const { caso, fotos, ficha, eventos, dispositivo, tipoEquipo, cierre } = r.data;
   try {
+    // Los topes antes de escribir nada.
+    const excedido =
+      (await revisarPorIp(req, fotos.filter((f) => f.imagen).length)) ??
+      (fotos.length > 0 ? await revisarFotosPorCaso(db, fotos.map((f) => f.foto)) : null);
+    if (excedido) return respuestaLimite(excedido);
     // El caso primero: fotos, ficha y eventos lo referencian.
     if (caso) await guardarCaso(db, caso, { dispositivo, tipoEquipo, cierre });
     const urls: { id: string; url: string }[] = [];
