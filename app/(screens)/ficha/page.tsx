@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
-import { ErrorApi, confirmarFicha, leerChapa } from "../_datos/api";
+import { ErrorApi, confirmarFicha, leerChapa, type Precisar } from "../_datos/api";
 import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { vistaPrevia } from "../_datos/imagen";
 import { usePrecargaPiezas } from "@/components/viewer";
@@ -11,7 +11,7 @@ import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BarraAccion, BotonPrincipal, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, BotonSecundario, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la etiqueta, cada dato con su estado. */
 
@@ -67,6 +67,9 @@ function FichaDelEquipoDelCaso() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [faltaModelo, setFaltaModelo] = useState(false);
+  /** El modelo es una familia ("MacBook Air"): se pregunta la versión antes de "Preparando" (#359). */
+  const [precisar, setPrecisar] = useState<Precisar | null>(null);
+  const [precision, setPrecision] = useState("");
   // El 3D se empieza a bajar ya (#133): con el tipo de equipo alcanza para las formas.
   usePrecargaPiezas(tipoEquipo);
 
@@ -125,16 +128,8 @@ function FichaDelEquipoDelCaso() {
       (c) => !(c in correcciones) && ficha[c].valor,
     );
     try {
-      const r = await confirmarFicha(ficha, confirmados, correcciones);
-      agregarEventos(r.eventos);
-      setFicha(r.ficha);
-      // Solo si cambió el equipo hay que buscar otro manual; si no, se reusa lo ya preparado.
-      if (preparado && ("marca" in correcciones || "modelo" in correcciones)) {
-        setPreparado(null);
-        setPlano(null);
-      }
-      if (r.listaParaPreparar) router.push("/preparando");
-      else setFaltaModelo(true);
+      const r = await confirmarFicha(ficha, confirmados, correcciones, { tipoEquipo });
+      seguir(r, "marca" in correcciones || "modelo" in correcciones);
     } catch (e) {
       setError(mensajeDeError(e));
     } finally {
@@ -142,12 +137,56 @@ function FichaDelEquipoDelCaso() {
     }
   }
 
+  /** Con la respuesta de /api/ficha: preguntar la versión si hace falta o seguir a preparar. */
+  function seguir(r: Awaited<ReturnType<typeof confirmarFicha>>, cambioEquipo: boolean) {
+    agregarEventos(r.eventos);
+    setFicha(r.ficha);
+    // Solo si cambió el equipo hay que buscar otro manual; si no, se reusa lo ya preparado.
+    if (preparado && (cambioEquipo || r.cambiados.includes("modelo"))) {
+      setPreparado(null);
+      setPlano(null);
+    }
+    if (r.precisar) {
+      setPrecisar(r.precisar);
+      setPrecision("");
+      return;
+    }
+    setPrecisar(null);
+    if (r.listaParaPreparar) router.push("/preparando");
+    else setFaltaModelo(true);
+  }
+
+  /** "Listo": vuelve a /api/ficha con la ficha que devolvió y lo que escribió la persona. */
+  async function precisarModelo() {
+    if (!ficha || !precision.trim()) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      const r = await confirmarFicha(ficha, [], {}, { tipoEquipo, precision: precision.trim() });
+      seguir(r, false);
+    } catch (e) {
+      setError(mensajeDeError(e));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  /** "No sé": sigue con el modelo como está, como antes de la pregunta. */
+  function noSe() {
+    setPrecisar(null);
+    setError(null);
+    if (ficha?.modelo.estado === "confirmado") router.push("/preparando");
+    else setFaltaModelo(true);
+  }
+
   const sinModelo = !!ficha && !ficha.modelo.valor;
   /** De dónde salió lo leído: la etiqueta (o lo que se usó en su lugar) o la foto del equipo. */
   const deDonde = fotoEtiqueta ? "Esto leí en la etiqueta." : "No había etiqueta: esto saqué de la foto del equipo.";
   const dice = error
     ? error
-    : faltaModelo || (sinModelo && !fotoEtiqueta)
+    : precisar
+      ? precisar.pregunta
+      : faltaModelo || (sinModelo && !fotoEtiqueta)
       ? `${fotoEtiqueta ? "Me falta el modelo" : "No pude saber el modelo con la foto"}. Tocá “Modelo” y escribilo: abajo te digo dónde encontrarlo.`
       : !ficha
         ? fotoEtiqueta
@@ -159,7 +198,12 @@ function FichaDelEquipoDelCaso() {
 
   return (
     <Pantalla>
-      <Encabezado paso={3} orbe={ficha ? "quieto" : "pensando"} alVolver={() => router.push("/fotos")} />
+      <Encabezado
+        paso={3}
+        orbe={ficha ? "quieto" : "pensando"}
+        // Con la pregunta a la vista, "Atrás" vuelve a la ficha (por si el modelo está mal).
+        alVolver={() => (precisar ? setPrecisar(null) : router.push("/fotos"))}
+      />
 
       <DiceExperto texto={dice} />
 
@@ -176,7 +220,36 @@ function FichaDelEquipoDelCaso() {
         </BarraAccion>
       )}
 
-      {!ficha ? (
+      {ficha && precisar ? (
+        // Modelo ambiguo: la persona dice cuál es antes de buscar el manual (o "No sé").
+        <form
+          id="precisar"
+          className="aparece flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            precisarModelo();
+          }}
+        >
+          <p className="font-mono text-sm text-texto-suave">
+            {[ficha.marca.valor, ficha.modelo.valor].filter(Boolean).join(" ")}
+          </p>
+          <input
+            autoFocus
+            value={precision}
+            onChange={(e) => setPrecision(e.target.value)}
+            maxLength={200}
+            placeholder="Ej.: la del 2020 con chip M1"
+            enterKeyHint="done"
+            aria-label={precisar.pregunta}
+            className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 text-lg placeholder:text-base placeholder:text-texto-suave/60 focus:outline-none"
+          />
+          {precisar.dondeMirar && (
+            <p className="text-sm text-texto-suave">
+              <span className="font-semibold text-dato">Dónde mirar:</span> {precisar.dondeMirar}
+            </p>
+          )}
+        </form>
+      ) : !ficha ? (
         // Carga de "leer la etiqueta": la foto con una lupa que la recorre y una línea de lo que lee.
         <div className="flex flex-col gap-3">
           <div className="relative aspect-[4/3] max-h-[50dvh] w-full overflow-hidden rounded-3xl bg-superficie">
@@ -309,7 +382,18 @@ function FichaDelEquipoDelCaso() {
         </div>
       )}
 
-      {ficha && (
+      {ficha && precisar && (
+        <BarraAccion>
+          <BotonPrincipal type="submit" form="precisar" disabled={enviando || !precision.trim()}>
+            {enviando ? "Buscando…" : "Listo"} <Flecha />
+          </BotonPrincipal>
+          <BotonSecundario type="button" onClick={noSe} disabled={enviando}>
+            No sé
+          </BotonSecundario>
+        </BarraAccion>
+      )}
+
+      {ficha && !precisar && (
         <BarraAccion>
           <p className="text-center text-xs text-texto-suave">
             Si un dato está mal, tocalo y corregilo. Lo que corregís queda confirmado.

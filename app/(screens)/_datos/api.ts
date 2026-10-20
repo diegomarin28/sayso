@@ -15,6 +15,7 @@ import {
 import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
 import { pedidosSimulados } from "./pedidos-simulados";
+import { precisarSimulado } from "./precisar-simulado";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -120,7 +121,15 @@ const conEventos = <T extends z.ZodRawShape>(forma: T) =>
 const RespPedidos = conEventos({ pedidos: z.array(PedidoDeFoto) });
 const RespCalidad = conEventos({ foto: Foto });
 const RespChapa = conEventos({ ficha: Ficha });
-const RespFicha = conEventos({ ficha: Ficha, listaParaPreparar: z.boolean() });
+const RespFicha = conEventos({
+  ficha: Ficha,
+  listaParaPreparar: z.boolean(),
+  /** Campos que cambiaron de valor (ej. "modelo" al precisarlo): es otro equipo. */
+  cambiados: z.array(z.string()).default([]),
+  /** El modelo es una familia ("MacBook Air"): preguntar la versión antes de buscar el manual (#359). */
+  precisar: z.object({ pregunta: z.string(), dondeMirar: z.string() }).optional(),
+});
+export type Precisar = NonNullable<z.infer<typeof RespFicha>["precisar"]>;
 const RespEntender = conEventos({
   /** El equipo en texto libre (ej. "heladera no frost"): se pasa a pedidos, chapa y al 3D. */
   tipoEquipo: z.string().optional(),
@@ -254,21 +263,32 @@ export async function leerChapa(
 
 type NombreCampo = "marca" | "modelo" | "serie" | "anio";
 
-/** La persona confirma la ficha: lo que miró queda confirmado, lo que corrigió también. */
+/**
+ * La persona confirma la ficha: lo que miró queda confirmado, lo que corrigió también.
+ * `precision`: la respuesta a `precisar.pregunta`, con la ficha que devolvió la llamada anterior ("" = "No sé").
+ */
 export async function confirmarFicha(
   ficha: Ficha,
   confirmados: NombreCampo[],
   correcciones: Partial<Record<NombreCampo, string | null>>,
+  { tipoEquipo, precision }: { tipoEquipo?: string | null; precision?: string } = {},
 ): Promise<z.infer<typeof RespFicha>> {
   if (USAR_FIXTURE) {
-    await esperar(300);
-    const nueva = { ...ficha, confirmadaPorUsuario: true };
+    await esperar(precision === undefined ? 300 : 1200);
+    const p = precisarSimulado({ ...ficha, confirmadaPorUsuario: true }, precision);
     return RespFicha.parse({
-      ficha: nueva,
-      listaParaPreparar: !!ficha.modelo.valor,
+      ficha: p.ficha,
+      listaParaPreparar: !!p.ficha.modelo.valor,
+      cambiados: p.cambiados,
+      ...(p.precisar ? { precisar: p.precisar } : {}),
     });
   }
-  return llamar("/api/ficha", { ficha, confirmados, correcciones }, RespFicha);
+  const tipo = tipoEquipo?.trim().slice(0, 60) || undefined;
+  return llamar(
+    "/api/ficha",
+    { ficha, confirmados, correcciones, tipoEquipo: tipo, ...(precision !== undefined ? { precision: precision.slice(0, 200) } : {}) },
+    RespFicha,
+  );
 }
 
 const RespKnowledge = conEventos({
