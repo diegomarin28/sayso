@@ -136,6 +136,16 @@ export function guardarLocal(cambio: Cambio) {
   escribirTodos([r.data, ...todos.filter((c) => c.caso.id !== cambio.caso.id)]);
 }
 
+/** Borra la copia local de los casos (después de borrar la cuenta). */
+export function borrarLocal() {
+  memoria = [];
+  try {
+    localStorage.removeItem(CLAVE_CASOS);
+  } catch {
+    // sin localStorage solo estaban en memoria
+  }
+}
+
 export const TEXTO_ESTADO: Record<EstadoCierre | "en_curso", string> = {
   resuelto: "Resuelto",
   esperando_repuesto: "Esperando repuesto",

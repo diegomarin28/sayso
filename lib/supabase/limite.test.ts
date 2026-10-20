@@ -8,6 +8,7 @@ import {
   ipDelPedido,
   respuestaLimite,
   revisarFotosPorCaso,
+  revisarCuenta,
   revisarPorIp,
   TOPES,
   usarContador,
@@ -201,4 +202,27 @@ it("respuestaLimite: 429 con mensaje que se puede mostrar", async () => {
   expect(res.status).toBe(429);
   expect(res.headers.get("Retry-After")).toBe("12");
   expect((await res.json()).error).toMatch(/fotos/);
+});
+
+describe("revisarCuenta (Login 2/3)", () => {
+  it("frena los códigos por IP y por día", async () => {
+    for (let i = 0; i < TOPES.codigosPorDia; i++) {
+      expect(await revisarCuenta(pedido(), "codigo", `p${i}@x.com`, AHORA, ENV)).toBeNull();
+    }
+    expect(await revisarCuenta(pedido(), "codigo", "otra@x.com", AHORA, ENV)).toMatchObject({ motivo: "codigos" });
+    expect(await revisarCuenta(pedido(), "codigo", "otra@x.com", new Date("2026-10-21T12:00:00Z"), ENV)).toBeNull();
+  });
+
+  it("frena los códigos a un mismo email desde muchas IP (sin importar mayúsculas)", async () => {
+    for (let i = 0; i < TOPES.codigosPorEmailPorDia; i++) {
+      expect(await revisarCuenta(pedido(`9.9.9.${i}`), "codigo", "Victima@x.com", AHORA, ENV)).toBeNull();
+    }
+    expect(await revisarCuenta(pedido("8.8.8.8"), "codigo", "victima@x.com", AHORA, ENV)).toMatchObject({ motivo: "codigos" });
+  });
+
+  it("cada acción cuenta aparte", async () => {
+    for (let i = 0; i < TOPES.codigosPorDia; i++) await revisarCuenta(pedido(), "codigo", undefined, AHORA, ENV);
+    expect(await revisarCuenta(pedido(), "sesion", undefined, AHORA, ENV)).toBeNull();
+    expect(await revisarCuenta(pedido(), "verificar", "a@x.com", AHORA, ENV)).toBeNull();
+  });
 });
