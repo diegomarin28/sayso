@@ -34,7 +34,7 @@ import { ES_TAPA } from "./cubiertas";
 import { ENVOLTURA_EN_FOTOS } from "./fotos-guia";
 import { acotarMedidas, seguirPlantilla, sinEsqueletoAjeno } from "./seguir-plantilla";
 import { sumarSueltas } from "./sueltas";
-import { aplicarRasgos3D, conRaizPorRasgos } from "./variantes-pack";
+import { aplicarRasgos3D, conRaizPorRasgos, sinCajaDeRasgos } from "./variantes-pack";
 import { ubicarTeclas } from "./teclas";
 import { sinPisarLoVisto } from "./lugar-libre";
 
@@ -546,6 +546,8 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
 
 /**
  * Lo último antes de devolver un plano (también uno de la caché), con reglas por TIPO de equipo:
+ * 0a. la caja de reloj con botones de un pack anterior vuelve a la de hoy (`sinCajaDeRasgos`); los rasgos del
+ *     pack de hoy se aplican al final (`aplicarRasgos3D`);
  * 0. lo que un esqueleto anterior sumó y el tipo de hoy no tiene se saca (`sinEsqueletoAjeno`: planos de la caché);
  * 0b. si el tipo tiene varias formas de pantalla, la caja toma la forma de hoy (`conRaizDeLaForma`: planos de la caché);
  * 1. lo que no viene de una página del manual, y lo que falta, sigue al esqueleto del tipo (`seguirPlantilla`);
@@ -559,6 +561,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  */
 export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: PlantillaDeEquipo) {
   const ids = kp.piezas.map((p) => p.id).filter((id) => !ES_ESTRUCTURA.has(id));
+  plano = sinCajaDeRasgos(plano);
   const limpio = tipo ? sinEsqueletoAjeno(conRaizPorRasgos(conRaizDeLaForma(plano, tipo), kp, tipo), ids, tipo) : { plano, avisos: [] };
   const seguido = tipo ? seguirPlantilla(limpio.plano, ids, tipo) : { plano, avisos: [] };
   const acotado = acotarMedidas(seguido.plano);
