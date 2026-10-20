@@ -137,6 +137,9 @@ export function preguntaAlRetomar(pack: KnowledgePack, pieza: string): string {
 /**
  * Pasos para seguir desde el cambio de `pieza`, armados con la guía guardada (los pasos del pack
  * con su cita). Solo usa piezas que existen en el plano; un paso de riesgo alto corta como bloqueo.
+ * La bienvenida va al principio del primer paso, que conserva su cita: un paso aparte salía con el
+ * sello «Guía pública» sin ser de ninguna guía. Si ese paso es de riesgo alto, no hay bienvenida
+ * ("sigamos con el cambio" contradice el bloqueo).
  */
 export function pasosAlRetomar(pack: KnowledgePack, plano: PlanoDePiezas, pieza: string): EventoChat[] {
   const enPlano = new Set(plano.piezas.map((p) => p.pieza));
@@ -155,21 +158,23 @@ export function pasosAlRetomar(pack: KnowledgePack, plano: PlanoDePiezas, pieza:
     ];
   };
 
-  const eventos: EventoChat[] = [
-    {
-      tipo: "paso",
-      coreografia: Coreografia.parse({
-        paso: 1,
-        dice: `Ya tenés el repuesto (${nombre.toLowerCase()}): sigamos desde el cambio.`,
-        acciones: acciones([pieza]),
-        riesgo: "bajo",
-      }),
-    },
-  ];
-  for (const [i, p] of pasos.slice(desde).entries()) {
+  const bienvenida = `Ya tenés el repuesto (${nombre.toLowerCase()}): sigamos desde el cambio.`;
+  const siguen = pasos.slice(desde);
+  // Sin pasos guardados, solo la bienvenida (no hay cita que conservar).
+  if (!siguen.length)
+    return [
+      {
+        tipo: "paso",
+        coreografia: Coreografia.parse({ paso: 1, dice: bienvenida, acciones: acciones([pieza]), riesgo: "bajo" }),
+      },
+      { tipo: "fin", pasos: 1 },
+    ];
+
+  const eventos: EventoChat[] = [];
+  for (const [i, p] of siguen.entries()) {
     const c = Coreografia.parse({
-      paso: i + 2,
-      dice: p.texto,
+      paso: i + 1,
+      dice: i === 0 && p.riesgo !== "alto" ? `${bienvenida} ${p.texto}` : p.texto,
       ...(p.cita ? { cita: p.cita } : {}),
       acciones: acciones(p.piezas),
       riesgo: p.riesgo,
