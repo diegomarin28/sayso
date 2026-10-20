@@ -133,6 +133,9 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
             !!c &&
             c.id === caso?.id &&
             ((tipo !== undefined && (tipo ?? "") !== (tipoEquipo ?? "")) || c.clase !== caso.clase);
+          // Y es otro caso, con id nuevo: el servidor no pisa una guía ya guardada, así que el anterior
+          // queda en "Mis casos" con la suya (decisión de Iaio, 20/10, #347).
+          if (c && otroEquipo) c = { ...c, id: crypto.randomUUID(), creadoEn: new Date().toISOString() };
           // Un caso nuevo arranca de cero.
           if (c?.id !== caso?.id || otroEquipo) {
             if (tipo === undefined) setTipoEquipo(null);

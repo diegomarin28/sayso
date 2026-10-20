@@ -2,15 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { guiaDelServidor, sincronizarCasos } from "../_datos/casos-servidor";
 import { leerCuenta } from "../_datos/cuenta";
-import { firmaCasos, listarCasos, TEXTO_ESTADO, type CasoGuardado } from "../_datos/mis-casos";
+import {
+  firmaCasos,
+  guardarGuiaBajada,
+  listarCasos,
+  suscribirCasos,
+  TEXTO_ESTADO,
+  type CasoGuardado,
+} from "../_datos/mis-casos";
 import { useFlujo } from "../_estado/flujo";
 import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla, Persona } from "../_ui/experto";
 
 /**
- * "Mis casos": los casos de este celular. Tocar uno lo retoma en la pantalla del
- * experto con su guía y su 3D, usando lo guardado: no vuelve a llamar a la IA. Si la sesión todavía
- * es anónima, invita a guardarlos con el email (/cuenta), también al llegar después de "Terminar".
+ * "Mis casos": los de este celular mezclados con los de la sesión en el servidor. Tocar uno lo retoma
+ * en la pantalla del experto con su guía y su 3D, usando lo guardado (si la guía está solo en el
+ * servidor, se baja): no vuelve a llamar a la IA. Si la sesión todavía es anónima, invita a guardarlos
+ * con el email (/cuenta), también al llegar después de "Terminar".
  */
 
 const ESTILO_ESTADO: Record<keyof typeof TEXTO_ESTADO, string> = {
@@ -29,8 +38,14 @@ export default function MisCasos() {
     if (cierre) reiniciar();
   }, [cierre, reiniciar]);
   // localStorage solo existe en el navegador: en el servidor la lista sale vacía y no hay desajuste.
-  const firma = useSyncExternalStore(sinSuscripcion, firmaCasos, () => "[]");
+  const firma = useSyncExternalStore(suscribirCasos, firmaCasos, () => "[]");
   const casos = useMemo(() => (firma === "[]" ? [] : listarCasos()), [firma]);
+  useEffect(() => {
+    sincronizarCasos();
+  }, []);
+  /** Caso cuya guía se está bajando del servidor. */
+  const [bajando, setBajando] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   // null = sin saber todavía, o sin login disponible: no se muestra la invitación.
   const [conEmail, setConEmail] = useState<boolean | null>(null);
   useEffect(() => {
@@ -39,7 +54,18 @@ export default function MisCasos() {
       .catch(() => setConEmail(null));
   }, []);
 
-  function abrir(c: CasoGuardado) {
+  async function abrir(c: CasoGuardado) {
+    if (bajando) return;
+    setError(null);
+    if (!c.guia && c.guiaEnServidor) {
+      setBajando(c.caso.id);
+      const guia = await guiaDelServidor(c.caso.id);
+      setBajando(null);
+      // Sin la guía no se sigue: armarla de nuevo gastaría IA.
+      if (!guia) return setError("No pudimos traer la guía de este caso. Revisá la conexión y probá de nuevo.");
+      guardarGuiaBajada(c.caso.id, guia);
+      c = { ...c, guia };
+    }
     retomar(c);
     // Con guía y plano guardados va directo al experto; si no, sigue desde donde quedó.
     router.push(c.guia ? "/experto" : c.ficha ? "/ficha" : "/fotos");
@@ -84,6 +110,8 @@ export default function MisCasos() {
         </button>
       )}
 
+      {error && <p role="alert" className="rounded-2xl border border-peligro/40 bg-peligro/10 p-3 text-sm text-peligro">{error}</p>}
+
       {casos.length > 0 ? (
         <ul className="flex flex-col gap-3">
           {casos.map((c) => {
@@ -98,6 +126,7 @@ export default function MisCasos() {
               <li key={c.caso.id}>
                 <button
                   onClick={() => abrir(c)}
+                  disabled={!!bajando}
                   className="flex w-full flex-col gap-2 rounded-2xl border border-borde bg-superficie p-4 text-left transition hover:border-texto-suave active:scale-[0.99]"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -114,7 +143,11 @@ export default function MisCasos() {
                     {estado === "esperando_repuesto" && pieza && (
                       <span className="text-probable">Falta: {pieza.toLowerCase()}</span>
                     )}
-                    {!c.guia && <span>Sin guía todavía</span>}
+                    {bajando === c.caso.id ? (
+                      <span>Trayendo la guía…</span>
+                    ) : (
+                      !c.guia && !c.guiaEnServidor && <span>Sin guía todavía</span>
+                    )}
                   </div>
                 </button>
               </li>
@@ -136,8 +169,6 @@ export default function MisCasos() {
     </Pantalla>
   );
 }
-
-const sinSuscripcion = () => () => {};
 
 function fecha(iso: string) {
   try {
