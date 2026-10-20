@@ -236,7 +236,10 @@ function CapturaGuiadaDelCaso() {
                     className="absolute inset-0 h-full w-full object-cover opacity-50"
                   />
                 )}
-                <span className="relative">{t?.alternativa ?? NOMBRE_TIPO[p.tipo]}</span>
+                {/* Sobre la foto, el nombre va en una pastilla oscura: sin fondo no se leía con fotos claras. */}
+                <span className={`relative ${ok && t?.url ? "rounded-md bg-fondo/80 px-1.5 py-0.5" : ""}`}>
+                  {t?.alternativa ?? NOMBRE_TIPO[p.tipo]}
+                </span>
                 {ok && (
                   <span className="absolute top-1.5 right-1.5 rounded-full bg-confirmado p-0.5 text-black">
                     <Check size={12} />
