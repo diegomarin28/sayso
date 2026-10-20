@@ -26,6 +26,14 @@ export const TOPES = {
   fotosPorCaso: 20,
   /** La app manda una foto por pedido. */
   fotosPorPedido: 2,
+  /** Sesiones anónimas nuevas por IP: una por celular, pero muchos comparten IP (CGNAT). */
+  sesionesPorDia: 50,
+  /** Mails con código por IP y por email (que nadie use la app para llenarle la casilla a otro). */
+  codigosPorDia: 10,
+  codigosPorEmailPorDia: 5,
+  /** Intentos de código por IP y por email: frena probar códigos de a uno. */
+  verificacionesPorDia: 30,
+  verificacionesPorEmailPorDia: 10,
 } as const;
 
 const MINUTO_MS = 60_000;
@@ -103,7 +111,7 @@ export function usarContador(c: ContadorUso | null): void {
 
 // ---------- Topes ----------
 
-export type MotivoLimite = "pedidos" | "imagenes" | "fotos_por_caso";
+export type MotivoLimite = "pedidos" | "imagenes" | "fotos_por_caso" | "sesiones" | "codigos" | "verificaciones";
 
 export type Excedido = { motivo: MotivoLimite; reintentarEnSeg: number };
 
@@ -135,6 +143,33 @@ export async function revisarPorIp(
 }
 
 /**
+ * Topes de las rutas de cuenta (`app/api/cuenta`), por IP y por día; los de código también por
+ * email (HMAC como la IP, nunca en claro). Supabase tiene sus propios topes, pero desde el servidor
+ * ve la IP de Vercel, no la de cada persona. null = puede seguir.
+ */
+export async function revisarCuenta(
+  req: Request,
+  accion: "sesion" | "codigo" | "verificar",
+  email?: string,
+  ahora = new Date(),
+  env: Record<string, string | undefined> = process.env,
+): Promise<Excedido | null> {
+  const dia = ventana(ahora.getTime(), DIA_MS);
+  const c = elContador();
+  const [porIp, porEmail, motivo]: readonly [number, number, MotivoLimite] = {
+    sesion: [TOPES.sesionesPorDia, Infinity, "sesiones"] as const,
+    codigo: [TOPES.codigosPorDia, TOPES.codigosPorEmailPorDia, "codigos"] as const,
+    verificar: [TOPES.verificacionesPorDia, TOPES.verificacionesPorEmailPorDia, "verificaciones"] as const,
+  }[accion];
+  const [ip, deEmail] = await Promise.all([
+    c.sumar(`${accion}:${hashIp(ipDelPedido(req), ahora, env)}`, dia.inicio, 1),
+    email ? c.sumar(`${accion}_email:${hashIp(email.toLowerCase(), ahora, env)}`, dia.inicio, 1) : 0,
+  ]);
+  if (ip > porIp || deEmail > porEmail) return { motivo, reintentarEnSeg: dia.quedanSeg };
+  return null;
+}
+
+/**
  * Tope de fotos por caso: las filas que ya tiene más las nuevas de este pedido (reescribir una foto
  * que ya está no suma). Si la consulta falla, deja seguir.
  */
@@ -162,6 +197,9 @@ const MENSAJES: Record<MotivoLimite, string> = {
   pedidos: "Demasiados pedidos seguidos. Probá de nuevo en un rato.",
   imagenes: "Demasiadas fotos seguidas. Probá de nuevo en un rato.",
   fotos_por_caso: "Este caso ya tiene el máximo de fotos guardadas.",
+  sesiones: "Demasiadas sesiones nuevas desde esta conexión. Probá de nuevo mañana.",
+  codigos: "Ya mandamos muchos códigos. Probá de nuevo mañana.",
+  verificaciones: "Demasiados intentos con el código. Probá de nuevo mañana.",
 };
 
 export function respuestaLimite(e: Excedido): Response {

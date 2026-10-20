@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { leerCuenta } from "../_datos/cuenta";
 import { firmaCasos, listarCasos, TEXTO_ESTADO, type CasoGuardado } from "../_datos/mis-casos";
 import { useFlujo } from "../_estado/flujo";
 import { BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla } from "../_ui/experto";
 
 /**
- * "Mis casos": los casos de este dispositivo (sin login). Tocar uno lo retoma en la pantalla del
- * experto con su guía y su 3D, usando lo guardado: no vuelve a llamar a la IA.
+ * "Mis casos": los casos de este celular. Tocar uno lo retoma en la pantalla del
+ * experto con su guía y su 3D, usando lo guardado: no vuelve a llamar a la IA. Si la sesión todavía
+ * es anónima, invita a guardarlos con el email (/cuenta), también al llegar después de "Terminar".
  */
 
 const ESTILO_ESTADO: Record<keyof typeof TEXTO_ESTADO, string> = {
@@ -29,6 +31,13 @@ export default function MisCasos() {
   // localStorage solo existe en el navegador: en el servidor la lista sale vacía y no hay desajuste.
   const firma = useSyncExternalStore(sinSuscripcion, firmaCasos, () => "[]");
   const casos = useMemo(() => (firma === "[]" ? [] : listarCasos()), [firma]);
+  // null = sin saber todavía, o sin login disponible: no se muestra la invitación.
+  const [conEmail, setConEmail] = useState<boolean | null>(null);
+  useEffect(() => {
+    leerCuenta()
+      .then((c) => setConEmail(c.configurado ? c.sesion && !c.anonima : null))
+      .catch(() => setConEmail(null));
+  }, []);
 
   function abrir(c: CasoGuardado) {
     retomar(c);
@@ -46,6 +55,12 @@ export default function MisCasos() {
           <FlechaAtras /> Inicio
         </button>
         <p className="text-xs font-medium tracking-widest text-texto-suave uppercase">Mis casos</p>
+        <button
+          onClick={() => router.push("/cuenta")}
+          className="ml-auto flex h-11 shrink-0 items-center rounded-full border border-borde bg-superficie px-4 text-sm font-medium"
+        >
+          Cuenta
+        </button>
       </header>
 
       <DiceExperto
@@ -55,6 +70,19 @@ export default function MisCasos() {
             : "Todavía no tenés casos guardados."
         }
       />
+
+      {conEmail === false && casos.length > 0 && (
+        <button
+          onClick={() => router.push("/cuenta")}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-acento/40 bg-acento/10 p-4 text-left"
+        >
+          <span>
+            <span className="block font-semibold">Guardar mis casos</span>
+            <span className="block text-sm text-texto-suave">Con tu email, para no perderlos si cambiás de celular.</span>
+          </span>
+          <Flecha />
+        </button>
+      )}
 
       {casos.length > 0 ? (
         <ul className="flex flex-col gap-3">
@@ -102,8 +130,9 @@ export default function MisCasos() {
       )}
 
       <p className="mt-auto text-center text-xs text-texto-suave">
-        Se guardan en este dispositivo y en nuestro servidor para que puedas retomarlos (con las
-        fotos, incluida la de la etiqueta del equipo). No pedimos cuenta.
+        Se guardan en este celular y en nuestro servidor para que puedas retomarlos (con las fotos,
+        incluida la de la etiqueta del equipo). El email es opcional: sirve para no perderlos. Podés
+        exportarlos o borrarlos desde Cuenta.
       </p>
     </Pantalla>
   );
