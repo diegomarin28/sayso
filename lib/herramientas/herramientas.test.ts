@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conExplicacion, explicar, HERRAMIENTAS, herramientasDePasos, herramientasEn } from "./herramientas";
+import { describir, HERRAMIENTAS, herramientasDePasos, herramientasEn } from "./herramientas";
 
 /** Por TIPO de herramienta: dos formas de nombrarla en un paso (manual, guía o chat). */
 const CASOS: Array<[string, string, string]> = [
@@ -23,20 +23,12 @@ describe("herramientas que nombra un paso (#230)", () => {
     expect(herramientasEn("Desenchufá el reloj inteligente de la pulsera de carga.")).toEqual([]);
   });
 
-  it("cada herramienta dice qué es, para qué sirve y cómo se usa, en una línea", () => {
+  it("cada herramienta dice qué es, para qué sirve y cómo se usa, en una línea (para el panel)", () => {
     for (const h of HERRAMIENTAS) {
-      const linea = explicar(h);
-      expect(linea).toMatch(new RegExp(`^${h.nombre.replace(/[()]/g, "\\$&")}: es .+; sirve para .+\\. .+\\.$`));
+      const linea = describir(h);
+      expect(linea).toMatch(/^Es .+; sirve para .+\. .+\.$/);
       expect(linea).not.toMatch(/\n/);
     }
-  });
-
-  it("se explica la primera vez que se nombra, no en cada paso", () => {
-    const explicadas = new Set<string>();
-    const uno = conExplicacion("Colocá el iOpener en el centro del microondas.", explicadas);
-    const dos = conExplicacion("Volvé a calentar el iOpener.", explicadas);
-    expect(uno).toMatch(/^Colocá el iOpener en el centro del microondas\. iOpener \(bolsa térmica\): es una bolsa con gel/);
-    expect(dos).toBe("Volvé a calentar el iOpener.");
   });
 
   it("la lista del caso junta las de todos los pasos, sin repetir, en el orden del catálogo", () => {
