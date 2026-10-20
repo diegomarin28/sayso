@@ -19,7 +19,7 @@ Cliente, esquema y migraciones de Supabase. Diseño del login, las sesiones y lo
   | `009_solo_servidor.sql` | C | todo solo para el servidor: sin lectura pública de `eventos` ni Realtime, sin permisos para `anon`/`authenticated` en ninguna tabla (también las futuras) | sí (20/10) |
   | `010_fotos_privadas.sql` | C | bucket privado `fotos-usuarios` para las fotos de las personas (#330); `fotos` queda público solo para las páginas del manual (`manuales/`). Después: `scripts/fotos-privadas/correr.ts --aplicar` mueve las fotos viejas | sí (20/10) |
   | `011_limite_casos.sql` | C | tabla `limite_uso` y función `sumar_limite_uso`: topes de `POST /api/casos` por IP (hash, nunca en claro) y por minuto/día; las filas de más de 2 días se borran solas (#332) | sí (20/10) |
-  | `012_login.sql` | C | columna `casos.dueno` (`auth.uid()`, en cascada al borrar el usuario) con su índice, y tabla `guias` (copia fija de la guía y el plano 3D de cada caso, solo servidor). **Correrla antes de publicar el login** (#345) | no |
+  | `012_login.sql` | C | columna `casos.dueno` (`auth.uid()`, en cascada al borrar el usuario) con su índice, y tabla `guias` (copia fija de la guía y el plano 3D de cada caso, solo servidor). (#345) | sí (20/10) |
 
   Para una migración nueva: siguiente número (`012_…`), sumarla a esta tabla y avisar para que alguien la corra. Desde la 009 las tablas nuevas nacen sin permisos para la clave pública: si alguna vez el navegador tiene que leer algo, va con una política explícita y revisada.
 - `cliente.ts`: `supabaseServidor()` (clave secreta, solo en rutas de API). El navegador no habla con Supabase, tampoco para Auth: todo pasa por las rutas de API. Si faltan variables devuelve `null` y nada se guarda: Supabase nunca frena la demo.
