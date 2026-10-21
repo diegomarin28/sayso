@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
 import { ANCHO_CHAT_LATERAL, BotonConversacion, BotonIcono, Charla, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, useChatLateral, type MensajeChat } from "./conversacion";
@@ -67,6 +68,11 @@ export type GuiaExpertoProps = {
   fuente?: FuenteChat;
   efectos?: ModoEfectos;
   className?: string;
+  /**
+   * Dónde va el chat en pantallas anchas: un lugar de la página al lado del encabezado, para que ocupe todo
+   * el alto (la pantalla del experto). Sin destino (el lab), va a la derecha de la guía.
+   */
+  destinoChat?: HTMLElement | null;
 };
 
 /** Por debajo del máximo que acepta /api/chat (LIMITES.chat.maxHistorial, en el servidor). */
@@ -101,6 +107,7 @@ export function GuiaExperto({
   fuente = fuenteApi,
   efectos,
   className = "",
+  destinoChat,
 }: GuiaExpertoProps) {
   const [estado, setEstado] = useState<EstadoGuia>("esperando");
   const [detalle, setDetalle] = useState<string>();
@@ -332,6 +339,12 @@ export function GuiaExperto({
           </button>
         </form>
   );
+  // Pantalla ancha: el chat en un panel a la derecha, de punta a punta del alto que le den.
+  const chatAlCostado = (
+    <aside aria-label="Hablar con el experto" className="flex w-[380px] shrink-0 flex-col border-l border-borde bg-fondo">
+      <Charla mensajes={mensajes} pie={campo} onCerrar={() => setPreguntando(false)} />
+    </aside>
+  );
   const horizontal = useCelularHorizontal();
   const chatLateral = useChatLateral();
 
@@ -447,11 +460,7 @@ export function GuiaExperto({
         </section>
       </div>
       {/* Pantalla ancha: el chat en un panel a la derecha; el 3D y la hoja se achican y siguen a la vista. */}
-      {chatLateral && preguntando && (
-        <aside aria-label="Hablar con el experto" className="flex w-[380px] shrink-0 flex-col border-l border-borde bg-fondo">
-          <Charla mensajes={mensajes} pie={campo} onCerrar={() => setPreguntando(false)} />
-        </aside>
-      )}
+      {chatLateral && preguntando && (destinoChat ? createPortal(chatAlCostado, destinoChat) : chatAlCostado)}
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
       {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>
