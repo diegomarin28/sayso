@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { BotonSilencio } from "./boton-silencio";
 import { Simbolo, type EstadoMarca } from "./marca";
 
 export type EstadoOrbe = EstadoMarca;
@@ -46,6 +47,7 @@ export function Encabezado({
   alVolver,
   volverApagado = false,
   accion,
+  conSilencio = false,
 }: {
   paso: number;
   orbe?: EstadoOrbe;
@@ -53,6 +55,8 @@ export function Encabezado({
   volverApagado?: boolean;
   /** Arriba a la derecha, en un lugar de 44 px (en el inicio, la sesión; en el experto, repuestos). */
   accion?: ReactNode;
+  /** Botón para silenciar la voz de la IA, a la izquierda de `accion` (donde la IA habla: inicio y experto). */
+  conSilencio?: boolean;
 }) {
   return (
     <header className="flex items-center gap-3">
@@ -91,7 +95,10 @@ export function Encabezado({
           {paso}/6 · {PASOS[paso - 1]}
         </p>
       </div>
-      <div className="flex h-11 min-w-11 shrink-0 items-center justify-end">{accion}</div>
+      <div className="flex h-11 shrink-0 items-center justify-end">
+        {conSilencio && <BotonSilencio />}
+        <div className="flex h-11 min-w-11 items-center justify-end">{accion}</div>
+      </div>
     </header>
   );
 }

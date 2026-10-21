@@ -199,7 +199,7 @@ function QueSeRompioDelCaso() {
 
   return (
     <Pantalla>
-      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
+      <Encabezado paso={1} conSilencio orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
 
       {enCharla ? (
         // La charla: lo que contó la persona y la respuesta de Sayso (o Sayso pensando).
