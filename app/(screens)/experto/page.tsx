@@ -11,6 +11,7 @@ import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
+import { Volviendo } from "../_ui/volviendo";
 import {
   fuenteConCierre,
   fuenteConRetomar,
@@ -100,7 +101,9 @@ function ExpertoDelCaso() {
   const [destinoChat, setDestinoChat] = useState<HTMLDivElement | null>(null);
   const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
 
-  if (!caso || !preparado || !plano) return null;
+  if (!caso) return <Volviendo />;
+  if (!preparado || !plano)
+    return <Volviendo texto="Todavía falta preparar tu guía. Te llevo ahí…" destino="/preparando" boton="Ir a la guía" />;
   // Antes del primer paso: hasta dónde llega la guía si el pack tiene un paso de riesgo alto (sin IA).
   const aviso = avisoRiesgoAlto(preparado.pack);
 

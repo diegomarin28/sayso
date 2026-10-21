@@ -70,11 +70,15 @@ export default function Cuenta() {
   const [falloCaptcha, setFalloCaptcha] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
+  /** No se pudo leer la cuenta (sin red o el servidor falló): no es lo mismo que "sin cuentas". */
+  const [sinConexion, setSinConexion] = useState(false);
   const recargar = useCallback(async () => {
     try {
       setCuenta(await leerCuenta());
+      setSinConexion(false);
     } catch {
-      setCuenta({ configurado: false, sesion: false, anonima: false, email: null, nombre: null });
+      setCuenta(null);
+      setSinConexion(true);
     }
   }, []);
   useEffect(() => {
@@ -190,7 +194,9 @@ export default function Cuenta() {
     (paso === "datos" || codigo.length >= 6);
 
   const texto = !cuenta
-    ? "Un segundo…"
+    ? sinConexion
+      ? "No pude conectar para ver tu cuenta. Revisá internet y probá de nuevo."
+      : "Un segundo…"
     : !cuenta.configurado
       ? "Las cuentas todavía no están disponibles. Podés usar la app igual: tus casos quedan en este dispositivo."
       : conEmail
@@ -228,6 +234,10 @@ export default function Cuenta() {
         <p role="alert" className="rounded-2xl border border-peligro/40 bg-peligro/10 p-4 text-sm text-peligro">
           {error}
         </p>
+      )}
+
+      {sinConexion && !cuenta && (
+        <BotonPrincipal onClick={() => void recargar()}>Probar de nuevo</BotonPrincipal>
       )}
 
       {cuenta?.configurado && !conEmail && (

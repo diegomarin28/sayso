@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PedidoDeFoto } from "@/shared";
-import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
+import { evaluarFoto, pedidosDeFoto } from "../_datos/api";
+import { mensajeDeError } from "../_datos/errores";
 import { instruccionDeToma } from "../_datos/instruccion-foto";
 import { dondeBuscarModelo } from "../_datos/donde-modelo";
-import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
+import { prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
+import { Volviendo } from "../_ui/volviendo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
   BarraAccion,
@@ -84,7 +86,7 @@ function CapturaGuiadaDelCaso() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se pide una vez por caso (o al reintentar)
   }, [caso?.id, vuelta]);
 
-  if (!caso) return null;
+  if (!caso) return <Volviendo />;
 
   const terminado = pedidos !== null && actual >= pedidos.length;
   const pedido = pedidos?.[actual];
@@ -493,12 +495,6 @@ function Esquinas({ color }: { color: string }) {
       />
     </div>
   );
-}
-
-function mensajeDeError(e: unknown) {
-  if (e instanceof ErrorApi || e instanceof ErrorImagen) return e.message;
-  console.error("[fotos]", e);
-  return "Algo salió mal. Probá de nuevo.";
 }
 
 function Galeria() {

@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Campo, EstadoDato } from "@/shared";
-import { ErrorApi, confirmarFicha, leerChapa, type Precisar } from "../_datos/api";
+import { confirmarFicha, leerChapa, type Precisar } from "../_datos/api";
+import { mensajeDeError } from "../_datos/errores";
 import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { vistaPrevia } from "../_datos/imagen";
 import { usePrecargaPiezas } from "@/components/viewer";
 import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
+import { Volviendo } from "../_ui/volviendo";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { BarraAccion, BotonPrincipal, BotonSecundario, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
@@ -107,7 +109,7 @@ function FichaDelEquipoDelCaso() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se lee una vez por caso (o al reintentar)
   }, [caso?.id, vuelta]);
 
-  if (!caso) return null;
+  if (!caso) return <Volviendo />;
 
   function guardar(clave: ClaveCampo) {
     if (!ficha) return;
@@ -395,6 +397,3 @@ function FichaDelEquipoDelCaso() {
   );
 }
 
-function mensajeDeError(e: unknown) {
-  return e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.";
-}
