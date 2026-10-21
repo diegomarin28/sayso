@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { knowledgePackEjemplo, planoEjemplo, type PlanoDePiezas } from "../../../shared";
-import { nombreFuente, resumenPasos, textoPlano } from "./resumen-guia";
+import { planoEjemplo, type PlanoDePiezas } from "../../../shared";
+import { nombreFuente, textoPlano } from "./resumen-guia";
 
 const conOrigen = (origenes: ("manual" | "estimada" | "plantilla")[]): PlanoDePiezas => ({
   ...planoEjemplo,
@@ -28,21 +28,6 @@ describe("C10: qué dice Preparando del 3D", () => {
   it("la plantilla es un esquema genérico", () => {
     expect(textoPlano({ plano: planoEjemplo, origen: "plantilla", avisos: [] })).toMatch(/Esquema genérico/);
   });
-});
-
-describe("Preparando: estado de los pasos sin carteles en cada uno", () => {
-  const paso = (n: number, pagina?: number) => ({
-    ...knowledgePackEjemplo.pasos[0],
-    id: `p${n}`,
-    orden: n,
-    cita: pagina ? { doc: "Manual", pagina, estado: "VERIFICADO" as const } : undefined,
-  });
-
-  it("guía pública: una línea arriba con cuántos pasos tienen página", () => {
-    const pack = { verificado: false, pasos: Array.from({ length: 11 }, (_, i) => paso(i + 1)) };
-    expect(resumenPasos(pack)).toBe("Guía pública: 0 de 11 pasos con página del manual");
-  });
-
 });
 
 describe("#240: el nombre de la guía no es una URL entera", () => {

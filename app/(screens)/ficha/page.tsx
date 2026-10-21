@@ -11,7 +11,7 @@ import { FichaDescifrando } from "../_ui/ficha-descifrando";
 import { LineaPensando, LINEAS } from "../_ui/linea-pensando";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { BarraAccion, BotonPrincipal, BotonSecundario, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, BotonSecundario, Check, DiceExperto, Encabezado, Flecha, Pantalla } from "../_ui/experto";
 
 /** Pantalla 3 — Ficha del equipo: lo leído de la etiqueta, cada dato con su estado. */
 
@@ -29,22 +29,26 @@ const CAMPOS: { clave: ClaveCampo; etiqueta: string; ejemplo: string }[] = [
  * "confirmado" de la IA se muestra como "Leído": la persona lo confirma todo junto ("Confirmar
  * todo", #228) y corrige con Editar solo el dato que esté mal (lo corregido queda confirmado).
  */
-const CORREGIDO = { texto: "Corregido por vos", clase: "text-confirmado border-confirmado/40 bg-confirmado/10" };
-
-const ESTILO_ESTADO: Record<EstadoDato, { texto: string; clase: string }> = {
-  confirmado: {
-    texto: "Leído · revisalo",
-    clase: "text-dato border-dato/40 bg-dato/10",
-  },
-  probable: {
-    texto: "Probable",
-    clase: "text-probable border-probable/40 bg-probable/10",
-  },
-  desconocido: {
-    texto: "No se sabe",
-    clase: "text-desconocido border-desconocido/40 border-dashed",
-  },
-};
+/** Cómo se marca cada dato a la derecha de su fila: un tilde si se leyó, "Revisalo" si es dudoso. */
+function EstadoDelDato({ estado, corregido }: { estado: EstadoDato; corregido: boolean }) {
+  if (corregido)
+    return (
+      <span className="shrink-0 text-confirmado" role="img" aria-label="Corregido por vos">
+        <Check size={20} />
+      </span>
+    );
+  if (estado === "confirmado")
+    return (
+      <span className="shrink-0 text-dato" role="img" aria-label="Leído">
+        <Check size={20} />
+      </span>
+    );
+  return (
+    <span className="shrink-0 rounded-full border border-probable/40 px-2 py-0.5 text-xs font-medium text-probable">
+      Revisalo
+    </span>
+  );
+}
 
 /**
  * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
@@ -193,8 +197,8 @@ function FichaDelEquipoDelCaso() {
           ? "Leyendo la etiqueta…"
           : "Mirando la foto del equipo…"
         : CAMPOS.some((c) => ficha[c.clave].valor && !(c.clave in correcciones))
-          ? `${deDonde} Revisalo: si algún dato está mal, tocalo y corregilo.`
-          : `${deDonde} ¿Es tu equipo?`;
+          ? "Revisá lo que leí"
+          : "¿Es tu equipo?";
 
   return (
     <Pantalla>
@@ -205,7 +209,13 @@ function FichaDelEquipoDelCaso() {
         alVolver={() => (precisar ? setPrecisar(null) : router.push("/fotos"))}
       />
 
-      <DiceExperto texto={dice} />
+      <div className="flex flex-col gap-3">
+        <DiceExperto texto={dice} />
+        {/* De dónde salió lo leído y qué hacer, debajo del título corto. */}
+        {ficha && !precisar && !error && !faltaModelo && !(sinModelo && !fotoEtiqueta) && (
+          <p className="aparece text-base text-texto-suave">{deDonde} Tocá un dato para corregirlo.</p>
+        )}
+      </div>
 
       {error && !ficha && (
         <BarraAccion>
@@ -284,34 +294,23 @@ function FichaDelEquipoDelCaso() {
               </ul>
             </div>
           )}
-          <div className="chapa relative rounded-3xl border border-white/10 p-5 pt-7 sm:p-6 sm:pt-8">
-            {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos) => (
-              <span key={pos} className={`remache absolute h-2.5 w-2.5 rounded-full ${pos}`} aria-hidden />
-            ))}
+          {/* Una lista simple: cada dato en una fila, con su estado a la derecha. Tocar una fila la edita. */}
+          <div className="overflow-hidden rounded-2xl border border-borde bg-superficie/90">
             {/* El equipo que entendió la recepción (#290); la clase interna ("otro") solo si no hay. */}
-            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-texto-suave uppercase">
+            <p className="border-b border-borde px-4 py-3 text-sm font-medium first-letter:uppercase">
               {tipoEquipo?.trim() && tipoEquipo.trim().toLowerCase() !== "equipo" ? tipoEquipo.trim() : ficha.clase}
             </p>
-            <dl className="flex flex-col gap-2">
+            <dl className="divide-y divide-borde">
               {CAMPOS.map(({ clave, etiqueta, ejemplo }) => {
                 const campo = ficha[clave];
                 const vacio = !campo.valor;
                 const ok = !vacio && clave in correcciones;
-                const estilo = ok ? CORREGIDO : ESTILO_ESTADO[campo.estado];
                 return (
                   <div key={clave}>
-                    <dt className="mb-1 flex items-center justify-between gap-2 text-xs text-texto-suave">
-                      {etiqueta}
-                      <span
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${estilo.clase}`}
-                      >
-                        {estilo.texto}
-                        {!ok && campo.fuente === "foto" ? " · por la foto" : ""}
-                      </span>
-                    </dt>
+                    <dt className="sr-only">{etiqueta}</dt>
                     {editando === clave ? (
                       <form
-                        className="flex flex-col gap-2"
+                        className="flex flex-col gap-2 p-3"
                         onSubmit={(e) => {
                           e.preventDefault();
                           guardar(clave);
@@ -340,37 +339,29 @@ function FichaDelEquipoDelCaso() {
                         </div>
                       </form>
                     ) : (
-                      <dd className="flex gap-2">
+                      <dd>
                         <button
                           onClick={() => {
                             setEditando(clave);
                             setBorrador(campo.valor ?? "");
                           }}
                           aria-label={`${vacio ? "Completar" : "Editar"} ${etiqueta}`}
-                          className={`flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition hover:border-texto-suave active:scale-[0.99] ${
-                            vacio
-                              ? "border-dashed border-acento/60 bg-acento/5"
-                              : "border-white/10 bg-black/20"
-                          }`}
+                          className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-fondo/40 active:bg-fondo/60"
                         >
-                          <span
-                            className={`min-w-0 break-words ${vacio ? "text-sm text-texto-suave" : "font-mono text-lg"}`}
-                          >
-                            {campo.valor ?? "Tocá para escribirlo"}
-                          </span>
-                          <span
-                            className={`flex shrink-0 items-center gap-1 text-xs font-semibold ${
-                              vacio ? "text-acento" : "text-texto-suave"
-                            }`}
-                          >
-                            {vacio ? (
-                              "+ Completar"
-                            ) : (
-                              <>
-                                <Lapiz /> Editar
-                              </>
+                          <span className="w-24 shrink-0 text-sm text-texto-suave">{etiqueta}</span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className={`break-words ${vacio ? "text-[15px] text-texto-suave" : "font-mono text-base"}`}>
+                              {campo.valor ?? "No lo encontré"}
+                            </span>
+                            {!vacio && !ok && campo.fuente === "foto" && (
+                              <span className="text-xs text-texto-suave">por la foto</span>
                             )}
                           </span>
+                          {vacio ? (
+                            <span className="shrink-0 text-sm font-medium text-acento">Agregar</span>
+                          ) : (
+                            <EstadoDelDato estado={campo.estado} corregido={ok} />
+                          )}
                         </button>
                       </dd>
                     )}
@@ -395,11 +386,8 @@ function FichaDelEquipoDelCaso() {
 
       {ficha && !precisar && (
         <BarraAccion>
-          <p className="text-center text-xs text-texto-suave">
-            Si un dato está mal, tocalo y corregilo. Lo que corregís queda confirmado.
-          </p>
           <BotonPrincipal onClick={confirmar} disabled={editando !== null || enviando}>
-            {enviando ? "Guardando…" : "Confirmar todo"} <Flecha />
+            {enviando ? "Guardando…" : "Está bien, seguir"} <Flecha />
           </BotonPrincipal>
         </BarraAccion>
       )}
@@ -409,22 +397,4 @@ function FichaDelEquipoDelCaso() {
 
 function mensajeDeError(e: unknown) {
   return e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.";
-}
-
-function Lapiz() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
-    </svg>
-  );
 }

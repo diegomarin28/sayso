@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Identidad Sayso (issue #122): azul petróleo con una nebulosa violeta y cian de fondo,
+ * Identidad Sayso (issue #122): azul petróleo con una cuadrícula cian tenue de fondo,
  * ámbar para las acciones y cian para los datos y el 3D. Es la única fuente de colores de la
  * app, incluida la escena del 3D (--escena): para cambiar el estilo se tocan solo estas variables.
  */
@@ -44,8 +44,8 @@
 }
 
 /*
- * Fondo: una nebulosa (violeta, cian y un toque de ámbar) que se mueve muy despacio. Encima, el
- * canvas de <FondoSayso> dibuja una pieza en 3D en líneas que gira (layout.tsx).
+ * Fondo: una cuadrícula cian muy tenue, como la mesa de trabajo de un técnico. Se ve solo arriba y
+ * se desvanece antes del contenido, para no competir con lo que dice el experto.
  */
 body {
   background-color: var(--fondo);
@@ -55,20 +55,14 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -20%;
+  inset: 0;
   z-index: -2;
   pointer-events: none;
-  background:
-    radial-gradient(40% 35% at 18% 22%, rgb(139 107 255 / 0.32), transparent 70%),
-    radial-gradient(45% 40% at 85% 78%, rgb(79 209 224 / 0.22), transparent 70%),
-    radial-gradient(30% 25% at 70% 12%, rgb(255 176 32 / 0.1), transparent 70%),
-    radial-gradient(35% 30% at 30% 90%, rgb(139 107 255 / 0.18), transparent 70%);
-  filter: blur(24px);
-  animation: nebulosa 38s ease-in-out infinite alternate;
-}
-@keyframes nebulosa {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+  background-image:
+    linear-gradient(rgb(79 209 224 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(79 209 224 / 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, #000, transparent 62%);
 }
 
 /* ---------- Solo vertical: aviso si un celular se pone horizontal ---------- */
@@ -320,28 +314,12 @@ body::before {
   animation: lupa 4.4s ease-in-out infinite;
 }
 
-/* ---------- Chapa metálica (ficha) ---------- */
-
-.chapa {
-  background:
-    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 3px),
-    linear-gradient(145deg, #2a3d4b, #172834 60%, #22363f);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.12),
-    inset 0 -1px 0 rgb(0 0 0 / 0.6),
-    0 20px 50px -20px rgb(0 0 0 / 0.6);
-}
-
-.remache {
-  background: radial-gradient(circle at 35% 35%, #a9bccb, #2c4150 70%);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .marca-capa-arriba, .marca-capa-abajo, .linea-escaneo { animation: none; }
   .inicio .marca-capa-arriba, .inicio .marca-capa-medio, .inicio .marca-capa-abajo,
   .inicio-nombre, .inicio-lema { animation: none; }
   .inicio { animation: inicio-sale 0.3s ease-in 0.8s forwards; }
-  body::before, .mic-invita, .mic-grabando { animation: none; }
+  .mic-invita, .mic-grabando { animation: none; }
   .palabra { animation: none; opacity: 1; }
   .aparece { animation: none; }
   .linea-pensando { animation: none; opacity: 1; }
