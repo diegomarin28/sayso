@@ -127,6 +127,8 @@ export function GuiaExperto({
   /** Lo que se ve en "Conversación": preguntas de la persona y pasos del experto. */
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [texto, setTexto] = useState("");
+  /** El chat (el ícono flotante sobre el 3D): la charla y el campo para preguntar. */
+  const [preguntando, setPreguntando] = useState(false);
   const historial = useRef<MensajeHistorial[]>([]);
   const actual = useRef<AbortController | null>(null);
   const idMensaje = useRef(0);
@@ -193,6 +195,8 @@ export function GuiaExperto({
     async (pregunta: string) => {
       const limpia = pregunta.trim();
       if (!limpia) return;
+      // Con el chat abierto, se cierra: la respuesta se ve en el 3D y en la hoja.
+      setPreguntando(false);
       const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
       historial.current = [...historial.current, { rol: "persona", texto: limpia }];
       setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
@@ -296,6 +300,38 @@ export function GuiaExperto({
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
   // Lo que tapan los avisos de arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
+  // El campo para preguntar va abajo del chat.
+  const campo = (
+        <form
+          className="flex items-center gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
+        >
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
+            placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
+            aria-label="Pregunta para el experto"
+            // Al abrir el chat, el cursor ya queda en el campo.
+            autoFocus
+            className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-fondo px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
+          />
+          {accesorioEntrada}
+          <button
+            type="submit"
+            disabled={!texto.trim()}
+            aria-label={etiquetaBoton}
+            className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
+          >
+            {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
+            <span className="max-[480px]:hidden">{etiquetaBoton}</span>
+            <FlechaEnviar className="hidden max-[480px]:block" />
+          </button>
+        </form>
+  );
   const horizontal = useCelularHorizontal();
 
   return (
@@ -337,21 +373,23 @@ export function GuiaExperto({
 
         {/* Abajo a la derecha del 3D, justo arriba de la hoja: la charla (con el número de preguntas) y la transparencia (#95). */}
         <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
-          <BotonConversacion mensajes={mensajes} />
+          <BotonConversacion mensajes={mensajes} abierta={preguntando} onCambiar={setPreguntando} pie={campo} />
           <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
             <Libro size={20} />
           </BotonIcono>
         </div>
       </div>
 
-      {/* La hoja: el paso, sus controles y la pregunta, al alcance del pulgar. Alto fijo (un texto largo
-          se lee con scroll adentro): nunca crece ni le saca lugar al 3D. */}
+      {/* La hoja: el paso y sus controles, al alcance del pulgar, con lo justo de alto (el texto ocupa 2 o 3
+          líneas, así la hoja casi no cambia entre pasos). La pregunta se abre con el botón de mensajes. Nunca
+          pasa de la mitad de la pantalla: lo que no entra se lee con scroll adentro. En pantallas anchas el
+          contenido va centrado y angosto. */}
       <section
         aria-label="Guía del experto"
-        className="flex h-[clamp(15rem,34dvh,18rem)] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
+        className="flex max-h-[50dvh] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
       >
         <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-borde" />
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pt-2">
+        <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-col gap-2 overflow-y-auto px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {/* Caso abierto desde "Mis casos": los pasos guardados del pack, sin IA (#219). */}
           {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
             <button
@@ -395,40 +433,15 @@ export function GuiaExperto({
           )}
           <EstadoExperto estado={estado} detalle={detalle} />
           {!pasoActual && !ocupado && estado !== "error" && pasosGuardados.length === 0 && (
-            <p className="text-sm text-texto-suave">Preguntale al experto lo que quieras sobre tu equipo.</p>
+            <p className="text-sm text-texto-suave">Tocá el ícono de mensajes para preguntarle al experto lo que quieras.</p>
           )}
         </div>
 
         {/* Las sugerencias, solo cuando no hay un paso a la vista. */}
-        <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
+        <div className="mx-auto w-full max-w-2xl">
+          <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
+        </div>
 
-        <form
-          className="flex shrink-0 items-center gap-2 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            enviar();
-          }}
-        >
-          <input
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
-            placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
-            aria-label="Pregunta para el experto"
-            className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-fondo px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
-          />
-          {accesorioEntrada}
-          <button
-            type="submit"
-            disabled={!texto.trim()}
-            aria-label={etiquetaBoton}
-            className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
-          >
-            {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
-            <span className="max-[480px]:hidden">{etiquetaBoton}</span>
-            <FlechaEnviar className="hidden max-[480px]:block" />
-          </button>
-        </form>
       </section>
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
       {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}

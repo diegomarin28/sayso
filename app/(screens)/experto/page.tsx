@@ -207,13 +207,13 @@ function ExpertoDelCaso() {
       />
       {/* Lo que se va diciendo, en vivo: se pregunta recién al tocar ■ (o se descarta). */}
       {dictado.escuchando && (
-        <div className="aparece pointer-events-none fixed inset-x-0 bottom-28 z-30 mx-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-peligro/50 bg-fondo/95 px-4 py-3 text-sm shadow-2xl">
+        <div className="aparece pointer-events-none fixed inset-x-0 bottom-28 z-[60] mx-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-peligro/50 bg-fondo/95 px-4 py-3 text-sm shadow-2xl">
           <p className="text-xs font-semibold tracking-widest text-peligro uppercase">Te escucho</p>
           <p className="mt-1">{dictado.texto || "Hablá tranquilo. Tocá ■ cuando termines."}</p>
         </div>
       )}
       {dictado.error && !dictado.escuchando && (
-        <p className="fixed inset-x-0 bottom-28 z-30 mx-auto w-fit rounded-full bg-fondo/95 px-4 py-2 text-sm text-probable">
+        <p className="fixed inset-x-0 bottom-28 z-[60] mx-auto w-fit rounded-full bg-fondo/95 px-4 py-2 text-sm text-probable">
           {dictado.error}
         </p>
       )}

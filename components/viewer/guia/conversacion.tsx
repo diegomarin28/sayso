@@ -105,7 +105,8 @@ export function TarjetaPaso({
           leía "...." (#231). El resto, con "ver más". */}
       <p
         ref={medir}
-        className={`mt-1 text-[17px] leading-snug font-medium ${
+        // Al menos 2 líneas: entre un paso corto y uno largo la hoja casi no cambia de alto (y el 3D no salta).
+        className={`mt-1 min-h-[2.75em] text-[17px] leading-snug font-medium ${
           entero
             ? ""
             : `max-h-[4.125em] overflow-hidden [@media(max-height:600px)]:max-h-[2.75em] ${largo ? "[mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" : ""}`
@@ -312,42 +313,54 @@ export function chatComoTexto(mensajes: MensajeChat[]): string {
     .join("\n\n");
 }
 
-/** "Conversación (n)": ícono con el número de preguntas en una insignia; abre la charla entera. */
-export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
-  const [abierta, setAbierta] = useState(false);
+/**
+ * El chat con el experto, en un solo lugar: el ícono (con el número de preguntas) flota sobre el 3D y abre
+ * la charla entera arriba y, abajo, el campo para preguntar (`pie`). Lo abre y lo cierra quien lo usa
+ * (`abierta`): al hacer una pregunta se cierra solo, para ver la respuesta en el 3D.
+ */
+export function BotonConversacion({
+  mensajes,
+  abierta,
+  onCambiar,
+  pie,
+}: {
+  mensajes: MensajeChat[];
+  abierta: boolean;
+  onCambiar: (abierta: boolean) => void;
+  /** El campo para preguntar, abajo del panel. */
+  pie?: ReactNode;
+}) {
   const [copiado, setCopiado] = useState(false);
-  /** El modal sumó una entrada al historial: "atrás" la consume y cierra (no se va del experto). */
-  const conHistorial = useRef(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+  const cambiar = useRef(onCambiar);
+  useEffect(() => {
+    cambiar.current = onCambiar;
+  }, [onCambiar]);
 
   function abrir() {
     setCopiado(false);
-    setAbierta(true);
-    window.history.pushState({ ...window.history.state, conversacion: true }, "");
-    conHistorial.current = true;
+    onCambiar(true);
   }
-  function cerrar() {
-    setAbierta(false);
-    if (conHistorial.current) {
-      conHistorial.current = false;
-      window.history.back(); // saca la entrada que sumó abrir()
-    }
-  }
+  // Abierto, suma una entrada al historial: "atrás" (gesto o botón) la consume y cierra (no se va del
+  // experto). Cerrado de otra forma (Cerrar, Escape o una pregunta), la saca.
   useEffect(() => {
     if (!abierta) return;
-    // Atrás (gesto o botón) y Escape cierran el modal.
+    window.history.pushState({ ...window.history.state, conversacion: true }, "");
+    let conHistorial = true;
     const alVolver = () => {
-      conHistorial.current = false;
-      setAbierta(false);
+      conHistorial = false;
+      cambiar.current(false);
     };
-    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cerrar();
+    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cambiar.current(false);
     window.addEventListener("popstate", alVolver);
     window.addEventListener("keydown", alTecla);
     return () => {
       window.removeEventListener("popstate", alVolver);
       window.removeEventListener("keydown", alTecla);
+      if (conHistorial) window.history.back();
     };
   }, [abierta]);
+  const cerrar = () => onCambiar(false);
 
   async function exportar() {
     const texto = chatComoTexto(mensajes);
@@ -363,10 +376,9 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
     }
   }
 
-  if (!mensajes.length) return null;
   return (
     <>
-      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
+      <BotonIcono etiqueta={`Hablar con el experto${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
         <Globo size={20} />
       </BotonIcono>
 
@@ -377,7 +389,7 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Conversación con el experto"
+            aria-label="Hablar con el experto"
             className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
             onClick={cerrar}
           >
@@ -386,15 +398,17 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2 border-b border-borde px-5 py-4">
-                <p className="min-w-0 font-semibold">Conversación con el experto</p>
+                <p className="min-w-0 font-semibold">Hablar con el experto</p>
                 <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={exportar}
-                    className="h-11 rounded-full border border-borde px-4 text-sm"
-                  >
-                    {copiado ? "Copiado ✓" : "Compartir"}
-                  </button>
+                  {mensajes.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={exportar}
+                      className="h-11 rounded-full border border-borde px-4 text-sm"
+                    >
+                      {copiado ? "Copiado ✓" : "Compartir"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={cerrar}
@@ -404,7 +418,12 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
                   </button>
                 </div>
               </div>
-              <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              {mensajes.length === 0 && (
+                <p className="px-5 py-4 text-sm text-texto-suave">
+                  Preguntale lo que quieras sobre tu equipo: dónde está una pieza, qué herramienta usar o qué hacer si algo no sale.
+                </p>
+              )}
+              <ol className={`flex min-h-0 flex-col gap-3 overflow-y-auto px-5 ${mensajes.length ? "py-4" : ""} ${pie ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"}`}>
                 {mensajes.map((m) =>
                   m.rol === "persona" ? (
                     <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
@@ -423,6 +442,7 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
                   ),
                 )}
               </ol>
+              {pie && <div className="shrink-0 border-t border-borde">{pie}</div>}
             </div>
           </div>,
           document.body,
