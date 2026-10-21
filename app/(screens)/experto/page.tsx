@@ -115,6 +115,7 @@ function ExpertoDelCaso() {
             <div className="min-w-0 flex-1">
               <Encabezado
                 paso={5}
+                conSilencio
                 alVolver={() => router.push("/preparando")}
                 accion={
                   ficha && (

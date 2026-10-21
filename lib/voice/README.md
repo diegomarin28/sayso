@@ -7,7 +7,7 @@ Voz del experto. La clave de ElevenLabs vive solo en el servidor; sin ella todo 
 | Archivo | Dónde corre | Qué hace |
 |---|---|---|
 | `elevenlabs.ts` | servidor | token de un solo uso para Scribe y texto a voz en streaming (Flash v2.5, español). Sin `ELEVENLABS_API_KEY` → `ErrorVoz` 503 |
-| `hablar.ts` | navegador | `hablar(texto)` → `{ detener, termino }`. ElevenLabs vía `/api/voz/hablar`; si falla, `speechSynthesis`. Una voz a la vez; `callar()` corta |
+| `hablar.ts` | navegador | `hablar(texto)` → `{ detener, termino }`. ElevenLabs vía `/api/voz/hablar`; si falla, `speechSynthesis`. Una voz a la vez; `callar()` corta. `silenciar(true)` apaga la voz de la IA (se recuerda en localStorage; no toca el dictado) |
 | `escuchar.ts` | navegador | `escuchar({ onParcial, onFrase, onError, onFin })` → `{ detener }`. Scribe v2 Realtime con el micrófono (corta la frase sola con las pausas); si falla, Web Speech API |
 | `useDictado.ts` | navegador | hook para un campo de texto: `alternar`, `escuchando`, `parcial`, `error` |
 
