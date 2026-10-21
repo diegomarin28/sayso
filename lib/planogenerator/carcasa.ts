@@ -131,8 +131,10 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   };
 
   if (envuelve(tapa, plantilla.plano)) {
-    const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
-    const max = [0, 1, 2].map((i) => Math.max(...piezas.map((p) => p.pos[i] + p.dim[i] / 2)) + MARGEN_TAPA);
+    // Sin las opcionales (el tanque de tinta, los joysticks de una consola): van afuera, a un costado.
+    const dentro = piezas.filter((p) => !plantilla.opcionales.includes(p.pieza));
+    const min = [0, 1, 2].map((i) => Math.min(...dentro.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
+    const max = [0, 1, 2].map((i) => Math.max(...dentro.map((p) => p.pos[i] + p.dim[i] / 2)) + MARGEN_TAPA);
     min[1] = piso; // apoyada en el piso
     const dim = max.map((v, i) => v - min[i]) as Vec3;
     return { ...plano, piezas: [...piezas, { ...base, dim, pos: max.map((v, i) => (v + min[i]) / 2) as Vec3, pivote: [0, 0, 0] }] };
