@@ -294,12 +294,15 @@ export function GuiaExperto({
   // La página del manual que cita el paso o, si cita un paso con foto (iFixit), esa foto.
   const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina) ?? fotoParaPaso(pasoActual, fotoDePaso);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
-  // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
+  // Lo que tapan los avisos de arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
   const horizontal = useCelularHorizontal();
 
   return (
     <div className={`flex flex-col bg-escena text-texto ${className}`}>
+      {/* El 3D ocupa todo el espacio entre el encabezado y la hoja. La hoja tiene alto fijo: sea una
+          heladera o un celular, la página no cambia; la cámara acerca o aleja el equipo para que entre
+          entero (encuadre) y nada lo tapa, porque la hoja va debajo del 3D y no encima. */}
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-0">
           <Visor
@@ -316,64 +319,23 @@ export function GuiaExperto({
           />
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-escena via-escena/70 to-transparent px-5 pt-5 pb-10 max-[440px]:px-3 max-[440px]:pt-3 max-[440px]:pb-6">
-          <div ref={cabecera} className="flex flex-col gap-3 max-[440px]:gap-2">
+        {/* Arriba, sobre el 3D, solo avisos chicos: el visor encuadra y pone las etiquetas debajo. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-2">
+          <div ref={cabecera} className="flex flex-col items-start gap-2">
             {origenPlano === "plantilla" && (
-              <p className="self-start rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
+              <p className="rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
                 Esquema genérico, no es tu modelo exacto
               </p>
             )}
-            {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void seguirGuardada()}
-                className="pointer-events-auto flex min-h-11 items-center gap-2 self-stretch rounded-2xl border border-acento/60 bg-fondo/90 px-4 py-2.5 text-left text-texto shadow-xl backdrop-blur-md active:scale-[0.99]"
-              >
-                <Siguiente size={20} className="shrink-0 text-acento" />
-                <span className="flex flex-col leading-tight">
-                  <span className="font-semibold">Seguir con la guía · {pasosGuardados.length} {pasosGuardados.length === 1 ? "paso" : "pasos"}</span>
-                  <span className="text-xs text-texto-suave">Los pasos que ya armamos para tu caso, sin volver a preguntar</span>
-                </span>
-              </button>
-            )}
-            {pasoActual && (
-              <TarjetaPaso
-                key={`${indice}-${pasoActual.dice}`}
-                c={pasoActual}
-                indice={indice}
-                total={Math.max(controles?.total ?? 0, pasos.length)}
-                completa={completa}
-                onElegir={verPaso}
-                onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
-                verFoto={!!paginaDelPaso?.foto}
-                controles={
-                  <>
-                    {controles && (controles.total > 1 || !controles.completa) && (
-                      <ControlesGuia
-                        c={{ ...controles, modo }}
-                        onAnterior={() => reproductor.current?.anterior()}
-                        onPausar={() => reproductor.current?.pausar()}
-                        onSeguir={() => reproductor.current?.seguir()}
-                        onSiguiente={() => reproductor.current?.siguiente()}
-                        onModo={cambiarModo}
-                      />
-                    )}
-                    {retomable && <BotonSeguirGuia guia={retomable} onSeguir={seguirGuia} />}
-                  </>
-                }
-              />
-            )}
-            <EstadoExperto estado={estado} detalle={detalle} />
-            {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
             {horizontal && (
-              <p className="flex items-center gap-2 self-start rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
+              <p className="flex items-center gap-2 rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
                 <GirarCelular size={18} /> Girá el celular para ver mejor
               </p>
             )}
           </div>
         </div>
 
-        {/* Junto al campo de pregunta, sobre el 3D: la charla (con el número de preguntas) y la transparencia (#95). */}
+        {/* Abajo a la derecha del 3D, justo arriba de la hoja: la charla (con el número de preguntas) y la transparencia (#95). */}
         <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
           <BotonConversacion mensajes={mensajes} />
           <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
@@ -382,36 +344,92 @@ export function GuiaExperto({
         </div>
       </div>
 
-      {/* Las sugerencias, solo cuando no hay un paso a la vista: durante la guía el 3D necesita el lugar. */}
-      <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
-
-      <form
-        className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        onSubmit={(e) => {
-          e.preventDefault();
-          enviar();
-        }}
+      {/* La hoja: el paso, sus controles y la pregunta, al alcance del pulgar. Alto fijo (un texto largo
+          se lee con scroll adentro): nunca crece ni le saca lugar al 3D. */}
+      <section
+        aria-label="Guía del experto"
+        className="flex h-[clamp(15rem,34dvh,18rem)] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
       >
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
-          placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
-          aria-label="Pregunta para el experto"
-          className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-superficie px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
-        />
-        {accesorioEntrada}
-        <button
-          type="submit"
-          disabled={!texto.trim()}
-          aria-label={etiquetaBoton}
-          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
+        <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-borde" />
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pt-2">
+          {/* Caso abierto desde "Mis casos": los pasos guardados del pack, sin IA (#219). */}
+          {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void seguirGuardada()}
+              className="flex min-h-11 items-center gap-2 rounded-2xl border border-acento/60 bg-acento/10 px-4 py-2.5 text-left text-texto active:scale-[0.99]"
+            >
+              <Siguiente size={20} className="shrink-0 text-acento" />
+              <span className="flex flex-col leading-tight">
+                <span className="font-semibold">Seguir con la guía · {pasosGuardados.length} {pasosGuardados.length === 1 ? "paso" : "pasos"}</span>
+                <span className="text-xs text-texto-suave">Los pasos que ya armamos para tu caso, sin volver a preguntar</span>
+              </span>
+            </button>
+          )}
+          {pasoActual && (
+            <TarjetaPaso
+              key={`${indice}-${pasoActual.dice}`}
+              c={pasoActual}
+              indice={indice}
+              total={Math.max(controles?.total ?? 0, pasos.length)}
+              completa={completa}
+              onElegir={verPaso}
+              onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
+              verFoto={!!paginaDelPaso?.foto}
+              controles={
+                <>
+                  {controles && (controles.total > 1 || !controles.completa) && (
+                    <ControlesGuia
+                      c={{ ...controles, modo }}
+                      onAnterior={() => reproductor.current?.anterior()}
+                      onPausar={() => reproductor.current?.pausar()}
+                      onSeguir={() => reproductor.current?.seguir()}
+                      onSiguiente={() => reproductor.current?.siguiente()}
+                      onModo={cambiarModo}
+                    />
+                  )}
+                  {retomable && <BotonSeguirGuia guia={retomable} onSeguir={seguirGuia} />}
+                </>
+              }
+            />
+          )}
+          <EstadoExperto estado={estado} detalle={detalle} />
+          {!pasoActual && !ocupado && estado !== "error" && pasosGuardados.length === 0 && (
+            <p className="text-sm text-texto-suave">Preguntale al experto lo que quieras sobre tu equipo.</p>
+          )}
+        </div>
+
+        {/* Las sugerencias, solo cuando no hay un paso a la vista. */}
+        <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
+
+        <form
+          className="flex shrink-0 items-center gap-2 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
         >
-          {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
-          <span className="max-[480px]:hidden">{etiquetaBoton}</span>
-          <FlechaEnviar className="hidden max-[480px]:block" />
-        </button>
-      </form>
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
+            placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
+            aria-label="Pregunta para el experto"
+            className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-fondo px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
+          />
+          {accesorioEntrada}
+          <button
+            type="submit"
+            disabled={!texto.trim()}
+            aria-label={etiquetaBoton}
+            className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
+          >
+            {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
+            <span className="max-[480px]:hidden">{etiquetaBoton}</span>
+            <FlechaEnviar className="hidden max-[480px]:block" />
+          </button>
+        </form>
+      </section>
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
       {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>

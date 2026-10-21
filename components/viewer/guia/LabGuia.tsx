@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { knowledgePackEjemplo, type Evento } from "../../../shared";
 import { planoNotebookBase } from "../../../lib/planogenerator";
+import { EJEMPLOS } from "../ejemplos";
 import { fuenteApi } from "./eventos-chat";
 import { GuiaExperto } from "./GuiaExperto";
 import { Cerrar, Engranaje, Microfono } from "./iconos";
@@ -20,7 +21,12 @@ function paginaDeEjemplo(pagina: number): string {
 
 const SUGERIDAS = ["¿Dónde está el SSD?", "Se apaga sola y el ventilador suena fuerte", "¿Cómo abro la batería para cambiarle las celdas?"];
 
-export function LabGuia() {
+/**
+ * `equipo`: un equipo de ejemplo (`/lab/guia?equipo=heladera`) para ver la guía con equipos de otras
+ * formas (alto, ancho, chico). El chat simulado sigue siendo el de la notebook.
+ */
+export function LabGuia({ equipo }: { equipo?: string }) {
+  const ejemplo = equipo ? EJEMPLOS[equipo] : undefined;
   const [origen, setOrigen] = useState<"ia" | "plantilla">("ia");
   const [real, setReal] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -30,7 +36,7 @@ export function LabGuia() {
   /** Respuestas que llegaron al final (onUltimoPaso): ahí la app pregunta «¿Se resolvió?». */
   const [finales, setFinales] = useState<number[]>([]);
   // Cambiar de modo remonta la guía (arranca de nuevo con la pregunta inicial).
-  const clave = `${origen}-${real}`;
+  const clave = `${origen}-${real}-${equipo ?? "notebook"}`;
 
   return (
     <main className="flex h-dvh flex-col bg-escena md:flex-row">
@@ -39,8 +45,8 @@ export function LabGuia() {
         className="min-h-0 flex-1"
         casoId="caso-demo-1"
         pack={knowledgePackEjemplo}
-        plano={planoNotebookBase}
-        tipoEquipo="notebook"
+        plano={ejemplo?.plano ?? planoNotebookBase}
+        tipoEquipo={ejemplo?.tipoEquipo ?? "notebook"}
         origenPlano={origen}
         preguntaInicial="Se apaga sola a los diez minutos y el ventilador suena muy fuerte."
         imagenPagina={paginaDeEjemplo}

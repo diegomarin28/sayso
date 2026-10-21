@@ -15,8 +15,8 @@ import type { EstadoControles } from "./reproducir";
 export type MensajeChat = { rol: "persona"; texto: string; id: number } | { rol: "experto"; c: Coreografia; id: number };
 
 /**
- * Paso actual, compacto para que el 3D se vea grande (prueba real: a 390×844 el 3D ocupa al menos la
- * mitad del alto). Arriba, en una línea: número de paso, sello de la cita y puntos para volver a un paso.
+ * Paso actual, en la hoja de abajo del experto (el 3D queda arriba, con todo el resto del alto).
+ * Arriba, en una línea: número de paso, sello de la cita y puntos para volver a un paso.
  * El texto, en 3 líneas con "ver más". Abajo, en una sola fila, los controles (con "Ver en el manual"
  * como ícono). Queda a la vista hasta el siguiente.
  */
@@ -63,9 +63,8 @@ export function TarjetaPaso({
   return (
     <div
       aria-live="polite"
-      className={`pointer-events-auto rounded-2xl border px-3 pt-2 pb-2.5 shadow-xl backdrop-blur-md ${
-        bloqueo ? "border-peligro/60 bg-peligro/20" : "border-borde bg-fondo/85"
-      }`}
+      // Va en la hoja de abajo del experto: sin marco propio, salvo un paso bloqueado (en rojo).
+      className={`pointer-events-auto ${bloqueo ? "rounded-2xl border border-peligro/60 bg-peligro/20 px-3 pt-2 pb-2.5" : ""}`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex shrink-0 items-center gap-2">
@@ -106,7 +105,7 @@ export function TarjetaPaso({
           leía "...." (#231). El resto, con "ver más". */}
       <p
         ref={medir}
-        className={`mt-1 text-[15px] leading-snug font-medium ${
+        className={`mt-1 text-[17px] leading-snug font-medium ${
           entero
             ? ""
             : `max-h-[4.125em] overflow-hidden [@media(max-height:600px)]:max-h-[2.75em] ${largo ? "[mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" : ""}`
@@ -264,7 +263,7 @@ export function FilaSugerencias({ sugerencias, onPreguntar }: { sugerencias: str
   if (!sugerencias.length) return null;
   return (
     // Se desliza de costado: el borde derecho se funde para que se note que hay más preguntas.
-    <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
+    <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pt-2 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
       {sugerencias.map((s) => (
         <button
           key={s}
