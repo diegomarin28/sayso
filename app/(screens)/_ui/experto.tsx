@@ -31,7 +31,7 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
   );
 }
 
-const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
+const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Cierre"];
 
 /**
  * Encabezado común, igual en todas las pantallas: a la izquierda "Atrás" (o el símbolo, donde no

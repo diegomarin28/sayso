@@ -4,30 +4,46 @@ import { useState } from "react";
 import type { FuenteChat, EventoChat } from "../../../components/viewer";
 import { Coreografia, type KnowledgePack, type PlanoDePiezas } from "../../../shared";
 import type { Cierre, EstadoCierre } from "../_datos/mis-casos";
+import { Encabezado } from "../_ui/experto";
 
 /**
  * Cierre del caso (pantalla 6) y retomar un caso que esperaba el repuesto.
  * El experto sigue desde el paso de cambiar la pieza con la guía guardada: no se llama a la IA.
  */
 
-const OPCIONES: { estado: EstadoCierre; titulo: string; detalle: string }[] = [
-  { estado: "resuelto", titulo: "Lo resolví", detalle: "Quedó andando." },
+const OPCIONES: { estado: EstadoCierre; titulo: string; detalle: string; icono: string }[] = [
+  { estado: "resuelto", titulo: "Lo resolví", detalle: "Quedó andando.", icono: "m5 12.5 4.5 4.5L19 7.5" },
   {
     estado: "esperando_repuesto",
     titulo: "Pedí el repuesto",
     detalle: "Cuando llegue, retomás desde “Mis casos”.",
+    icono: "M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Zm0 0 8 4.5 8-4.5M12 12v9",
   },
-  { estado: "derivado", titulo: "Lo llevo a un técnico", detalle: "Queda anotado como derivado." },
+  {
+    estado: "derivado",
+    titulo: "Lo llevo a un técnico",
+    detalle: "Queda anotado como derivado.",
+    icono: "M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17v3h3l5.2-5.2a4 4 0 0 0 5.3-5.3l-2.5 2.5-2.5-.5-.5-2.5 2.5-2.5Z",
+  },
 ];
 
+/**
+ * Pantalla 6 — Cierre. Va encima del experto (que sigue montado: al volver no se pierde el chat ni
+ * el 3D). Se elige cómo quedó y recién "Guardar en Mis casos" cierra el caso.
+ */
 export function PanelCierre({
   pack,
+  equipo,
+  sintoma,
   piezaSugerida,
   compra,
   onCerrar,
   onCancelar,
 }: {
   pack: KnowledgePack;
+  /** Marca y modelo de la ficha, si la persona la confirmó. */
+  equipo: string | null;
+  sintoma: string;
   /** La pieza que el experto dijo de cambiar o la de la última compra abierta. */
   piezaSugerida: string | null;
   compra: { pieza: string; url: string } | null;
@@ -38,91 +54,130 @@ export function PanelCierre({
   const [pieza, setPieza] = useState<string>(compra?.pieza ?? piezaSugerida ?? pack.piezas[0]?.id ?? "");
   const url = compra && compra.pieza === pieza ? compra.url : undefined;
 
-  function confirmar(estado: EstadoCierre) {
+  function guardar() {
+    if (!elegido) return;
     onCerrar({
-      estado,
-      ...(estado === "esperando_repuesto" && pieza ? { pieza, ...(url ? { compraUrl: url } : {}) } : {}),
+      estado: elegido,
+      ...(elegido === "esperando_repuesto" && pieza ? { pieza, ...(url ? { compraUrl: url } : {}) } : {}),
       ts: new Date().toISOString(),
     });
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Terminar el caso"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center md:p-6"
-      onClick={onCancelar}
-    >
+    <div role="dialog" aria-modal="true" aria-label="Terminar el caso" className="fixed inset-0 z-[65] overflow-y-auto bg-fondo">
+      {/* La cuadrícula de las otras pantallas (body::before queda tapada por este fondo). */}
       <div
-        className="aparece flex w-full max-w-xl flex-col gap-4 rounded-t-3xl border border-borde bg-fondo px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:rounded-3xl md:pb-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-lg font-semibold">¿Cómo quedó?</p>
-          <button
-            type="button"
-            onClick={onCancelar}
-            className="h-10 rounded-full border border-borde px-4 text-sm"
-          >
-            Seguir
-          </button>
+        aria-hidden
+        className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgb(79_209_224/0.07)_1px,transparent_1px),linear-gradient(90deg,rgb(79_209_224/0.07)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:linear-gradient(to_bottom,#000,transparent_62%)]"
+      />
+      <div className="aparece relative mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 md:max-w-2xl md:pt-6">
+        <Encabezado paso={6} alVolver={onCancelar} />
+
+        <div className="mt-2 flex flex-col gap-2 md:mt-6">
+          <h1 className="font-titulo text-[clamp(1.75rem,7vw,2.25rem)] leading-[1.15] font-semibold tracking-tight">
+            ¿Cómo quedó?
+          </h1>
+          <p className="text-base text-texto-suave">
+            Lo guardo en “Mis casos” para que lo retomes cuando quieras.
+          </p>
         </div>
 
-        {OPCIONES.map((o) => (
-          <button
-            key={o.estado}
-            type="button"
-            onClick={() => (o.estado === "esperando_repuesto" ? setElegido(o.estado) : confirmar(o.estado))}
-            aria-pressed={elegido === o.estado}
-            className={`flex flex-col items-start gap-0.5 rounded-2xl border p-4 text-left transition active:scale-[0.99] ${
-              elegido === o.estado
-                ? "border-acento bg-acento/10"
-                : "border-borde bg-superficie hover:border-texto-suave"
-            }`}
-          >
-            <span className="font-semibold">{o.titulo}</span>
-            <span className="text-sm text-texto-suave">{o.detalle}</span>
-          </button>
-        ))}
+        <div className="flex items-center gap-3 rounded-2xl border border-borde bg-superficie px-3.5 py-3">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-mono text-sm font-medium uppercase">
+              {equipo ?? "Tu equipo"}
+            </span>
+            <span className="line-clamp-2 text-[0.8125rem] text-texto-suave">{sintoma}</span>
+            <span className="block text-[0.8125rem] text-texto-suave">
+              {pack.pasos.length} {pack.pasos.length === 1 ? "paso" : "pasos"} en la guía
+            </span>
+          </span>
+        </div>
 
-        {elegido === "esperando_repuesto" && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-acento/40 p-4">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-texto-suave">¿Qué pieza pediste?</span>
-              <select
-                value={pieza}
-                onChange={(e) => setPieza(e.target.value)}
-                className="h-12 rounded-xl border border-borde bg-superficie px-3 text-base"
-              >
-                {pack.piezas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="text-xs text-texto-suave">
-              {url ? (
-                <>
-                  Compra guardada:{" "}
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="break-all underline">
-                    {new URL(url).hostname}
-                  </a>
-                </>
-              ) : (
-                "Si la compraste desde “Repuestos”, el link queda guardado solo."
-              )}
-            </p>
-            <button
-              type="button"
-              onClick={() => confirmar("esperando_repuesto")}
-              className="h-12 rounded-xl bg-acento font-semibold text-black active:scale-[0.98]"
-            >
-              Guardar y esperar el repuesto
-            </button>
-          </div>
-        )}
+        <div role="radiogroup" aria-label="Cómo quedó" className="flex flex-col gap-2.5">
+          {OPCIONES.map((o) => {
+            const activa = elegido === o.estado;
+            return (
+              <div key={o.estado} className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={activa}
+                  onClick={() => setElegido(o.estado)}
+                  className={`flex min-h-[4.75rem] items-center gap-3.5 rounded-2xl border p-3.5 text-left transition active:scale-[0.99] ${
+                    activa ? "border-2 border-acento bg-acento/10" : "border-borde bg-superficie hover:border-texto-suave"
+                  }`}
+                >
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-fondo ${
+                      activa ? "text-acento" : "text-texto-suave"
+                    }`}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d={o.icono} />
+                    </svg>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="font-semibold">{o.titulo}</span>
+                    <span className="text-sm text-texto-suave">{o.detalle}</span>
+                  </span>
+                </button>
+
+                {activa && o.estado === "esperando_repuesto" && (
+                  <div className="flex flex-col gap-2 rounded-2xl border border-dato/40 p-3.5">
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-texto-suave">¿Qué pieza pediste?</span>
+                      <select
+                        value={pieza}
+                        onChange={(e) => setPieza(e.target.value)}
+                        className="h-12 rounded-xl border border-borde bg-superficie px-3 text-base"
+                      >
+                        {pack.piezas.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-xs text-texto-suave">
+                      {url ? (
+                        <>
+                          Compra guardada:{" "}
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="break-all underline">
+                            {new URL(url).hostname}
+                          </a>
+                        </>
+                      ) : (
+                        "Si la compraste desde “Repuestos”, el link queda guardado solo."
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="sticky bottom-0 mt-auto -mx-4 bg-gradient-to-t from-fondo from-70% to-transparent px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
+          <button
+            type="button"
+            onClick={guardar}
+            disabled={!elegido}
+            className="flex h-14 w-full items-center justify-center rounded-2xl bg-acento text-[1.0625rem] font-semibold text-black transition active:scale-[0.98] disabled:bg-borde disabled:text-texto-suave"
+          >
+            Guardar en Mis casos
+          </button>
+        </div>
       </div>
     </div>
   );
