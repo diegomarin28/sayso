@@ -8,7 +8,7 @@
 2. Leé `CLAUDE.md`, `CONTEXT.md`, `AGENTS.md`, `shared/schemas.ts` y la documentación del carril que toque la tarea. Si `shared/` no existe, no inventes contratos: avisá que Iaio tiene que crearlos.
 3. Verificá el estado real, nunca de memoria: `git fetch origin`, `git log --oneline -15 origin/main`, `gh pr list` y `git worktree list`.
 4. Leé los issues abiertos de tu carril, primero los que tienen `pregunta`, `dependencia`, `decision` o `bloqueado`: `gh issue list --state open --label <carril>`. Mirá también los PR abiertos que toquen los archivos de la tarea.
-5. Presentá el **plan de un solo PR**: objetivo, alcance, archivos previstos, pruebas, riesgos, dependencias y si gasta IA o servicios pagos. Esperá el OK de la persona antes de empezar, salvo que la tarea ya estuviera aprobada.
+5. Presentá el **plan de un solo PR**: objetivo, alcance, archivos previstos, pruebas, riesgos, dependencias si gasta IA o servicios pagos y el **modelo a utilizar** (§8). Esperá el OK de la persona antes de empezar, salvo que la tarea ya estuviera aprobada.
 6. Si estás en un worktree recién creado, comprobá la rama, que esté limpio y que su base sea `origin/main` (ver §4). No abras otra rama dentro del worktree: **un worktree = una rama = un PR**.
 
 ## 1. Producto y prioridades
@@ -103,4 +103,7 @@ Cada tarea tiene definición de terminado, pruebas y criterio de aceptación. Si
 
 > **PR:** #… — [fusionado / pendiente]. **Verificaciones:** … **Coordinación:** issues … (esperando a …). **Pendiente:** … **Próximo objetivo:** … **Rama/worktree sugerido:** `<carril>/<slug>` en `<ruta>`.
 > **Mensaje para el nuevo Claude Code:** «Soy [persona]. Leé CLAUDE.md y los issues de mi carril. Trabajá en [objetivo] (issue #…), en un worktree nuevo desde origin/main y con un solo PR. No uses APIs pagas sin mi aprobación. …»
+> **Modelo a utilizar:** [Haiku / Sonnet / Opus] — [una línea de por qué]. Se cambia con `/model` antes de pegar el mensaje.
+
+**Elegir el modelo (para no gastar créditos de más):** todo mensaje de próxima tarea y todo plan incluye «Modelo a utilizar». Haiku para cambios mecánicos y textos; Sonnet para pantallas y PR acotados (lo habitual); Opus solo para arquitectura, seguridad o datos personales, o un bug que falló dos veces sin causa clara. En la duda, el más barato que alcance, y subir si no sale.
 > [Si corresponde] **Ya podés borrar este worktree:** desde `<repo-principal>`, `git worktree remove <ruta>` (o desde Orca).
