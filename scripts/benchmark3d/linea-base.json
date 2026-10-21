@@ -12,14 +12,14 @@
   },
   "celular": {
     "puntajes": {
-      "geometria": 66,
+      "geometria": 99,
       "posicion": 80,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100
     },
     "bytes": 460736,
-    "triangulos": 8963
+    "triangulos": 8577
   },
   "consola": {
     "puntajes": {
@@ -45,8 +45,8 @@
   },
   "impresora": {
     "puntajes": {
-      "geometria": 85,
-      "posicion": 50,
+      "geometria": 86,
+      "posicion": 100,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100

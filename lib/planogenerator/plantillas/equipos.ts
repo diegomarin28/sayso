@@ -72,23 +72,27 @@ const tapaQueEnvuelve = (id: string, padre: string, piezas: PiezaPlano[], margen
   return pieza(id, max.map((v, i) => r(v - min[i])) as Vec3, max.map((v, i) => r((v + min[i]) / 2)) as Vec3, "extrusion", padre);
 };
 
-/** Celular visto desde atrás (la tapa trasera arriba): marco con la placa media, batería, placa y cámaras. */
+/**
+ * Celular visto desde atrás (la tapa trasera arriba): marco con la placa media, batería, placa y cámaras. Todo
+ * dentro del espesor del marco (0,8 cm, como un teléfono de hoy): apilado afuera salía el doble de grueso (#338).
+ */
 export const planoCelular: PlanoDePiezas = {
   modelo: "Celular genérico (ejemplo del lab)",
   unidades: "cm",
   piezas: [
     pieza("marco", [7.4, 0.8, 15.8], [0, 0.4, 0]),
     ...hijos("marco", [
-      ["pantalla", [7.1, 0.35, 15.5], [0, -0.2, 0]],
-      ["bateria", [5.6, 0.45, 8.6], [0, 1.03, 2.4]],
-      ["placa_madre", [6, 0.25, 5.4], [0, 0.93, -4.6]],
-      ["camara_trasera", [2.6, 0.7, 2.6], [-1.6, 1.4, -5.6]],
-      ["camara_frontal", [0.8, 0.5, 0.8], [1.8, 1.3, -6.6]],
-      ["placa_carga", [6, 0.2, 1.8], [0, 0.9, 6.8]],
+      ["pantalla", [7.1, 0.3, 15.5], [0, 0.15, 0]],
+      // Capas dentro del espesor, de la pantalla a la tapa: placas y batería, y encima de las placas lo que sobresale.
+      ["bateria", [5.6, 0.3, 7.6], [0, 0.5, 2.2]],
+      ["placa_madre", [6, 0.15, 5.4], [0, 0.425, -4.6]],
+      ["camara_trasera", [2.6, 0.15, 2.6], [-1.6, 0.575, -5.6]],
+      ["camara_frontal", [0.8, 0.15, 0.8], [1.8, 0.575, -6.6]],
+      ["placa_carga", [6, 0.15, 1.6], [0, 0.425, 6.9]],
       // El puerto con su tramo de flex (la boca en el borde de abajo) y el parlante con su rejilla: no son puntitos.
-      ["conector_carga", [1.5, 0.32, 1.78], [0, 1.16, 7.0]],
-      ["parlante_inferior", [2.2, 0.4, 1.3], [-2.2, 1.1, 6.6]],
-      ["tapa_trasera", [7.3, 0.18, 15.7], [0, 1.9, 0]],
+      ["conector_carga", [1.5, 0.15, 1.6], [0, 0.575, 6.9]],
+      ["parlante_inferior", [2.2, 0.15, 1.3], [-2.2, 0.575, 6.6]],
+      ["tapa_trasera", [7.3, 0.15, 15.7], [0, 0.725, 0]],
     ]),
   ],
 };
@@ -244,6 +248,9 @@ export const planoImpresora: PlanoDePiezas = {
   ],
 };
 planoImpresora.piezas.push(tapaQueEnvuelve("tapa_impresora", "bandeja_papel", planoImpresora.piezas));
+// Las impresoras de tanque de tinta (opcional, solo si el pack lo nombra) lo traen AFUERA, contra el frente y a un
+// costado, con las ventanas a la vista: no adentro del cuerpo. Va después de la tapa para no agrandarla (#338).
+planoImpresora.piezas.push(pieza("tanque_tinta", [9, 6, 3], [16.6, 3.5, 11.1], "caja", "bandeja_papel"));
 
 /**
  * Impresora láser (la de la demo es una): gabinete con el cassette de papel abajo, rodillo de recogida,

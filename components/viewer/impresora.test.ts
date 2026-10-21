@@ -57,7 +57,8 @@ const plantilla = (id: string) => PLANTILLAS_POR_TIPO.find((t) => t.id === id)!.
 /** Cada pieza del esqueleto está en el plano: con su id o con otra del mismo tipo (el cartucho negro del pack cuenta por el de color). */
 const faltan = (plano: PlanoDePiezas, esqueleto: PlanoDePiezas) => {
   const tipos = new Set(ids(plano).map((id) => tipoPara(id, NOMBRES) ?? id));
-  return ids(esqueleto).filter((id) => !ids(plano).includes(id) && !tipos.has(tipoPara(id, NOMBRES) ?? id));
+  // El tanque de tinta es opcional: solo está si el pack lo nombra.
+  return ids(esqueleto).filter((id) => id !== "tanque_tinta" && !ids(plano).includes(id) && !tipos.has(tipoPara(id, NOMBRES) ?? id));
 };
 const paso = (n: number, dice: string, acciones: Coreografia["acciones"] = []): Coreografia => ({ paso: n, dice, acciones, riesgo: "bajo" });
 
