@@ -34,6 +34,8 @@ export const MODELO_DE = {
   reconocer: MODELOS.corto as string,
   /** ¿El modelo confirmado es una familia ("MacBook Air") o una sola versión? Y armar el nombre con la respuesta. */
   precisar: MODELOS.corto as string,
+  /** Triage: piezas sospechosas del síntoma y cómo confirmarlas, antes de elegir la fuente (lib/knowledge/triage.ts). */
+  triage: MODELOS.corto as string,
   /** Guía pública con búsqueda web (cuando no hay manual). */
   guiaPublica: MODELOS.corto as string,
   /**

@@ -173,6 +173,55 @@ describe("guía pública del síntoma (sin pasos en el manual oficial)", () => {
     expect(r.pack.pasos.some((p) => p.cita?.estado === "VERIFICADO")).toBe(true); // lo del manual adjunto, citado
   });
 
+  it("triage: las sospechosas eligen la guía, llegan a la lectura y el código saca la reparación de otra pieza", async () => {
+    const etapas: string[] = [];
+    let tarea = "";
+    const enviar: EnviarMensaje = async (p, etapa) => {
+      etapas.push(etapa ?? "");
+      if (String(p.system).includes("bibliotecario")) return mensaje([{ type: "text", text: '{"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null}' }]);
+      if (etapa === "bibliotecario: guía de iFixit") {
+        const contenido = p.messages[0].content as Anthropic.ContentBlockParam[];
+        tarea = JSON.stringify(contenido.at(-1));
+        const docs = contenido.filter((b) => b.type === "document").length;
+        const cita = [citaTexto(docs - 1, "Lift the fan out of its bracket.")];
+        return mensaje([
+          { type: "text", text: "PASO|1|Apagalo y prendelo de nuevo.||bajo|chequeo" },
+          { type: "text", text: "\nPASO|2|Para llegar al ventilador, sacá la tapa de atrás.|tapa_trasera|bajo|acceso", citations: cita },
+          { type: "text", text: "\nPASO|3|Cambiá la batería por una nueva.|bateria|medio|reparacion", citations: cita },
+          { type: "text", text: "\nPASO|4|Sacá el ventilador de su soporte y limpialo.|ventilador|bajo|reparacion", citations: cita },
+          { type: "text", text: "\nPASO|5|Poné la tapa y probalo.|tapa_trasera|bajo|armado", citations: cita },
+        ]);
+      }
+      return mensaje([{ type: "text", text: "nada útil" }]);
+    };
+    const sospechosas = [{ pieza: "ventilador", temas: ["fan"], porque: "El zumbido sale de ahí.", chequeo: "Acercá el oído con el celular andando." }];
+    const r = await armarKnowledgePack(
+      { ficha, sintoma: "hace un zumbido raro", tipoEquipo: "celular" },
+      { enviar, fetch: red(true), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f", triar: async () => ({ sospechosas, soloSoftware: false }) },
+    );
+    // Sin el triage, "zumbido" no nombra ningún tema y no había guía de iFixit: con él, la del ventilador.
+    expect(etapas).toContain("bibliotecario: guía de iFixit");
+    expect(r.pack.fuentes[0].url).toBe(GUIA_FAN_URL);
+    expect(tarea).toMatch(/<sospechosas>.*1\. ventilador: El zumbido sale de ahí\./);
+    expect(r.pack.pasos.map((p) => p.texto)).toEqual([
+      "Apagalo y prendelo de nuevo.",
+      "Para llegar al ventilador, sacá la tapa de atrás.",
+      "Sacá el ventilador de su soporte y limpialo.",
+      "Poné la tapa y probalo.",
+    ]);
+    expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2, 3, 4]);
+    expect(r.pack.pasos[0]).not.toHaveProperty("rol"); // el rol no va al pack
+    expect(r.pack.sospechosas).toEqual([{ pieza: "ventilador", porque: "El zumbido sale de ahí.", chequeo: "Acercá el oído con el celular andando." }]);
+    expect(r.eventos.map((e) => e.tipo)).toEqual(expect.arrayContaining(["piezas_sospechosas", "pasos_fuera_de_tema"]));
+  });
+
+  it("sin triage (falló o es un test sin `triar`) la guía se arma como antes, sin sospechosas", async () => {
+    const c = claude(false);
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, fetch: red(), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f", triar: async () => null });
+    expect(r.pack.sospechosas).toBeUndefined();
+    expect(r.pack.pasos).toHaveLength(1);
+  });
+
   it("reconoce la URL de una guía de iFixit", () => {
     expect(idDeGuiaIfixit(GUIA_URL)).toBe(3);
     expect(idDeGuiaIfixit("https://otra.com/Guide/x/3")).toBeNull();

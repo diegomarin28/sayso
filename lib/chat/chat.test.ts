@@ -225,6 +225,15 @@ describe("cambiar", () => {
     if (p.tipo !== "paso") throw new Error();
     expect(p.coreografia.cambiar).toBeUndefined();
   });
+
+  it("con piezas sospechosas en el pack, solo se ofrece cambiar una de ellas (no la batería si es el ventilador)", async () => {
+    const pack = { ...knowledgePackEjemplo, sospechosas: [{ pieza: "ventilador", porque: "Hace ruido.", chequeo: "Escuchalo con el equipo andando." }] };
+    const ev = await todos(
+      conversar({ ...base2, pack, pregunta: "¿Qué hago?" }, streamFalso(["[[cambiar:bateria]] Cambiá la batería. ", "[[cambiar:ventilador]] Cambiá el ventilador. "])),
+    );
+    const cambios = ev.flatMap((e) => (e.tipo === "paso" ? [e.coreografia.cambiar] : []));
+    expect(cambios).toEqual([undefined, "ventilador"]);
+  });
 });
 
 describe("pregunta de seguimiento (A7)", () => {
