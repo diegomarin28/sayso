@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
-import { BotonConversacion, BotonIcono, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
+import { ANCHO_CHAT_LATERAL, BotonConversacion, BotonIcono, Charla, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, useChatLateral, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
@@ -195,8 +195,8 @@ export function GuiaExperto({
     async (pregunta: string) => {
       const limpia = pregunta.trim();
       if (!limpia) return;
-      // Con el chat abierto, se cierra: la respuesta se ve en el 3D y en la hoja.
-      setPreguntando(false);
+      // En el celular el chat tapa el 3D: se cierra para ver la respuesta. En pantallas anchas queda al costado.
+      if (!window.matchMedia(ANCHO_CHAT_LATERAL).matches) setPreguntando(false);
       const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
       historial.current = [...historial.current, { rol: "persona", texto: limpia }];
       setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
@@ -333,116 +333,125 @@ export function GuiaExperto({
         </form>
   );
   const horizontal = useCelularHorizontal();
+  const chatLateral = useChatLateral();
 
   return (
-    <div className={`flex flex-col bg-escena text-texto ${className}`}>
-      {/* El 3D ocupa todo el espacio entre el encabezado y la hoja. La hoja tiene alto fijo: sea una
-          heladera o un celular, la página no cambia; la cámara acerca o aleja el equipo para que entre
-          entero (encuadre) y nada lo tapa, porque la hoja va debajo del 3D y no encima. */}
-      <div className="relative min-h-0 flex-1">
-        <div className="absolute inset-0">
-          <Visor
-            className="h-full w-full"
-            plano={plano}
-            coreografia={coreografia}
-            piezas={pack.piezas}
-            tipoEquipo={tipoEquipo}
-            casoId={casoId}
-            onEvento={onEvento}
-            onPaso={(p) => alPaso(p.coreografia)}
-            efectos={efectos}
-            reservadoArriba={reservado}
-          />
-        </div>
+    <div className={`flex bg-escena text-texto ${className}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* El 3D ocupa todo el espacio entre el encabezado y la hoja. La hoja tiene alto fijo: sea una
+            heladera o un celular, la página no cambia; la cámara acerca o aleja el equipo para que entre
+            entero (encuadre) y nada lo tapa, porque la hoja va debajo del 3D y no encima. */}
+        <div className="relative min-h-0 flex-1">
+          <div className="absolute inset-0">
+            <Visor
+              className="h-full w-full"
+              plano={plano}
+              coreografia={coreografia}
+              piezas={pack.piezas}
+              tipoEquipo={tipoEquipo}
+              casoId={casoId}
+              onEvento={onEvento}
+              onPaso={(p) => alPaso(p.coreografia)}
+              efectos={efectos}
+              reservadoArriba={reservado}
+            />
+          </div>
 
-        {/* Arriba, sobre el 3D, solo avisos chicos: el visor encuadra y pone las etiquetas debajo. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-2">
-          <div ref={cabecera} className="flex flex-col items-start gap-2">
-            {origenPlano === "plantilla" && (
-              <p className="rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
-                Esquema genérico, no es tu modelo exacto
-              </p>
-            )}
-            {horizontal && (
-              <p className="flex items-center gap-2 rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
-                <GirarCelular size={18} /> Girá el celular para ver mejor
-              </p>
-            )}
+          {/* Arriba, sobre el 3D, solo avisos chicos: el visor encuadra y pone las etiquetas debajo. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-2">
+            <div ref={cabecera} className="flex flex-col items-start gap-2">
+              {origenPlano === "plantilla" && (
+                <p className="rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
+                  Esquema genérico, no es tu modelo exacto
+                </p>
+              )}
+              {horizontal && (
+                <p className="flex items-center gap-2 rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
+                  <GirarCelular size={18} /> Girá el celular para ver mejor
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Abajo a la derecha del 3D, justo arriba de la hoja: la charla (con el número de preguntas) y la transparencia (#95). */}
+          <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
+            <BotonConversacion mensajes={mensajes} abierta={preguntando} onCambiar={setPreguntando} pie={campo} lateral={chatLateral} />
+            <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
+              <Libro size={20} />
+            </BotonIcono>
           </div>
         </div>
 
-        {/* Abajo a la derecha del 3D, justo arriba de la hoja: la charla (con el número de preguntas) y la transparencia (#95). */}
-        <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
-          <BotonConversacion mensajes={mensajes} abierta={preguntando} onCambiar={setPreguntando} pie={campo} />
-          <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
-            <Libro size={20} />
-          </BotonIcono>
-        </div>
+        {/* La hoja: el paso y sus controles, al alcance del pulgar, con lo justo de alto (el texto ocupa 2 o 3
+            líneas, así la hoja casi no cambia entre pasos). La pregunta se abre con el botón de mensajes. Nunca
+            pasa de la mitad de la pantalla: lo que no entra se lee con scroll adentro. En pantallas anchas el
+            contenido va centrado y angosto. */}
+        <section
+          aria-label="Guía del experto"
+          className="flex max-h-[50dvh] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
+        >
+          <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-borde" />
+          <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-col gap-2 overflow-y-auto px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {/* Caso abierto desde "Mis casos": los pasos guardados del pack, sin IA (#219). */}
+            {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void seguirGuardada()}
+                className="flex min-h-11 items-center gap-2 rounded-2xl border border-acento/60 bg-acento/10 px-4 py-2.5 text-left text-texto active:scale-[0.99]"
+              >
+                <Siguiente size={20} className="shrink-0 text-acento" />
+                <span className="flex flex-col leading-tight">
+                  <span className="font-semibold">Seguir con la guía · {pasosGuardados.length} {pasosGuardados.length === 1 ? "paso" : "pasos"}</span>
+                  <span className="text-xs text-texto-suave">Los pasos que ya armamos para tu caso, sin volver a preguntar</span>
+                </span>
+              </button>
+            )}
+            {pasoActual && (
+              <TarjetaPaso
+                key={`${indice}-${pasoActual.dice}`}
+                c={pasoActual}
+                indice={indice}
+                total={Math.max(controles?.total ?? 0, pasos.length)}
+                completa={completa}
+                onElegir={verPaso}
+                onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
+                verFoto={!!paginaDelPaso?.foto}
+                controles={
+                  <>
+                    {controles && (controles.total > 1 || !controles.completa) && (
+                      <ControlesGuia
+                        c={{ ...controles, modo }}
+                        onAnterior={() => reproductor.current?.anterior()}
+                        onPausar={() => reproductor.current?.pausar()}
+                        onSeguir={() => reproductor.current?.seguir()}
+                        onSiguiente={() => reproductor.current?.siguiente()}
+                        onModo={cambiarModo}
+                      />
+                    )}
+                    {retomable && <BotonSeguirGuia guia={retomable} onSeguir={seguirGuia} />}
+                  </>
+                }
+              />
+            )}
+            <EstadoExperto estado={estado} detalle={detalle} />
+            {!pasoActual && !ocupado && estado !== "error" && pasosGuardados.length === 0 && (
+              <p className="text-sm text-texto-suave">Tocá el ícono de mensajes para preguntarle al experto lo que quieras.</p>
+            )}
+          </div>
+
+          {/* Las sugerencias, solo cuando no hay un paso a la vista. */}
+          <div className="mx-auto w-full max-w-2xl">
+            <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
+          </div>
+
+        </section>
       </div>
-
-      {/* La hoja: el paso y sus controles, al alcance del pulgar, con lo justo de alto (el texto ocupa 2 o 3
-          líneas, así la hoja casi no cambia entre pasos). La pregunta se abre con el botón de mensajes. Nunca
-          pasa de la mitad de la pantalla: lo que no entra se lee con scroll adentro. En pantallas anchas el
-          contenido va centrado y angosto. */}
-      <section
-        aria-label="Guía del experto"
-        className="flex max-h-[50dvh] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
-      >
-        <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-borde" />
-        <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-col gap-2 overflow-y-auto px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          {/* Caso abierto desde "Mis casos": los pasos guardados del pack, sin IA (#219). */}
-          {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
-            <button
-              type="button"
-              onClick={() => void seguirGuardada()}
-              className="flex min-h-11 items-center gap-2 rounded-2xl border border-acento/60 bg-acento/10 px-4 py-2.5 text-left text-texto active:scale-[0.99]"
-            >
-              <Siguiente size={20} className="shrink-0 text-acento" />
-              <span className="flex flex-col leading-tight">
-                <span className="font-semibold">Seguir con la guía · {pasosGuardados.length} {pasosGuardados.length === 1 ? "paso" : "pasos"}</span>
-                <span className="text-xs text-texto-suave">Los pasos que ya armamos para tu caso, sin volver a preguntar</span>
-              </span>
-            </button>
-          )}
-          {pasoActual && (
-            <TarjetaPaso
-              key={`${indice}-${pasoActual.dice}`}
-              c={pasoActual}
-              indice={indice}
-              total={Math.max(controles?.total ?? 0, pasos.length)}
-              completa={completa}
-              onElegir={verPaso}
-              onVerManual={paginaDelPaso ? () => setPaginaAbierta(paginaDelPaso) : undefined}
-              verFoto={!!paginaDelPaso?.foto}
-              controles={
-                <>
-                  {controles && (controles.total > 1 || !controles.completa) && (
-                    <ControlesGuia
-                      c={{ ...controles, modo }}
-                      onAnterior={() => reproductor.current?.anterior()}
-                      onPausar={() => reproductor.current?.pausar()}
-                      onSeguir={() => reproductor.current?.seguir()}
-                      onSiguiente={() => reproductor.current?.siguiente()}
-                      onModo={cambiarModo}
-                    />
-                  )}
-                  {retomable && <BotonSeguirGuia guia={retomable} onSeguir={seguirGuia} />}
-                </>
-              }
-            />
-          )}
-          <EstadoExperto estado={estado} detalle={detalle} />
-          {!pasoActual && !ocupado && estado !== "error" && pasosGuardados.length === 0 && (
-            <p className="text-sm text-texto-suave">Tocá el ícono de mensajes para preguntarle al experto lo que quieras.</p>
-          )}
-        </div>
-
-        {/* Las sugerencias, solo cuando no hay un paso a la vista. */}
-        <div className="mx-auto w-full max-w-2xl">
-          <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
-        </div>
-
-      </section>
+      {/* Pantalla ancha: el chat en un panel a la derecha; el 3D y la hoja se achican y siguen a la vista. */}
+      {chatLateral && preguntando && (
+        <aside aria-label="Hablar con el experto" className="flex w-[380px] shrink-0 flex-col border-l border-borde bg-fondo">
+          <Charla mensajes={mensajes} pie={campo} onCerrar={() => setPreguntando(false)} />
+        </aside>
+      )}
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
       {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Coreografia, KnowledgePack } from "../../../shared";
 import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
@@ -313,36 +313,50 @@ export function chatComoTexto(mensajes: MensajeChat[]): string {
     .join("\n\n");
 }
 
+/** Desde este ancho (tablet y compu) el chat va en un panel a la derecha del 3D; más angosto, sube desde abajo. */
+export const ANCHO_CHAT_LATERAL = "(min-width: 768px)";
+
+/** Si la pantalla es ancha (`ANCHO_CHAT_LATERAL`). En el servidor, angosta. */
+export function useChatLateral(): boolean {
+  return useSyncExternalStore(
+    (avisar) => {
+      const mq = window.matchMedia(ANCHO_CHAT_LATERAL);
+      mq.addEventListener("change", avisar);
+      return () => mq.removeEventListener("change", avisar);
+    },
+    () => window.matchMedia(ANCHO_CHAT_LATERAL).matches,
+    () => false,
+  );
+}
+
 /**
- * El chat con el experto, en un solo lugar: el ícono (con el número de preguntas) flota sobre el 3D y abre
- * la charla entera arriba y, abajo, el campo para preguntar (`pie`). Lo abre y lo cierra quien lo usa
- * (`abierta`): al hacer una pregunta se cierra solo, para ver la respuesta en el 3D.
+ * El chat con el experto, en un solo lugar: el ícono (con el número de preguntas) flota sobre el 3D y
+ * abre la charla con el campo para preguntar (`pie`). En el celular sube desde abajo, encima del 3D, y se
+ * cierra al preguntar (para ver la respuesta). En pantallas anchas (`lateral`) lo dibuja quien lo usa, en
+ * un panel a la derecha (`Charla`): acá queda solo el ícono, que lo abre y lo cierra.
  */
 export function BotonConversacion({
   mensajes,
   abierta,
   onCambiar,
   pie,
+  lateral = false,
 }: {
   mensajes: MensajeChat[];
   abierta: boolean;
   onCambiar: (abierta: boolean) => void;
-  /** El campo para preguntar, abajo del panel. */
+  /** El campo para preguntar, abajo de la charla. */
   pie?: ReactNode;
+  lateral?: boolean;
 }) {
-  const [copiado, setCopiado] = useState(false);
   const preguntas = mensajes.filter((m) => m.rol === "persona").length;
   const cambiar = useRef(onCambiar);
   useEffect(() => {
     cambiar.current = onCambiar;
   }, [onCambiar]);
 
-  function abrir() {
-    setCopiado(false);
-    onCambiar(true);
-  }
   // Abierto, suma una entrada al historial: "atrás" (gesto o botón) la consume y cierra (no se va del
-  // experto). Cerrado de otra forma (Cerrar, Escape o una pregunta), la saca.
+  // experto). Cerrado de otra forma (Cerrar, Escape, el ícono o una pregunta), la saca.
   useEffect(() => {
     if (!abierta) return;
     window.history.pushState({ ...window.history.state, conversacion: true }, "");
@@ -362,6 +376,49 @@ export function BotonConversacion({
   }, [abierta]);
   const cerrar = () => onCambiar(false);
 
+  return (
+    <>
+      <BotonIcono
+        etiqueta={`Hablar con el experto${preguntas > 0 ? ` (${preguntas})` : ""}`}
+        onClick={() => onCambiar(!abierta)}
+        insignia={preguntas}
+      >
+        <Globo size={20} />
+      </BotonIcono>
+
+      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
+          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
+      {abierta &&
+        !lateral &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Hablar con el experto"
+            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70"
+            onClick={cerrar}
+          >
+            <div
+              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Charla mensajes={mensajes} pie={pie} onCerrar={cerrar} />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/** Lo de adentro del chat: título, Compartir y Cerrar; la charla (baja sola al último mensaje); y el campo. */
+export function Charla({ mensajes, pie, onCerrar }: { mensajes: MensajeChat[]; pie?: ReactNode; onCerrar: () => void }) {
+  const [copiado, setCopiado] = useState(false);
+  const fin = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    fin.current?.scrollIntoView({ block: "end" });
+  }, [mensajes.length]);
+
   async function exportar() {
     const texto = chatComoTexto(mensajes);
     try {
@@ -378,75 +435,53 @@ export function BotonConversacion({
 
   return (
     <>
-      <BotonIcono etiqueta={`Hablar con el experto${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
-        <Globo size={20} />
-      </BotonIcono>
-
-      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
-          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
-      {abierta &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Hablar con el experto"
-            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
-            onClick={cerrar}
-          >
-            <div
-              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
-              onClick={(e) => e.stopPropagation()}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-borde px-5 py-4">
+        <p className="min-w-0 font-semibold">Hablar con el experto</p>
+        <div className="flex shrink-0 gap-2">
+          {mensajes.length > 0 && (
+            <button type="button" onClick={exportar} className="h-11 rounded-full border border-borde px-4 text-sm">
+              {copiado ? "Copiado ✓" : "Compartir"}
+            </button>
+          )}
+          <button type="button" onClick={onCerrar} className="h-11 rounded-full border border-borde px-4 text-sm">
+            Cerrar
+          </button>
+        </div>
+      </div>
+      {mensajes.length === 0 && (
+        <p className="px-5 py-4 text-sm text-texto-suave">
+          Preguntale lo que quieras sobre tu equipo: dónde está una pieza, qué herramienta usar o qué hacer si algo no sale.
+        </p>
+      )}
+      <ol
+        className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 ${mensajes.length ? "py-4" : ""} ${
+          pie ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+        }`}
+      >
+        {mensajes.map((m, i) =>
+          m.rol === "persona" ? (
+            <li
+              key={m.id}
+              ref={i === mensajes.length - 1 ? fin : undefined}
+              className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-borde px-5 py-4">
-                <p className="min-w-0 font-semibold">Hablar con el experto</p>
-                <div className="flex shrink-0 gap-2">
-                  {mensajes.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={exportar}
-                      className="h-11 rounded-full border border-borde px-4 text-sm"
-                    >
-                      {copiado ? "Copiado ✓" : "Compartir"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={cerrar}
-                    className="h-11 rounded-full border border-borde px-4 text-sm"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-              {mensajes.length === 0 && (
-                <p className="px-5 py-4 text-sm text-texto-suave">
-                  Preguntale lo que quieras sobre tu equipo: dónde está una pieza, qué herramienta usar o qué hacer si algo no sale.
-                </p>
-              )}
-              <ol className={`flex min-h-0 flex-col gap-3 overflow-y-auto px-5 ${mensajes.length ? "py-4" : ""} ${pie ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"}`}>
-                {mensajes.map((m) =>
-                  m.rol === "persona" ? (
-                    <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
-                      {m.texto}
-                    </li>
-                  ) : (
-                    <li
-                      key={m.id}
-                      className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
-                        m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
-                      }`}
-                    >
-                      <p className="mb-1.5 leading-snug">{m.c.dice}</p>
-                      <EtiquetaCita c={m.c} />
-                    </li>
-                  ),
-                )}
-              </ol>
-              {pie && <div className="shrink-0 border-t border-borde">{pie}</div>}
-            </div>
-          </div>,
-          document.body,
+              {m.texto}
+            </li>
+          ) : (
+            <li
+              key={m.id}
+              ref={i === mensajes.length - 1 ? fin : undefined}
+              className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
+                m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
+              }`}
+            >
+              <p className="mb-1.5 leading-snug">{m.c.dice}</p>
+              <EtiquetaCita c={m.c} />
+            </li>
+          ),
         )}
+      </ol>
+      {pie && <div className="shrink-0 border-t border-borde">{pie}</div>}
     </>
   );
 }
