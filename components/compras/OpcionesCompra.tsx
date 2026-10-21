@@ -19,6 +19,11 @@ export type OpcionesCompraProps = PedidoCompra & {
   buscarAlMontar?: boolean;
   /** false si la pantalla ya muestra la pieza (nombre y N.º de parte) arriba: sin encabezado propio (#208). */
   mostrarPieza?: boolean;
+  /**
+   * El botón para buscar: por defecto, ámbar, ancho y «Ver dónde comprar esta pieza». En una lista, `compacto`:
+   * chico y con borde, al lado del nombre (mientras busca o con resultados, ocupa todo el ancho).
+   */
+  boton?: { texto: string; compacto?: boolean };
   onEvento?: (e: Evento) => void;
   /** Para /lab y tests: de dónde salen las opciones (por defecto, /api/compras). */
   fuente?: FuenteCompras;
@@ -28,6 +33,7 @@ export type OpcionesCompraProps = PedidoCompra & {
 export function OpcionesCompra({
   buscarAlMontar = false,
   mostrarPieza = true,
+  boton,
   onEvento,
   fuente = fuenteApi,
   className = "",
@@ -56,7 +62,16 @@ export function OpcionesCompra({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <VistaCompras estado={estado} pedido={pedido} mostrarPieza={mostrarPieza} onBuscar={() => void buscar()} className={className} />;
+  return (
+    <VistaCompras
+      estado={estado}
+      pedido={pedido}
+      mostrarPieza={mostrarPieza}
+      boton={boton}
+      onBuscar={() => void buscar()}
+      className={className}
+    />
+  );
 }
 
 /** Lo que se ve en cada estado. Sin estado propio: se prueba renderizándola (components/compras/compras.test.tsx). */
@@ -64,12 +79,14 @@ export function VistaCompras({
   estado,
   pedido,
   mostrarPieza = true,
+  boton,
   onBuscar,
   className = "",
 }: {
   estado: EstadoCompras;
   pedido: Pick<PedidoCompra, "pieza" | "nombre" | "numeroParte" | "modelo" | "marca">;
   mostrarPieza?: boolean;
+  boton?: { texto: string; compacto?: boolean };
   onBuscar: () => void;
   className?: string;
 }) {
@@ -88,7 +105,11 @@ export function VistaCompras({
         </header>
       )}
 
-      {estado.t === "inicio" && <BotonBuscar onClick={onBuscar}>Ver dónde comprar esta pieza</BotonBuscar>}
+      {estado.t === "inicio" && (
+        <BotonBuscar onClick={onBuscar} compacto={boton?.compacto}>
+          {boton?.texto ?? "Ver dónde comprar esta pieza"}
+        </BotonBuscar>
+      )}
 
       {estado.t === "buscando" && (
         <p role="status" className="animate-pulse text-sm text-texto-suave">
@@ -159,13 +180,25 @@ function Alternativa({ pedido }: { pedido: Pick<PedidoCompra, "pieza" | "nombre"
   );
 }
 
-function BotonBuscar({ onClick, secundario = false, children }: { onClick: () => void; secundario?: boolean; children: string }) {
+function BotonBuscar({
+  onClick,
+  secundario = false,
+  compacto = false,
+  children,
+}: {
+  onClick: () => void;
+  secundario?: boolean;
+  compacto?: boolean;
+  children: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-12 w-full rounded-2xl px-4 py-2 font-semibold leading-tight transition active:scale-95 ${
-        secundario ? "border border-borde text-texto" : "bg-acento text-black"
+      className={`font-semibold leading-tight transition active:scale-95 ${
+        compacto
+          ? "min-h-11 self-start rounded-full border border-borde px-4 text-sm text-texto hover:border-texto-suave"
+          : `min-h-12 w-full rounded-2xl px-4 py-2 ${secundario ? "border border-borde text-texto" : "bg-acento text-black"}`
       }`}
     >
       {children}
