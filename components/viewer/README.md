@@ -1,6 +1,6 @@
 # components/viewer
 
-Dueño: Diego
+Dueño: Iaio (desde el 21/10/2026; antes, Diego).
 
 Visor 3D y reproductor de coreografía (React Three Fiber).
 

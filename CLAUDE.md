@@ -5,7 +5,7 @@
 ## 0. Inicio obligatorio
 
 1. Preguntá: **«¿Sos Diego, Juanma o Iaio?»** y esperá la respuesta. Iaio y "Yayo" son la misma persona. Si no sabés su sistema, preguntalo (Juanma usa Windows/PowerShell; Diego e Iaio, Mac).
-2. Leé `CLAUDE.md`, `CONTEXT.md`, `AGENTS.md`, `shared/schemas.ts` y la documentación del carril que toque la tarea. Si `shared/` no existe, no inventes contratos: avisá que Diego tiene que crearlos.
+2. Leé `CLAUDE.md`, `CONTEXT.md`, `AGENTS.md`, `shared/schemas.ts` y la documentación del carril que toque la tarea. Si `shared/` no existe, no inventes contratos: avisá que Iaio tiene que crearlos.
 3. Verificá el estado real, nunca de memoria: `git fetch origin`, `git log --oneline -15 origin/main`, `gh pr list` y `git worktree list`.
 4. Leé los issues abiertos de tu carril, primero los que tienen `pregunta`, `dependencia`, `decision` o `bloqueado`: `gh issue list --state open --label <carril>`. Mirá también los PR abiertos que toquen los archivos de la tarea.
 5. Presentá el **plan de un solo PR**: objetivo, alcance, archivos previstos, pruebas, riesgos, dependencias y si gasta IA o servicios pagos. Esperá el OK de la persona antes de empezar, salvo que la tarea ya estuviera aprobada.
@@ -18,22 +18,21 @@ Sayso apunta a ser un producto B2C de asistencia de reparación desde el celular
 | Persona | Carril | Etiqueta | Prioridades actuales |
 |---|---|---|---|
 | **Juanma** (Windows, poca RAM) | **A — Cerebro** | `carril-a` | Selección y uso de Haiku y otros modelos; identificación; preguntas al usuario; búsqueda documental; precisión y claridad de las respuestas; citas; seguridad y comportamiento del chat. Respuestas verificables y útiles antes que vistosas. Medir calidad, costo y latencia. |
-| **Diego** | **B — 3D** + `shared/` | `carril-b` | Prioridad transversal: fidelidad visual, geometría, escala, ubicación y jerarquía de piezas, variantes por equipo, evidencia y certeza, interacción, coreografías, rendimiento en el celular y evaluación reproducible. Explorar herramientas nuevas de IA/3D como investigación con criterios y pruebas, sin adoptar servicios por moda ni gastar sin permiso. |
-| **Iaio** | **C — Producto** | `carril-c` | Interfaz móvil usable; autenticación y sesiones; lista de casos activos, pendientes y anteriores; recuperar un caso y su 3D ya generado sin regenerarlo; navegación clara (sidebar u otra según diseño); estados de carga y errores. Diseñar persistencia y aislamiento por usuario, migración de casos anónimos y manejo de datos personales **antes** de dar por listo el login. |
+| **Diego** | **B — Modelado 3D** | `carril-b` | Los modelos 3D: fidelidad visual, geometría, escala, piezas y variantes por equipo, hechos en Blender y comprimidos para el celular. Explorar herramientas nuevas de IA/3D para modelar, con criterios y pruebas, sin adoptar servicios por moda ni gastar sin permiso. No escribe el código de la app (desde el 21/10/2026, ver §2). |
+| **Iaio** | **C — Producto** + código del 3D, `shared/` y compras | `carril-c` | Todo el código que no es de A: además de lo de abajo, el visor y la guía en 3D (ubicación de piezas, interacción, coreografías, rendimiento en el celular, evaluación reproducible), los contratos de `shared/` y compras. Interfaz móvil usable; autenticación y sesiones; lista de casos activos, pendientes y anteriores; recuperar un caso y su 3D ya generado sin regenerarlo; navegación clara (sidebar u otra según diseño); estados de carga y errores. Diseñar persistencia y aislamiento por usuario, migración de casos anónimos y manejo de datos personales **antes** de dar por listo el login. |
 
-Cuando A o C terminen sus objetivos acordados, le proponen a Diego (issue `carril-b` + `pregunta`) tareas acotadas de apoyo al 3D. No cambian de dueño ni pisan archivos sin coordinarlo en GitHub.
+Cuando A termine sus objetivos acordados, le propone a Iaio (issue `carril-c` + `pregunta`) tareas acotadas de apoyo al código del 3D, o a Diego (`carril-b`) si son de modelado. No cambia de dueño ni pisa archivos sin coordinarlo en GitHub.
 
 ## 2. Dueños de código y contratos
 
 Las rutas son orientativas: verificá el código real antes de tocar algo.
 
 - **A:** `lib/ia`, `lib/intake`, `lib/ficha`, `lib/knowledge`, `lib/chat`, `lib/safety` y sus endpoints (`app/api/intake`, `ficha`, `knowledge`, `chat`).
-- **B:** `components/viewer`, `lib/planogenerator`, `app/api/plano`, `assets/models`, `public/models/piezas`, `app/lab`, las herramientas de evaluación 3D y `shared/`.
-- **C:** `app/(screens)`, componentes de navegación, cuenta y casos, `lib/voice` y `app/api/voz`, persistencia y autenticación (`lib/supabase`, `app/api/casos` y rutas relacionadas).
-- **Compras** (`lib/compras`, `components/compras`, `app/api/compras`, `lib/herramientas`): las escribió B y dependen de A (IA). Hasta que se decida un dueño en un issue `decision`, todo cambio ahí se coordina entre A y B.
+- **B (Diego, modelado 3D):** los modelos y su generación: `assets/models` (Blender y sus scripts) y `public/models/piezas` (`npm run modelos:*`).
+- **C (Iaio):** `app/(screens)`, componentes de navegación, cuenta y casos, `lib/voice` y `app/api/voz`, persistencia y autenticación (`lib/supabase`, `app/api/casos` y rutas relacionadas). Además, desde el 21/10/2026, todo el código que era de B: `components/viewer`, `lib/planogenerator`, `app/api/plano`, `app/lab` y las herramientas de evaluación 3D; los contratos de `shared/`; y compras (`lib/compras`, `components/compras`, `app/api/compras`, `lib/herramientas`), que dependen de A (IA): los cambios que toquen la IA se coordinan con A.
 - `docs/`: todos.
 
-Si una tarea toca otra área, abrí un issue `dependencia` al carril dueño o pactá en el issue un PR explícitamente coordinado. **`shared/schemas.ts`** solo cambia por PR con etiqueta `contrato`, revisión de todos los consumidores y aviso a los tres carriles (issue con `carril-a`, `carril-b` y `carril-c`); nunca de forma unilateral. Lo fusiona Diego.
+Si una tarea toca otra área, abrí un issue `dependencia` al carril dueño o pactá en el issue un PR explícitamente coordinado. **`shared/schemas.ts`** solo cambia por PR con etiqueta `contrato`, revisión de todos los consumidores y aviso a los tres carriles (issue con `carril-a`, `carril-b` y `carril-c`); nunca de forma unilateral. Lo fusiona Iaio.
 
 ## 3. Coordinación entre agentes: GitHub es la memoria compartida
 
@@ -79,7 +78,7 @@ Ningún agente decide solo sobre:
 - **Seguridad y datos personales:** reglas de riesgo, bloqueos, manejo de datos de usuarios, permisos, secretos, accesos.
 - **Presupuesto:** cualquier llamada paga a IA o a un proveedor, cuentas nuevas, planes pagos.
 
-En esos casos presentá alternativas con pros, contras y costo, y preguntá a tu persona. Si la decisión es de otro carril o afecta a todos, abrí un issue `decision` con la etiqueta del carril dueño. Los contratos (`shared/`) y el gasto de la cuenta de Anthropic los decide Diego; las claves de Supabase y Vercel, Iaio. También frená si algo falla dos veces seguidas sin causa clara, o si necesitás que alguien pruebe en el navegador, el micrófono o la cámara.
+En esos casos presentá alternativas con pros, contras y costo, y preguntá a tu persona. Si la decisión es de otro carril o afecta a todos, abrí un issue `decision` con la etiqueta del carril dueño. Los contratos (`shared/`) los decide Iaio; el gasto de la cuenta de Anthropic, Diego; las claves de Supabase y Vercel, Iaio. También frená si algo falla dos veces seguidas sin causa clara, o si necesitás que alguien pruebe en el navegador, el micrófono o la cámara.
 
 ## 6. Reglas técnicas y de seguridad permanentes (detalle en `CONTEXT.md`)
 
@@ -95,8 +94,8 @@ En esos casos presentá alternativas con pros, contras y costo, y preguntá a tu
 ## 7. Cómo elegir el siguiente trabajo
 
 - **A:** encontrar errores de respuesta, evidencia y búsqueda; medir calidad, latencia y costo antes y después; priorizar fallas reproducibles.
-- **B:** armar un benchmark 3D con equipos y fotos de referencia; puntuar geometría, posición, animación, certeza y rendimiento; mejorar un cuello de botella por PR. Investigar herramientas nuevas con comparativas y pruebas acotadas, sin suponer que un proveedor da un 3D utilizable sin verificarlo.
-- **C:** especificar identidad y datos guardados, login, recuperación de casos y reutilización de modelos; separar el prototipo local de una arquitectura multiusuario segura; priorizar el flujo móvil de punta a punta.
+- **B:** mejorar los modelos 3D con equipos y fotos de referencia (geometría, escala, piezas, peso en el celular), un equipo o una familia de piezas por PR. Investigar herramientas nuevas de modelado con comparativas y pruebas acotadas, sin suponer que un proveedor da un 3D utilizable sin verificarlo.
+- **C:** especificar identidad y datos guardados, login, recuperación de casos y reutilización de modelos; separar el prototipo local de una arquitectura multiusuario segura; priorizar el flujo móvil de punta a punta. En el código del 3D: armar un benchmark con equipos de referencia; puntuar posición, animación, certeza y rendimiento; mejorar un cuello de botella por PR.
 
 Cada tarea tiene definición de terminado, pruebas y criterio de aceptación. Si falta una decisión, proponé alternativas y preguntá a la persona indicada.
 

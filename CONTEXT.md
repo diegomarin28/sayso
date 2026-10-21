@@ -12,9 +12,9 @@ Ahora apunta a ser un producto B2C para el celular; las prioridades de cada carr
 
 | Persona | Cuenta | Carril |
 |---|---|---|
-| **Diego** (Mac) | Claude 100 USD | **B — 3D** + `shared/` |
+| **Diego** (Mac) | Claude 100 USD | **B — Modelado 3D** |
 | **Juanma** (Windows) | Claude 20 USD | **A — Cerebro** |
-| **Iaio** (Mac) | Claude 20 USD | **C — Producto** |
+| **Iaio** (Mac) | Claude 20 USD | **C — Producto** + código del 3D, `shared/` y compras |
 
 Dueños de carpetas: `CLAUDE.md` §2. La cuenta de Codex (20 USD) no tiene dueño: se usa para revisar PRs y escribir tests.
 
