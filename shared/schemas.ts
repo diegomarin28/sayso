@@ -130,6 +130,19 @@ export const Rasgos3D = z.object({
 });
 export type Rasgos3D = z.infer<typeof Rasgos3D>;
 
+/**
+ * Pieza sospechosa del síntoma: el diagnóstico previo de la IA (triage), antes de elegir la fuente. `pieza` es el
+ * tipo de pieza (ej. "ventilador"), como empiezan los ids de `Pieza`: los pasos de reparación y `cambiar` solo
+ * pueden ser de estas piezas. Es una hipótesis, no un dato confirmado.
+ */
+export const Sospechosa = z.object({
+  pieza: z.string().regex(/^[a-z0-9_]+$/),
+  porque: z.string(),
+  /** Cómo confirmarla (ej. "Acercá el oído con el equipo andando: si el ventilador raspa, es él"). */
+  chequeo: z.string(),
+});
+export type Sospechosa = z.infer<typeof Sospechosa>;
+
 export const KnowledgePack = z.object({
   modelo: z.string(),
   clase: ClaseEquipo,
@@ -146,6 +159,8 @@ export const KnowledgePack = z.object({
    */
   formaPantalla: z.enum(["cuadrada", "redonda"]).optional(),
   rasgos3D: Rasgos3D.optional(),
+  /** Piezas sospechosas del síntoma, de la más probable a la menos (triage). Sin dato (packs viejos): sin filtro. */
+  sospechosas: z.array(Sospechosa).max(3).optional(),
 });
 export type KnowledgePack = z.infer<typeof KnowledgePack>;
 
