@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import type { Coreografia, Evento, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { Visor, type ModoEfectos } from "../Visor";
-import { BotonConversacion, BotonIcono, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, type MensajeChat } from "./conversacion";
+import { ANCHO_CHAT_LATERAL, BotonConversacion, BotonIcono, Charla, ControlesGuia, FilaSugerencias, preguntasSugeridas, TarjetaPaso, useChatLateral, type MensajeChat } from "./conversacion";
 import { FlechaEnviar, GirarCelular, Libro, Siguiente } from "./iconos";
 import { fotoParaPaso, paginaParaPaso, VerPaginaManual, type PaginaManual } from "./pagina-manual";
 import { fuenteApi, type EventoChat, type FuenteChat, type MensajeHistorial } from "./eventos-chat";
@@ -67,6 +68,11 @@ export type GuiaExpertoProps = {
   fuente?: FuenteChat;
   efectos?: ModoEfectos;
   className?: string;
+  /**
+   * Dónde va el chat en pantallas anchas: un lugar de la página al lado del encabezado, para que ocupe todo
+   * el alto (la pantalla del experto). Sin destino (el lab), va a la derecha de la guía.
+   */
+  destinoChat?: HTMLElement | null;
 };
 
 /** Por debajo del máximo que acepta /api/chat (LIMITES.chat.maxHistorial, en el servidor). */
@@ -101,6 +107,7 @@ export function GuiaExperto({
   fuente = fuenteApi,
   efectos,
   className = "",
+  destinoChat,
 }: GuiaExpertoProps) {
   const [estado, setEstado] = useState<EstadoGuia>("esperando");
   const [detalle, setDetalle] = useState<string>();
@@ -127,6 +134,8 @@ export function GuiaExperto({
   /** Lo que se ve en "Conversación": preguntas de la persona y pasos del experto. */
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [texto, setTexto] = useState("");
+  /** El chat (el ícono flotante sobre el 3D): la charla y el campo para preguntar. */
+  const [preguntando, setPreguntando] = useState(false);
   const historial = useRef<MensajeHistorial[]>([]);
   const actual = useRef<AbortController | null>(null);
   const idMensaje = useRef(0);
@@ -193,6 +202,8 @@ export function GuiaExperto({
     async (pregunta: string) => {
       const limpia = pregunta.trim();
       if (!limpia) return;
+      // En el celular el chat tapa el 3D: se cierra para ver la respuesta. En pantallas anchas queda al costado.
+      if (!window.matchMedia(ANCHO_CHAT_LATERAL).matches) setPreguntando(false);
       const pedido = { casoId, pack, plano, manualFileId, historial: historial.current.slice(-HISTORIAL_MAX), pregunta: limpia, tipoEquipo };
       historial.current = [...historial.current, { rol: "persona", texto: limpia }];
       setMensajes((m) => [...m, { rol: "persona", texto: limpia, id: ++idMensaje.current }]);
@@ -294,40 +305,112 @@ export function GuiaExperto({
   // La página del manual que cita el paso o, si cita un paso con foto (iFixit), esa foto.
   const paginaDelPaso = paginaParaPaso(pasoActual, imagenPagina) ?? fotoParaPaso(pasoActual, fotoDePaso);
   const etiquetaBoton = ocupado ? "Cambiar" : "Preguntar";
-  // Lo que tapa la frase (y el aviso / estado) arriba del 3D: el visor encuadra y pone las etiquetas debajo.
+  // Lo que tapan los avisos de arriba del 3D: el visor encuadra y pone las etiquetas debajo.
   const [cabecera, reservado] = useAltoHastaAbajo<HTMLDivElement>();
+  // El campo para preguntar va abajo del chat.
+  const campo = (
+        <form
+          className="flex items-center gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
+        >
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
+            placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
+            aria-label="Pregunta para el experto"
+            // Al abrir el chat, el cursor ya queda en el campo.
+            autoFocus
+            className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-fondo px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
+          />
+          {accesorioEntrada}
+          <button
+            type="submit"
+            disabled={!texto.trim()}
+            aria-label={etiquetaBoton}
+            className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
+          >
+            {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
+            <span className="max-[480px]:hidden">{etiquetaBoton}</span>
+            <FlechaEnviar className="hidden max-[480px]:block" />
+          </button>
+        </form>
+  );
+  // Pantalla ancha: el chat en un panel a la derecha, de punta a punta del alto que le den.
+  const chatAlCostado = (
+    <aside aria-label="Hablar con el experto" className="flex w-[380px] shrink-0 flex-col border-l border-borde bg-fondo">
+      <Charla mensajes={mensajes} pie={campo} onCerrar={() => setPreguntando(false)} />
+    </aside>
+  );
   const horizontal = useCelularHorizontal();
+  const chatLateral = useChatLateral();
 
   return (
-    <div className={`flex flex-col bg-escena text-texto ${className}`}>
-      <div className="relative min-h-0 flex-1">
-        <div className="absolute inset-0">
-          <Visor
-            className="h-full w-full"
-            plano={plano}
-            coreografia={coreografia}
-            piezas={pack.piezas}
-            tipoEquipo={tipoEquipo}
-            casoId={casoId}
-            onEvento={onEvento}
-            onPaso={(p) => alPaso(p.coreografia)}
-            efectos={efectos}
-            reservadoArriba={reservado}
-          />
+    <div className={`flex bg-escena text-texto ${className}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* El 3D ocupa todo el espacio entre el encabezado y la hoja. La hoja tiene alto fijo: sea una
+            heladera o un celular, la página no cambia; la cámara acerca o aleja el equipo para que entre
+            entero (encuadre) y nada lo tapa, porque la hoja va debajo del 3D y no encima. */}
+        <div className="relative min-h-0 flex-1">
+          <div className="absolute inset-0">
+            <Visor
+              className="h-full w-full"
+              plano={plano}
+              coreografia={coreografia}
+              piezas={pack.piezas}
+              tipoEquipo={tipoEquipo}
+              casoId={casoId}
+              onEvento={onEvento}
+              onPaso={(p) => alPaso(p.coreografia)}
+              efectos={efectos}
+              reservadoArriba={reservado}
+            />
+          </div>
+
+          {/* Arriba, sobre el 3D, solo avisos chicos: el visor encuadra y pone las etiquetas debajo. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 px-4 pt-2">
+            <div ref={cabecera} className="flex flex-col items-start gap-2">
+              {origenPlano === "plantilla" && (
+                <p className="rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
+                  Esquema genérico, no es tu modelo exacto
+                </p>
+              )}
+              {horizontal && (
+                <p className="flex items-center gap-2 rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
+                  <GirarCelular size={18} /> Girá el celular para ver mejor
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Abajo a la derecha del 3D, justo arriba de la hoja: la charla (con el número de preguntas) y la transparencia (#95). */}
+          <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
+            <BotonConversacion mensajes={mensajes} abierta={preguntando} onCambiar={setPreguntando} pie={campo} lateral={chatLateral} />
+            <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
+              <Libro size={20} />
+            </BotonIcono>
+          </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-escena via-escena/70 to-transparent px-5 pt-5 pb-10 max-[440px]:px-3 max-[440px]:pt-3 max-[440px]:pb-6">
-          <div ref={cabecera} className="flex flex-col gap-3 max-[440px]:gap-2">
-            {origenPlano === "plantilla" && (
-              <p className="self-start rounded-full border border-probable/50 bg-escena/80 px-3 py-1 text-xs text-probable">
-                Esquema genérico, no es tu modelo exacto
-              </p>
-            )}
+        {/* La hoja: el paso y sus controles, al alcance del pulgar, con lo justo de alto (el texto ocupa 2 o 3
+            líneas, así la hoja casi no cambia entre pasos). La pregunta se abre con el botón de mensajes. Nunca
+            pasa de la mitad de la pantalla: lo que no entra se lee con scroll adentro. En pantallas anchas el
+            contenido va centrado y angosto. */}
+        <section
+          aria-label="Guía del experto"
+          className="flex max-h-[50dvh] shrink-0 flex-col rounded-t-3xl border-t border-borde bg-superficie shadow-[0_-12px_32px_rgb(0_0_0/0.35)]"
+        >
+          <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-borde" />
+          <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-col gap-2 overflow-y-auto px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {/* Caso abierto desde "Mis casos": los pasos guardados del pack, sin IA (#219). */}
             {!pasoActual && !ocupado && mensajes.length === 0 && pasosGuardados.length > 0 && (
               <button
                 type="button"
                 onClick={() => void seguirGuardada()}
-                className="pointer-events-auto flex min-h-11 items-center gap-2 self-stretch rounded-2xl border border-acento/60 bg-fondo/90 px-4 py-2.5 text-left text-texto shadow-xl backdrop-blur-md active:scale-[0.99]"
+                className="flex min-h-11 items-center gap-2 rounded-2xl border border-acento/60 bg-acento/10 px-4 py-2.5 text-left text-texto active:scale-[0.99]"
               >
                 <Siguiente size={20} className="shrink-0 text-acento" />
                 <span className="flex flex-col leading-tight">
@@ -364,54 +447,20 @@ export function GuiaExperto({
               />
             )}
             <EstadoExperto estado={estado} detalle={detalle} />
-            {/* Dentro de la franja de arriba: el visor encuadra debajo y las etiquetas no lo tapan. */}
-            {horizontal && (
-              <p className="flex items-center gap-2 self-start rounded-full border border-borde bg-superficie/90 px-4 py-1.5 text-sm text-texto backdrop-blur">
-                <GirarCelular size={18} /> Girá el celular para ver mejor
-              </p>
+            {!pasoActual && !ocupado && estado !== "error" && pasosGuardados.length === 0 && (
+              <p className="text-sm text-texto-suave">Tocá el ícono de mensajes para preguntarle al experto lo que quieras.</p>
             )}
           </div>
-        </div>
 
-        {/* Junto al campo de pregunta, sobre el 3D: la charla (con el número de preguntas) y la transparencia (#95). */}
-        <div className="pointer-events-none absolute right-3 bottom-3 flex gap-2">
-          <BotonConversacion mensajes={mensajes} />
-          <BotonIcono etiqueta="¿De dónde sale esto?" onClick={() => setTransparenciaAbierta(true)}>
-            <Libro size={20} />
-          </BotonIcono>
-        </div>
+          {/* Las sugerencias, solo cuando no hay un paso a la vista. */}
+          <div className="mx-auto w-full max-w-2xl">
+            <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
+          </div>
+
+        </section>
       </div>
-
-      {/* Las sugerencias, solo cuando no hay un paso a la vista: durante la guía el 3D necesita el lugar. */}
-      <FilaSugerencias sugerencias={ocupado || pasoActual ? [] : sugerencias} onPreguntar={(t) => void preguntar(t)} />
-
-      <form
-        className="flex shrink-0 items-center gap-2 bg-fondo px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        onSubmit={(e) => {
-          e.preventDefault();
-          enviar();
-        }}
-      >
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          // Corto a propósito: en un iPhone SE la caja mide ~140 px y "Preguntale al experto…" se cortaba.
-          placeholder={estado === "bloqueado" ? "Otra pregunta…" : "Tu pregunta…"}
-          aria-label="Pregunta para el experto"
-          className="h-12 min-w-0 flex-1 rounded-2xl border border-borde bg-superficie px-4 text-base text-texto placeholder:text-texto-suave focus:border-acento focus:outline-none"
-        />
-        {accesorioEntrada}
-        <button
-          type="submit"
-          disabled={!texto.trim()}
-          aria-label={etiquetaBoton}
-          className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-acento px-4 font-semibold text-fondo transition active:scale-95 disabled:opacity-30 max-[480px]:w-12 max-[480px]:px-0"
-        >
-          {/* En celulares (hasta 480 px, incluso los Pro Max de 430), solo el ícono: la fila siempre entra y la caja de texto tiene lugar. */}
-          <span className="max-[480px]:hidden">{etiquetaBoton}</span>
-          <FlechaEnviar className="hidden max-[480px]:block" />
-        </button>
-      </form>
+      {/* Pantalla ancha: el chat en un panel a la derecha; el 3D y la hoja se achican y siguen a la vista. */}
+      {chatLateral && preguntando && (destinoChat ? createPortal(chatAlCostado, destinoChat) : chatAlCostado)}
       {paginaAbierta && <VerPaginaManual pagina={paginaAbierta} onCerrar={cerrarPagina} />}
       {transparenciaAbierta && <DeDondeSale datos={transparencia} onCerrar={() => setTransparenciaAbierta(false)} />}
     </div>

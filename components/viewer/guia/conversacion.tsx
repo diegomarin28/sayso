@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Coreografia, KnowledgePack } from "../../../shared";
 import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
@@ -15,8 +15,8 @@ import type { EstadoControles } from "./reproducir";
 export type MensajeChat = { rol: "persona"; texto: string; id: number } | { rol: "experto"; c: Coreografia; id: number };
 
 /**
- * Paso actual, compacto para que el 3D se vea grande (prueba real: a 390×844 el 3D ocupa al menos la
- * mitad del alto). Arriba, en una línea: número de paso, sello de la cita y puntos para volver a un paso.
+ * Paso actual, en la hoja de abajo del experto (el 3D queda arriba, con todo el resto del alto).
+ * Arriba, en una línea: número de paso, sello de la cita y puntos para volver a un paso.
  * El texto, en 3 líneas con "ver más". Abajo, en una sola fila, los controles (con "Ver en el manual"
  * como ícono). Queda a la vista hasta el siguiente.
  */
@@ -63,9 +63,8 @@ export function TarjetaPaso({
   return (
     <div
       aria-live="polite"
-      className={`pointer-events-auto rounded-2xl border px-3 pt-2 pb-2.5 shadow-xl backdrop-blur-md ${
-        bloqueo ? "border-peligro/60 bg-peligro/20" : "border-borde bg-fondo/85"
-      }`}
+      // Va en la hoja de abajo del experto: sin marco propio, salvo un paso bloqueado (en rojo).
+      className={`pointer-events-auto ${bloqueo ? "rounded-2xl border border-peligro/60 bg-peligro/20 px-3 pt-2 pb-2.5" : ""}`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex shrink-0 items-center gap-2">
@@ -106,7 +105,8 @@ export function TarjetaPaso({
           leía "...." (#231). El resto, con "ver más". */}
       <p
         ref={medir}
-        className={`mt-1 text-[15px] leading-snug font-medium ${
+        // Al menos 2 líneas: entre un paso corto y uno largo la hoja casi no cambia de alto (y el 3D no salta).
+        className={`mt-1 min-h-[2.75em] text-[17px] leading-snug font-medium ${
           entero
             ? ""
             : `max-h-[4.125em] overflow-hidden [@media(max-height:600px)]:max-h-[2.75em] ${largo ? "[mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" : ""}`
@@ -264,7 +264,7 @@ export function FilaSugerencias({ sugerencias, onPreguntar }: { sugerencias: str
   if (!sugerencias.length) return null;
   return (
     // Se desliza de costado: el borde derecho se funde para que se note que hay más preguntas.
-    <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-borde bg-fondo px-4 pt-3 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
+    <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pt-2 pr-10 [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none]">
       {sugerencias.map((s) => (
         <button
           key={s}
@@ -313,42 +313,111 @@ export function chatComoTexto(mensajes: MensajeChat[]): string {
     .join("\n\n");
 }
 
-/** "Conversación (n)": ícono con el número de preguntas en una insignia; abre la charla entera. */
-export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
-  const [abierta, setAbierta] = useState(false);
-  const [copiado, setCopiado] = useState(false);
-  /** El modal sumó una entrada al historial: "atrás" la consume y cierra (no se va del experto). */
-  const conHistorial = useRef(false);
-  const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+/** Desde este ancho (tablet y compu) el chat va en un panel a la derecha del 3D; más angosto, sube desde abajo. */
+export const ANCHO_CHAT_LATERAL = "(min-width: 768px)";
 
-  function abrir() {
-    setCopiado(false);
-    setAbierta(true);
-    window.history.pushState({ ...window.history.state, conversacion: true }, "");
-    conHistorial.current = true;
-  }
-  function cerrar() {
-    setAbierta(false);
-    if (conHistorial.current) {
-      conHistorial.current = false;
-      window.history.back(); // saca la entrada que sumó abrir()
-    }
-  }
+/** Si la pantalla es ancha (`ANCHO_CHAT_LATERAL`). En el servidor, angosta. */
+export function useChatLateral(): boolean {
+  return useSyncExternalStore(
+    (avisar) => {
+      const mq = window.matchMedia(ANCHO_CHAT_LATERAL);
+      mq.addEventListener("change", avisar);
+      return () => mq.removeEventListener("change", avisar);
+    },
+    () => window.matchMedia(ANCHO_CHAT_LATERAL).matches,
+    () => false,
+  );
+}
+
+/**
+ * El chat con el experto, en un solo lugar: el ícono (con el número de preguntas) flota sobre el 3D y
+ * abre la charla con el campo para preguntar (`pie`). En el celular sube desde abajo, encima del 3D, y se
+ * cierra al preguntar (para ver la respuesta). En pantallas anchas (`lateral`) lo dibuja quien lo usa, en
+ * un panel a la derecha (`Charla`): acá queda solo el ícono, que lo abre y lo cierra.
+ */
+export function BotonConversacion({
+  mensajes,
+  abierta,
+  onCambiar,
+  pie,
+  lateral = false,
+}: {
+  mensajes: MensajeChat[];
+  abierta: boolean;
+  onCambiar: (abierta: boolean) => void;
+  /** El campo para preguntar, abajo de la charla. */
+  pie?: ReactNode;
+  lateral?: boolean;
+}) {
+  const preguntas = mensajes.filter((m) => m.rol === "persona").length;
+  const cambiar = useRef(onCambiar);
+  useEffect(() => {
+    cambiar.current = onCambiar;
+  }, [onCambiar]);
+
+  // Abierto, suma una entrada al historial: "atrás" (gesto o botón) la consume y cierra (no se va del
+  // experto). Cerrado de otra forma (Cerrar, Escape, el ícono o una pregunta), la saca.
   useEffect(() => {
     if (!abierta) return;
-    // Atrás (gesto o botón) y Escape cierran el modal.
+    window.history.pushState({ ...window.history.state, conversacion: true }, "");
+    let conHistorial = true;
     const alVolver = () => {
-      conHistorial.current = false;
-      setAbierta(false);
+      conHistorial = false;
+      cambiar.current(false);
     };
-    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cerrar();
+    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cambiar.current(false);
     window.addEventListener("popstate", alVolver);
     window.addEventListener("keydown", alTecla);
     return () => {
       window.removeEventListener("popstate", alVolver);
       window.removeEventListener("keydown", alTecla);
+      if (conHistorial) window.history.back();
     };
   }, [abierta]);
+  const cerrar = () => onCambiar(false);
+
+  return (
+    <>
+      <BotonIcono
+        etiqueta={`Hablar con el experto${preguntas > 0 ? ` (${preguntas})` : ""}`}
+        onClick={() => onCambiar(!abierta)}
+        insignia={preguntas}
+      >
+        <Globo size={20} />
+      </BotonIcono>
+
+      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
+          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
+      {abierta &&
+        !lateral &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Hablar con el experto"
+            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70"
+            onClick={cerrar}
+          >
+            <div
+              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Charla mensajes={mensajes} pie={pie} onCerrar={cerrar} />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/** Lo de adentro del chat: título, Compartir y Cerrar; la charla (baja sola al último mensaje); y el campo. */
+export function Charla({ mensajes, pie, onCerrar }: { mensajes: MensajeChat[]; pie?: ReactNode; onCerrar: () => void }) {
+  const [copiado, setCopiado] = useState(false);
+  const fin = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    fin.current?.scrollIntoView({ block: "end" });
+  }, [mensajes.length]);
 
   async function exportar() {
     const texto = chatComoTexto(mensajes);
@@ -364,70 +433,55 @@ export function BotonConversacion({ mensajes }: { mensajes: MensajeChat[] }) {
     }
   }
 
-  if (!mensajes.length) return null;
   return (
     <>
-      <BotonIcono etiqueta={`Conversación${preguntas > 0 ? ` (${preguntas})` : ""}`} onClick={abrir} insignia={preguntas}>
-        <Globo size={20} />
-      </BotonIcono>
-
-      {/* En document.body: el botón vive en una capa con pointer-events-none sobre el 3D y, montado
-          ahí adentro, el modal heredaba eso (Cerrar no respondía en iPhone, #227). */}
-      {abierta &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Conversación con el experto"
-            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70 md:items-center md:p-6"
-            onClick={cerrar}
-          >
-            <div
-              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo md:rounded-3xl"
-              onClick={(e) => e.stopPropagation()}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-borde px-5 py-4">
+        <p className="min-w-0 font-semibold">Hablar con el experto</p>
+        <div className="flex shrink-0 gap-2">
+          {mensajes.length > 0 && (
+            <button type="button" onClick={exportar} className="h-11 rounded-full border border-borde px-4 text-sm">
+              {copiado ? "Copiado ✓" : "Compartir"}
+            </button>
+          )}
+          <button type="button" onClick={onCerrar} className="h-11 rounded-full border border-borde px-4 text-sm">
+            Cerrar
+          </button>
+        </div>
+      </div>
+      {mensajes.length === 0 && (
+        <p className="px-5 py-4 text-sm text-texto-suave">
+          Preguntale lo que quieras sobre tu equipo: dónde está una pieza, qué herramienta usar o qué hacer si algo no sale.
+        </p>
+      )}
+      <ol
+        className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 ${mensajes.length ? "py-4" : ""} ${
+          pie ? "" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+        }`}
+      >
+        {mensajes.map((m, i) =>
+          m.rol === "persona" ? (
+            <li
+              key={m.id}
+              ref={i === mensajes.length - 1 ? fin : undefined}
+              className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-borde px-5 py-4">
-                <p className="min-w-0 font-semibold">Conversación con el experto</p>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={exportar}
-                    className="h-11 rounded-full border border-borde px-4 text-sm"
-                  >
-                    {copiado ? "Copiado ✓" : "Compartir"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cerrar}
-                    className="h-11 rounded-full border border-borde px-4 text-sm"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-              <ol className="flex flex-col gap-3 overflow-y-auto px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                {mensajes.map((m) =>
-                  m.rol === "persona" ? (
-                    <li key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-acento/20 px-4 py-2.5 text-sm">
-                      {m.texto}
-                    </li>
-                  ) : (
-                    <li
-                      key={m.id}
-                      className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
-                        m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
-                      }`}
-                    >
-                      <p className="mb-1.5 leading-snug">{m.c.dice}</p>
-                      <EtiquetaCita c={m.c} />
-                    </li>
-                  ),
-                )}
-              </ol>
-            </div>
-          </div>,
-          document.body,
+              {m.texto}
+            </li>
+          ) : (
+            <li
+              key={m.id}
+              ref={i === mensajes.length - 1 ? fin : undefined}
+              className={`max-w-[90%] self-start rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm ${
+                m.c.riesgo === "alto" ? "border-peligro/60 bg-peligro/15" : "border-borde bg-superficie"
+              }`}
+            >
+              <p className="mb-1.5 leading-snug">{m.c.dice}</p>
+              <EtiquetaCita c={m.c} />
+            </li>
+          ),
         )}
+      </ol>
+      {pie && <div className="shrink-0 border-t border-borde">{pie}</div>}
     </>
   );
 }
