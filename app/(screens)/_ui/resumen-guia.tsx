@@ -5,6 +5,7 @@ import type { Plano } from "../_datos/api";
 import { resumenOrigen, textoResumen, todoDelManual } from "../../../components/viewer/origen";
 import { AnimacionPreparando } from "./animacion-preparando";
 import { Alerta } from "./experto";
+import { sospechasParaMostrar } from "./sospechas";
 
 /**
  * Pantalla 4, al terminar: qué encontró el experto. La notebook armada y la guía: el manual (con
@@ -62,6 +63,7 @@ export function ResumenGuia({
   const enPasos = new Set(pack.pasos.flatMap((p) => p.piezas));
   // Primero las piezas que se usan en los pasos (las que el experto va a mostrar).
   const piezas = [...pack.piezas].sort((a, b) => Number(enPasos.has(b.id)) - Number(enPasos.has(a.id)));
+  const sospechas = sospechasParaMostrar(pack);
   const verificados = pack.pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
 
   return (
@@ -127,6 +129,33 @@ export function ResumenGuia({
             )}
           </ul>
         </div>
+
+        {sospechas.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs text-texto-suave">
+              Lo que sospechamos · <span className="text-probable">es una hipótesis</span>
+            </p>
+            <ul className="flex flex-col gap-2">
+              {sospechas.map((s) =>
+                s.destacada ? (
+                  <li key={s.nombre} className="rounded-2xl border border-probable/40 bg-probable/10 p-3">
+                    <p className="font-semibold leading-snug [overflow-wrap:anywhere]">{s.nombre}</p>
+                    <p className="mt-1 text-sm [overflow-wrap:anywhere]">{s.porque}</p>
+                    <p className="mt-2 text-sm text-texto-suave [overflow-wrap:anywhere]">
+                      <span className="font-medium text-texto">Cómo confirmarlo:</span> {s.chequeo}
+                    </p>
+                  </li>
+                ) : (
+                  <li key={s.nombre} className="rounded-xl border border-borde px-3 py-2">
+                    <p className="text-sm font-medium [overflow-wrap:anywhere]">{s.nombre}</p>
+                    <p className="mt-0.5 text-xs text-texto-suave [overflow-wrap:anywhere]">{s.porque}</p>
+                    <p className="mt-1 text-xs text-texto-suave [overflow-wrap:anywhere]">Cómo confirmarlo: {s.chequeo}</p>
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        )}
 
         {pack.advertencias.length > 0 && (
           <p className="flex items-start gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm text-probable">

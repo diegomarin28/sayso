@@ -309,6 +309,20 @@ const RespKnowledge = conEventos({
 });
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
+/** Solo para el fixture: las sospechas del pack de ejemplo, para ver «Lo que sospechamos» en Preparando. */
+const sospechasEjemplo = [
+  {
+    pieza: "ventilador",
+    porque: "Se calienta y hace ruido: el ventilador puede estar trabado o con polvo.",
+    chequeo: "Con el equipo andando, acercá el oído: si el ventilador raspa o no gira, es él.",
+  },
+  {
+    pieza: "disipador",
+    porque: "Con polvo acumulado el calor no sale y el equipo se apaga solo.",
+    chequeo: "Mirá por las rejillas: si ves una capa de pelusa, hay que limpiarlo.",
+  },
+];
+
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
 export function prepararExperto(
   ficha: Ficha,
@@ -320,7 +334,7 @@ export function prepararExperto(
     return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(2500);
       return RespKnowledge.parse({
-        pack: knowledgePackEjemplo,
+        pack: { ...knowledgePackEjemplo, sospechosas: sospechasEjemplo },
         manualUrl: null,
         manualFileId: null,
         paginasVistaExplosionada: [],
