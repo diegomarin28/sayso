@@ -51,10 +51,14 @@ const ITEMS: { icono: ReactNode; titulo: string; detalle: string }[] = [
     titulo: "Repuestos",
     detalle: "Dónde comprar las piezas. El número es cuántas podés buscar; «!» marca la que hay que cambiar.",
   },
-  { icono: <Cubo size={20} />, titulo: "El 3D", detalle: "Cambiar la vista y ver de dónde sale cada pieza." },
-  { icono: <Globo size={20} />, titulo: "Conversación", detalle: "Todo lo que hablamos. El número es cuántas preguntas hiciste." },
-  { icono: <Libro size={20} />, titulo: "¿De dónde sale esto?", detalle: "El manual o la guía de donde salen los pasos." },
-  { icono: <Microfono size={20} />, titulo: "Preguntar con la voz", detalle: "También podés escribir abajo." },
+  { icono: <Cubo size={20} />, titulo: "El 3D", detalle: "Cambiar la vista y ver de dónde salen las ubicaciones de las piezas." },
+  {
+    icono: <Globo size={20} />,
+    titulo: "Chat con el experto",
+    detalle: "Tocá el ícono de mensajes para ver lo que hablamos y preguntar. El número es cuántas preguntas hiciste.",
+  },
+  { icono: <Libro size={20} />, titulo: "¿De dónde sale esto?", detalle: "El manual o la guía de donde salen los pasos, y el origen del 3D." },
+  { icono: <Microfono size={20} />, titulo: "Preguntar con la voz", detalle: "Está en el chat, al lado del campo. También podés escribir ahí." },
 ];
 
 export function AyudaExperto({ onCerrar }: { onCerrar: () => void }) {
