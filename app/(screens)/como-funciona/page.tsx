@@ -49,14 +49,17 @@ const PASOS: { titulo: string; texto: string; icono: ReactNode }[] = [
 const EQUIPO = [
   {
     nombre: "Ignacio Iglesia",
+    rol: "Frontend y código de la app",
     linkedin: "https://www.linkedin.com/in/ignacio-iglesia-2271733a2/",
   },
   {
     nombre: "Diego Marin",
+    rol: "Modelado 3D",
     linkedin: "https://www.linkedin.com/in/diegomarin2805/",
   },
   {
     nombre: "Juan Martín Noguez",
+    rol: "Inteligencia artificial",
     linkedin: "https://www.linkedin.com/in/juan-mart%C3%ADn-noguez-berdun/",
   },
 ];
@@ -136,7 +139,10 @@ export default function ComoFunciona() {
               key={p.nombre}
               className="flex items-center gap-3 rounded-2xl border border-borde bg-superficie/70 py-3 pr-3 pl-4"
             >
-              <p className="min-w-0 flex-1 font-semibold">{p.nombre}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{p.nombre}</p>
+                <p className="text-sm text-texto-suave">{p.rol}</p>
+              </div>
               <a
                 href={p.linkedin}
                 target="_blank"
