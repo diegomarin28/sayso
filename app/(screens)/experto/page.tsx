@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fuenteApi, GuiaExperto } from "@/components/viewer";
+import type { Ficha } from "@/shared";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { avisoRiesgoAlto } from "./aviso-riesgo";
@@ -34,6 +35,12 @@ async function decir(texto: string, senal: AbortSignal) {
   const voz = hablar(texto);
   senal.addEventListener("abort", voz.detener, { once: true });
   await voz.termino;
+}
+
+/** «Marca modelo» de la ficha, solo con lo que la persona confirmó o leyó. */
+function equipoDeFicha(ficha: Ficha | null): string | null {
+  const partes = [ficha?.marca.valor, ficha?.modelo.valor].filter(Boolean);
+  return partes.length ? partes.join(" ") : null;
 }
 
 /**
@@ -136,7 +143,10 @@ function ExpertoDelCaso() {
             </div>
             <button
               type="button"
-              onClick={() => setCerrando(true)}
+              onClick={() => {
+                callar(); // el experto se calla al terminar
+                setCerrando(true);
+              }}
               className="flex h-11 shrink-0 items-center rounded-full bg-acento px-4 text-sm font-semibold text-black active:scale-95"
             >
               Terminar
@@ -232,6 +242,8 @@ function ExpertoDelCaso() {
       {cerrando && (
         <PanelCierre
           pack={preparado.pack}
+          equipo={equipoDeFicha(ficha)}
+          sintoma={caso.sintoma}
           piezaSugerida={piezaACambiar ?? cierre?.pieza ?? null}
           compra={ultimaCompra}
           onCancelar={() => setCerrando(false)}
