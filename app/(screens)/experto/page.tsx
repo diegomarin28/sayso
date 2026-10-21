@@ -10,7 +10,7 @@ import { useDictado } from "@/lib/voice/useDictado";
 import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
-import { Detener, Encabezado, FlechaAtras, Microfono, Papelera } from "../_ui/experto";
+import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
 import {
   fuenteConCierre,
   fuenteConRetomar,
@@ -106,28 +106,26 @@ function ExpertoDelCaso() {
     <main className="flex h-dvh w-full flex-col bg-fondo">
       <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:px-6 md:pt-6">
         <div className="flex items-center gap-3">
+          {/* "Atrás", repuestos y "Terminar" van en esta fila: debajo le sacarían lugar al 3D (#199).
+              Atrás y repuestos van en los lugares fijos del encabezado, como en las otras pantallas. */}
           <div className="min-w-0 flex-1">
-            <Encabezado paso={5} />
-          </div>
-          {/* Repuestos, "Atrás" y "Terminar" van en esta fila: debajo le sacarían lugar al 3D (#199). */}
-          {ficha && (
-            <Repuestos
-              pack={preparado.pack}
-              ficha={ficha}
-              casoId={caso.id}
-              onEvento={(e) => agregarEventos([e])}
-              piezaACambiar={piezaACambiar}
-              onCompra={setUltimaCompra}
+            <Encabezado
+              paso={5}
+              alVolver={() => router.push("/preparando")}
+              accion={
+                ficha && (
+                  <Repuestos
+                    pack={preparado.pack}
+                    ficha={ficha}
+                    casoId={caso.id}
+                    onEvento={(e) => agregarEventos([e])}
+                    piezaACambiar={piezaACambiar}
+                    onCompra={setUltimaCompra}
+                  />
+                )
+              }
             />
-          )}
-          <button
-            type="button"
-            onClick={() => router.push("/preparando")}
-            aria-label="Atrás"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-borde bg-superficie text-texto transition active:scale-95"
-          >
-            <FlechaAtras size={20} />
-          </button>
+          </div>
           <button
             type="button"
             onClick={() => setCerrando(true)}

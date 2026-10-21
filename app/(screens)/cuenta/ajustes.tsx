@@ -87,9 +87,9 @@ export function AjustesCuenta({
         <p className="text-sm text-texto-suave">
           Email: <span className="break-all text-texto">{email}</span>
         </p>
-        <p className="text-sm text-texto-suave">La sesión queda abierta en este celular hasta que salgas.</p>
+        <p className="text-sm text-texto-suave">La sesión queda abierta en este dispositivo hasta que salgas.</p>
         <BotonSecundario disabled={ocupado} onClick={alSalir}>
-          Salir en este celular
+          Salir de este dispositivo
         </BotonSecundario>
       </Seccion>
 
@@ -191,37 +191,68 @@ export function AjustesCuenta({
       </Seccion>
 
       <Seccion titulo="Borrar cuenta" peligro>
-        {confirmarBorrado ? (
-          <>
-            <p className="text-sm">
-              Se borran para siempre tu cuenta, tus casos y sus fotos, también la copia de este celular. No se puede
-              deshacer.
-            </p>
-            <button
-              type="button"
-              disabled={ocupado}
-              onClick={alBorrar}
-              className="h-12 rounded-xl bg-peligro font-semibold text-black active:scale-[0.98] disabled:opacity-30"
-            >
-              {ocupado ? "Borrando…" : "Sí, borrar mi cuenta"}
-            </button>
-            <button type="button" className="text-sm underline" onClick={() => setConfirmarBorrado(false)}>
-              Cancelar
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-texto-suave">Borra tu cuenta, tus casos y sus fotos para siempre.</p>
-            <button
-              type="button"
-              onClick={() => setConfirmarBorrado(true)}
-              className="h-12 rounded-xl border border-peligro/60 text-sm font-medium text-peligro"
-            >
-              Borrar mi cuenta
-            </button>
-          </>
-        )}
+        <p className="text-sm text-texto-suave">Borra tu cuenta, tus casos y sus fotos para siempre.</p>
+        <button
+          type="button"
+          onClick={() => setConfirmarBorrado(true)}
+          className="h-12 rounded-xl border border-peligro/60 text-sm font-medium text-peligro"
+        >
+          Borrar mi cuenta
+        </button>
       </Seccion>
+
+      {confirmarBorrado && (
+        <ConfirmarBorrado ocupado={ocupado} alBorrar={alBorrar} alCancelar={() => setConfirmarBorrado(false)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * El cartel de "¿Seguro?" antes de borrar: tapa la pantalla para que no se borre de un toque.
+ */
+function ConfirmarBorrado({
+  ocupado,
+  alBorrar,
+  alCancelar,
+}: {
+  ocupado: boolean;
+  alBorrar: () => void;
+  alCancelar: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[2px] sm:items-center">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="borrar-titulo"
+        aria-describedby="borrar-texto"
+        className="aparece flex w-full max-w-md flex-col gap-4 rounded-t-3xl border border-peligro/40 bg-superficie p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl"
+      >
+        <h2 id="borrar-titulo" className="font-titulo text-xl font-semibold">
+          ¿Seguro que querés borrar tu cuenta?
+        </h2>
+        <p id="borrar-texto" className="text-sm leading-relaxed">
+          Se van a perder todos tus casos y sus fotos, también los de este dispositivo. No se puede deshacer.
+        </p>
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={alBorrar}
+          className="h-12 rounded-xl bg-peligro font-semibold text-black active:scale-[0.98] disabled:opacity-30"
+        >
+          {ocupado ? "Borrando…" : "Sí, borrar mi cuenta"}
+        </button>
+        <button
+          type="button"
+          autoFocus
+          disabled={ocupado}
+          onClick={alCancelar}
+          className="h-12 rounded-xl border border-borde text-sm font-medium"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }

@@ -151,6 +151,18 @@ export default function ComoFunciona() {
         </ul>
       </section>
 
+      {/* Las dudas de siempre, también para quien no tiene cuenta (con cuenta están en el menú, "Saber más"). */}
+      <Link
+        href="/preguntas"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-borde bg-superficie/70 p-4 transition hover:border-texto-suave"
+      >
+        <span>
+          <span className="block font-semibold">¿Tenés dudas?</span>
+          <span className="block text-sm text-texto-suave">Mirá las preguntas frecuentes.</span>
+        </span>
+        <Flecha />
+      </Link>
+
       <div className="mt-auto flex flex-col gap-4">
         <Link
           href="/"
@@ -164,6 +176,9 @@ export default function ComoFunciona() {
           </Link>
           <Link href="/privacidad" className="underline">
             Privacidad
+          </Link>
+          <Link href="/preguntas" className="underline">
+            Preguntas frecuentes
           </Link>
         </p>
       </div>

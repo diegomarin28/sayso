@@ -159,7 +159,7 @@ function PreparandoDelCaso() {
           ? "Ahora miro la vista explosionada del manual para ubicar cada pieza en el 3D…"
           : "Ahora ubico cada pieza en el 3D…"
         : pack.verificado
-          ? `Listo. Tengo el manual de tu ${equipo} y las piezas ubicadas.`
+          ? "Listo, ya tengo tu guía."
           : `No encontré el manual oficial de tu ${equipo}. Te guío con una guía pública, sin verificar.`;
 
   return (
@@ -189,7 +189,7 @@ function PreparandoDelCaso() {
         </div>
       )}
 
-      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} />}
+      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} modelo={equipo} />}
 
       <div className="mt-auto">
         <FeedActividad eventos={eventos} />

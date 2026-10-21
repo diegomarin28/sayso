@@ -40,7 +40,7 @@ const TEXTO: Record<Modo, Record<Paso, string>> = {
     codigo: "",
   },
   crear: {
-    datos: "Creá tu cuenta para no perder tus casos. Los de este celular quedan guardados en ella.",
+    datos: "Creá tu cuenta para no perder tus casos. Los de este dispositivo quedan guardados en ella.",
     codigo: "Te mandamos un código al email. Escribilo para confirmar que es tuyo.",
   },
   recuperar: {
@@ -157,7 +157,7 @@ export default function Cuenta() {
       borrarLocal();
       olvidarSesion();
       await recargar();
-      setAviso("Saliste de tu cuenta en este celular. Podés seguir usando la app sin cuenta.");
+      setAviso("Saliste de tu cuenta en este dispositivo. Podés seguir usando la app sin cuenta.");
     });
 
   const borrar = () =>
@@ -192,7 +192,7 @@ export default function Cuenta() {
   const texto = !cuenta
     ? "Un segundo…"
     : !cuenta.configurado
-      ? "Las cuentas todavía no están disponibles. Podés usar la app igual: tus casos quedan en este celular."
+      ? "Las cuentas todavía no están disponibles. Podés usar la app igual: tus casos quedan en este dispositivo."
       : conEmail
         ? `${cuenta.nombre ? `Hola, ${cuenta.nombre}. ` : ""}Tus casos quedan guardados en tu cuenta.`
         : TEXTO[modo][paso];
@@ -439,8 +439,8 @@ export default function Cuenta() {
             )}
           </div>
           <p className="text-center text-xs text-texto-suave">
-            Tu email es solo para entrar y recuperar tus casos. La sesión queda abierta en este celular hasta que
-            toques «Salir en este celular» en Cuenta.
+            Tu email es solo para entrar y recuperar tus casos. La sesión queda abierta en este dispositivo hasta que
+            toques «Salir de este dispositivo» en Cuenta.
           </p>
         </form>
       )}

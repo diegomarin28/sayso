@@ -17,8 +17,8 @@ import {
 import { Persona } from "./experto";
 
 /**
- * Arriba a la derecha del inicio. Sin cuenta: "Iniciar sesión" y, en pantallas anchas, también
- * "Registrarte" (en el celular no entra: se llega desde "Iniciar sesión"). Con cuenta: la inicial
+ * Arriba a la derecha del inicio. Sin cuenta: "Iniciar sesión" (en el celular, solo el ícono) y, en
+ * pantallas anchas, también "Registrarte" (en el celular no entra: se llega desde "Iniciar sesión"). Con cuenta: la inicial
  * (y el nombre, si entra), que abre un menú como el de cualquier app: mis casos, configuración,
  * saber más y cerrar sesión. En el celular el menú sube desde abajo con el fondo oscurecido (no tapa
  * media pantalla); en pantallas anchas es un desplegable. Sin login configurado no se muestra.
@@ -52,11 +52,13 @@ export function BotonSesion({
     return <MenuCuenta cuenta={cuenta} alCambiar={alCambiar} />;
   return (
     <div className="flex shrink-0 gap-2">
+      {/* En el celular, solo el ícono: entra en el lugar fijo del encabezado. */}
       <Link
         href="/cuenta"
-        className={`flex ${PILDORA} border-acento/60 bg-acento/10 pr-4 pl-3`}
+        aria-label="Iniciar sesión"
+        className={`flex ${PILDORA} w-11 justify-center border-acento/60 bg-acento/10 sm:w-auto sm:pr-4 sm:pl-3`}
       >
-        <Persona /> Iniciar sesión
+        <Persona /> <span className="hidden sm:inline">Iniciar sesión</span>
       </Link>
       <Link
         href="/cuenta?modo=crear"
@@ -176,6 +178,9 @@ function MenuCuenta({
             <Opcion href="/privacidad" icono={<IconoCandado />}>
               Privacidad
             </Opcion>
+            <Opcion href="/preguntas" icono={<IconoPreguntas />}>
+              Preguntas frecuentes
+            </Opcion>
             <Separador />
             <button
               type="button"
@@ -265,6 +270,12 @@ const IconoCandado = () => (
   <Icono>
     <rect x="4" y="11" width="16" height="10" rx="2" />
     <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </Icono>
+);
+const IconoPreguntas = () => (
+  <Icono>
+    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z" />
+    <path d="M10.2 9.6a2 2 0 0 1 3.8.8c0 1.3-1.9 1.8-1.9 3M12 15.8v.01" />
   </Icono>
 );
 const IconoSalir = () => (

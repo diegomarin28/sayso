@@ -16,6 +16,7 @@ const EQUIPOS: { palabras: RegExp; clase: Caso["clase"]; tipo: string }[] = [
   { palabras: /\b(microondas)\b/i, clase: "otro", tipo: "microondas" },
   { palabras: /\b(tele|televisor|tv|smart tv)\b/i, clase: "otro", tipo: "televisor" },
   { palabras: /\b(impresora)\b/i, clase: "otro", tipo: "impresora" },
+  { palabras: /\b(monitor)\b/i, clase: "otro", tipo: "monitor" },
 ];
 
 /** Una palabra que puede decir algo (tiene vocal y al menos 2 letras): "dddd" no cuenta. */
