@@ -1,6 +1,6 @@
 # lib/planogenerator
 
-Dueño: Diego
+Dueño: Iaio (desde el 21/10/2026; antes, Diego).
 
 Construye la escena 3D (three.js) a partir de un `PlanoDePiezas` (`shared/`).
 La misma función sirve para la plantilla fija (MVP) y para el plano que genera la IA desde el manual (B4).

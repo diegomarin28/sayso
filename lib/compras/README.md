@@ -1,6 +1,6 @@
 # lib/compras
 
-Dueño: Diego (tarea A6, tomada del carril A para liberar el cupo de Juanma).
+Dueño: Iaio (desde el 21/10/2026). La escribió Diego (tarea A6, tomada del carril A para liberar el cupo de Juanma).
 
 Dónde comprar un repuesto. Ruta: `POST /api/compras { pieza, numeroParte, modelo, marca?, casoId? }` → `{ opciones, cotizacion, descartados, costo, eventos }` (tarda ~20–60 s).
 
