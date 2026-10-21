@@ -1,4 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../../shared";
+import { espejadoEnX } from "./espejo";
 
 /**
  * Plantilla genérica de notebook (escalón 1 de la escalera 3D).
@@ -47,7 +48,7 @@ export function tapaDePantalla([ancho, hondo]: [number, number], cara: number): 
   ];
 }
 
-export const planoNotebookBase: PlanoDePiezas = {
+const notebookAbierta: PlanoDePiezas = {
   modelo: "Notebook genérica (plantilla)",
   unidades: "cm",
   piezas: [
@@ -170,3 +171,10 @@ export const planoNotebookBase: PlanoDePiezas = {
     },
   ],
 };
+
+/**
+ * La plantilla se escribió con la notebook abierta (derecha en +x), pero se muestra dada vuelta, vista desde abajo
+ * con la bisagra arriba en la imagen (como las páginas del manual): ahí el lado derecho de quien la usa queda a la
+ * izquierda, en -x (#339).
+ */
+export const planoNotebookBase: PlanoDePiezas = espejadoEnX(notebookAbierta);

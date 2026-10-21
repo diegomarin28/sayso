@@ -19,7 +19,7 @@ for(const formato of ['over_ear','in_ear'] as const)for(const modelo of ['Equipo
   const almohadilla=p.piezas.find(p=>p.pieza===('almohadilla_oreja'+(modelo==='Equipo B'?'_derecha':'')))!;
   const referencia=tipo.plano.piezas.find(p=>p.pieza==='almohadilla_copa_izquierda')!;
   expect(almohadilla.pos.every(Number.isFinite)).toBe(true);
-  expect(Math.sign(almohadilla.pos[0])).toBe(modelo==='Equipo B'?1:-1);
+  expect(Math.sign(almohadilla.pos[0])).toBe(modelo==='Equipo B'?-1:1); // la derecha en -x, la izquierda en +x (#339)
   expect(referencia).toBeDefined();
  }
  const leer=parsearContenido([{texto:`RASGO|auriculares|formato|${formato}`,citas:[]}] as Linea[],'fuente');

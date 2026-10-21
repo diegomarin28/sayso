@@ -1,4 +1,5 @@
 import type { PiezaPlano, PlanoDePiezas, Vec3 } from "../../../shared";
+import { espejadoEnX } from "./espejo";
 import { tapaDePantalla } from "./notebook";
 
 /**
@@ -29,7 +30,7 @@ export const planoHeladera: PlanoDePiezas = {
     pieza("condensador", [45, 80, 2], [0, 95, -34], "caja", "carcasa_heladera"),
     pieza("evaporador", [40, 20, 3], [0, 140, -27], "caja", "carcasa_heladera"),
     pieza("bandeja_verduras", [52, 18, 30], [0, 12, 14], "caja", "carcasa_heladera"),
-    pieza("ventilador_evaporador", [12, 12, 3], [20, 140, -24], "cilindro", "carcasa_heladera"),
+    pieza("ventilador_evaporador", [12, 12, 3], [0, 140, -24], "cilindro", "carcasa_heladera"),
     pieza("resistencia_deshielo", [30, 4, 6], [0, 128, -27], "caja", "carcasa_heladera"),
     pieza("termostato", [4, 3, 3], [22, 112, -28], "caja", "carcasa_heladera"),
     pieza("placa_control", [15, 1.8, 10], [0, 173, -20], "caja", "carcasa_heladera"),
@@ -103,7 +104,7 @@ export const planoCelular: PlanoDePiezas = {
  * todo, teclado y trackpad del otro lado (con la tapa de pantalla cerrada encima), parlantes a los costados.
  * No tiene ventilador, RAM ni SSD sueltos.
  */
-export const planoNotebookSinVentilador: PlanoDePiezas = {
+export const planoNotebookSinVentilador: PlanoDePiezas = espejadoEnX({
   modelo: "Notebook sin ventilador genérica (ejemplo del lab)",
   unidades: "cm",
   piezas: [
@@ -121,7 +122,7 @@ export const planoNotebookSinVentilador: PlanoDePiezas = {
     ]),
     ...tapaDePantalla([30.4, 21.2], -0.85),
   ],
-};
+});
 
 /** Televisor de 46" parado, visto de frente: panel, retroiluminación con tiras de LED, fuente y placa. */
 export const planoTelevisor: PlanoDePiezas = {
@@ -367,7 +368,7 @@ export const planoCafetera: PlanoDePiezas = {
  * la placa y el conector de carga en las copas. La raíz es la vincha: mide todo el equipo para escalar el
  * esqueleto, pero se dibuja solo el arco de atrás (`raizVisibleVincha`, ver `raizVisible` en `por-tipo.ts`).
  */
-export const planoAuricularesVincha: PlanoDePiezas = {
+export const planoAuricularesVincha: PlanoDePiezas = espejadoEnX({
   modelo: "Auriculares de vincha genéricos (ejemplo)",
   unidades: "cm",
   piezas: [
@@ -387,7 +388,7 @@ export const planoAuricularesVincha: PlanoDePiezas = {
       ["boton_encendido", [0.5, 0.4, 0.8], [-10.9, 3.1, 2.5]],
     ]),
   ],
-};
+});
 
 export const raizVisibleVincha: Pick<PiezaPlano, "pos" | "dim"> = { dim: [15, 1.2, 2.6], pos: [0, 3.9, -8.2] };
 

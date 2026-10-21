@@ -152,6 +152,33 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   return { ...plano, piezas: [...piezas, nueva] };
 }
 
+/** Grosor (cm) de la chapa de una tapa de un equipo parado. */
+const GROSOR_TAPA_PARADA = 0.4;
+
+/**
+ * Las tapas que nombra el pack en un equipo PARADO (TV, heladera, microondas…) y el plano no ubicó: cada una es la
+ * chapa de la cara de atrás de la carcasa (+z, el lado de la cámara: ver `pararPlano`), del tamaño de esa cara y
+ * apenas afuera de lo que hay. Sin esto entraban como piezas sueltas con la medida de la tapa de otro equipo (la
+ * de un celular, en un TV de 100 cm: #340). Por TIPO, nunca por modelo. Sin tapas nombradas, no agrega nada.
+ */
+export function conTapaTrasera(plano: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): PlanoDePiezas {
+  const raiz = plano.piezas.find((p) => !p.padre);
+  if (!plantilla.parado || !raiz) return plano;
+  const faltan = [...new Set(ids)].filter((id) => ES_TAPA.test(id) && !plano.piezas.some((p) => p.pieza === id));
+  if (!faltan.length) return plano;
+  const atras = Math.max(...plano.piezas.map((p) => p.pos[2] + p.dim[2] / 2));
+  const nuevas = faltan.map((id, k): PiezaPlano => ({
+    pieza: id,
+    forma: "caja",
+    dim: [raiz.dim[0], raiz.dim[1], GROSOR_TAPA_PARADA],
+    pos: [raiz.pos[0], raiz.pos[1], +(atras + GROSOR_TAPA_PARADA * (k + 0.5)).toFixed(3)],
+    pivote: [0, 0, 0],
+    padre: raiz.pieza,
+    origen: "plantilla",
+  }));
+  return { ...plano, piezas: [...plano.piezas, ...nuevas] };
+}
+
 /**
  * La tapa de pantalla de una notebook (#232), si el tipo la tiene y el plano no: cerrada sobre la cara del
  * teclado, del ancho y lo hondo de la carcasa, con la bisagra atrás; el visor la abre cuando mira por ese lado

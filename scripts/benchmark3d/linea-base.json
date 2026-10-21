@@ -2,7 +2,7 @@
   "auriculares": {
     "puntajes": {
       "geometria": 91,
-      "posicion": 33,
+      "posicion": 100,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100
@@ -57,7 +57,7 @@
   "microondas": {
     "puntajes": {
       "geometria": 92,
-      "posicion": 42,
+      "posicion": 67,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100
@@ -68,7 +68,7 @@
   "notebook": {
     "puntajes": {
       "geometria": 83,
-      "posicion": 44,
+      "posicion": 75,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100
@@ -90,7 +90,7 @@
   "televisor": {
     "puntajes": {
       "geometria": 81,
-      "posicion": 20,
+      "posicion": 90,
       "certeza": 100,
       "evidencia": 0,
       "rendimiento": 100
