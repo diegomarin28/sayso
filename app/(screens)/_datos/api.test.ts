@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { casoEjemplo, fichaEjemplo, knowledgePackEjemplo } from "../../../shared";
-import { ErrorApi, ErrorCortado, TIEMPO_MAXIMO_MS, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, leerChapa, pedidosDeFoto, prepararExperto } from "./api";
+import { pedidosSimulados } from "./pedidos-simulados";
+import { ErrorApi, SIN_PEDIDOS, ErrorCortado, TIEMPO_MAXIMO_MS, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, leerChapa, pedidosDeFoto, prepararExperto } from "./api";
 
 /** Bajar costos: cada llamada a la IA se hace una sola vez por caso, aunque se vaya atrás y adelante. */
 
@@ -19,16 +20,30 @@ const knowledge = {
   eventos: [],
 };
 
+const [pedido] = pedidosSimulados("notebook", "no carga");
+
 describe("pantallas: una llamada por caso", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("pedir las fotos dos veces para el mismo caso llama una sola vez", async () => {
-    const fetch = vi.fn(() => respuesta({ pedidos: [], eventos: [] }));
+    const fetch = vi.fn(() => respuesta({ pedidos: [pedido], eventos: [] }));
     vi.stubGlobal("fetch", fetch);
     const caso = { ...casoEjemplo, id: "caso-fotos" };
     await Promise.all([pedidosDeFoto(caso), pedidosDeFoto(caso)]);
     await pedidosDeFoto(caso); // volver a la pantalla
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("una lista de fotos vacía es un fallo y se vuelve a pedir", async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementationOnce(() => respuesta({ pedidos: [], eventos: [] }))
+      .mockImplementation(() => respuesta({ pedidos: [pedido], eventos: [] }));
+    vi.stubGlobal("fetch", fetch);
+    const caso = { ...casoEjemplo, id: "caso-sin-pedidos" };
+    await expect(pedidosDeFoto(caso)).rejects.toThrow(SIN_PEDIDOS);
+    await expect(pedidosDeFoto(caso)).resolves.toMatchObject({ pedidos: [pedido] });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("knowledge: mismo equipo = una llamada; corregir el modelo = otra", async () => {
@@ -79,7 +94,7 @@ describe("pantallas: tipo de equipo y foto del frente (#63)", () => {
   const imagen = (n: string) => ({ base64: n.repeat(40), mediaType: "image/jpeg" as const });
 
   it("pedidos manda el tipoEquipo", async () => {
-    const fetch = vi.fn(() => respuesta({ pedidos: [], eventos: [] }));
+    const fetch = vi.fn(() => respuesta({ pedidos: [pedido], eventos: [] }));
     vi.stubGlobal("fetch", fetch);
     await pedidosDeFoto({ ...casoEjemplo, id: "caso-tipo" }, "heladera no frost");
     expect(

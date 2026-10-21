@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { fotosDelServidor, guiaDelServidor, sincronizarCasos, type FotoDelCaso } from "../_datos/casos-servidor";
+import { fotosDelServidor, guiaDelServidor, sincronizarCasos, type FotoDelCaso, type Sincronizacion } from "../_datos/casos-servidor";
 import { leerCuenta } from "../_datos/cuenta";
 import {
   firmaCasos,
@@ -44,9 +44,16 @@ export default function MisCasos() {
   // localStorage solo existe en el navegador: en el servidor la lista sale vacía y no hay desajuste.
   const firma = useSyncExternalStore(suscribirCasos, firmaCasos, () => "[]");
   const casos = useMemo(() => (firma === "[]" ? [] : listarCasos()), [firma]);
+  /** null mientras trae los del servidor. */
+  const [sync, setSync] = useState<Sincronizacion | null>(null);
+  const [vuelta, setVuelta] = useState(0); // se incrementa con "Reintentar"
   useEffect(() => {
-    sincronizarCasos();
-  }, []);
+    let vigente = true;
+    void sincronizarCasos().then((r) => vigente && setSync(r));
+    return () => {
+      vigente = false;
+    };
+  }, [vuelta]);
   /** Caso cuya guía se está bajando del servidor. */
   const [bajando, setBajando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -209,6 +216,30 @@ export default function MisCasos() {
       )}
 
       {error && <p role="alert" className="rounded-2xl border border-peligro/40 bg-peligro/10 p-3 text-sm text-peligro">{error}</p>}
+
+      {sync === null && <p role="status" className="text-sm text-texto-suave">Buscando los casos de tu cuenta…</p>}
+      {(sync === "fallo" || sync === "sesion") && (
+        <div role="status" className="flex flex-col gap-3 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm">
+          <p>
+            {sync === "sesion"
+              ? "Tu sesión venció, así que solo ves los casos de este celular."
+              : "No pude traer los casos de tu cuenta. Ves los de este celular."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (sync === "sesion") router.push("/cuenta");
+              else {
+                setSync(null);
+                setVuelta((v) => v + 1);
+              }
+            }}
+            className="h-11 self-start rounded-full border border-probable/60 px-4 font-medium"
+          >
+            {sync === "sesion" ? "Iniciar sesión" : "Reintentar"}
+          </button>
+        </div>
+      )}
 
       {casos.length > 0 ? (
         <ul className="flex flex-col gap-3">

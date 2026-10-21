@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ErrorApi, ErrorCortado, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, prepararExperto } from "../_datos/api";
+import { ErrorCortado, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, prepararExperto } from "../_datos/api";
+import { mensajeDeError } from "../_datos/errores";
+import { Volviendo } from "../_ui/volviendo";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
@@ -100,7 +102,7 @@ function PreparandoDelCaso() {
     })()
       .catch((e) => {
         if (!vigente) return;
-        setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.");
+        setError(mensajeDeError(e));
         if (e instanceof ErrorCortado && !reintentado.current) {
           reintentado.current = true;
           setTimeout(() => vigente && reintentar(), PAUSA_REINTENTO_MS);
@@ -142,7 +144,8 @@ function PreparandoDelCaso() {
     };
   }, []);
 
-  if (!caso || !ficha || !listaParaPreparar) return null;
+  if (!caso) return <Volviendo />;
+  if (!ficha || !listaParaPreparar) return <Volviendo texto="Falta confirmar tu equipo. Te llevo a la ficha…" destino="/ficha" boton="Ir a la ficha" />;
 
   const equipo = [ficha.marca.valor, ficha.modelo.valor].filter(Boolean).join(" ");
   const etapa = ETAPAS.findLast((e) => segundos >= e.desde) ?? ETAPAS[0];

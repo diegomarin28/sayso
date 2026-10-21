@@ -16,6 +16,7 @@ import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
 import { pedidosSimulados } from "./pedidos-simulados";
 import { precisarSimulado } from "./precisar-simulado";
+import { ErrorApi, ErrorCortado, MENSAJE_GENERICO, mensajeDeEstado } from "./errores";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -26,11 +27,7 @@ import type { ImagenB64 } from "./imagen";
 
 export const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
 
-/** Error que se le puede mostrar a la persona tal cual. */
-export class ErrorApi extends Error {}
-
-/** El pedido se cortó: tardó más que `TIEMPO_MAXIMO_MS` o se canceló al volver la red (`cancelarPedidosEnCurso`). */
-export class ErrorCortado extends ErrorApi {}
+export { ErrorApi, ErrorCortado };
 
 /** Ninguna llamada espera más que esto (la más larga, el manual, tarda hasta ~2 min). */
 export const TIEMPO_MAXIMO_MS = 150_000;
@@ -103,14 +100,12 @@ async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): 
   if (!res.ok) {
     // Aviso y no error: es un fallo esperable que la pantalla ya muestra con "Probar de nuevo".
     console.warn(`[api] ${ruta} ${res.status}`, datos);
-    throw new ErrorApi(
-      res.status === 502 ? "Me trabé pensando. Probá de nuevo." : "Algo salió mal. Probá de nuevo.",
-    );
+    throw new ErrorApi(mensajeDeEstado(res.status));
   }
   const r = esquema.safeParse(datos);
   if (!r.success) {
     console.error(`[api] ${ruta} respuesta inválida`, r.error);
-    throw new ErrorApi("Algo salió mal. Probá de nuevo.");
+    throw new ErrorApi(MENSAJE_GENERICO);
   }
   return r.data;
 }
@@ -119,6 +114,7 @@ const conEventos = <T extends z.ZodRawShape>(forma: T) =>
   z.object({ ...forma, eventos: z.array(Evento).default([]) });
 
 const RespPedidos = conEventos({ pedidos: z.array(PedidoDeFoto) });
+export const SIN_PEDIDOS = "No pude armar la lista de fotos. Probá de nuevo.";
 const RespCalidad = conEventos({ foto: Foto });
 const RespChapa = conEventos({ ficha: Ficha });
 const RespFicha = conEventos({
@@ -178,7 +174,11 @@ export async function pedidosDeFoto(
       "/api/intake/pedidos",
       { casoId: caso.id, clase: caso.clase, sintoma: caso.sintoma, tipoEquipo: tipo },
       RespPedidos,
-    ),
+    ).then((r) => {
+      // Una lista vacía no deja sacar ninguna foto: es un fallo (y así `unaVez` no la guarda).
+      if (r.pedidos.length === 0) throw new ErrorApi(SIN_PEDIDOS);
+      return r;
+    }),
   );
 }
 
