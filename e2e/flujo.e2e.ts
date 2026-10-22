@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { filaFicha } from "./recorrido";
 import {
   Libreta,
   alAlcance,
@@ -30,7 +31,7 @@ const SINTOMA = "Mi notebook se apaga sola a los diez minutos";
 const PREGUNTA = "¿Dónde está la batería?";
 
 /** Lo que dice el experto en las pantallas 1–4 (frase grande, palabra por palabra). */
-const dice = (page: Page) => page.locator("main p[aria-live=polite]").first();
+const dice = (page: Page) => page.locator("main :is(h1, p)[aria-live=polite]").first();
 
 async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton = "Elegir de la galería") {
   // Como la persona: toca el botón de la galería y elige una foto.
@@ -135,11 +136,11 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     await test.step("3 · revisa la ficha, completa el año y confirma", async () => {
       await expect(dice(page)).toContainText("Leyendo la etiqueta…");
       await expect(dice(page)).toContainText("Revisá lo que leí");
-      await expect(page.getByRole("button", { name: "Editar Marca" })).toContainText("EJEMPLO");
-      await expect(page.getByRole("button", { name: "Editar Modelo" })).toContainText("NB-15 (ficticio)");
-      await expect(page.getByRole("button", { name: "Editar N.º de serie" })).toContainText("SN-0000-DEMO");
+      await expect(filaFicha(page, "Marca", "Editar")).toContainText("EJEMPLO");
+      await expect(filaFicha(page, "Modelo", "Editar")).toContainText("NB-15 (ficticio)");
+      await expect(filaFicha(page, "N.º de serie", "Editar")).toContainText("SN-0000-DEMO");
       // Lo que leyó la IA no queda confirmado hasta que la persona lo revisa: cada fila dice su estado.
-      const fila = (dato: string) => page.getByRole("button", { name: new RegExp(`^(Editar|Completar) ${dato}$`) });
+      const fila = (dato: string) => filaFicha(page, dato);
       await expect(fila("Marca").getByRole("img", { name: "Leído" })).toBeVisible();
       await expect(fila("N.º de serie")).toContainText("Revisalo");
       await expect(fila("Año")).toContainText("No lo encontré");
@@ -149,14 +150,14 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await revisarPantalla(page, libreta);
       await captura(page, info, "07-ficha");
 
-      await page.getByRole("button", { name: "Completar Año" }).click();
+      await filaFicha(page, "Año", "Completar").click();
       const anio = page.getByRole("textbox", { name: "Año" });
       await expect(anio).toBeFocused();
       await anio.fill("2021");
       await revisarPantalla(page, libreta);
       await captura(page, info, "08-ficha-editando");
       await page.getByRole("button", { name: "Guardar" }).click();
-      await expect(page.getByRole("button", { name: "Editar Año" })).toContainText("2021");
+      await expect(filaFicha(page, "Año", "Editar")).toContainText("2021");
 
       await expect(es).toBeEnabled();
       await alAlcance(page, es, libreta, "Está bien, seguir");
@@ -275,7 +276,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     await test.step("6 · pregunta por texto y recibe respuesta", async () => {
       // Un solo chat: se abre con el ícono de mensajes (abajo a la derecha del 3D) y trae el campo para preguntar.
       // Ya cuenta 1: el experto arrancó solo con el síntoma de la pantalla 1.
-      await page.getByRole("button", { name: /^Hablar con el experto \(1\)$/ }).click({ timeout: 60_000 });
+      await page.getByRole("button", { name: "Hablar con el experto, 1 pregunta" }).click({ timeout: 60_000 });
       const charla = page.getByRole("dialog", { name: "Hablar con el experto" });
       await expect(charla).toBeVisible();
       const campo = charla.getByRole("textbox", { name: "Pregunta para el experto" });
@@ -303,7 +304,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
         libreta.anotar("problema", `Después de la respuesta el 3D se ve negro (${JSON.stringify(medida)})`);
 
       // La conversación queda guardada; el ícono cuenta las preguntas (la del síntoma, que el experto hizo solo, y esta).
-      await page.getByRole("button", { name: "Hablar con el experto (2)" }).click({ timeout: 60_000 });
+      await page.getByRole("button", { name: "Hablar con el experto, 2 preguntas" }).click({ timeout: 60_000 });
       await expect(charla).toBeVisible();
       await expect(charla).toContainText(PREGUNTA);
       await expect(charla).toContainText("Batería: parte delantera.");

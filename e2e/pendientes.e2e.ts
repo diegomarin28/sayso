@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { Libreta, captura, detalle3D, escucharConsola, lienzo3D, pantallaCongelada, prepararNavegador, revisarPantalla, sinRedNiIA } from "./ayudas";
-import { botonChat, chat, llegarALaFicha, llegarAlExperto, preguntar } from "./recorrido";
+import { botonChat, chat, filaFicha, llegarALaFicha, llegarAlExperto, preguntar } from "./recorrido";
 
 /**
  * Tests de los issues de la prueba real (18/10) cuyo arreglo todavía no está en main.
@@ -110,10 +110,10 @@ test("#228 · lo que la persona edita cuenta como confirmado: editar un dato y �
   await llegarALaFicha(page);
   libreta.pantalla = "3 · Ficha";
 
-  await tocar(page.getByRole("button", { name: "Completar Año" }));
+  await tocar(filaFicha(page, "Año", "Completar"));
   await page.getByRole("textbox", { name: "Año" }).fill("2021");
   await tocar(page.getByRole("button", { name: "Guardar" }));
-  await expect(page.getByRole("button", { name: "Editar Año" })).toContainText("2021");
+  await expect(filaFicha(page, "Año", "Editar")).toContainText("2021");
 
   await tocar(page.getByRole("button", { name: /Está bien, seguir/ }));
   await expect(page).toHaveURL(/\/preparando$/, { timeout: 5000 });
