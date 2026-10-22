@@ -197,7 +197,7 @@ function ExpertoDelCaso() {
                   type="button"
                   onClick={dictado.terminar}
                   aria-label="Terminar de grabar y preguntar"
-                  className="flex h-12 w-12 shrink-0 animate-pulse items-center justify-center rounded-2xl bg-peligro text-white transition active:scale-95"
+                  className="flex h-12 w-12 shrink-0 motion-safe:animate-pulse items-center justify-center rounded-2xl bg-peligro text-white transition active:scale-95"
                 >
                   <Detener />
                 </button>

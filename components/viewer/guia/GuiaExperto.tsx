@@ -477,7 +477,7 @@ function EstadoExperto({ estado, detalle }: { estado: EstadoGuia; detalle?: stri
           ? detalle
           : null;
   if (!texto) return null;
-  return <p className={`text-sm ${estado === "error" ? "text-peligro" : "animate-pulse text-texto-suave"}`}>{texto}</p>;
+  return <p className={`text-sm ${estado === "error" ? "text-peligro" : "motion-safe:animate-pulse text-texto-suave"}`}>{texto}</p>;
 }
 
 /** Alto (px) desde el borde de arriba del contenedor posicionado hasta el borde de abajo del elemento. */

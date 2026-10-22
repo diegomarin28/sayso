@@ -98,7 +98,7 @@ export function TarjetaPaso({
                 />
               </button>
             ))}
-            {!completa && <span className="mx-[3px] h-1.5 w-1.5 animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
+            {!completa && <span className="mx-[3px] h-1.5 w-1.5 motion-safe:animate-pulse rounded-full bg-texto-suave/60" aria-hidden />}
           </div>
         )}
       </div>
