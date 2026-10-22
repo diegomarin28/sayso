@@ -15,7 +15,7 @@ export function BotonSilencio() {
       type="button"
       onClick={() => silenciar(!callado)}
       aria-pressed={callado}
-      aria-label={callado ? "Activar la voz del experto" : "Silenciar la voz del experto"}
+      aria-label={callado ? "Activar la voz" : "Silenciar la voz"}
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition active:scale-95 ${
         callado ? "text-acento" : "text-texto-suave hover:text-texto"
       }`}
