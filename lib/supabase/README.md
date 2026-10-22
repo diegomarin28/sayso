@@ -38,7 +38,7 @@ Cliente, esquema y migraciones de Supabase. Diseño del login, las sesiones y lo
 - Lectura (docs/login.md §6), solo del dueño de la sesión y sin llamar a la IA, con `Cache-Control: private, no-store`:
   - `GET /api/casos` → `{ casos: [{ caso, tipoEquipo, ficha, cierre, tieneGuia, actualizadoEn }] }`, el más reciente primero (hasta 50), sin la guía.
   - `GET /api/casos/[id]` → `{ caso, tipoEquipo, ficha, cierre, actualizadoEn, fotos, guia }`. Cada foto con `url` firmada por 5 minutos, o `null` si no tiene imagen en `fotos-usuarios` (nunca la URL guardada). Un caso ajeno o inexistente da el mismo 404.
-  - Sin sesión, 401. Las pantallas todavía no los usan: que Mis casos lea del servidor es el próximo PR.
+  - Sin sesión, 401. Mis casos los usa desde #361 (`app/(screens)/_datos/casos-servidor.ts`).
 
 **Para el carril A:** la caché del knowledge pack en Supabase se pasa así:
 
