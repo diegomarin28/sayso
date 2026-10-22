@@ -107,7 +107,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           const { caso: c, plano: pl } = ultimo.current;
           if (c && p && pl) {
             guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
-            guardar({ guia: { casoId: c.id, preparado: p, plano: pl } });
+            guardar({ guia: { casoId: c.id, preparado: p, plano: pl } }, c.id);
           }
         },
         plano,
@@ -117,7 +117,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           const { caso: c, preparado: pr } = ultimo.current;
           if (c && p && pr) {
             guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
-            guardar({ guia: { casoId: c.id, preparado: pr, plano: p } });
+            guardar({ guia: { casoId: c.id, preparado: pr, plano: p } }, c.id);
           }
         },
         captura,
@@ -155,22 +155,22 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           if (c) {
             const t = tipo !== undefined ? tipo : c.id === caso?.id ? tipoEquipo : null;
             guardarLocal({ caso: c, tipoEquipo: t });
-            guardar({ caso: c, tipoEquipo: t });
+            guardar({ caso: c, tipoEquipo: t }, c.id);
           }
         },
         agregarFoto: (f, imagen) => {
           setFotos((prev) => [...prev, f]);
           if (imagen && f.aceptada) setImagenes((prev) => ({ ...prev, [f.id]: imagen }));
-          guardar({ fotos: [{ foto: f, imagen: f.aceptada ? imagen : undefined }] });
+          guardar({ fotos: [{ foto: f, imagen: f.aceptada ? imagen : undefined }] }, ultimo.current.caso?.id);
         },
         setFicha: (f) => {
           setFicha(f);
-          if (f) guardar({ ficha: f });
+          if (f) guardar({ ficha: f }, ultimo.current.caso?.id);
           if (f && ultimo.current.caso) guardarLocal({ caso: ultimo.current.caso, ficha: f });
         },
         agregarEventos: (e) => {
           setEventos((prev) => [...prev, ...e]);
-          guardar({ eventos: e });
+          guardar({ eventos: e }, ultimo.current.caso?.id);
         },
         cierre,
         cerrarCaso: (c) => {
@@ -183,7 +183,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           };
           setCaso(cerrado);
           guardarLocal({ caso: cerrado, cierre: c });
-          guardar({ caso: cerrado, cierre: c });
+          guardar({ caso: cerrado, cierre: c }, cerrado.id);
         },
         ultimaCompra,
         setUltimaCompra,

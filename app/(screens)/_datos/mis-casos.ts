@@ -34,6 +34,8 @@ export const CasoGuardado = z.object({
   cierre: Cierre.nullable().default(null),
   /** El servidor tiene la guía (vino de otro celular): se baja al abrir el caso, sin IA. */
   guiaEnServidor: z.boolean().default(false),
+  /** Lo último no llegó al servidor (sin red o sesión vencida): "Reintentar guardado" lo manda. Solo local. */
+  pendienteServidor: z.boolean().default(false),
   actualizadoEn: z.string(),
 });
 export type CasoGuardado = z.infer<typeof CasoGuardado>;
@@ -148,7 +150,7 @@ export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[
   for (const { tieneGuia, ...s } of servidor) {
     const local = porId.get(s.caso.id);
     if (!local) {
-      porId.set(s.caso.id, { ...s, guia: null, guiaEnServidor: tieneGuia });
+      porId.set(s.caso.id, { ...s, guia: null, guiaEnServidor: tieneGuia, pendienteServidor: false });
       continue;
     }
     const nuevo = s.actualizadoEn > local.actualizadoEn ? s : local;
@@ -160,6 +162,7 @@ export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[
       cierre: nuevo.cierre ?? viejo.cierre,
       guia: local.guia,
       guiaEnServidor: tieneGuia,
+      pendienteServidor: local.pendienteServidor,
       actualizadoEn: nuevo.actualizadoEn,
     });
   }
@@ -169,6 +172,13 @@ export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[
 /** Guarda en el celular la lista de casos que trajo el servidor. */
 export function mezclarDelServidor(servidor: ResumenServidor[]) {
   escribirTodos(mezclarCasos(leerTodos(), servidor));
+}
+
+/** Marca si el caso no llegó al servidor. No cambia `actualizadoEn`: no es un cambio de la persona. */
+export function marcarPendiente(id: string, pendiente: boolean) {
+  const todos = leerTodos();
+  if (!todos.some((c) => c.caso.id === id && c.pendienteServidor !== pendiente)) return;
+  escribirTodos(todos.map((c) => (c.caso.id === id ? { ...c, pendienteServidor: pendiente } : c)));
 }
 
 /** La guía bajada del servidor al abrir un caso: no cambia `actualizadoEn` (abrir no es un cambio). */

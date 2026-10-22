@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { fotosDelServidor, guiaDelServidor, mensajeSinGuia, sincronizarCasos, type FotoDelCaso, type Sincronizacion } from "../_datos/casos-servidor";
 import { leerCuenta } from "../_datos/cuenta";
+import { MENSAJE_GENERICO } from "../_datos/errores";
+import { reintentarGuardado } from "../_datos/guardar";
 import {
   firmaCasos,
   guardarGuiaBajada,
@@ -65,6 +67,28 @@ export default function MisCasos() {
     leerCuenta()
       .then((c) => setConEmail(c.configurado ? c.sesion && !c.anonima : null))
       .catch(() => setConEmail(null));
+  }, []);
+
+  /** "Reintentar guardado" de un caso que quedó solo en este celular. Sin sesión, va a iniciar sesión y vuelve acá. */
+  const [reintentando, setReintentando] = useState<string | null>(null);
+  const [fallaReintento, setFallaReintento] = useState<string | null>(null);
+  async function reintentar(id: string) {
+    setReintentando(id);
+    setFallaReintento(null);
+    const r = await reintentarGuardado(id);
+    setReintentando(null);
+    if (r === "ok") return;
+    if (r === "sesion") return router.push(`/cuenta?vuelta=${encodeURIComponent(`/casos?reintentar=${id}`)}`);
+    setFallaReintento(id);
+  }
+  // Al volver de iniciar sesión (cuenta con ?vuelta=) se reintenta el caso que quedó pendiente.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("reintentar");
+    if (!id) return;
+    window.history.replaceState(null, "", "/casos");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- el reintento arranca al volver de la sesión
+    void reintentar(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar, con la vuelta de la sesión
   }, []);
 
   /** El caso tocado: primero se ve su charla y desde ahí se sigue (`abrir`). */
@@ -286,6 +310,24 @@ export default function MisCasos() {
                     )}
                   </div>
                 </button>
+                {c.pendienteServidor && (
+                  <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-3 text-sm">
+                    <p>Este caso quedó solo en tu celular.</p>
+                    {fallaReintento === c.caso.id && (
+                      <p role="alert" className="text-peligro">
+                        {MENSAJE_GENERICO}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void reintentar(c.caso.id)}
+                      disabled={reintentando === c.caso.id}
+                      className="h-11 self-start rounded-full border border-probable/60 px-4 font-medium disabled:opacity-60"
+                    >
+                      {reintentando === c.caso.id ? "Guardando…" : "Reintentar guardado"}
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}

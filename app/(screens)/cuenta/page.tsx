@@ -122,10 +122,16 @@ export default function Cuenta() {
     }
   }
 
-  /** Después de entrar o de crear la cuenta se vuelve al inicio, que ya saluda por el nombre. */
+  /**
+   * Después de entrar o de crear la cuenta se vuelve al inicio, que ya saluda por el nombre; o a la
+   * pantalla que pidió la sesión (`?vuelta=`, por ejemplo Mis casos al reintentar). Solo rutas de la app.
+   */
   const alInicio = () => {
     olvidarSesion();
-    router.push("/");
+    // Se resuelve contra el origen actual: "/\evil.com" o "//evil.com" salen de la app y se descartan.
+    const vuelta = new URLSearchParams(window.location.search).get("vuelta");
+    const destino = new URL(vuelta ?? "/", window.location.origin);
+    router.push(destino.origin === window.location.origin ? destino.pathname + destino.search : "/");
   };
 
 

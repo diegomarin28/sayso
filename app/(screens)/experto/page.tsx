@@ -242,6 +242,7 @@ function ExpertoDelCaso() {
       {ayuda && !cerrando && <AyudaExperto onCerrar={cerrarAyuda} />}
       {cerrando && (
         <PanelCierre
+          casoId={caso.id}
           pack={preparado.pack}
           equipo={equipoDeFicha(ficha)}
           sintoma={caso.sintoma}

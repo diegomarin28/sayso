@@ -30,6 +30,7 @@ const caso = (extra: Partial<CasoGuardado> = {}): CasoGuardado => ({
   guia: null,
   cierre: null,
   guiaEnServidor: false,
+  pendienteServidor: false,
   actualizadoEn: "2026-10-20T10:00:00.000Z",
   ...extra,
 });

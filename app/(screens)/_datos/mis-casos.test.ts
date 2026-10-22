@@ -18,6 +18,7 @@ const local = (id: string, actualizadoEn: string, extra: Partial<CasoGuardado> =
   guia: null,
   cierre: null,
   guiaEnServidor: false,
+  pendienteServidor: false,
   actualizadoEn,
   ...extra,
 });
