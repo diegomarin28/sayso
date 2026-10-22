@@ -5,7 +5,7 @@ import { Volver } from "./volver";
 /**
  * Página de texto legal (términos y privacidad). Los textos los revisan las personas antes de
  * publicar (Ley 25.326); ningún agente los da por buenos. Sin cartel de borrador desde el rediseño
- * (lo pidió Iaio): los `[COMPLETAR]` que quedan en los textos siguen pendientes.
+ * (lo pidió Iaio). Mientras Sayso sea una demo, los textos lo dicen en vez de completar datos de una empresa.
  */
 export function PaginaLegal({ titulo, version, children }: { titulo: string; version: string; children: ReactNode }) {
   return (
