@@ -1,4 +1,5 @@
-import { mensajeDeCuenta } from "./errores";
+import { fetchConTiempo, ErrorDeTiempo, TIEMPO_DESCARGA_MS } from "./con-tiempo";
+import { MENSAJE_TARDA, mensajeDeCuenta } from "./errores";
 
 /**
  * Cuenta y sesión desde las pantallas (docs/login.md). Todo pasa por `/api/cuenta/*`: la sesión
@@ -24,14 +25,19 @@ export class ErrorCuenta extends Error {
   }
 }
 
+/** Un pedido que no llegó: tardó demasiado o no hay conexión. */
+function sinRespuesta(e: unknown): never {
+  if (e instanceof ErrorDeTiempo) throw new ErrorCuenta(MENSAJE_TARDA, "tiempo");
+  throw new ErrorCuenta("Sin conexión. Probá de nuevo.", "red");
+}
+
 async function pedir<T>(ruta: string, init?: { metodo?: string; cuerpo?: unknown }): Promise<T> {
-  const res = await fetch(ruta, {
+  const res = await fetchConTiempo(ruta, {
     method: init?.metodo ?? (init?.cuerpo === undefined ? "GET" : "POST"),
     headers: init?.cuerpo === undefined ? undefined : { "Content-Type": "application/json" },
     body: init?.cuerpo === undefined ? undefined : JSON.stringify(init.cuerpo),
     cache: "no-store",
-  }).catch(() => null);
-  if (!res) throw new ErrorCuenta("Sin conexión. Probá de nuevo.", "red");
+  }).catch(sinRespuesta);
   const datos = (await res.json().catch(() => ({}))) as T & { error?: string; codigo?: string };
   if (!res.ok) throw new ErrorCuenta(mensajeDeCuenta(res.status, datos.error), datos.codigo ?? String(res.status));
   return datos;
@@ -64,8 +70,7 @@ const RUTA_EXPORTAR = "/api/cuenta/exportar";
  * la persona ve el error en la pantalla en vez de un JSON de error descargado o una pestaña rota.
  */
 export async function descargarCopia(): Promise<void> {
-  const res = await fetch(RUTA_EXPORTAR, { cache: "no-store" }).catch(() => null);
-  if (!res) throw new ErrorCuenta("Sin conexión. Probá de nuevo.", "red");
+  const res = await fetchConTiempo(RUTA_EXPORTAR, { cache: "no-store" }, TIEMPO_DESCARGA_MS).catch(sinRespuesta);
   if (!res.ok) {
     const datos = (await res.json().catch(() => ({}))) as { error?: string; codigo?: string };
     throw new ErrorCuenta(mensajeDeCuenta(res.status, datos.error), datos.codigo ?? String(res.status));

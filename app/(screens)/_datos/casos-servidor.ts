@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Guia } from "../../../lib/supabase/guia";
+import { fetchConTiempo } from "./con-tiempo";
 import { mezclarDelServidor, ResumenServidor, type GuiaGuardada } from "./mis-casos";
 
 /**
@@ -22,7 +23,7 @@ export const sincronizacionDeEstado = (status: number): Sincronizacion =>
 export async function sincronizarCasos(): Promise<Sincronizacion> {
   if (SIN_SERVIDOR) return "ok";
   try {
-    const res = await fetch("/api/casos", { cache: "no-store" });
+    const res = await fetchConTiempo("/api/casos", { cache: "no-store" });
     if (!res.ok) return sincronizacionDeEstado(res.status);
     const datos = (await res.json()) as { casos?: unknown };
     // Uno que no valida (de una versión vieja) se saltea en vez de descartar la lista.
@@ -49,7 +50,7 @@ const FotosDelCaso = z.object({
 export async function fotosDelServidor(id: string): Promise<FotoDelCaso[]> {
   if (SIN_SERVIDOR) return [];
   try {
-    const res = await fetch(`/api/casos/${encodeURIComponent(id)}`, { cache: "no-store" });
+    const res = await fetchConTiempo(`/api/casos/${encodeURIComponent(id)}`, { cache: "no-store" });
     if (!res.ok) return [];
     const r = FotosDelCaso.safeParse(await res.json());
     if (!r.success) return [];
@@ -80,7 +81,7 @@ export function mensajeSinGuia(motivo: MotivoSinGuia): string {
 export async function guiaDelServidor(id: string): Promise<ResultadoGuia> {
   if (SIN_SERVIDOR) return { motivo: "vacio" };
   try {
-    const res = await fetch(`/api/casos/${encodeURIComponent(id)}`, { cache: "no-store" });
+    const res = await fetchConTiempo(`/api/casos/${encodeURIComponent(id)}`, { cache: "no-store" });
     if (!res.ok) return { motivo: sincronizacionDeEstado(res.status) === "sesion" ? "sesion" : "fallo" };
     const r = z.object({ guia: Guia.nullable() }).safeParse(await res.json());
     if (!r.success) return { motivo: "fallo" };
