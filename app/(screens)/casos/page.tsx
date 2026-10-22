@@ -328,6 +328,14 @@ export default function MisCasos() {
                     </button>
                   </div>
                 )}
+                {c.fotosSinCopia > 0 && (
+                  <p className="mt-2 text-xs text-probable">
+                    {c.fotosSinCopia === 1
+                      ? "1 foto no se pudo guardar en este celular."
+                      : `${c.fotosSinCopia} fotos no se pudieron guardar en este celular.`}{" "}
+                    Si hace falta, sacala de nuevo.
+                  </p>
+                )}
               </li>
             );
           })}

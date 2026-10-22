@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Caso, Ficha } from "../../../shared";
 import { Guia } from "../../../lib/supabase/guia";
+import { borrarTodasLasFotosPendientes } from "./fotos-pendientes";
 
 /**
  * "Mis casos": copia en el celular (localStorage) de los casos de la sesión, para abrir rápido y sin
@@ -36,6 +37,8 @@ export const CasoGuardado = z.object({
   guiaEnServidor: z.boolean().default(false),
   /** Lo último no llegó al servidor (sin red o sesión vencida): "Reintentar guardado" lo manda. Solo local. */
   pendienteServidor: z.boolean().default(false),
+  /** Fotos que no se pudieron guardar ni en el servidor ni en el celular (tope o sin IndexedDB). Solo local. */
+  fotosSinCopia: z.number().int().min(0).default(0),
   actualizadoEn: z.string(),
 });
 export type CasoGuardado = z.infer<typeof CasoGuardado>;
@@ -150,7 +153,7 @@ export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[
   for (const { tieneGuia, ...s } of servidor) {
     const local = porId.get(s.caso.id);
     if (!local) {
-      porId.set(s.caso.id, { ...s, guia: null, guiaEnServidor: tieneGuia, pendienteServidor: false });
+      porId.set(s.caso.id, { ...s, guia: null, guiaEnServidor: tieneGuia, pendienteServidor: false, fotosSinCopia: 0 });
       continue;
     }
     const nuevo = s.actualizadoEn > local.actualizadoEn ? s : local;
@@ -163,6 +166,7 @@ export function mezclarCasos(locales: CasoGuardado[], servidor: ResumenServidor[
       guia: local.guia,
       guiaEnServidor: tieneGuia,
       pendienteServidor: local.pendienteServidor,
+      fotosSinCopia: local.fotosSinCopia,
       actualizadoEn: nuevo.actualizadoEn,
     });
   }
@@ -181,6 +185,12 @@ export function marcarPendiente(id: string, pendiente: boolean) {
   escribirTodos(todos.map((c) => (c.caso.id === id ? { ...c, pendienteServidor: pendiente } : c)));
 }
 
+/** Suma fotos que no se pudieron guardar. No cambia `actualizadoEn`: el caso no cambió por eso. */
+export function sumarFotosSinCopia(id: string, cuantas: number) {
+  if (cuantas <= 0) return;
+  escribirTodos(leerTodos().map((c) => (c.caso.id === id ? { ...c, fotosSinCopia: c.fotosSinCopia + cuantas } : c)));
+}
+
 /** La guía bajada del servidor al abrir un caso: no cambia `actualizadoEn` (abrir no es un cambio). */
 export function guardarGuiaBajada(id: string, guia: GuiaGuardada) {
   escribirTodos(leerTodos().map((c) => (c.caso.id === id ? { ...c, guia } : c)));
@@ -194,6 +204,7 @@ export function borrarLocal() {
   } catch {
     // sin localStorage solo estaban en memoria
   }
+  void borrarTodasLasFotosPendientes();
   oyentes.forEach((o) => o());
 }
 
