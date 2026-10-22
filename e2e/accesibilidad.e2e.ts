@@ -26,7 +26,8 @@ async function irAlExperto(page: Page, context: BrowserContext, info: TestInfo) 
 test("la ayuda del experto toma el foco y se cierra con Escape", async ({ page, context }, info) => {
   await prepararNavegador(context);
   await sinRedNiIA(context, new Libreta(info));
-  await llegarAlExperto(page);
+  // La primera vez que se entra, la ayuda aparece sola: el helper no la cierra para que esta prueba la vea.
+  await llegarAlExperto(page, { dejarAyuda: true });
   const ayuda = page.getByRole("dialog", { name: "Así se usa esta pantalla" });
   await expect(ayuda).toBeVisible();
   expect((await activo(page)).dentro).toBe(true);

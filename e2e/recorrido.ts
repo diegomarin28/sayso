@@ -58,13 +58,13 @@ export async function confirmarFicha(page: Page) {
   await expect(page).toHaveURL(/\/preparando$/);
 }
 
-/** Hasta el experto 3D, con el primer paso de la guía a la vista. */
-export async function llegarAlExperto(page: Page) {
+/** Hasta el experto 3D, con el primer paso de la guía a la vista. `dejarAyuda`: no cierra «Así se usa esta pantalla» (para probar ese diálogo). */
+export async function llegarAlExperto(page: Page, { dejarAyuda = false }: { dejarAyuda?: boolean } = {}) {
   await llegarALaFicha(page);
   await confirmarFicha(page);
   await page.getByRole("button", { name: /Ver al experto/ }).click();
   await expect(page).toHaveURL(/\/experto$/);
-  await cerrarAyudaDelExperto(page);
+  if (!dejarAyuda) await cerrarAyudaDelExperto(page);
   await expect(page.getByText(/^Paso 1 de \d+$/)).toBeVisible();
 }
 
