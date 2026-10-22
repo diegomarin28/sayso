@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import type { FuenteChat, EventoChat } from "../../../components/viewer";
 import { Coreografia, type KnowledgePack, type PlanoDePiezas } from "../../../shared";
 import type { Cierre, EstadoCierre } from "../_datos/mis-casos";
@@ -53,6 +54,8 @@ export function PanelCierre({
   const [elegido, setElegido] = useState<EstadoCierre | null>(null);
   const [pieza, setPieza] = useState<string>(compra?.pieza ?? piezaSugerida ?? pack.piezas[0]?.id ?? "");
   const url = compra && compra.pieza === pieza ? compra.url : undefined;
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogo(ref, onCancelar);
 
   function guardar() {
     if (!elegido) return;
@@ -64,7 +67,7 @@ export function PanelCierre({
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Terminar el caso" className="fixed inset-0 z-[65] overflow-y-auto bg-fondo">
+    <div ref={ref} role="dialog" aria-modal="true" aria-label="Terminar el caso" className="fixed inset-0 z-[65] overflow-y-auto bg-fondo">
       {/* La cuadrícula de las otras pantallas (body::before queda tapada por este fondo). */}
       <div
         aria-hidden

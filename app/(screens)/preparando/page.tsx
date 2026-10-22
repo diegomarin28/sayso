@@ -230,7 +230,7 @@ type EstadoEtapa = "pendiente" | "en-curso" | "hecha" | "error";
 
 function Etapa({ estado, children }: { estado: EstadoEtapa; children: React.ReactNode }) {
   return (
-    <li className={`flex items-center gap-3 ${estado === "pendiente" ? "text-texto-suave/50" : ""}`}>
+    <li className={`flex items-center gap-3 ${estado === "pendiente" ? "text-texto-suave/70" : ""}`}>
       <span
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
           estado === "hecha"

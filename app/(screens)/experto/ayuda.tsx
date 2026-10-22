@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import { Cubo, Globo, Libro } from "@/components/viewer/guia/iconos";
 import { Microfono } from "../_ui/experto";
 import { Carrito } from "./repuestos";
@@ -62,8 +63,12 @@ const ITEMS: { icono: ReactNode; titulo: string; detalle: string }[] = [
 ];
 
 export function AyudaExperto({ onCerrar }: { onCerrar: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // El foco va al cartel (se lee el título) y no al botón de abajo, que en un celular chico haría saltar el scroll.
+  useDialogo(ref, onCerrar, { foco: "contenedor" });
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-modal="true"
       aria-label="Así se usa esta pantalla"
@@ -101,7 +106,7 @@ export function AyudaExperto({ onCerrar }: { onCerrar: () => void }) {
         <button
           type="button"
           onClick={onCerrar}
-          className="h-12 rounded-xl bg-acento font-semibold text-black active:scale-[0.98]"
+          className="h-12 shrink-0 rounded-xl bg-acento font-semibold text-black active:scale-[0.98]"
         >
           Entendido
         </button>

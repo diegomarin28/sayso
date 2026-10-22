@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import type { Coreografia } from "../../../shared";
 import { Cerrar } from "./iconos";
 
@@ -37,17 +38,13 @@ export function fotoParaPaso(c: Coreografia | undefined, fotoDePaso: ((url: stri
  * La imagen se puede recorrer con scroll y hacer zoom con los dedos (la página no bloquea el gesto).
  */
 export function VerPaginaManual({ pagina, onCerrar }: { pagina: PaginaManual; onCerrar: () => void }) {
-  const cerrar = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cerrar.current?.focus();
-    const tecla = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
-    window.addEventListener("keydown", tecla);
-    return () => window.removeEventListener("keydown", tecla);
-  }, [onCerrar]);
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogo(ref, onCerrar); // foco al botón de cerrar (el primero), Escape y devolución del foco
 
   const titulo = `${pagina.doc ? `${pagina.doc} · ` : ""}${pagina.foto ? "foto del paso" : `página ${pagina.pagina}`}`;
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-modal
       aria-label={pagina.foto ? `Foto: ${titulo}` : `Manual: ${titulo}`}
@@ -57,7 +54,6 @@ export function VerPaginaManual({ pagina, onCerrar }: { pagina: PaginaManual; on
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <p className="min-w-0 truncate text-sm text-texto-suave">{titulo}</p>
         <button
-          ref={cerrar}
           type="button"
           onClick={onCerrar}
           aria-label={pagina.foto ? "Cerrar la foto del paso" : "Cerrar la página del manual"}
