@@ -17,6 +17,7 @@ import * as THREE from "three";
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
+import { accionDeTecla, anuncioResaltadas, CONSULTA_MENOS_MOVIMIENTO, descripcionVisor, type AccionTeclado } from "./accesibilidad";
 import { useBibliotecaPiezas } from "./biblioteca";
 import {
   animar,
@@ -133,6 +134,13 @@ export function Visor({
   // Se espera la biblioteca de piezas (o su plazo) para no armar la escena dos veces.
   const biblioteca = useBibliotecaPiezas(plano.piezas, tipoEquipo);
   const soportaWebGL2 = useSoportaWebGL2();
+  const menosMovimiento = useMenosMovimiento();
+  // Lo que anuncia el lector de pantalla al resaltar piezas (ver `anuncioResaltadas`) y la cámara por teclado.
+  const [anuncio, setAnuncio] = useState("");
+  const tecladoRef = useRef<((a: AccionTeclado) => void) | null>(null);
+  const registrarTeclado = useCallback((f: ((a: AccionTeclado) => void) | null) => {
+    tecladoRef.current = f;
+  }, []);
   // Una vez al montar (el lienzo solo existe en el cliente) y antes de preparar la escena: ver tema.ts.
   useState(() => usarColorActivo(colorActivoDelDocumento()));
   // Un plano mixto no se muestra como verificado entero (ver origen.ts).
@@ -214,9 +222,25 @@ export function Visor({
   }
 
   return (
-    <div className={className} style={{ position: "relative", background: "var(--escena)", touchAction: "none" }}>
+    <div
+      className={`${className ?? ""} focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--dato)]`}
+      style={{ position: "relative", background: "var(--escena)", touchAction: "none" }}
+      role="group"
+      aria-roledescription="modelo 3D"
+      aria-label={descripcionVisor(origen.texto, plano.piezas.length)}
+      tabIndex={falla ? undefined : 0}
+      onKeyDown={(e) => {
+        // Solo cuando el foco está en el visor mismo: los botones de adentro conservan sus teclas.
+        if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
+        const accion = accionDeTecla(e.key);
+        if (!accion) return;
+        e.preventDefault();
+        tecladoRef.current?.(accion);
+      }}
+    >
       <Resguardo key={intento} onError={() => setFalla("error")}>
-        <Canvas dpr={dprPara(rendimiento)} onCreated={alCrear}>
+        {/* El lienzo y sus etiquetas no se leen: la región y el aviso de abajo dicen lo que hay. */}
+        <Canvas dpr={dprPara(rendimiento)} onCreated={alCrear} aria-hidden>
           {/* Sin fondo propio: el lienzo es transparente y se ve var(--escena) del contenedor tal cual
               (un color de fondo en la escena pasaría por el tone mapping del posprocesado y saldría más oscuro). */}
           {vista === "isometrica" ? (
@@ -237,6 +261,9 @@ export function Visor({
               onPaso={onPaso}
               sombrasEnVivo={efectosActivos}
               reservadoArriba={reservadoArriba}
+              menosMovimiento={menosMovimiento}
+              onAnuncio={setAnuncio}
+              registrarTeclado={registrarTeclado}
             />
           )}
           {/* Con el contexto perdido todo se lee negro: el vigía espera al lienzo nuevo. */}
@@ -256,6 +283,10 @@ export function Visor({
         </Canvas>
       </Resguardo>
       {falla && <AvisoVisor falla={falla} onReintentar={falla === "contexto" ? undefined : rearmar} />}
+      {/* Aviso para el lector de pantalla: qué pieza quedó resaltada (el texto del paso ya está en la guía). */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {anuncio}
+      </p>
       {/* Un solo botón de ícono en la esquina (prueba real: el 3D se veía chico): abre la vista y de dónde sale cada ubicación. */}
       {controles && (
         <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
@@ -341,6 +372,20 @@ const sinCambios = () => () => {};
 /** `false` si el navegador no tiene WebGL2 (three.js lo necesita); `undefined` en el servidor. */
 function useSoportaWebGL2(): boolean | undefined {
   return useSyncExternalStore(sinCambios, hayWebGL2, () => undefined);
+}
+
+/** `true` si el sistema pidió menos movimiento (`prefers-reduced-motion`); se actualiza si cambia. */
+function useMenosMovimiento(): boolean {
+  return useSyncExternalStore(
+    (avisar) => {
+      if (typeof matchMedia === "undefined") return () => {};
+      const mq = matchMedia(CONSULTA_MENOS_MOVIMIENTO);
+      mq.addEventListener("change", avisar);
+      return () => mq.removeEventListener("change", avisar);
+    },
+    () => typeof matchMedia !== "undefined" && matchMedia(CONSULTA_MENOS_MOVIMIENTO).matches,
+    () => false,
+  );
 }
 
 /** Atrapa un error de lo que envuelve (el lienzo o los efectos) y avisa en vez de dejar todo negro. */
@@ -443,9 +488,12 @@ type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
     sombrasEnVivo: boolean;
     reservadoArriba: number;
     biblioteca: BibliotecaPiezas | null;
+    menosMovimiento: boolean;
+    onAnuncio: (texto: string) => void;
+    registrarTeclado: (f: ((a: AccionTeclado) => void) | null) => void;
   };
 
-function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo, reservadoArriba }: EscenaProps) {
+function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo, reservadoArriba, menosMovimiento, onAnuncio, registrarTeclado }: EscenaProps) {
   // Por ref: la frase cambia de alto seguido y no hace falta re-renderizar; se usa al encuadrar y en cada cuadro.
   const reservado = useRef(reservadoArriba);
   const controles = useRef<CameraControls>(null);
@@ -475,10 +523,16 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     },
     mirar: (() => {}) as (objetivo: string, zoom: number, animado: boolean) => void,
   });
+  // Por ref, como `reservado`: se lee desde timers y no hace falta rearmar nada si cambia.
+  const reducido = useRef(menosMovimiento);
+  useEffect(() => {
+    reducido.current = menosMovimiento;
+  }, [menosMovimiento]);
   useEffect(() => {
     acciones.current.mirar = (objetivo, zoom, animado) => {
       const c = controles.current;
       if (!c) return;
+      animado &&= !reducido.current;
       const { despiece, lado, piezas } = estado.current;
       const corridas = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.desp.some((v) => v !== 0)).map(([id, p]) => [id, p.desp]));
       const girados = Object.fromEntries(Object.entries(piezas).filter(([, p]) => p.rot.some((v) => v !== 0)).map(([id, p]) => [id, p.rot]));
@@ -562,13 +616,13 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
         else if (accion.t === "restaurar") acciones.current.mirar(OBJETIVO_GENERAL, 1, true);
         // Se sacó una tapa (o se despegó la pantalla): la cámara va al equipo abierto, del lado de la tapa (#233).
         else if (r.estado.lado !== antes.lado || r.estado.camara !== antes.camara) acciones.current.mirar(r.estado.camara.objetivo, r.estado.camara.zoom, true);
-      }, i * ESPACIO_ENTRE_ACCIONES_MS),
+      }, i * (reducido.current ? 0 : ESPACIO_ENTRE_ACCIONES_MS)),
     );
     return () => timers.forEach(clearTimeout);
     // Sin `escena`: si llegan las piezas reales a mitad de un paso, el paso sigue (no se repite ni se corta).
   }, [coreografia, casoId, plano, tipoEquipo]);
 
-  useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000));
+  useFrame(({ clock }) => animar(escena, estado.current, clock.elapsedTime * 1000, reducido.current));
 
   // Etiquetas de las piezas resaltadas: cada una dice dónde quiere ir y acá se acomodan juntas, en el
   // orden en que se resaltaron, para que no se pisen (#179). Se escribe directo en el DOM (no tiembla).
@@ -587,6 +641,34 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
 
   const delKp = useMemo(() => new Map(piezas?.map((p) => [p.id, p]) ?? []), [piezas]);
   const delPlano = useMemo(() => new Map(plano.piezas.map((p) => [p.pieza, p])), [plano]);
+
+  // Al lector de pantalla: qué piezas quedaron resaltadas y de dónde sale su ubicación.
+  useEffect(() => {
+    onAnuncio(
+      anuncioResaltadas(
+        activos.map((id) => ({
+          nombre: delKp.get(id)?.nombre ?? nombreLegible(id),
+          origen: textoEtiquetaPieza(delPlano.get(id) ?? {}),
+        })),
+      ),
+    );
+  }, [activos, delKp, delPlano, onAnuncio]);
+
+  // Teclado: la cámara gira, se acerca o vuelve a la vista de la guía (la del último paso).
+  useEffect(() => {
+    registrarTeclado((a) => {
+      const c = controles.current;
+      if (!c) return;
+      const animado = !reducido.current;
+      if (a.t === "girar") void c.rotate(a.horizontal, a.vertical, animado);
+      else if (a.t === "acercar") void c.dolly(a.delta, animado);
+      else {
+        const { objetivo, zoom } = estado.current.camara;
+        acciones.current.mirar(objetivo, zoom, true);
+      }
+    });
+    return () => registrarTeclado(null);
+  }, [registrarTeclado]);
 
   return (
     <>
@@ -614,7 +696,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
         far={escena.radio}
         frames={sombrasEnVivo ? Infinity : 1}
       />
-      <CameraControls ref={controles} makeDefault smoothTime={0.55} minDistance={4} maxDistance={escena.radio * 8} />
+      <CameraControls ref={controles} makeDefault smoothTime={menosMovimiento ? 0.001 : 0.55} minDistance={4} maxDistance={escena.radio * 8} />
     </>
   );
 }
@@ -678,6 +760,7 @@ type RegistroEtiqueta = {
  * se encimaría con la frase; a la izquierda si a la derecha se sale del lienzo.
  */
 function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro }: EtiquetaProps) {
+  const menosMovimiento = useMenosMovimiento();
   const datos = animable.nodo.userData as DatosPieza;
   const numero = datos.etiquetaManual ?? numeroKp;
   const base = animable.principal.position;
@@ -720,7 +803,7 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
         // Sigue a la pieza al girar (es relativo a ella); lo que se suaviza es el cambio de lugar del recuadro.
         const t = performance.now();
         const previa = dibujada.current;
-        const c = suavizar(previa, objetivo, previa ? t - previa.t : 0);
+        const c = menosMovimiento ? objetivo : suavizar(previa, objetivo, previa ? t - previa.t : 0);
         dibujada.current = { ...c, t };
         el.style.left = `${c.x}px`;
         el.style.top = `${c.y}px`;
@@ -735,7 +818,7 @@ function Etiqueta({ animable, nombre, numeroKp, origen, reservado, id, registro 
 
   return createPortal(
     <Html position={desde} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
-      <div style={{ opacity: visible ? 1 : 0, transition: "opacity 300ms ease-out" }}>
+      <div className="transition-opacity duration-300 ease-out motion-reduce:transition-none" style={{ opacity: visible ? 1 : 0 }}>
         <svg width={1} height={1} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
           <line ref={linea} x1={0} y1={0} x2={LINEA_ETIQUETA.dx} y2={-LINEA_ETIQUETA.dy} stroke={CSS_ACTIVO} strokeWidth={1.5} strokeOpacity={0.9} />
           <circle cx={0} cy={0} r={2.5} fill={CSS_ACTIVO} />

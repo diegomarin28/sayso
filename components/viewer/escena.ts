@@ -5,6 +5,7 @@ import { SUFIJO_MALLA, construirEscena, type BibliotecaPiezas, type DatosPieza }
 import { despiezado, type Cubiertas, type EstadoEscena } from "./reproductor";
 import { ladosDelPlano, type Lado, type Lados } from "./lados";
 import { ACTIVO_RESPALDO } from "./tema";
+import { conMenosMovimiento } from "./accesibilidad";
 import { crearTween, seguir, type Tween } from "./tween";
 
 /**
@@ -64,8 +65,8 @@ export const OPACIDAD_GRANDE_ACTIVA = 0.3;
 /** Y brilla menos que una pieza chica: con tanta superficie, el brillo entero lava todo a celeste. */
 const BRILLO_GRANDE = 0.45;
 
-const DURACION = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
-const ESCALON_DESPIECE_MS = 70;
+const DURACIONES = { mover: 750, girar: 750, fundido: 450, foco: 400, despiece: 650 };
+const ESCALON_DESPIECE = 70;
 
 type MallaAnimable = {
   malla: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
@@ -337,8 +338,10 @@ export function piezasResaltadas(estado: EstadoEscena): string[] {
 
 const lerp = THREE.MathUtils.lerp;
 
-/** `ahora` en ms. */
-export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: number) {
+/** `ahora` en ms. Con `reducido` (la persona pidió menos movimiento) todo salta al estado final, sin transición. */
+export function animar(escena: EscenaPreparada, estado: EstadoEscena, ahora: number, reducido = false) {
+  const DURACION = conMenosMovimiento(DURACIONES, reducido);
+  const ESCALON_DESPIECE_MS = reducido ? 0 : ESCALON_DESPIECE;
   if (estado.despiece !== escena.despiece.ultimo) {
     escena.despiece.subiendo = estado.despiece > escena.despiece.ultimo;
     escena.despiece.ultimo = estado.despiece;
