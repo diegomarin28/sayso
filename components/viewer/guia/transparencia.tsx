@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import type { Coreografia, KnowledgePack, PlanoDePiezas } from "../../../shared";
 import { resumenOrigen, textoResumen, todoDelManual } from "../origen";
 
@@ -63,8 +64,11 @@ const HIZO_EL_CODIGO = [
 
 export function DeDondeSale({ datos, onCerrar }: { datos: DatosTransparencia; onCerrar: () => void }) {
   const { manual, tresD, respuesta } = datos;
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogo(ref, onCerrar);
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-modal="true"
       aria-label="De dónde sale esto"

@@ -117,6 +117,7 @@ function ExpertoDelCaso() {
   return (
     // En pantallas anchas, a la derecha de todo (al lado del encabezado) va el chat con el experto.
     <main className="flex h-dvh w-full bg-fondo">
+      <h1 className="sr-only">Guía paso a paso</h1>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:px-6 md:pt-6">
           <div className="flex items-center gap-3">

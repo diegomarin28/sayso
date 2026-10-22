@@ -523,7 +523,7 @@ function BotonSaltar({ pedido, alSaltar }: { pedido: string; alSaltar: () => voi
     <button
       type="button"
       onClick={alSaltar}
-      className="min-h-11 justify-self-end text-right text-sm text-texto-suave underline underline-offset-4 hover:text-texto"
+      className="min-h-11 min-w-11 justify-self-end text-right text-sm text-texto-suave underline underline-offset-4 hover:text-texto"
     >
       {pedido === "etiqueta" ? "No la encuentro" : "Saltar"}
     </button>

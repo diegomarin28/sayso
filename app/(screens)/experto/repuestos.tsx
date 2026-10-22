@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import { Herramientas, OpcionesCompra, type FuenteCompras } from "@/components/compras";
 import type { Evento, Ficha, KnowledgePack } from "@/shared";
 import { USAR_FIXTURE } from "../_datos/api";
 import { piezasParaComprar } from "./piezas-compra";
 
 /**
- * Pantalla 6 — repuestos. Ícono de carrito en el encabezado ("Ver dónde comprar repuestos (n)") con las piezas que se pueden comprar
+ * Pantalla 6 — repuestos. Ícono de carrito en el encabezado ("Ver dónde comprar repuestos, n") con las piezas que se pueden comprar
  * (`piezasParaComprar`): las que tienen número de parte citado en el manual o, si el manual no los
  * trae, las de la guía para buscar por modelo. Cuando el experto dice que una pieza hay que
  * cambiarla (`piezaACambiar`, de onCambiarPieza de <GuiaExperto>), el carrito se resalta y un aviso
@@ -51,6 +52,12 @@ export function Repuestos({
     return () => clearTimeout(t);
   }, [piezaACambiar]);
   const modelo = ficha.modelo.valor;
+  // Queda montado y oculto: el teclado solo lo atiende mientras está abierto.
+  const dialogo = useRef<HTMLDivElement>(null);
+  useDialogo(dialogo, () => {
+    setAbierto(false);
+    if (piezaACambiar) setAvisoCerrado(piezaACambiar);
+  }, { activo: abierto });
 
   // Siempre hay un camino para comprar: si el manual no trae números de parte, se ofrecen las piezas
   // de la guía para buscar por modelo (#107). La que el experto pide cambiar va primera.
@@ -97,8 +104,8 @@ export function Repuestos({
           onClick={() => setAbierto(true)}
           aria-label={
             piezaACambiar
-              ? `Hay que cambiar: ${nombre(piezaACambiar)}. Ver dónde comprar repuestos (${items.length})`
-              : `Ver dónde comprar repuestos (${items.length})`
+              ? `Hay que cambiar: ${nombre(piezaACambiar)}. Ver dónde comprar repuestos, ${items.length}`
+              : `Ver dónde comprar repuestos, ${items.length}`
           }
           title="Ver dónde comprar repuestos"
           className={`relative flex h-11 w-11 items-center justify-center rounded-full border bg-superficie text-texto transition hover:border-acento active:scale-95 ${
@@ -139,6 +146,7 @@ export function Repuestos({
 
       {/* Se oculta en vez de desmontarse: así no se pierden (ni se vuelven a pagar) las búsquedas. */}
       <div
+        ref={dialogo}
         role="dialog"
         aria-modal="true"
         aria-label="Repuestos"

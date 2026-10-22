@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import { contrasenaValida, REGLA_CONTRASENA } from "../../../lib/supabase/credenciales";
 import { ErrorCuenta, recuperar, RUTA_EXPORTAR, verificarCodigo } from "../_datos/cuenta";
 import { useCaptcha } from "../_ui/captcha";
@@ -220,9 +221,12 @@ function ConfirmarBorrado({
   alBorrar: () => void;
   alCancelar: () => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogo(ref, () => !ocupado && alCancelar());
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[2px] sm:items-center">
       <div
+        ref={ref}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="borrar-titulo"

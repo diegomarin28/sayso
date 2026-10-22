@@ -316,6 +316,8 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .marca-capa-arriba, .marca-capa-abajo, .linea-escaneo { animation: none; }
+  /* «Pensando»: esta regla va aparte porque la de arriba tiene más especificidad que `.marca-capa-*`. */
+  .marca[data-estado="pensando"] .marca-capa-arriba, .marca[data-estado="pensando"] .marca-capa-abajo { animation: none; }
   .inicio .marca-capa-arriba, .inicio .marca-capa-medio, .inicio .marca-capa-abajo,
   .inicio-nombre, .inicio-lema { animation: none; }
   .inicio { animation: inicio-sale 0.3s ease-in 0.8s forwards; }

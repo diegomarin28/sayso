@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useDialogo } from "../../../lib/a11y/useDialogo";
 import type { Coreografia, KnowledgePack } from "../../../shared";
 import { Anterior, Foto, Globo, Libro, Pausa, Reproducir, Siguiente } from "./iconos";
 import type { EstadoControles } from "./reproducir";
@@ -89,7 +90,7 @@ export function TarjetaPaso({
                 onClick={() => onElegir(i)}
                 aria-label={`Ver el paso ${i + 1}`}
                 aria-current={i === indice}
-                className="group flex h-11 cursor-pointer items-center px-[3px]"
+                className="group flex h-11 min-w-6 cursor-pointer items-center justify-center px-[3px]"
               >
                 <span
                   aria-hidden
@@ -365,7 +366,8 @@ export function BotonConversacion({
       conHistorial = false;
       cambiar.current(false);
     };
-    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && cambiar.current(false);
+    // El diálogo (useDialogo) ya atiende Escape; esto cubre el panel lateral, que no es un diálogo.
+    const alTecla = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && cambiar.current(false);
     window.addEventListener("popstate", alVolver);
     window.addEventListener("keydown", alTecla);
     return () => {
@@ -379,7 +381,8 @@ export function BotonConversacion({
   return (
     <>
       <BotonIcono
-        etiqueta={`Hablar con el experto${preguntas > 0 ? ` (${preguntas})` : ""}`}
+        // El número también se ve en el ícono: el nombre lo incluye tal cual (así el control por voz lo encuentra).
+        etiqueta={`Hablar con el experto${preguntas > 0 ? `, ${preguntas} ${preguntas === 1 ? "pregunta" : "preguntas"}` : ""}`}
         onClick={() => onCambiar(!abierta)}
         insignia={preguntas}
       >
@@ -391,23 +394,35 @@ export function BotonConversacion({
       {abierta &&
         !lateral &&
         createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Hablar con el experto"
-            className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70"
-            onClick={cerrar}
-          >
-            <div
-              className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Charla mensajes={mensajes} pie={pie} onCerrar={cerrar} />
-            </div>
-          </div>,
+          <DialogoChat onCerrar={cerrar}>
+            <Charla mensajes={mensajes} pie={pie} onCerrar={cerrar} />
+          </DialogoChat>,
           document.body,
         )}
     </>
+  );
+}
+
+/** El chat como diálogo modal: el foco entra, no se escapa con Tab, Escape cierra y el foco vuelve al ícono. */
+function DialogoChat({ onCerrar, children }: { onCerrar: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogo(ref, onCerrar);
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Hablar con el experto"
+      className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-fondo/70"
+      onClick={onCerrar}
+    >
+      <div
+        className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl border border-borde bg-fondo"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 

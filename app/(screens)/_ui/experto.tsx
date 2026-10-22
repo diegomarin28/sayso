@@ -14,8 +14,9 @@ export function Orbe({ estado = "quieto", tam = 44 }: { estado?: EstadoOrbe; tam
 
 /** Lo que dice el experto: grande, aparece palabra por palabra. Cambiar `texto` re-anima. */
 export function DiceExperto({ texto, className = "" }: { texto: string; className?: string }) {
+  // Es el título de la pantalla: un h1 (lo único que cambia para un lector; el estilo es el mismo).
   return (
-    <p
+    <h1
       key={texto}
       aria-live="polite"
       className={`font-titulo text-[clamp(1.5rem,5.5vw,2.125rem)] leading-[1.15] font-semibold tracking-tight text-balance ${className}`}
@@ -28,7 +29,7 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
           </span>{" "}
         </Fragment>
       ))}
-    </p>
+    </h1>
   );
 }
 

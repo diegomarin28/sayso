@@ -202,6 +202,8 @@ function QueSeRompioDelCaso() {
     <Pantalla>
       <Encabezado paso={1} conSilencio orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
 
+      {/* En la charla no hay un título a la vista: el h1 es para el lector de pantalla. */}
+      {enCharla && <h1 className="sr-only">Qué se rompió</h1>}
       {enCharla ? (
         // La charla: lo que contó la persona y la respuesta de Sayso (o Sayso pensando).
         <Hilo>

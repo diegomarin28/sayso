@@ -253,7 +253,7 @@ function FichaDelEquipoDelCaso() {
             placeholder="Ej.: la del 2020 con chip M1"
             enterKeyHint="done"
             aria-label={precisar.pregunta}
-            className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 text-lg placeholder:text-base placeholder:text-texto-suave/60 focus:outline-none"
+            className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 text-lg placeholder:text-base placeholder:text-texto-suave/80 focus:outline-none"
           />
           {precisar.dondeMirar && (
             <p className="text-sm text-texto-suave">
@@ -325,7 +325,7 @@ function FichaDelEquipoDelCaso() {
                           placeholder={ejemplo}
                           enterKeyHint="done"
                           aria-label={etiqueta}
-                          className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 font-mono text-lg placeholder:font-sans placeholder:text-base placeholder:text-texto-suave/60 focus:outline-none"
+                          className="h-12 w-full rounded-xl border-2 border-acento bg-black/30 px-3 font-mono text-lg placeholder:font-sans placeholder:text-base placeholder:text-texto-suave/80 focus:outline-none"
                         />
                         <div className="flex gap-2">
                           <button className="h-11 flex-1 rounded-xl bg-acento font-semibold text-black active:scale-[0.98]">
@@ -347,7 +347,6 @@ function FichaDelEquipoDelCaso() {
                             setEditando(clave);
                             setBorrador(campo.valor ?? "");
                           }}
-                          aria-label={`${vacio ? "Completar" : "Editar"} ${etiqueta}`}
                           className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-fondo/40 active:bg-fondo/60"
                         >
                           <span className="w-24 shrink-0 text-sm text-texto-suave">{etiqueta}</span>
@@ -364,6 +363,8 @@ function FichaDelEquipoDelCaso() {
                           ) : (
                             <EstadoDelDato estado={campo.estado} corregido={ok} />
                           )}
+                          {/* El nombre del botón sale de lo que se ve (así el control por voz lo encuentra) + la acción. */}
+                          <span className="sr-only">{vacio ? ". Completar" : ". Editar"}</span>
                         </button>
                       </dd>
                     )}
