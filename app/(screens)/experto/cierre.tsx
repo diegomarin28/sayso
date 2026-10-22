@@ -73,41 +73,55 @@ export function PanelCierre({
         aria-hidden
         className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgb(79_209_224/0.07)_1px,transparent_1px),linear-gradient(90deg,rgb(79_209_224/0.07)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:linear-gradient(to_bottom,#000,transparent_62%)]"
       />
-      <div className="aparece relative mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 md:max-w-2xl md:pt-6">
+      <div className="aparece relative mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-5 [@media(max-height:700px)]:gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 md:max-w-2xl md:pt-6">
         <Encabezado paso={6} alVolver={onCancelar} />
 
-        <div className="mt-2 flex flex-col gap-2 md:mt-6">
-          <h1 className="font-titulo text-[clamp(1.75rem,7vw,2.25rem)] leading-[1.15] font-semibold tracking-tight">
+        <div className="mt-2 flex flex-col gap-2 [@media(max-height:700px)]:mt-0 [@media(max-height:700px)]:gap-1 md:mt-6">
+          <h1 className="font-titulo text-[clamp(1.75rem,7vw,2.25rem)] [@media(max-height:700px)]:text-[1.625rem] leading-[1.15] font-semibold tracking-tight">
             ¿Cómo quedó?
           </h1>
-          <p className="text-base text-texto-suave">
+          <p className="text-base text-texto-suave [@media(max-height:700px)]:text-sm">
             Lo guardo en “Mis casos” para que lo retomes cuando quieras.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-borde bg-superficie px-3.5 py-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-borde bg-superficie px-3.5 py-3 [@media(max-height:700px)]:py-2">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+            className="shrink-0 text-texto-suave"
+            aria-hidden
+          >
+            <rect x="5" y="5" width="14" height="10" rx="1.5" />
+            <path d="M2.5 18.5h19" />
+          </svg>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-mono text-sm font-medium uppercase">
               {equipo ?? "Tu equipo"}
             </span>
-            <span className="line-clamp-2 text-[0.8125rem] text-texto-suave">{sintoma}</span>
+            <span className="line-clamp-2 [@media(max-height:700px)]:line-clamp-1 text-[0.8125rem] text-texto-suave">{sintoma}</span>
             <span className="block text-[0.8125rem] text-texto-suave">
               {pack.pasos.length} {pack.pasos.length === 1 ? "paso" : "pasos"} en la guía
             </span>
           </span>
         </div>
 
-        <div role="radiogroup" aria-label="Cómo quedó" className="flex flex-col gap-2.5">
+        <div role="radiogroup" aria-label="Cómo quedó" className="flex flex-col gap-2.5 [@media(max-height:700px)]:gap-2">
           {OPCIONES.map((o) => {
             const activa = elegido === o.estado;
             return (
-              <div key={o.estado} className="flex flex-col gap-2.5">
+              <div key={o.estado} className="flex flex-col gap-2.5 [@media(max-height:700px)]:gap-2">
                 <button
                   type="button"
                   role="radio"
                   aria-checked={activa}
                   onClick={() => setElegido(o.estado)}
-                  className={`flex min-h-[4.75rem] items-center gap-3.5 rounded-2xl border p-3.5 text-left transition active:scale-[0.99] ${
+                  className={`flex min-h-[4.75rem] [@media(max-height:700px)]:min-h-[3.75rem] items-center gap-3.5 rounded-2xl border p-3.5 [@media(max-height:700px)]:p-2.5 text-left transition active:scale-[0.99] ${
                     activa ? "border-2 border-acento bg-acento/10" : "border-borde bg-superficie hover:border-texto-suave"
                   }`}
                 >
@@ -171,12 +185,12 @@ export function PanelCierre({
           })}
         </div>
 
-        <div className="sticky bottom-0 mt-auto -mx-4 bg-gradient-to-t from-fondo from-70% to-transparent px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
+        <div className="sticky bottom-0 mt-auto -mx-4 bg-gradient-to-t from-fondo from-70% to-transparent px-4 pt-4 [@media(max-height:700px)]:pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] [@media(max-height:700px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
           <button
             type="button"
             onClick={guardar}
             disabled={!elegido}
-            className="flex h-14 w-full items-center justify-center rounded-2xl bg-acento text-[1.0625rem] font-semibold text-black transition active:scale-[0.98] disabled:bg-borde disabled:text-texto-suave"
+            className="flex h-14 [@media(max-height:700px)]:h-12 w-full items-center justify-center rounded-2xl bg-acento text-[1.0625rem] font-semibold text-black transition active:scale-[0.98] disabled:bg-borde disabled:text-texto-suave"
           >
             Guardar en Mis casos
           </button>
