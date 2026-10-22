@@ -112,7 +112,7 @@ export function VistaCompras({
       )}
 
       {estado.t === "buscando" && (
-        <p role="status" className="animate-pulse text-sm text-texto-suave">
+        <p role="status" className="motion-safe:animate-pulse text-sm text-texto-suave">
           Buscando en Mercado Libre y en tiendas que envían a Uruguay… (puede tardar un minuto)
         </p>
       )}
