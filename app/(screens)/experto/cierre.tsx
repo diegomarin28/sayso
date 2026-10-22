@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useDialogo } from "../../../lib/a11y/useDialogo";
 import type { FuenteChat, EventoChat } from "../../../components/viewer";
 import { Coreografia, type KnowledgePack, type PlanoDePiezas } from "../../../shared";
-import type { Cierre, EstadoCierre } from "../_datos/mis-casos";
+import { firmaCasos, leerCaso, suscribirCasos, type Cierre, type EstadoCierre } from "../_datos/mis-casos";
 import { Encabezado } from "../_ui/experto";
 
 /**
@@ -33,6 +33,7 @@ const OPCIONES: { estado: EstadoCierre; titulo: string; detalle: string; icono: 
  * el 3D). Se elige cómo quedó y recién "Guardar en Mis casos" cierra el caso.
  */
 export function PanelCierre({
+  casoId,
   pack,
   equipo,
   sintoma,
@@ -41,6 +42,7 @@ export function PanelCierre({
   onCerrar,
   onCancelar,
 }: {
+  casoId: string;
   pack: KnowledgePack;
   /** Marca y modelo de la ficha, si la persona la confirmó. */
   equipo: string | null;
@@ -56,6 +58,9 @@ export function PanelCierre({
   const url = compra && compra.pieza === pieza ? compra.url : undefined;
   const ref = useRef<HTMLDivElement>(null);
   useDialogo(ref, onCancelar);
+  // Si el caso quedó solo en el celular (sin red o sesión vencida), se avisa sin frenar nada.
+  const firma = useSyncExternalStore(suscribirCasos, firmaCasos, () => "[]");
+  const sinGuardar = firma !== "[]" && (leerCaso(casoId)?.pendienteServidor ?? false);
 
   function guardar() {
     if (!elegido) return;
@@ -186,6 +191,11 @@ export function PanelCierre({
         </div>
 
         <div className="sticky bottom-0 mt-auto -mx-4 bg-gradient-to-t from-fondo from-70% to-transparent px-4 pt-4 [@media(max-height:700px)]:pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] [@media(max-height:700px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
+          {sinGuardar && (
+            <p className="mb-2 text-center text-xs text-probable">
+              Este caso todavía no llegó al servidor. Queda en tu celular: podés reintentarlo desde “Mis casos”.
+            </p>
+          )}
           <button
             type="button"
             onClick={guardar}
