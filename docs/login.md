@@ -176,10 +176,12 @@
    - Retención de 90 días.
    - Texto de privacidad para revisar.
 
-**Antes de publicar, a cargo de Iaio en Supabase:**
-- Activar Anonymous Sign-Ins y el CAPTCHA.
-- Configurar el SMTP y la plantilla del código.
-- Correr la 012.
+**Antes de publicar, a cargo de Iaio:**
+- [ ] Activar Anonymous Sign-Ins y el CAPTCHA en Supabase.
+- [ ] Configurar el SMTP propio y la plantilla del código (Change Email Address y Reset Password).
+- [ ] Confirmar que la migración 012 está aplicada (`lib/supabase/README.md`: sí, 20/10).
+- [ ] Revisar los borradores de `/terminos` y `/privacidad` (versión en `VERSION_LEGALES`, `lib/supabase/credenciales.ts`).
+- [ ] Retención de 90 días: se corre a mano (`scripts/retencion/correr.ts`); programarla queda para cuando haya usuarios.
 
 ## Fuera de este diseño
 
