@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CODIGO_NO_CARGO } from "./captcha-codigos";
 
 /**
  * Cloudflare Turnstile (docs/login.md §1): prueba que hay una persona antes de crear una sesión o
@@ -37,7 +38,11 @@ function cargarTurnstile(): Promise<Turnstile> {
     const s = document.createElement("script");
     s.src = SCRIPT;
     s.async = true;
-    s.onload = () => (window.turnstile ? resolver(window.turnstile) : rechazar(new Error("Turnstile no cargó")));
+    s.onload = () => {
+      if (window.turnstile) return resolver(window.turnstile);
+      cargando = null;
+      rechazar(new Error("Turnstile no cargó"));
+    };
     s.onerror = () => {
       cargando = null;
       rechazar(new Error("Turnstile no cargó"));
@@ -55,8 +60,12 @@ export function useCaptcha() {
   const token = useRef<string | null>(null);
   const esperando = useRef<((t: string | undefined) => void)[]>([]);
   const [estado, setEstado] = useState<EstadoCaptcha>(SITE_KEY ? "verificando" : "listo");
+  /** Código que dio Turnstile en el último fallo (o CODIGO_NO_CARGO si el script no cargó). */
+  const [codigoError, setCodigoError] = useState<string | null>(null);
   /** Cloudflare pide tocar el recuadro: quien lo muestra puede darle lugar y una explicación. */
   const [interactivo, setInteractivo] = useState(false);
+  /** Si el script no cargó, no hay widget que resetear: reintentar sube esto y se vuelve a cargar. */
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     if (!SITE_KEY || !el) return;
@@ -78,11 +87,13 @@ export function useCaptcha() {
           "after-interactive-callback": () => setInteractivo(false),
           callback: (v: string) => {
             token.current = v;
+            setCodigoError(null);
             setEstado("listo");
             avisar(v);
           },
-          "error-callback": () => {
+          "error-callback": (codigo: number | string) => {
             token.current = null;
+            setCodigoError(String(codigo));
             setEstado("fallo");
             avisar(undefined);
           },
@@ -92,14 +103,18 @@ export function useCaptcha() {
           },
         });
       })
-      .catch(() => vivo && setEstado("fallo"));
+      .catch(() => {
+        if (!vivo) return;
+        setCodigoError(CODIGO_NO_CARGO);
+        setEstado("fallo");
+      });
     return () => {
       vivo = false;
       if (widget.current) window.turnstile?.remove(widget.current);
       widget.current = null;
       token.current = null;
     };
-  }, [el]);
+  }, [el, intento]);
 
   const obtener = useCallback(async (): Promise<string | undefined> => {
     if (!SITE_KEY) return undefined;
@@ -120,11 +135,15 @@ export function useCaptcha() {
 
   /** Vuelve a intentar después de un fallo. */
   const reintentar = useCallback(() => {
-    if (!widget.current) return;
+    setCodigoError(null);
+    if (!widget.current) {
+      setIntento((n) => n + 1);
+      return;
+    }
     setEstado("verificando");
     window.turnstile?.reset(widget.current);
   }, []);
 
   const elemento = <div ref={setEl} className="flex justify-center empty:hidden" />;
-  return { elemento, obtener, estado, listo: estado === "listo", reintentar, interactivo };
+  return { elemento, obtener, estado, listo: estado === "listo", reintentar, interactivo, codigoError };
 }

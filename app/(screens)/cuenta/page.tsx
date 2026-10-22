@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { contrasenaValida, emailValido, nombreValido, REGLA_CONTRASENA } from "../../../lib/supabase/credenciales";
+import { fraseCaptcha } from "../_ui/captcha-codigos";
 import {
   asegurarSesion,
   borrarCuenta,
@@ -397,9 +398,14 @@ export default function Cuenta() {
             <div role="status" className="flex flex-col gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm">
               <p className="font-medium text-probable">No pudimos confirmar que sos una persona</p>
               <p className="text-texto-suave">
-                Suele pasar con bloqueadores de anuncios o con el modo privado. Desactivalos para esta página o
-                probá con otro navegador.
+                Puede pasar por un bloqueador de anuncios, el modo privado u otra causa. Probá con otro navegador o
+                más tarde.
               </p>
+              {captcha.codigoError && (
+                <p className="text-xs text-texto-suave">
+                  Código: {captcha.codigoError}. {fraseCaptcha(captcha.codigoError)}
+                </p>
+              )}
               <button
                 type="button"
                 className="self-start font-medium text-texto underline"
