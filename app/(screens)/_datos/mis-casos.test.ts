@@ -19,6 +19,7 @@ const local = (id: string, actualizadoEn: string, extra: Partial<CasoGuardado> =
   cierre: null,
   guiaEnServidor: false,
   pendienteServidor: false,
+  fotosSinCopia: 0,
   actualizadoEn,
   ...extra,
 });

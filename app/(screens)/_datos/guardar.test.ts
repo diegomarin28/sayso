@@ -1,16 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { guardar, reintentarGuardado } from "./guardar";
 import { guardarLocal, leerCaso, marcarPendiente, mezclarCasos, type ResumenServidor } from "./mis-casos";
+import type { Foto } from "../../../shared";
 
 /** Cómo responde el servidor a /api/casos en cada prueba. "cuenta" es la consulta de sesión (sin Supabase). */
 let modo: "ok" | "red" | "401" = "ok";
+/** Los cuerpos de los pedidos a /api/casos, en orden. */
+const pedidos: { caso?: unknown; fotos?: { foto: { id: string } }[] }[] = [];
 
 vi.stubGlobal(
   "fetch",
-  vi.fn(async (url: string) => {
+  vi.fn(async (url: string, init?: RequestInit) => {
     if (url === "/api/cuenta") {
       return Response.json({ configurado: false, sesion: false, anonima: false, email: null, nombre: null });
     }
+    if (url === "/api/casos" && init?.body) pedidos.push(JSON.parse(String(init.body)));
     if (modo === "red") throw new TypeError("fetch failed");
     if (modo === "401") return new Response("{}", { status: 401 });
     return Response.json({ guardado: true, fotos: [] });
@@ -31,8 +35,19 @@ const esperarPendiente = (id: string, pendiente: boolean) =>
 
 afterEach(() => {
   modo = "ok";
+  pedidos.length = 0;
   vi.clearAllMocks();
 });
+
+const foto = (id: string, casoId: string): Foto => ({
+  id,
+  casoId,
+  tipoPedido: "frente",
+  url: `blob:${id}`,
+  calidad: { nitidez: 0.9, encuadreOk: true },
+  aceptada: true,
+});
+const imagen = { base64: "AAAA", mediaType: "image/jpeg" as const };
 
 describe("guardar: el caso queda marcado si no llega al servidor", () => {
   it("un guardado que llega deja el caso sin marca", async () => {
@@ -123,5 +138,32 @@ describe("marcarPendiente y la mezcla con el servidor", () => {
     };
     const [r] = mezclarCasos([local], [servidorCaso]);
     expect(r.pendienteServidor).toBe(true);
+  });
+});
+
+describe("fotos: pedidos de a 2 y fotos que no se guardan", () => {
+  it("con 3 fotos manda 2 pedidos (2 y 1), y el segundo lleva solo sus fotos", async () => {
+    guardarLocal({ caso: caso("pedidos") });
+    guardar(
+      {
+        fotos: [
+          { foto: foto("p1", "pedidos"), imagen },
+          { foto: foto("p2", "pedidos"), imagen },
+          { foto: foto("p3", "pedidos"), imagen },
+        ],
+      },
+      "pedidos",
+    );
+    await vi.waitFor(() => expect(pedidos).toHaveLength(2));
+    expect(pedidos.map((p) => p.fotos?.map((f) => f.foto.id))).toEqual([["p1", "p2"], ["p3"]]);
+    expect(Object.keys(pedidos[1])).toEqual(["fotos"]);
+  });
+
+  it("sin el celular para guardarlas, las fotos que no llegan se cuentan como perdidas", async () => {
+    modo = "red";
+    guardarLocal({ caso: caso("sinCopia") });
+    guardar({ fotos: [{ foto: foto("s1", "sinCopia"), imagen }, { foto: foto("s2", "sinCopia"), imagen }] }, "sinCopia");
+    await vi.waitFor(() => expect(leerCaso("sinCopia")?.fotosSinCopia).toBe(2));
+    expect(leerCaso("sinCopia")?.pendienteServidor).toBe(true);
   });
 });

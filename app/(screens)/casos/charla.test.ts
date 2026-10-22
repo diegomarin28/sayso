@@ -31,6 +31,7 @@ const caso = (extra: Partial<CasoGuardado> = {}): CasoGuardado => ({
   cierre: null,
   guiaEnServidor: false,
   pendienteServidor: false,
+  fotosSinCopia: 0,
   actualizadoEn: "2026-10-20T10:00:00.000Z",
   ...extra,
 });

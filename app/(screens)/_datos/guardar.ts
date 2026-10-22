@@ -3,7 +3,19 @@ import type { GuiaDeCaso } from "@/lib/supabase/repo";
 import { asegurarSesion, olvidarSesion } from "./cuenta";
 import type { ImagenB64 } from "./imagen";
 import { fetchConTiempo } from "./con-tiempo";
-import { dispositivoViejo, leerCaso, marcarPendiente, olvidarDispositivo, type Cierre } from "./mis-casos";
+import {
+  dispositivoViejo,
+  leerCaso,
+  marcarPendiente,
+  olvidarDispositivo,
+  sumarFotosSinCopia,
+  type Cierre,
+} from "./mis-casos";
+import {
+  borrarFotosPendientes,
+  fotosPendientesDelCaso,
+  guardarFotosPendientes,
+} from "./fotos-pendientes";
 
 /**
  * Guarda el avance del caso en Supabase vía `/api/casos`, en segundo plano y en orden
@@ -57,11 +69,51 @@ async function enviar(cambio: Cambio): Promise<Resultado> {
   return "ok";
 }
 
-/** Un turno de la cola: si no llega, el caso queda marcado como solo en el celular (y se desmarca al llegar). */
+/**
+ * El servidor acepta 2 fotos por pedido (`TOPES.fotosPorPedido`, lib/supabase/limite.ts): un pedido con
+ * más se rechaza entero. Igual que ahí, se mantiene en 2. El primer pedido lleva todo lo demás del caso;
+ * los siguientes, solo sus fotos y el caso (que el servidor no pisa).
+ */
+const FOTOS_POR_PEDIDO = 2;
+
+function pedidosDe(cambio: Cambio): Cambio[] {
+  const { fotos = [], ...resto } = cambio;
+  if (fotos.length <= FOTOS_POR_PEDIDO) return [cambio];
+  const pedidos: Cambio[] = [];
+  for (let i = 0; i < fotos.length; i += FOTOS_POR_PEDIDO) {
+    const trozo = fotos.slice(i, i + FOTOS_POR_PEDIDO);
+    pedidos.push(i === 0 ? { ...resto, fotos: trozo } : { caso: resto.caso, fotos: trozo });
+  }
+  return pedidos;
+}
+
+/**
+ * Un turno de la cola. Manda los pedidos en orden y para en el primero que no llega. Después marca el
+ * caso como solo en el celular (o lo desmarca) y guarda en el celular las fotos que no llegaron, o quita
+ * las que sí.
+ */
 function encolar(cambio: Cambio, casoId: string | undefined): Promise<Resultado> {
   const turno = cola.then(async () => {
-    const res = await enviar(cambio);
+    let res: Resultado = "ok";
+    for (const pedido of pedidosDe(cambio)) {
+      res = await enviar(pedido).catch((e): Resultado => {
+        console.warn("[guardar]", e);
+        return "fallo";
+      });
+      if (res !== "ok") break;
+    }
     if (casoId) marcarPendiente(casoId, res !== "ok");
+    const fotos = cambio.fotos ?? [];
+    if (casoId && fotos.length) {
+      if (res === "ok") {
+        await borrarFotosPendientes(fotos.map((f) => f.foto.id));
+      } else {
+        const sinCopia = await guardarFotosPendientes(
+          fotos.map(({ foto, imagen }) => ({ casoId, foto, imagen })),
+        );
+        sumarFotosSinCopia(casoId, sinCopia);
+      }
+    }
     return res;
   });
   cola = turno.catch(() => undefined);
@@ -75,12 +127,14 @@ export function guardar(cambio: Cambio, casoId?: string): void {
 
 /**
  * "Reintentar guardado" de Mis casos: manda lo que el celular tiene del caso (caso, equipo, ficha,
- * cierre y guía). Las fotos no se guardan en el celular: si no llegaron, no vuelven con el reintento.
+ * cierre y guía) y las fotos que quedaron guardadas en el celular. Las que no se guardaron (tope o sin
+ * IndexedDB) ya no están: el caso queda con el aviso de `fotosSinCopia`.
  */
-export function reintentarGuardado(casoId: string): Promise<Resultado> {
-  if (NO_GUARDAR) return Promise.resolve("ok");
+export async function reintentarGuardado(casoId: string): Promise<Resultado> {
+  if (NO_GUARDAR) return "ok";
   const local = leerCaso(casoId);
-  if (!local) return Promise.resolve("fallo");
+  if (!local) return "fallo";
+  const pendientes = await fotosPendientesDelCaso(casoId);
   return encolar(
     {
       caso: local.caso,
@@ -88,6 +142,7 @@ export function reintentarGuardado(casoId: string): Promise<Resultado> {
       ficha: local.ficha ?? undefined,
       cierre: local.cierre ?? undefined,
       guia: local.guia ? { casoId, ...local.guia } : undefined,
+      fotos: pendientes.map(({ foto, imagen }) => ({ foto, imagen })),
     },
     casoId,
   );
