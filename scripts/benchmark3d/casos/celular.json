@@ -1,0 +1,173 @@
+{
+  "tipo": "celular",
+  "tipoEquipo": "celular",
+  "equipo": "Apple iPhone 13",
+  "pack": {
+    "modelo": "Apple iPhone 13",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "marco",
+        "nombre": "marco",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "pantalla",
+        "nombre": "pantalla",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bateria",
+        "nombre": "bateria",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa_madre",
+        "nombre": "placa madre",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "camara_trasera",
+        "nombre": "camara trasera",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "camara_frontal",
+        "nombre": "camara frontal",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "conector_carga",
+        "nombre": "conector carga",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_inferior",
+        "nombre": "parlante inferior",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tapa_trasera",
+        "nombre": "tapa trasera",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": [],
+    "rasgos3D": {
+      "celular": {
+        "camarasTraseras": 2,
+        "muesca": true,
+        "bordes": "rectos"
+      }
+    }
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 7.15,
+    "y": 0.765,
+    "z": 14.67,
+    "fuente": "https://support.apple.com/kb/SP851",
+    "nota": "Apple: alto 146.7 mm, ancho 71.5 mm, espesor 7.65 mm (sin el relieve de la cámara)."
+  },
+  "fotos": [
+    {
+      "archivo": "celular-atras.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/IPhone_13_iPhone_4s_backside_01.jpg/1280px-IPhone_13_iPhone_4s_backside_01.jpg",
+      "pagina": "https://commons.wikimedia.org/wiki/File:IPhone_13_iPhone_4s_backside_01.jpg",
+      "licencia": "CC BY-SA 4.0 (autor: CGBR, Wikimedia Commons)",
+      "descripcion": "por atrás: el iPhone 13 rojo (derecha de la foto), con la cámara doble arriba a la izquierda",
+      "derecha": "+x",
+      "abajo": "+z",
+      "marco": "marco",
+      "esquinas": {
+        "ai": [
+          817,
+          124
+        ],
+        "ad": [
+          1122,
+          178
+        ],
+        "bd": [
+          1026,
+          859
+        ],
+        "bi": [
+          663,
+          781
+        ]
+      },
+      "piezas": {
+        "camara_trasera": [
+          885,
+          205
+        ]
+      },
+      "nota": "Solo el iPhone 13 rojo (al lado hay un iPhone 4s). Está girado unos 10° y tiene algo de perspectiva; las esquinas son las intersecciones de los bordes rectos (las esquinas reales son redondeadas). La tapa trasera es todo el dorso: no se anota porque su centro es el del marco."
+    },
+    {
+      "archivo": "celular-abierto.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/hvJVEGlrncaAupdr.huge",
+      "pagina": "https://www.ifixit.com/Guide/iPhone+13+Battery+Replacement/145896",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit): uso interno de evaluación, no se sube",
+      "descripcion": "de frente sin la pantalla: batería, placa (A15), cámaras y conector a la vista",
+      "derecha": "-x",
+      "abajo": "+z",
+      "marco": "marco",
+      "esquinas": {
+        "ai": [
+          523,
+          26
+        ],
+        "ad": [
+          1082,
+          26
+        ],
+        "bd": [
+          1082,
+          1173
+        ],
+        "bi": [
+          523,
+          1173
+        ]
+      },
+      "piezas": {
+        "bateria": [
+          870,
+          660
+        ],
+        "placa_madre": [
+          625,
+          530
+        ],
+        "camara_trasera": [
+          920,
+          215
+        ],
+        "conector_carga": [
+          805,
+          1150
+        ]
+      },
+      "nota": "Paso 14 de la guía (los recuadros rojos son de iFixit). Vista desde el lado de la pantalla (la cámara mira hacia +y), con la parte de arriba del teléfono arriba. camara_trasera = soporte metálico de la cámara doble (arriba a la derecha vista de frente). No se anotó camara_frontal: arriba hay dos módulos (un lente a la izquierda, dos elementos a la derecha) y no es seguro cuál es la cámara frontal. Tampoco el parlante: no se distingue con seguridad."
+    }
+  ]
+}

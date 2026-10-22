@@ -85,23 +85,23 @@ test("#227 · «Conversación con el experto» se cierra con Cerrar y con atrás
   await sinProblemas(libreta);
 });
 
-// ---------- #228: "Confirmar todo" en la ficha ----------
+// ---------- #228: "Está bien, seguir" en la ficha ----------
 
-test("#228 · la ficha tiene «Confirmar todo» y con un toque pasa a Preparando", async ({ page, context }, info) => {
+test("#228 · la ficha tiene «Está bien, seguir» y con un toque pasa a Preparando", async ({ page, context }, info) => {
   pendiente(228);
   const libreta = await preparar(page, context, info);
   await llegarALaFicha(page);
   libreta.pantalla = "3 · Ficha";
 
-  const todo = page.getByRole("button", { name: /Confirmar todo/ });
+  const todo = page.getByRole("button", { name: /Está bien, seguir/ });
   await expect(todo).toBeVisible();
   await captura(page, info, "228-ficha");
   await tocar(todo); // un solo toque
-  await expect(page, "Con un toque en «Confirmar todo» pasa a Preparando").toHaveURL(/\/preparando$/, { timeout: 5000 });
+  await expect(page, "Con un toque en «Está bien, seguir» pasa a Preparando").toHaveURL(/\/preparando$/, { timeout: 5000 });
   await sinProblemas(libreta);
 });
 
-test("#228 · lo que la persona edita cuenta como confirmado: editar un dato y «Confirmar todo» pasa", async ({
+test("#228 · lo que la persona edita cuenta como confirmado: editar un dato y «Está bien, seguir» pasa", async ({
   page,
   context,
 }, info) => {
@@ -115,7 +115,7 @@ test("#228 · lo que la persona edita cuenta como confirmado: editar un dato y �
   await tocar(page.getByRole("button", { name: "Guardar" }));
   await expect(page.getByRole("button", { name: "Editar Año" })).toContainText("2021");
 
-  await tocar(page.getByRole("button", { name: /Confirmar todo/ }));
+  await tocar(page.getByRole("button", { name: /Está bien, seguir/ }));
   await expect(page).toHaveURL(/\/preparando$/, { timeout: 5000 });
   await sinProblemas(libreta);
 });

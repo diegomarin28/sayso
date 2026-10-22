@@ -367,3 +367,39 @@ Las dos variantes se verifican contra las plantillas reales y los GLB comprimido
 Los renders individuales y de despiece están en `renders/impresoras_demo`.
 No hay decisiones por marca ni modelo. El visor/generador debe completar los planos
 de caché que no incluyan el interior y animar el retiro de la carcasa por paso.
+
+## Tablet: frente opcional por dato explícito
+
+`tablet_variantes.glb` publica `pantalla_tablet_dato@con_boton` y
+`pantalla_tablet_dato@sin_boton`. Ninguna entra en la elección automática: sin el
+dato del pack sigue la pantalla actual. Contrato propuesto y dos variantes en
+`tablet-variantes-cobertura.json`; carga por `formaBiblioteca` conectada al finalizar planos nuevos y de caché (#302).
+Renders de las dos formas comprimidas en `renders/tablet_variantes/`.
+
+## Televisor: apoyo por dato explícito
+
+`tv_variantes.glb` publica `carcasa_tv_dato@pie_central` y
+`carcasa_tv_dato@pie_laterales`, reutilizando el cuerpo actual. Sin dato del pack
+no cambia la forma de hoy. Contrato propuesto en `tv-variantes-cobertura.json`;
+conexión al pack y caché integrada (#302). Renders frontales de 46 y 32 pulgadas en
+`renders/tv_variantes/`; el giro del estudio es solo para las imágenes.
+
+## Auriculares por formato explícito
+
+`rasgos3D.auriculares.formato` distingue `over_ear` e `in_ear`, solo si las fuentes lo traen. Sin dato conserva la elección anterior. `auriculares_variantes.glb` aporta arco, copa y almohadilla ovalada con nombres aislados; in-ear reutiliza la biblioteca actual. Los componentes nombrados por el pack se contienen en la copa correspondiente, después de recolocar el resto. El cambio de estuche a diadema no reinterpreta sus medidas como las del otro formato.
+
+## Celular: cámaras, muesca y perfil por dato explícito
+
+`celular_variantes.glb` aporta módulos de 1/2/3 cámaras, dos pantallas y dos marcos. `rasgos3D.celular.camarasTraseras`, `muesca` y `bordes` se validan y se aplican de manera independiente: sin uno de esos campos sigue la forma anterior de esa pieza. Los nombres aislados terminan en `_dato` y no se ofrecen como IDs al bibliotecario. Todas las combinaciones se prueban en dos tamaños y con datos de marca/modelo cambiados.
+
+## Reloj: corona y botones laterales por dato explícito
+
+`rasgos3D.reloj.corona` (sí/no) y `botonesLaterales` (0, 1 o 2, sin contar la corona) se aplican solo si el
+pack los trae; lo que no vino es como hoy (con corona, sin botones). `reloj_variantes.glb` publica
+`caja_reloj_dato@{cuadrada|redonda}_{c|s}{0|1|2}`, reutilizando las cajas actuales con pulsadores del lado de la
+corona (+X); la redonda sin corona no tiene el puerto. Con corona y sin botones no hay variante: sigue la caja de hoy.
+Sin corona se saca `corona_reloj`, salvo que el pack la nombre o que venga del manual o de una foto. La caja
+cambia de medidas en el plano para que el cuerpo quede del mismo tamaño y en el mismo lugar; un plano de la caché
+vuelve a la caja de hoy antes de seguir la plantilla (`sinCajaDeRasgos`). Los nombres terminan en `_dato` y no se
+ofrecen al bibliotecario. Renders en `renders/reloj_variantes/`; capturas del visor a 390 × 844, cerrado y
+despiezado, en `renders/reloj_variantes/capturas/` (#302).

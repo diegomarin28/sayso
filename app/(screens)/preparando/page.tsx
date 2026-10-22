@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ErrorApi, generarPlano, prepararExperto } from "../_datos/api";
+import { useEffect, useRef, useState } from "react";
+import { ErrorApi, ErrorCortado, cancelarPedidosEnCurso, generarPlano, hayPedidosEnCurso, prepararExperto } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import {
@@ -34,13 +34,42 @@ const ETAPAS: { desde: number; texto: (equipo: string) => string }[] = [
   { desde: 90, texto: () => "Ya casi. Los manuales de servicio son largos…" },
 ];
 
+/**
+ * Volver a la app después de esto (el iPhone corta la red en segundo plano) se toma como "volvió la red": un
+ * pedido que siguiera en camino probablemente quedó colgado. Un vistazo corto a otra app no corta nada.
+ */
+const VOLVER_DESDE_MS = 10_000;
+/** Antes del reintento automático se ve "Probar de nuevo" un momento: la persona entiende qué pasó. */
+const PAUSA_REINTENTO_MS = 1500;
+
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function Preparando() {
+  const { caso } = useFlujo();
+  return <PreparandoDelCaso key={caso?.id ?? "sin-caso"} />;
+}
+
+function PreparandoDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { ficha, eventos, preparado, setPreparado, plano, setPlano, agregarEventos, tipoEquipo } = useFlujo();
   const [segundos, setSegundos] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [vuelta, setVuelta] = useState(0); // se incrementa con "Probar de nuevo"
+  // Un solo reintento automático (por tiempo agotado o al volver la red); después, el botón.
+  const reintentado = useRef(false);
+  const hayError = useRef(false);
+  useEffect(() => {
+    hayError.current = error !== null;
+  }, [error]);
+  const reintentar = () => {
+    setError(null);
+    setSegundos(0);
+    setVuelta((v) => v + 1);
+  };
   // Las formas del 3D se bajan mientras espera a la IA (#133): el visor abre sin esperar la red.
   usePrecargaPiezas(tipoEquipo, preparado?.pack);
 
@@ -69,9 +98,14 @@ export default function Preparando() {
       agregarEventos(nuevos);
       setPlano(p);
     })()
-      .catch(
-        (e) => vigente && setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo."),
-      )
+      .catch((e) => {
+        if (!vigente) return;
+        setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.");
+        if (e instanceof ErrorCortado && !reintentado.current) {
+          reintentado.current = true;
+          setTimeout(() => vigente && reintentar(), PAUSA_REINTENTO_MS);
+        }
+      })
       .finally(() => clearInterval(reloj));
     return () => {
       vigente = false;
@@ -79,6 +113,34 @@ export default function Preparando() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se prepara una vez por caso (o al reintentar)
   }, [caso?.id, listaParaPreparar, vuelta]);
+
+  // Volvió la red (o la persona volvió a la app): lo que siga en camino se corta (falla con ErrorCortado y se
+  // reintenta una vez); si ya estaba el error, se reintenta una vez.
+  useEffect(() => {
+    let ocultaDesde: number | null = null;
+    const volvio = () => {
+      if (hayPedidosEnCurso()) cancelarPedidosEnCurso();
+      else if (hayError.current && !reintentado.current) {
+        reintentado.current = true;
+        reintentar();
+      }
+    };
+    const alCambiar = () => {
+      if (document.visibilityState === "hidden") {
+        ocultaDesde = Date.now();
+        return;
+      }
+      const afuera = ocultaDesde === null ? 0 : Date.now() - ocultaDesde;
+      ocultaDesde = null;
+      if (afuera >= VOLVER_DESDE_MS) volvio();
+    };
+    window.addEventListener("online", volvio);
+    document.addEventListener("visibilitychange", alCambiar);
+    return () => {
+      window.removeEventListener("online", volvio);
+      document.removeEventListener("visibilitychange", alCambiar);
+    };
+  }, []);
 
   if (!caso || !ficha || !listaParaPreparar) return null;
 
@@ -97,7 +159,7 @@ export default function Preparando() {
           ? "Ahora miro la vista explosionada del manual para ubicar cada pieza en el 3D…"
           : "Ahora ubico cada pieza en el 3D…"
         : pack.verificado
-          ? `Listo. Tengo el manual de tu ${equipo} y las piezas ubicadas.`
+          ? "Listo, ya tengo tu guía."
           : `No encontré el manual oficial de tu ${equipo}. Te guío con una guía pública, sin verificar.`;
 
   return (
@@ -127,7 +189,7 @@ export default function Preparando() {
         </div>
       )}
 
-      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} />}
+      {pack && <ResumenGuia pack={pack} plano={plano} equipo={tipoEquipo ?? caso.clase} modelo={equipo} />}
 
       <div className="mt-auto">
         <FeedActividad eventos={eventos} />

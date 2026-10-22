@@ -1,8 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
-import { Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
+import { Rasgos3D, Cita, PasoReparacion, Pieza, Riesgo, Repuesto, type KnowledgePack } from "../../shared";
 import { evaluarRiesgo } from "../safety/riesgos";
 import { normalizar } from "../intake/chapa";
+import { Rol, type PasoConRol } from "./triage";
 
 /**
  * El modelo escribe el knowledge pack como líneas marcadas, con citas de la API:
@@ -51,14 +52,15 @@ export function lineasConCitas(bloques: Bloque[]): Linea[] {
 export type Verificable = boolean | ((documento: number) => boolean);
 
 export function citaDesde(c: Anthropic.TextCitation, docPorDefecto: string, urls?: string[], verificable: Verificable = true): Cita | null {
+  // Manual oficial del modelo: VERIFICADO. Guía pública, o un manual que no es el oficial de este modelo: se cita,
+  // pero NO_VERIFICABLE.
+  const oficial = (documento: number) => (typeof verificable === "function" ? verificable(documento) : verificable);
   if (c.type === "page_location" && c.cited_text.trim().length >= 8) {
-    return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: "VERIFICADO" };
+    return { doc: c.document_title ?? docPorDefecto, pagina: c.start_page_number, estado: oficial(c.document_index) ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "char_location" && c.cited_text.trim().length >= 8) {
     const url = urls?.[c.document_index];
-    // Texto de un manual oficial: VERIFICADO. De una guía pública guardada: se cita, pero NO_VERIFICABLE.
-    const oficial = typeof verificable === "function" ? verificable(c.document_index) : verificable;
-    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: oficial ? "VERIFICADO" : "NO_VERIFICABLE" };
+    return { doc: c.document_title ?? docPorDefecto, ...(url ? { url } : {}), estado: oficial(c.document_index) ? "VERIFICADO" : "NO_VERIFICABLE" };
   }
   if (c.type === "web_search_result_location") {
     return { doc: c.title ?? c.url, url: c.url, estado: "NO_VERIFICABLE" };
@@ -84,8 +86,10 @@ export type Vistas = Record<ClaseVista, number | null>;
 export type Faltante = { procedimiento: string; /** Cuántos PASO había antes de la línea: ahí va lo que se complete. */ despuesDe: number };
 
 export type Contenido = {
+  rasgos3D?: KnowledgePack["rasgos3D"];
   piezas: Pieza[];
-  pasos: PasoReparacion[];
+  /** Con el rol que marcó la lectura (ver lib/knowledge/triage.ts); no va al pack. */
+  pasos: PasoConRol[];
   repuestos: z.infer<typeof Repuesto>[];
   advertencias: string[];
   vistas: Vistas;
@@ -179,7 +183,8 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
         r.piezas.push(p.data);
       } else r.descartadas.push(l.texto);
     } else if (tipo === "PASO" && campos.length >= 5) {
-      const [, orden, textoCrudo, piezas, riesgo] = campos;
+      const [, orden, textoCrudo, piezas, riesgo, rolCrudo] = campos;
+      const rol = Rol.safeParse((rolCrudo ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase());
       const texto = enCastellano(textoCrudo);
       const propuesto = Riesgo.safeParse(riesgo.toLowerCase());
       // La tabla de seguridad decide; la IA solo puede subir el riesgo.
@@ -195,7 +200,7 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
         riesgo: evaluado.riesgo,
         ...(cita ? { cita } : {}),
       });
-      if (p.success) r.pasos.push(p.data);
+      if (p.success) r.pasos.push(rol.success ? { ...p.data, rol: rol.data } : p.data);
       else r.descartadas.push(l.texto);
     } else if (tipo === "REPUESTO" && campos.length >= 3) {
       const [, pieza, numeroParte] = campos;
@@ -212,6 +217,16 @@ export function parsearContenido(lineas: Linea[], doc: string, urls?: string[], 
       const pagina = l.citas.find((c) => c.type === "page_location");
       if (clase && pagina?.type === "page_location" && r.vistas[clase] === null) r.vistas[clase] = pagina.start_page_number;
       else r.descartadas.push(l.texto);
+    } else if (tipo === "RASGO" && campos.length === 4) {
+      const [, equipo, campo, texto] = campos;
+      const valor = /^(si|sí|true)$/.test(texto.toLowerCase()) ? true : /^(no|false)$/.test(texto.toLowerCase()) ? false : /^[0-3]$/.test(texto) ? Number(texto) : texto;
+      const validado = Rasgos3D.safeParse({ [equipo]: { [campo]: valor } });
+      const entrada = validado.success ? (validado.data as Record<string, Record<string, unknown>>)[equipo] : undefined;
+      if (entrada && Object.hasOwn(entrada, campo)) {
+        const anteriores = (r.rasgos3D as Record<string, Record<string, unknown>> | undefined)?.[equipo] ?? {};
+        if (!Object.hasOwn(anteriores, campo)) r.rasgos3D = { ...r.rasgos3D, [equipo]: { ...anteriores, ...entrada } };
+        else r.descartadas.push(l.texto);
+      } else r.descartadas.push(l.texto);
     } else if (tipo === "FORMA") {
       // La primera que se entiende; una forma que no es ninguna de las dos se descarta.
       const forma = formaDe(campos[1]);

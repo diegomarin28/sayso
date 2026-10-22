@@ -60,6 +60,32 @@ export function Repuestos({
 
   const nombre = (id: string) => pack.piezas.find((p) => p.id === id)?.nombre ?? id;
   const avisar = piezaACambiar && avisoCerrado !== piezaACambiar && !abierto;
+  const equipo = [ficha.marca.valor, modelo].filter(Boolean).join(" ");
+  /** La que el experto recomienda cambiar va aparte, destacada; el resto en la lista. */
+  const recomendada = items.find((r) => r.pieza === piezaACambiar);
+  const otras = items.filter((r) => r !== recomendada);
+  const cerrar = () => {
+    setAbierto(false);
+    if (piezaACambiar) setAvisoCerrado(piezaACambiar);
+  };
+  /** El link de "Comprar" lo arma <OpcionesCompra>: se toma del clic, sin tocar ese componente. */
+  const alComprar = (pieza: string) => (e: React.MouseEvent) => {
+    const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
+    if (a && /^https?:/.test(a.href)) onCompra?.({ pieza, url: a.href });
+  };
+  const comunes = (r: (typeof items)[number]) => ({
+    casoId,
+    pieza: r.pieza,
+    // El nombre del pack ("Conector Lightning"): el título y la búsqueda lo usan, no el id (#195).
+    nombre: nombre(r.pieza),
+    // El nombre y el N.º de parte ya están arriba: no se repiten debajo (#208).
+    mostrarPieza: false,
+    numeroParte: r.numeroParte,
+    modelo,
+    marca: ficha.marca.valor,
+    onEvento,
+    fuente: USAR_FIXTURE ? fuenteApagada : undefined,
+  });
 
   return (
     <>
@@ -118,81 +144,105 @@ export function Repuestos({
         aria-label="Repuestos"
         aria-hidden={!abierto}
         className={`fixed inset-0 z-50 items-end justify-center bg-black/60 md:items-center md:p-6 ${abierto ? "flex" : "hidden"}`}
-        onClick={() => setAbierto(false)}
+        onClick={cerrar}
       >
         <div
-          className="aparece flex max-h-[85dvh] w-full max-w-xl flex-col gap-6 overflow-y-auto rounded-t-3xl border border-borde bg-fondo px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-2xl md:rounded-3xl md:pb-6"
+          className="aparece flex max-h-[88dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-borde bg-fondo md:max-w-2xl md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-texto-suave">
-              {conNumeros
-                ? `Repuestos de tu ${[ficha.marca.valor, modelo].filter(Boolean).join(" ")}, según el manual`
-                : `El manual no trae números de parte: buscá las piezas de tu ${[ficha.marca.valor, modelo].filter(Boolean).join(" ")} por modelo`}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setAbierto(false);
-                if (piezaACambiar) setAvisoCerrado(piezaACambiar);
-              }}
-              className="h-10 shrink-0 rounded-full border border-borde px-4 text-sm"
-            >
+          {/* Arriba: de qué equipo son y, una sola vez, cómo se buscan. */}
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-borde px-5 pt-5 pb-4">
+            <div className="min-w-0">
+              <h2 className="font-titulo text-xl font-semibold">Repuestos</h2>
+              <p className="text-sm text-texto-suave">
+                Para tu <span className="font-mono text-texto">{equipo}</span>
+                {conNumeros ? ", con los números de parte del manual." : ". El manual no trae números de parte: los busco por modelo."}
+              </p>
+            </div>
+            <button type="button" onClick={cerrar} className="h-10 shrink-0 rounded-full border border-borde px-4 text-sm">
               Cerrar
             </button>
           </div>
-          <p className="-mt-2 text-sm text-texto-suave">
-            En cada pieza, tocá «Ver dónde comprar esta pieza» y te muestro dónde comprarla con envío a
-            Uruguay. Nunca compramos ni pagamos por vos: el link abre la publicación.
-          </p>
-          {items.map((r) => (
-            <div
-              key={r.pieza}
-              className="flex flex-col gap-3 border-t border-borde pt-5"
-              // El link de "Comprar" lo arma <OpcionesCompra>: se toma del clic, sin tocar ese componente.
-              onClickCapture={(e) => {
-                const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
-                if (a && /^https?:/.test(a.href)) onCompra?.({ pieza: r.pieza, url: a.href });
-              }}
-            >
-              <div>
-                {r.pieza === piezaACambiar && (
-                  <p className="mb-1 text-xs font-semibold tracking-widest text-acento uppercase">
-                    El experto recomienda cambiarla
-                  </p>
-                )}
-                <p className="text-lg font-semibold">{nombre(r.pieza)}</p>
-                <p className="font-mono text-xs text-texto-suave">
-                  {r.numeroParte
-                    ? `N.º de parte ${r.numeroParte}${r.pagina ? ` · pág. ${r.pagina} del manual` : ""}`
-                    : "Sin número de parte en el manual: se busca por modelo"}
-                </p>
-              </div>
-              <OpcionesCompra
-                key={r.pieza}
-                casoId={casoId}
-                pieza={r.pieza}
-                // El nombre del pack ("Conector Lightning"): el título y la búsqueda lo usan, no el id (#195).
-                nombre={nombre(r.pieza)}
-                // El nombre y el N.º de parte ya están arriba: no se repiten debajo del título (#208).
-                mostrarPieza={false}
-                numeroParte={r.numeroParte}
-                modelo={modelo}
-                marca={ficha.marca.valor}
-                onEvento={onEvento}
-                fuente={USAR_FIXTURE ? fuenteApagada : undefined}
-              />
-            </div>
-          ))}
-          {/* Las herramientas que nombran los pasos, con qué es cada una y dónde conseguirla (#230). */}
-          <Herramientas pasos={pack.pasos} className="border-t border-borde pt-5" />
+
+          <div className="flex min-h-0 flex-col gap-6 overflow-y-auto px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6">
+            {/* La que el experto dijo que hay que cambiar: destacada y con el único botón grande. */}
+            {recomendada && (
+              <section className="flex flex-col gap-3 rounded-2xl border border-acento/60 bg-acento/10 p-4" onClickCapture={alComprar(recomendada.pieza)}>
+                <div className="flex items-start gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-acento text-black">
+                    <Llave />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold tracking-widest text-acento uppercase">Te recomendamos cambiar</p>
+                    <p className="text-lg font-semibold">{nombre(recomendada.pieza)}</p>
+                    {recomendada.numeroParte && (
+                      <p className="font-mono text-xs text-texto-suave">
+                        N.º de parte {recomendada.numeroParte}
+                        {recomendada.pagina ? ` · pág. ${recomendada.pagina} del manual` : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <OpcionesCompra key={recomendada.pieza} {...comunes(recomendada)} />
+              </section>
+            )}
+
+            {/* El resto, en una lista compacta: cada una se busca al tocar "Buscar" (cada búsqueda cuesta). */}
+            {otras.length > 0 && (
+              <section className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium text-texto-suave">
+                  {recomendada ? "Otras piezas de tu equipo" : "Piezas de tu equipo"}
+                </h3>
+                <ul className="divide-y divide-borde overflow-hidden rounded-2xl border border-borde bg-superficie">
+                  {otras.map((r) => (
+                    // El nombre y "Buscar" en una línea; al buscar, lo que aparece baja a todo el ancho.
+                    <li key={r.pieza} className="flex flex-wrap items-center gap-3 px-4 py-3" onClickCapture={alComprar(r.pieza)}>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{nombre(r.pieza)}</p>
+                        {r.numeroParte && (
+                          <p className="font-mono text-xs text-texto-suave">
+                            N.º de parte {r.numeroParte}
+                            {r.pagina ? ` · pág. ${r.pagina}` : ""}
+                          </p>
+                        )}
+                      </div>
+                      <OpcionesCompra
+                        key={r.pieza}
+                        {...comunes(r)}
+                        boton={{ texto: "Buscar", compacto: true }}
+                        // Solo el botón: va a la derecha del nombre. Buscando o con resultados: todo el ancho.
+                        className="[&:not(:has(>button:only-child))]:basis-full"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Las herramientas que nombran los pasos, con qué es cada una y dónde conseguirla (#230). */}
+            <Herramientas pasos={pack.pasos} className="border-t border-borde pt-5" />
+
+            <p className="text-xs leading-relaxed text-texto-suave">
+              Busco en Mercado Libre y en tiendas que envían a Uruguay. Nunca compramos ni pagamos por vos: el link abre la
+              publicación y ahí decidís.
+            </p>
+          </div>
         </div>
       </div>
     </>
   );
 }
 
-function Carrito() {
+/** Llave de tuercas: "hay que cambiar esta pieza". */
+function Llave() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3.5 17.5v3h3l5.8-5.8a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6Z" />
+    </svg>
+  );
+}
+
+export function Carrito() {
   return (
     <svg
       width="20"

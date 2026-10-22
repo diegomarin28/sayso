@@ -1,0 +1,138 @@
+{
+  "tipo": "auriculares",
+  "tipoEquipo": "auriculares de vincha",
+  "equipo": "Sony WH-1000XM4",
+  "pack": {
+    "modelo": "Sony WH-1000XM4",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "diadema",
+        "nombre": "diadema",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "copa_izquierda",
+        "nombre": "copa izquierda",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "copa_derecha",
+        "nombre": "copa derecha",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "almohadilla_copa_izquierda",
+        "nombre": "almohadilla copa izquierda",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "almohadilla_copa_derecha",
+        "nombre": "almohadilla copa derecha",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bateria",
+        "nombre": "bateria",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa",
+        "nombre": "placa",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_izquierdo",
+        "nombre": "parlante izquierdo",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_derecho",
+        "nombre": "parlante derecho",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "conector_carga",
+        "nombre": "conector carga",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "boton_encendido",
+        "nombre": "boton encendido",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": [],
+    "rasgos3D": {
+      "auriculares": {
+        "formato": "over_ear"
+      }
+    }
+  },
+  "fuera": [],
+  "fotos": [
+    {
+      "archivo": "auriculares-arriba.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/2OuAEXtDoqrKRrRs.full",
+      "pagina": "https://www.ifixit.com/Guide/Sony+WH-1000XM4+Swivel+Replacement/167320",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit): uso interno de evaluación, no se sube",
+      "descripcion": "desde arriba, acostados con las almohadillas hacia abajo y la vincha arriba en la foto (vincha sin extender)",
+      "derecha": "+x",
+      "abajo": "+z",
+      "marco": "todo",
+      "esquinas": {
+        "ai": [
+          189,
+          30
+        ],
+        "ad": [
+          658,
+          30
+        ],
+        "bd": [
+          658,
+          557
+        ],
+        "bi": [
+          189,
+          557
+        ]
+      },
+      "piezas": {
+        "copa_izquierda": [
+          541,
+          410
+        ],
+        "copa_derecha": [
+          315,
+          428
+        ],
+        "diadema": [
+          414,
+          150
+        ]
+      },
+      "nota": "Paso 15 de la guía. La copa IZQUIERDA es la de la DERECHA de la foto: tiene la marca N (NFC) y los dos botones (encendido y CUSTOM) en el borde de abajo; según la guía de Sony, la marca N y esos botones están en la unidad izquierda. diadema = centro de la caja del arco (de la parte de arriba a donde empiezan los soportes de las copas). No se anotaron el botón de encendido (son dos botones juntos y no se distingue cuál es) ni el conector de carga (no se ve con seguridad). Foto chica (800 x 600): iFixit no da una versión más grande."
+    }
+  ],
+  "nota": "Sin medidas: Sony no publica las del WH-1000XM4 y los comercios repiten 25,2 × 18,5 × 7,7 cm sin decir en qué posición ni qué eje es cuál; acostados como en el plano no coinciden (en la foto de arriba el largo/ancho da 1,12, no 1,36). La forma y la escala no se puntúan."
+}

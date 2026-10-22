@@ -17,7 +17,7 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
     <p
       key={texto}
       aria-live="polite"
-      className={`font-titulo text-[clamp(1.75rem,6.5vw,2.75rem)] leading-[1.1] font-semibold tracking-tight text-balance ${className}`}
+      className={`font-titulo text-[clamp(1.5rem,5.5vw,2.125rem)] leading-[1.15] font-semibold tracking-tight text-balance ${className}`}
     >
       {texto.split(" ").map((p, i) => (
         // El espacio va afuera de la palabra animada: adentro, Safari dibuja restos entre palabras.
@@ -34,64 +34,65 @@ export function DiceExperto({ texto, className = "" }: { texto: string; classNam
 const PASOS = ["Problema", "Fotos", "Ficha", "Preparando", "Experto", "Charla"];
 
 /**
- * Encabezado común: el símbolo + el progreso del recorrido (1–6), siempre igual en todas las
- * pantallas. "Atrás" va debajo, chico, solo donde se puede volver: así el símbolo no se mueve y
- * no queda lugar vacío. `volverApagado` lo deja a la vista pero deshabilitado (ej. mientras se
- * revisa una foto) para que no aparezca y desaparezca.
+ * Encabezado común, igual en todas las pantallas: a la izquierda "Atrás" (o el símbolo, donde no
+ * se puede volver), en el medio el progreso del recorrido (1–6) y a la derecha un lugar fijo para
+ * una acción (sesión, repuestos). El lugar de la derecha ocupa lo mismo aunque esté vacío: así la
+ * barra mide igual en todas las pantallas. `volverApagado` deja "Atrás" a la vista pero
+ * deshabilitado (ej. mientras se revisa una foto) para que no aparezca y desaparezca.
  */
 export function Encabezado({
   paso,
   orbe = "quieto",
   alVolver,
   volverApagado = false,
+  accion,
 }: {
   paso: number;
   orbe?: EstadoOrbe;
   alVolver?: () => void;
   volverApagado?: boolean;
+  /** Arriba a la derecha, en un lugar de 44 px (en el inicio, la sesión; en el experto, repuestos). */
+  accion?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-center gap-4">
-        <Link href="/" aria-label="Sayso: volver al inicio">
-          <Orbe estado={orbe} />
+    <header className="flex items-center gap-3">
+      {alVolver ? (
+        <button
+          type="button"
+          onClick={alVolver}
+          disabled={volverApagado}
+          aria-label="Atrás"
+          className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-texto-suave transition hover:text-texto active:scale-95 disabled:opacity-30"
+        >
+          <FlechaAtras size={22} />
+        </button>
+      ) : (
+        <Link
+          href="/"
+          aria-label="Sayso: volver al inicio"
+          className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center"
+        >
+          <Orbe estado={orbe} tam={32} />
         </Link>
-        {/* min-w-0: con botones al lado (el experto), el progreso se achica en vez de pasar por debajo. */}
-        {/* @container: el nombre del paso se muestra solo si entra entero (nunca "EX…"). */}
-        <div className="@container min-w-0 flex-1">
-          <div className="flex gap-1.5" aria-hidden>
-            {PASOS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
-                  i < paso ? "bg-acento" : "bg-borde"
-                }`}
-              />
-            ))}
-          </div>
-          <p className="mt-2 font-mono text-[11px] font-medium tracking-wider whitespace-nowrap text-texto-suave uppercase">
-            {paso}/6
-            <span className="hidden @[6rem]:inline"> · {PASOS[paso - 1]}</span>
-          </p>
+      )}
+      {/* min-w-0: el progreso se achica en vez de empujar la acción de la derecha. */}
+      <div className="min-w-0 flex-1">
+        <div className="flex gap-1.5" aria-hidden>
+          {PASOS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
+                i < paso ? "bg-acento" : "bg-borde"
+              }`}
+            />
+          ))}
         </div>
+        <p className="mt-1.5 truncate text-xs font-medium tracking-wide text-texto-suave">
+          {paso}/6 · {PASOS[paso - 1]}
+        </p>
       </div>
-      {alVolver && <BotonVolver onClick={alVolver} disabled={volverApagado} />}
+      <div className="flex h-11 min-w-11 shrink-0 items-center justify-end">{accion}</div>
     </header>
-  );
-}
-
-/** "← Atrás": chico, arriba a la izquierda, debajo del progreso. */
-export function BotonVolver({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="-ml-1 flex h-9 items-center gap-1.5 self-start rounded-full px-1 pr-3 text-sm font-medium text-texto-suave transition hover:text-texto active:scale-95 disabled:opacity-30"
-    >
-      <FlechaAtras size={20} />
-      Atrás
-    </button>
   );
 }
 
@@ -158,6 +159,25 @@ export function Flecha() {
       aria-hidden
     >
       <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function Persona({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }

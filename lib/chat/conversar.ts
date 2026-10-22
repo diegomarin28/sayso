@@ -12,6 +12,7 @@ import { repoManuales } from "../knowledge/manuales";
 import { evaluarPedido, filtrarCoreografia } from "../safety/riesgos";
 import { paginaOriginal, paginasDelArchivo } from "../knowledge/extracto";
 import { bloquesDeFuente, fuenteDelManual, fuenteIfixit, manualGuardado, urlsDeFuente, type DepsConsulta, type FuenteConsulta } from "../knowledge/consulta";
+import { puedeCambiar } from "../knowledge/triage";
 import { Segmentador, type Segmento } from "./segmentos";
 
 /**
@@ -60,7 +61,7 @@ const marcas3D = (piezas: string[]) => `Para mover el 3D, poné marcas AL PRINCI
 [[ocultar:PIEZA]]  [[despiezar:0.6]]  [[restaurar]]
 Piezas que existen en el 3D (usá solo estas): ${piezas.join(", ")}.
 Ejemplo: "[[camara:ssd|1.6]] [[resaltar:ssd]] El SSD está abajo a la izquierda, debajo de la tapa."
-Si según el manual o el knowledge pack hay que REEMPLAZAR una pieza por una nueva, poné [[cambiar:PIEZA]] en esa frase (una sola vez). Si no hay que cambiar nada, no la pongas.`;
+Si según el manual o el knowledge pack hay que REEMPLAZAR una pieza por una nueva, poné [[cambiar:PIEZA]] en esa frase (una sola vez). Si no hay que cambiar nada, no la pongas. Si el knowledge pack trae "sospechosas", solo se cambia una de esas piezas.`;
 
 const COMUNES = `Sos un técnico experto que guía por voz a una persona sin experiencia a reparar su equipo en casa, mientras un modelo 3D muestra las piezas.
 Respondé en español rioplatense (voseo), en frases cortas, como se habla: sin listas, sin markdown, sin títulos. Nunca copies frases en inglés: traducilas.
@@ -98,9 +99,12 @@ ${marcas3D(piezas)}`;
 const GUIA_DESDE_FUENTE = `Esta es la primera respuesta: la guía COMPLETA para el síntoma, que la persona va a seguir sin volver a preguntar. En tres partes, anunciando cada una con una frase corta: chequeos sin abrir (descartar lo que no es una falla del equipo), desarme y reparación, y armado y prueba. En cada paso: qué hacer, cómo (herramienta, dónde, hacia dónde) y qué vas a ver si va bien. El 3D acompaña cada paso: [[resaltar:PIEZA]] cuando el paso toca una pieza que existe en el 3D.`;
 const alcance = (primera: boolean) => (primera ? GUIA_DESDE_FUENTE : SEGUIMIENTO);
 
-/** Lectura de la fuente armada para la pregunta (manual oficial o guía pública). */
-function reglasConsulta(piezas: string[], oficial: boolean, primera = false): string {
-  const fuente = oficial ? "el manual oficial adjunto (las partes que importan para esta pregunta)" : "la guía pública adjunta (de iFixit, no es del fabricante)";
+/** Lectura de la fuente armada para la pregunta (manual oficial, un manual sin confirmar o guía pública). */
+function reglasConsulta(piezas: string[], f: Pick<FuenteConsulta, "origen" | "oficial">, primera = false): string {
+  const fuente =
+    f.origen === "ifixit" ? "la guía pública adjunta (de iFixit, no es del fabricante)"
+    : f.oficial ? "el manual oficial adjunto (las partes que importan para esta pregunta)"
+    : "el manual adjunto (las partes que importan para esta pregunta; no está confirmado que sea el oficial de este modelo exacto)";
   return `${COMUNES}
 ${alcance(primera)}
 Basate en ${fuente} y citalo en cada frase. Si ahí NO está lo que pregunta (por ejemplo, no tiene el procedimiento de esa pieza), respondé ÚNICAMENTE "[[no_cubre]]" (nada más).
@@ -149,7 +153,8 @@ function citaDe(s: Segmento, ctx: Contexto): Cita | undefined {
   for (const c of s.citas) {
     if (c.type === "page_location" && c.cited_text.trim().length >= 8) {
       // El PDF es el extracto: la página se traduce a la del manual completo.
-      return { doc: c.document_title ?? ctx.doc, pagina: paginaOriginal(ctx.paginas, c.start_page_number), estado: "VERIFICADO" };
+      // VERIFICADO solo si el manual es el oficial de este modelo (lib/knowledge/fuentes.ts).
+      return { doc: c.document_title ?? ctx.doc, pagina: paginaOriginal(ctx.paginas, c.start_page_number), estado: ctx.verificable ? "VERIFICADO" : "NO_VERIFICABLE" };
     }
     // Texto de un manual web (con la URL de su sección): VERIFICADO si es el oficial; de una guía pública
     // o de una búsqueda web, NO_VERIFICABLE.
@@ -202,7 +207,8 @@ function emitir(s: Segmento, ctx: Contexto): EventoChat {
     acciones,
     riesgo: "bajo",
     ...(cita ? { cita } : {}),
-    ...(s.cambiar ? { cambiar: s.cambiar } : {}),
+    // Solo una pieza sospechosa del síntoma: comprar una batería no arregla un ventilador.
+    ...(s.cambiar && puedeCambiar(s.cambiar, ctx.pack.sospechosas) ? { cambiar: s.cambiar } : {}),
   }, { tipoEquipo: ctx.tipoEquipo });
   return evaluacion.bloqueado ? { tipo: "bloqueo", coreografia, clases: evaluacion.clases } : { tipo: "paso", coreografia };
 }
@@ -389,7 +395,7 @@ export async function* conversar(
             model: MODELO_DE.lectura,
             max_tokens: LIMITES.chat.maxTokensConsulta,
             output_config: { effort: LIMITES.lectura.effort },
-            system: [{ type: "text", text: reglasConsulta(piezas, f.oficial, primera) }],
+            system: [{ type: "text", text: reglasConsulta(piezas, f, primera) }],
             messages: [{ role: "user", content: [...bloquesDeFuente(f), bloquePack, textoPregunta] }],
           },
           ctx,
@@ -404,7 +410,7 @@ export async function* conversar(
       }
       if (resultado === "manual" || resultado === "no_cubre") {
         // El manual no tiene esos pasos (o no hay manual): guía pública de iFixit, marcada como tal.
-        const aviso = fuente ? "El manual oficial no incluye este procedimiento." : "No tengo el manual oficial de este equipo para esto.";
+        const aviso = !fuente ? "No tengo el manual oficial de este equipo para esto." : fuente.oficial ? "El manual oficial no incluye este procedimiento." : "El manual no incluye este procedimiento.";
         const guia = await fuenteIfixit(pack.modelo, pregunta, deps.fetch).catch(() => null);
         if (guia) {
           yield emitirTexto(`${aviso} Te paso los pasos de una guía pública de iFixit, que no es del fabricante.`, ctx);
@@ -484,6 +490,8 @@ export async function* conversar(
     // manual.titulo = pack.fuentes[0].doc) y las reglas del chat DESPUÉS del documento: si se
     // cambia algo de eso, cada primera consulta vuelve a pagar el extracto entero.
     ctx.paginas = await paginasDe(manualFileId).catch(() => null);
+    // El extracto es del manual del pack: sus citas son VERIFICADO solo si el pack lo es (manual oficial del modelo).
+    ctx.verificable = pack.verificado;
     return yield* fase(
       stream,
       {

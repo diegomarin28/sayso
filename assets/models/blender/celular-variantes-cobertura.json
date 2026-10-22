@@ -1,0 +1,22 @@
+{
+  "familia": "celular_variantes",
+  "dato_pack": "rasgos3D.celular",
+  "campos": {
+    "camarasTraseras": [
+      1,
+      2,
+      3
+    ],
+    "muesca": [
+      false,
+      true
+    ],
+    "bordes": [
+      "redondeados",
+      "rectos"
+    ]
+  },
+  "sin_dato": "Conservar solo las formas de hoy; cada campo actúa independientemente",
+  "casos": "Todas las combinaciones probadas a escala 1 y 1.12, también caché y cambio de marca/modelo",
+  "coordinacion": 302
+}

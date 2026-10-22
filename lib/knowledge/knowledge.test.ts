@@ -44,6 +44,11 @@ describe("lineasConCitas + parsearContenido", () => {
     expect(contenido.pasos[0].cita).toEqual({ doc: "HMM", pagina: 52, estado: "VERIFICADO" });
   });
 
+  it("de un manual que no es el oficial del modelo, la cita con página queda NO_VERIFICABLE (con su página)", () => {
+    const c = parsearContenido(lineasConCitas(PACK), "HMM", undefined, undefined, false);
+    expect(c.pasos[0].cita).toEqual({ doc: "HMM", pagina: 52, estado: "NO_VERIFICABLE" });
+  });
+
   it("un paso sin cita queda sin verificar", () => {
     expect(contenido.pasos.find((p) => p.orden === 3)?.cita).toBeUndefined();
   });
@@ -135,8 +140,8 @@ function tarea(p: Anthropic.MessageCreateParamsNonStreaming): string {
  * Claude falso. Bibliotecario: llama a probar_pdf y responde el JSON final.
  * Lectura del pack: devuelve PACK + las vistas de `enPack`. Búsqueda dedicada: devuelve `dedicada`.
  */
-function enviarFalso(opciones: { url?: string; enPack?: Bloque[]; dedicada?: Bloque[] } = {}) {
-  const { url = "https://ej.com/hmm.pdf", enPack = [VISTA_EXPLOSIONADA, VISTA_INTERIOR], dedicada = [] } = opciones;
+function enviarFalso(opciones: { url?: string; enPack?: Bloque[]; dedicada?: Bloque[]; titulo?: string; fuente?: string } = {}) {
+  const { url = "https://ej.com/hmm.pdf", enPack = [VISTA_EXPLOSIONADA, VISTA_INTERIOR], dedicada = [], titulo = "HMM NB-15", fuente = "fabricante" } = opciones;
   const llamadas: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const enviar: EnviarMensaje = async (p) => {
     llamadas.push(p);
@@ -144,7 +149,7 @@ function enviarFalso(opciones: { url?: string; enPack?: Bloque[]; dedicada?: Blo
       const ultimo = p.messages.at(-1)!;
       const yaProbo = Array.isArray(ultimo.content) && ultimo.content.some((b) => b.type === "tool_result");
       if (!yaProbo) return mensaje([{ type: "tool_use", id: "t1", name: "probar_pdf", input: { url } }], "tool_use");
-      return mensaje([{ type: "text", text: `{"encontrado":true,"url":"${url}","titulo":"HMM NB-15","fuente":"fabricante"}` }]);
+      return mensaje([{ type: "text", text: `{"encontrado":true,"url":"${url}","titulo":"${titulo}","fuente":"${fuente}"}` }]);
     }
     const bloques = tarea(p).startsWith("Prepará una guía") ? [...PACK, ...enPack] : dedicada;
     return mensaje(bloques.map((b) => ({ type: "text", ...b })));
@@ -313,6 +318,64 @@ describe("armarKnowledgePack", () => {
   it("no arma nada si el modelo no está confirmado", async () => {
     const ficha = { ...fichaEjemplo, modelo: { valor: "NB-15", estado: "probable" as const } };
     await expect(armarKnowledgePack({ ficha, sintoma: "x" }, { enviar: enviarFalso().enviar })).rejects.toThrow();
+  });
+});
+
+describe("VERIFICADO solo con el manual oficial de este modelo (lib/knowledge/fuentes.ts)", () => {
+  const sinCache: CachePacks = { get: async () => undefined, set: async () => {} };
+  const subir = async () => "file_1";
+  const modelo = fichaEjemplo.modelo.valor!;
+  const verificadas = (pasos: { cita?: { estado: string } }[]) => pasos.filter((p) => p.cita?.estado === "VERIFICADO").length;
+
+  it.each([
+    ["una página de iFixit", { fuente: "ifixit" }, "tercero"],
+    ["el manual de otro modelo", { titulo: "HMM NB-17" }, "otro_modelo"],
+  ])("con %s: lee igual (mismas llamadas), pero los pasos van NO VERIFICADO y no se guarda como verificado", async (_, opciones, motivo) => {
+    const oficial = enviarFalso();
+    const base = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: oficial.enviar, fetch: pdfOk, cache: sinCache, subir, manuales: repoEnMemoria() });
+    expect(verificadas(base.pack.pasos)).toBeGreaterThan(0);
+
+    const manuales = repoEnMemoria();
+    const f = enviarFalso(opciones);
+    const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache: sinCache, subir, manuales });
+    expect(f.llamadas).toHaveLength(oficial.llamadas.length);
+    expect(r.pack.pasos).toHaveLength(base.pack.pasos.length);
+    expect(verificadas(r.pack.pasos)).toBe(0);
+    expect(r.pack.repuestos.every((x) => x.cita.estado !== "VERIFICADO")).toBe(true);
+    expect(r.pack.verificado).toBe(false);
+    // Las citas conservan su página: se puede mirar el manual, pero no se presenta como el oficial.
+    expect(r.pack.pasos[0].cita).toMatchObject({ pagina: base.pack.pasos[0].cita?.pagina, estado: "NO_VERIFICABLE" });
+    expect(r.pack.fuentes[0].url).toBe("https://ej.com/hmm.pdf");
+    expect(r.eventos.find((e) => e.tipo === "manual_sin_confirmar")?.datos).toEqual({ motivo });
+    expect((await manuales.buscar(fichaEjemplo.marca.valor, modelo))?.verificado).toBe(false);
+  });
+
+  it("una guía guardada con citas VERIFICADO de un manual que no es el de este modelo se sirve rebajada, sin IA", async () => {
+    const mapa = new Map<string, Armado>();
+    const cache: CachePacks = { get: async (k) => mapa.get(k), set: async (k, v) => void mapa.set(k, v) };
+    const manuales = repoEnMemoria();
+    const f = enviarFalso();
+    await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache, subir, manuales });
+    // La fila quedó de antes de la regla: una página de iFixit guardada como verificada.
+    const fila = (await manuales.buscar(fichaEjemplo.marca.valor, modelo))!;
+    await manuales.guardar({ ...fila, fuente: "ifixit", verificado: true });
+    const antes = f.llamadas.length;
+    const r = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, { enviar: f.enviar, fetch: pdfOk, cache, subir, manuales });
+    expect(r.desdeCache).toBe(true);
+    expect(f.llamadas).toHaveLength(antes);
+    expect(verificadas(r.pack.pasos)).toBe(0);
+    expect(r.pack.verificado).toBe(false);
+    expect(r.eventos.map((e) => e.tipo)).toEqual(["pack_en_cache", "manual_sin_confirmar"]);
+  });
+
+  it("una guía guardada del manual oficial se sirve igual que siempre", async () => {
+    const mapa = new Map<string, Armado>();
+    const cache: CachePacks = { get: async (k) => mapa.get(k), set: async (k, v) => void mapa.set(k, v) };
+    const deps = { enviar: enviarFalso().enviar, fetch: pdfOk, cache, subir, manuales: repoEnMemoria() };
+    const primera = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, deps);
+    const otra = await armarKnowledgePack({ ficha: fichaEjemplo, sintoma: "se apaga" }, deps);
+    expect(otra.pack).toEqual(primera.pack);
+    expect(otra.eventos.map((e) => e.tipo)).toEqual(["pack_en_cache"]);
   });
 });
 

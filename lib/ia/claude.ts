@@ -32,6 +32,10 @@ export const MODELO_DE = {
   chapa: MODELOS.corto as string,
   /** Reconocer el equipo por la foto del frente. */
   reconocer: MODELOS.corto as string,
+  /** ¿El modelo confirmado es una familia ("MacBook Air") o una sola versión? Y armar el nombre con la respuesta. */
+  precisar: MODELOS.corto as string,
+  /** Triage: piezas sospechosas del síntoma y cómo confirmarlas, antes de elegir la fuente (lib/knowledge/triage.ts). */
+  triage: MODELOS.corto as string,
   /** Guía pública con búsqueda web (cuando no hay manual). */
   guiaPublica: MODELOS.corto as string,
   /**
@@ -76,7 +80,26 @@ export const LIMITES = {
   },
   /** Lecturas del manual completo (comparten prefijo y caché de prompts: mismo effort en todas). */
   // maxTokensPack incluye el razonamiento del modelo: con poco margen se queda sin lugar para escribir los pasos.
-  lectura: { effort: "medium" as const, maxTokensPack: 32000, maxTokensVistas: 1500 },
+  // effort "low": con "medium", la MacBook Air llegó al tope de 32.000 tokens y la guía tardó 281 s (corte en 300 s).
+  // Es el mismo effort para la lectura, el chat y el plano: el prefijo de la caché de prompts sigue igual entre ellos.
+  lectura: {
+    effort: "low" as const,
+    maxTokensPack: 32000,
+    maxTokensVistas: 1500,
+    /** Tiempo de la lectura del manual: si se pasa, se usa lo que ya escribió (las líneas parciales). */
+    presupuestoMs: 150_000,
+    /** Tiempo total de la guía de un equipo nuevo (la ruta corta a los 300 s). */
+    totalMs: 200_000,
+    /** Lo que sigue (escalar, guía pública, iFixit, completar) solo arranca si quedan al menos esto. */
+    minRestoMs: 40_000,
+    /**
+     * «Completar la guía» escribe pocos pasos y no comparte el prefijo de la caché con la lectura: tope propio (con
+     * el general, en la MacBook Air llegó a 32.000 tokens, ~2 min). Es opcional: si la lectura terminó después de
+     * `completarHastaMs`, se saltea y la guía queda como está, con el aviso.
+     */
+    maxTokensCompletar: 16_000,
+    completarHastaMs: 120_000,
+  },
   /** Guía pública (sin manual): búsquedas y continuaciones de `pause_turn`. */
   /**
    * Guía pública por búsqueda web (sin manual ni iFixit): UNA búsqueda por caso, contando las continuaciones, y
@@ -271,16 +294,48 @@ export const llamarClaude: LlamarIA = async ({ modelo, system, contenido, format
     .join("");
 };
 
-/** Llamada completa (con streaming para pedidos largos, ej. un PDF). Se reemplaza en los tests. */
+/** `stop_reason` de una respuesta cortada por `hastaMs`: trae lo que el modelo ya había escrito. */
+export const CORTE_POR_TIEMPO = "tiempo";
+
+/**
+ * Llamada completa (con streaming para pedidos largos, ej. un PDF). Se reemplaza en los tests.
+ * `hastaMs`: tiempo máximo; si se pasa, se corta y vuelve lo que ya salió, con `stop_reason` `CORTE_POR_TIEMPO`.
+ */
 export type EnviarMensaje = (
   params: Anthropic.MessageCreateParamsNonStreaming,
   etapa?: string,
   escalada?: MotivoEscalada,
+  opciones?: { hastaMs?: number },
 ) => Promise<Anthropic.Message>;
 
-export const enviarMensaje: EnviarMensaje = async (params, etapa, escalada) => {
+export const enviarMensaje: EnviarMensaje = async (params, etapa, escalada, opciones) => {
   await frenar();
-  const mensaje = await obtenerCliente().messages.stream(params).finalMessage();
+  const stream = obtenerCliente().messages.stream(params);
+  let cortado = false;
+  const reloj =
+    opciones?.hastaMs !== undefined
+      ? setTimeout(() => {
+          cortado = true;
+          stream.abort();
+        }, Math.max(0, opciones.hastaMs))
+      : null;
+  let mensaje: Anthropic.Message;
+  try {
+    mensaje = await stream.finalMessage();
+  } catch (e) {
+    const parcial = stream.currentMessage;
+    if (!cortado || !parcial) throw e;
+    // Cortado por tiempo: lo que ya escribió. La salida se cobra igual; el uso del stream todavía no la cuenta.
+    const caracteres = parcial.content.reduce((n, b) => n + (b.type === "text" ? b.text.length : b.type === "thinking" ? b.thinking.length : 0), 0);
+    mensaje = {
+      ...parcial,
+      stop_reason: CORTE_POR_TIEMPO as Anthropic.StopReason,
+      usage: { ...parcial.usage, output_tokens: Math.max(parcial.usage.output_tokens, Math.ceil(caracteres / 3.5)) },
+    };
+    console.warn(`[ia] ${etapa ?? "sin etapa"}: cortada por tiempo (${opciones?.hastaMs} ms, ${caracteres} caracteres)`);
+  } finally {
+    if (reloj) clearTimeout(reloj);
+  }
   registrarUso({ ...calcularUso(etapa ?? "sin etapa", params.model, mensaje.usage), ...(escalada ? { escalada } : {}) });
   if (mensaje.stop_reason === "refusal") throw new ErrorIA("El modelo rechazó el pedido", mensaje.stop_details);
   return mensaje;

@@ -1,6 +1,6 @@
 # components/viewer
 
-Dueño: Diego
+Dueño: Iaio (desde el 21/10/2026; antes, Diego).
 
 Visor 3D y reproductor de coreografía (React Three Fiber).
 
@@ -22,7 +22,7 @@ import { Visor } from "@/components/viewer";
 ```
 
 - **Seguridad:** toda coreografía pasa por `filtrarCoreografia` (lib/safety) antes de animarse (`paso.ts`). Si es de riesgo alto no se anima (solo `restaurar`) y `onPaso` trae la derivación en vez del texto de la IA. Mostrá siempre `onPaso(...).coreografia.dice`, no el original.
-- **Piezas de Blender:** el visor lee `/models/piezas/indice.json` y baja solo las familias (GLB) que usan las piezas del plano, una vez cada una (`biblioteca.ts`); arma cada pieza con su forma típica (ventilador, RAM, compresor, carcasa…). Si no carga en 4 s, usa las primitivas. `tipoEquipo` ayuda a elegir la variante.
+- **Piezas de Blender:** el visor lee `/models/piezas/indice.json` y baja solo las familias (GLB) de las formas que puede elegir para las piezas del plano, una vez cada una (`biblioteca.ts`, `formasPara`): la `formaBiblioteca` si la hay; si no, las variantes que deja el tipo de equipo y, con las medidas del plano, las que pueden quedar a un empate de la que menos se deforma (una notebook no baja la pantalla del reloj, #313). Arma cada pieza con su forma típica (ventilador, RAM, compresor, carcasa…). Si no carga en 4 s, usa las primitivas. `tipoEquipo` ayuda a elegir la variante. La precarga de «preparando» no tiene medidas: baja todas las que deja el tipo de equipo.
 - **Origen visible:** las piezas con origen "estimada" o "plantilla" se dibujan con contorno punteado y más transparentes (resaltadas, un poco menos); las del manual, sólidas. Sin origen (planos viejos, fixtures), como siempre.
 - **Piezas que llegan tarde:** si los GLB tardan más de 4 s, el visor arranca con primitivas y, cuando termina la descarga, las cambia por las piezas reales sin perder la cámara, el estado ni el paso en curso (`continuarAnimacion` en `escena.ts`, `siguienteBiblioteca` en `biblioteca.ts`).
 - **Estilo ilustración técnica** (`escena.ts`): bordes en todas las piezas, luz de estudio sin descargas, sombras de contacto, materiales por tipo y detalles (aspas, chips, etiquetas).

@@ -15,7 +15,12 @@
   "tablet_demo": "tablet_demo.glb",
   "notebook_demo": "notebook_demo.glb",
   "alineacion_demo": "alineacion_demo.glb",
-  "impresoras_demo": "impresoras_demo.glb"
+  "impresoras_demo": "impresoras_demo.glb",
+  "tablet_variantes": "tablet_variantes.glb",
+  "tv_variantes": "tv_variantes.glb",
+  "auriculares_variantes": "auriculares_variantes.glb",
+  "celular_variantes": "celular_variantes.glb",
+  "reloj_variantes": "reloj_variantes.glb"
  },
  "tipos": {
   "canasta_freidora": {
@@ -3547,6 +3552,259 @@
     6,
     1.6,
     6
+   ]
+  },
+  "pantalla_tablet_dato@sin_boton": {
+   "familia": "tablet_variantes",
+   "ajuste": "libre",
+   "equipos": "tablet tableta",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia -Y GLB (frente del plano de tablet).",
+   "caja": [
+    17.3,
+    0.197,
+    24.8
+   ]
+  },
+  "pantalla_tablet_dato@con_boton": {
+   "familia": "tablet_variantes",
+   "ajuste": "libre",
+   "equipos": "tablet tableta",
+   "descripcion": "Frente de tablet con cámara y botón frontal opcional; vidrio hacia -Y GLB (frente del plano de tablet).",
+   "caja": [
+    17.3,
+    0.215,
+    24.8
+   ]
+  },
+  "carcasa_tv_dato@pie_central": {
+   "familia": "tv_variantes",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Televisor genérico frontal; el cuerpo conserva sus materiales y el apoyo es el dato explícito.",
+   "caja": [
+    100,
+    66,
+    6.12
+   ]
+  },
+  "carcasa_tv_dato@pie_laterales": {
+   "familia": "tv_variantes",
+   "ajuste": "libre",
+   "equipos": "televisor tv",
+   "descripcion": "Televisor genérico frontal; el cuerpo conserva sus materiales y el apoyo es el dato explícito.",
+   "caja": [
+    100,
+    66.2685,
+    6.12
+   ]
+  },
+  "carcasa_auricular_dato@diadema": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Diadema curva acolchada que une ambas copas.",
+   "caja": [
+    19.9989,
+    1.12,
+    10.5233
+   ]
+  },
+  "carcasa_auricular_dato@copa": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Copa ovalada hueca, con borde y cubierta trasera; no cápsula in-ear estirada.",
+   "caja": [
+    7,
+    2.9,
+    8.6
+   ]
+  },
+  "carcasa_auricular_dato@almohadilla": {
+   "familia": "auriculares_variantes",
+   "ajuste": "libre",
+   "equipos": "auriculares diadema over ear",
+   "descripcion": "Almohadilla ovalada con abertura central para la oreja.",
+   "caja": [
+    6.9,
+    1.6,
+    8.5
+   ]
+  },
+  "camara_celular_dato@1": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "camara_celular_dato@2": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "camara_celular_dato@3": {
+   "familia": "celular_variantes",
+   "ajuste": "proporcional",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo trasero con cantidad explícita de lentes, aro óptico y flex de conexión.",
+   "caja": [
+    2.6,
+    0.6,
+    3.7
+   ]
+  },
+  "pantalla_celular_dato@sin_muesca": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo de pantalla completo: vidrio frontal hacia -Y GLB y chapa con flex hacia el interior.",
+   "caja": [
+    7.2,
+    0.3575,
+    15.6
+   ]
+  },
+  "pantalla_celular_dato@con_muesca": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Módulo de pantalla completo: vidrio frontal hacia -Y GLB y chapa con flex hacia el interior.",
+   "caja": [
+    7.2,
+    0.355,
+    15.6
+   ]
+  },
+  "marco_celular_dato@redondeados": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Marco hueco de celular, esquinas redondeadas y perfil del borde según dato del pack.",
+   "caja": [
+    7.4,
+    0.8,
+    15.86
+   ]
+  },
+  "marco_celular_dato@rectos": {
+   "familia": "celular_variantes",
+   "ajuste": "libre",
+   "equipos": "celular smartphone",
+   "descripcion": "Marco hueco de celular, esquinas redondeadas y perfil del borde según dato del pack.",
+   "caja": [
+    7.4,
+    0.8,
+    15.86
+   ]
+  },
+  "caja_reloj_dato@cuadrada_c1": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_c2": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_s1": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@cuadrada_s2": {
+   "familia": "reloj_variantes",
+   "ajuste": "proporcional",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.63,
+    1.1,
+    5.35
+   ]
+  },
+  "caja_reloj_dato@redonda_c1": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_c2": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.601,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s0": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.6,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s1": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.83,
+    1.1,
+    4.8
+   ]
+  },
+  "caja_reloj_dato@redonda_s2": {
+   "familia": "reloj_variantes",
+   "ajuste": "redondo:xz",
+   "equipos": "smartwatch reloj inteligente wearable",
+   "descripcion": "Caja de reloj genérica con pulsadores laterales del lado de la corona.",
+   "caja": [
+    4.768,
+    1.1,
+    4.8
    ]
   }
  }

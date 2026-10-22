@@ -134,3 +134,24 @@ describe("cerrado / abierto (arranca cerrado, se abre cuando la guía lo indica)
     expect(con([{ t: "ocultar", pieza: "puerta_freezer" }, { t: "camara", objetivo: OBJETIVO_GENERAL }]).abierto).toBe(true);
   });
 });
+
+describe("un paso que no mira ni resalta nada vuelve a la vista general", () => {
+  const ctx = { casoId: "c" };
+  const paso = (n: number, acciones: Coreografia["acciones"]): Coreografia => ({ paso: n, dice: "…", acciones, riesgo: "bajo" });
+  it.each([
+    ["sin acciones", []],
+    ["solo mueve una pieza", [{ t: "rotar", pieza: "tapa_inferior", eje: "x", grados: -100 }]],
+  ] as const)("%s: cámara en la vista general y sin el resaltado anterior", (_, acciones) => {
+    const inicio = estadoInicial(["base", "bateria", "tapa_inferior"]);
+    const enfocado = aplicarCoreografia(inicio, paso(1, [{ t: "camara", objetivo: "bateria", zoom: 1.4 }, { t: "resaltar", pieza: "bateria" }]), ctx).estado;
+    expect(enfocado.camara).toEqual({ objetivo: "bateria", zoom: 1.4 });
+    const siguiente = aplicarCoreografia(enfocado, paso(2, [...acciones]), ctx).estado;
+    expect(siguiente.camara).toEqual({ objetivo: "general", zoom: 1 });
+    expect(siguiente.piezas.bateria.resaltada).toBe(false);
+  });
+
+  it("un paso que resalta sin mover la cámara la deja donde estaba", () => {
+    const enfocado = aplicarCoreografia(estadoInicial(["base", "bateria"]), paso(1, [{ t: "camara", objetivo: "bateria" }]), ctx).estado;
+    expect(aplicarCoreografia(enfocado, paso(2, [{ t: "resaltar", pieza: "bateria" }]), ctx).estado.camara.objetivo).toBe("bateria");
+  });
+});

@@ -5,7 +5,7 @@ import type { Caso, Evento, Ficha, Foto, PedidoDeFoto } from "@/shared";
 import type { Plano, Preparado } from "../_datos/api";
 import { guardar } from "../_datos/guardar";
 import type { ImagenB64 } from "../_datos/imagen";
-import { guardarLocal, idDispositivo, type CasoGuardado, type Cierre } from "../_datos/mis-casos";
+import { guardarLocal, type CasoGuardado, type Cierre } from "../_datos/mis-casos";
 
 /**
  * Estado del recorrido en memoria del navegador. Cada cambio también se guarda en
@@ -103,16 +103,22 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
         setPreparado: (p) => {
           setPreparado(p);
           ultimo.current.preparado = p;
-          // La guía y el plano se guardan juntos en "Mis casos" (para retomar sin IA).
+          // La guía y el plano se guardan juntos en "Mis casos" y en el servidor (para retomar sin IA).
           const { caso: c, plano: pl } = ultimo.current;
-          if (c && p && pl) guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
+          if (c && p && pl) {
+            guardarLocal({ caso: c, guia: { preparado: p, plano: pl } });
+            guardar({ guia: { casoId: c.id, preparado: p, plano: pl } });
+          }
         },
         plano,
         setPlano: (p) => {
           setPlano(p);
           ultimo.current.plano = p;
           const { caso: c, preparado: pr } = ultimo.current;
-          if (c && p && pr) guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
+          if (c && p && pr) {
+            guardarLocal({ caso: c, guia: { preparado: pr, plano: p } });
+            guardar({ guia: { casoId: c.id, preparado: pr, plano: p } });
+          }
         },
         captura,
         setCaptura,
@@ -127,6 +133,9 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
             !!c &&
             c.id === caso?.id &&
             ((tipo !== undefined && (tipo ?? "") !== (tipoEquipo ?? "")) || c.clase !== caso.clase);
+          // Y es otro caso, con id nuevo: el servidor no pisa una guía ya guardada, así que el anterior
+          // queda en "Mis casos" con la suya (decisión de Iaio, 20/10, #347).
+          if (c && otroEquipo) c = { ...c, id: crypto.randomUUID(), creadoEn: new Date().toISOString() };
           // Un caso nuevo arranca de cero.
           if (c?.id !== caso?.id || otroEquipo) {
             if (tipo === undefined) setTipoEquipo(null);
@@ -146,7 +155,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           if (c) {
             const t = tipo !== undefined ? tipo : c.id === caso?.id ? tipoEquipo : null;
             guardarLocal({ caso: c, tipoEquipo: t });
-            guardar({ caso: c, dispositivo: idDispositivo(), tipoEquipo: t });
+            guardar({ caso: c, tipoEquipo: t });
           }
         },
         agregarFoto: (f, imagen) => {
@@ -174,7 +183,7 @@ export function ProveedorFlujo({ children }: { children: ReactNode }) {
           };
           setCaso(cerrado);
           guardarLocal({ caso: cerrado, cierre: c });
-          guardar({ caso: cerrado, cierre: c, dispositivo: idDispositivo() });
+          guardar({ caso: cerrado, cierre: c });
         },
         ultimaCompra,
         setUltimaCompra,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarGuiaIfixit, equipoIfixit, fotosPorPaso, guiaIfixit, LICENCIA, manualWebDeIfixit, nombresParaIfixit, ordenarGuias, type GuiaEnLista } from "./ifixit";
+import { buscarGuiaIfixit, equipoIfixit, esDelTema, fotosPorPaso, guiaIfixit, guiasDelSintoma, LICENCIA, manualWebDeIfixit, nombresParaIfixit, ordenarGuias, temasDelSintoma, type GuiaEnLista } from "./ifixit";
 
 /**
  * Una API de iFixit simulada (sin red): la búsqueda pide TODAS las palabras (en el título o la descripción),
@@ -25,6 +25,9 @@ const CATEGORIAS: Record<string, { description: string; guides: { guideid: numbe
   "Tele 55C722": { description: "A 55 inch TV.", guides: [{ guideid: 30, title: "Tele 55C722 Screen Replacement", subject: "Screen", type: "replacement" }] },
   "Tablo 6": { description: "The sixth generation Tablo.", guides: [{ guideid: 50, title: "Tablo 6 Battery Replacement", subject: "Battery", type: "replacement" }] },
   "Tablo Air 4": { description: "Tablo Air, 4th generation.", guides: [{ guideid: 51, title: "Tablo Air 4 Battery Replacement", subject: "Battery", type: "replacement" }] },
+  // Otro equipo que comparte UNA palabra con un modelo sin números (un proyector «Luminous Superior»).
+  "Aspira Elite Superior": { description: "Commercial vacuum cleaner.", guides: [{ guideid: 60, title: "Aspira Elite Superior Capacitor Repair", subject: "Capacitor", type: "repair" }] },
+  "Proyecta Lux": { description: "Ceiling projector.", guides: [{ guideid: 61, title: "Proyecta Lux Lamp Replacement", subject: "Lamp", type: "replacement" }] },
   Mando: {
     description: "Game controller.",
     guides: [
@@ -96,6 +99,15 @@ describe("equipoIfixit: el equipo exacto, o nada", () => {
     expect(await equipoIfixit("Impresora LaserX M404", api())).toBeNull();
   });
 
+  it("un modelo sin números no se confunde con otro equipo por una palabra en común (la guía de una aspiradora para un proyector)", async () => {
+    expect(await equipoIfixit("MarcaV Luminous Superior", api())).toBeNull();
+    expect(await buscarGuiaIfixit("MarcaV Luminous Superior", "no prende", api())).toBeNull();
+  });
+
+  it("un modelo sin números sí se encuentra si están todas sus palabras (la marca puede faltar)", async () => {
+    expect((await equipoIfixit("MarcaV Proyecta Lux", api()))?.titulo).toBe("Proyecta Lux");
+  });
+
   it("si la red falla, null (sigue la búsqueda de siempre)", async () => {
     const caida = (async () => {
       throw new Error("sin red");
@@ -130,9 +142,52 @@ describe("ordenarGuias: por el síntoma, en castellano", () => {
     ["se le rompió la pantalla", 1],
     ["la batería dura poco", 2],
     ["no carga", 3],
-    ["anda raro", 2], // sin pistas: batería
+    ["anda raro", 2], // sin pistas: batería, solo como respaldo (ver guiasDelSintoma)
   ])("%s → guía %i", (sintoma, id) => {
     expect(ordenarGuias(guias, sintoma)[0].id).toBe(id);
+  });
+});
+
+describe("guía del síntoma: nunca la de otra pieza", () => {
+  const notebook: GuiaEnLista[] = CATEGORIAS["Libro Air 13 Late 2020"].guides.map((g) => ({ id: g.guideid, titulo: g.title, tema: g.subject, tipo: g.type }));
+  const celular: GuiaEnLista[] = CATEGORIAS["Fono X21"].guides.map((g) => ({ id: g.guideid, titulo: g.title, tema: g.subject, tipo: g.type }));
+
+  it.each([
+    ["se calienta y se apaga", 21], // sin nombrar la pieza: la temperatura pesa como la batería, y el ventilador suma "calienta"
+    ["se apaga sola y el ventilador hace mucho ruido", 21],
+    ["hace ruido", 21],
+    ["se recalienta jugando", 21],
+    ["la batería no dura nada", 20],
+    ["se descarga rápido", 20],
+  ])("notebook: %s → guía %i", (sintoma, id) => {
+    expect(guiasDelSintoma(notebook, sintoma)[0]?.id).toBe(id);
+  });
+
+  it("\"durante\" no es \"dura\": no suma para la batería", () => {
+    expect(temasDelSintoma("hace ruido durante el arranque").has("battery")).toBe(false);
+  });
+
+  it("nombrar la pieza pesa más que un síntoma que puede venir de varias", () => {
+    const t = temasDelSintoma("se apaga y el ventilador hace ruido");
+    expect(t.get("fan")!).toBeGreaterThan(t.get("battery")!);
+  });
+
+  it.each(["anda raro", "se tilda", "anda lento"])("sin pieza ni falla (%s): ninguna guía del síntoma", (sintoma) => {
+    expect(guiasDelSintoma(celular, sintoma)).toEqual([]);
+  });
+
+  it("si el equipo no tiene guía del tema, no se usa la de otra pieza", () => {
+    expect(guiasDelSintoma(celular, "el ventilador hace ruido")).toEqual([]);
+  });
+
+  it("esDelTema: una guía ya guardada se revisa contra el síntoma nuevo", () => {
+    expect(esDelTema({ titulo: "Libro Air Battery Replacement", tema: "Battery" }, "el ventilador hace ruido")).toBe(false);
+    expect(esDelTema({ titulo: "Libro Air Fan Replacement", tema: "Fan" }, "el ventilador hace ruido")).toBe(true);
+  });
+
+  it("buscarGuiaIfixit con delTema: null si no hay guía del tema; sin delTema, la de respaldo", async () => {
+    expect(await buscarGuiaIfixit("Fono X21", "anda raro", api(), { delTema: true })).toBeNull();
+    expect((await buscarGuiaIfixit("Fono X21", "anda raro", api()))?.id).toBe(2);
   });
 });
 

@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { firmaCasos, listarCasos } from "./_datos/mis-casos";
-import { CargaEntender } from "./_ui/carga-entender";
+import { BotonSesion, useCuenta } from "./_ui/boton-sesion";
+import { Hilo, MensajeIA, MensajeYo, Pensando } from "./_ui/chat";
+import { LINEAS } from "./_ui/linea-pensando";
 import { IconoDeEquipo, type IconoEquipo } from "./_ui/iconos-equipo";
-import { LEMA, Marca } from "./_ui/marca";
+import { LEMA } from "./_ui/marca";
+import { ProblemasFrecuentes } from "./_ui/problemas-frecuentes";
 import type { Caso, Evento } from "@/shared";
 import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
-import { sinEntender } from "./_datos/entender-simulado";
+import { sinEntender, sintomaParaCitar } from "./_datos/entender-simulado";
 import { useFlujo } from "./_estado/flujo";
 import { useDictado } from "@/lib/voice/useDictado";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
@@ -47,7 +50,18 @@ const NOMBRE_CLASE: Record<Exclude<Caso["clase"], "otro">, string> = {
 const NO_TE_ENTENDI =
   "No te entendí bien. ¿Me contás de nuevo qué equipo es y qué le pasa? Por ejemplo: “mi celular no carga”.";
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function QueSeRompio() {
+  const { caso, cierre } = useFlujo();
+  // Un caso cerrado no se retoma desde acá (ver abajo): arranca limpia, como sin caso.
+  return <QueSeRompioDelCaso key={(!cierre && caso?.id) || "sin-caso"} />;
+}
+
+function QueSeRompioDelCaso() {
   const router = useRouter();
   const { caso: casoEnCurso, cierre, setCaso, agregarEventos, tipoEquipo } = useFlujo();
   // Un caso ya cerrado no se retoma desde acá: la pantalla 1 arranca limpia (está en "Mis casos").
@@ -84,10 +98,11 @@ export default function QueSeRompio() {
   const enVivo = dictado.escuchando && dictado.texto ? sumar(texto, dictado.texto) : texto;
   const hayAlgo = !!enVivo.trim();
 
-  async function enviar() {
+  /** `directo`: un problema frecuente tocado, que se manda tal cual. */
+  async function enviar(directo?: string) {
     desbloquearAudio(); // la respuesta se dice en voz alta cuando llega (iPhone pide un toque)
     // Si estaba grabando, "Seguir" usa también lo que dijo (incluida la frase a medias).
-    const aEnviar = enVivo;
+    const aEnviar = directo ?? enVivo;
     if (dictado.escuchando) {
       dictado.descartar(); // ya se sumó acá; no entregarlo dos veces
       setTexto(aEnviar);
@@ -150,6 +165,10 @@ export default function QueSeRompio() {
   const sinElegir = !!entendido && otro === null && !opciones.some(elegida);
   const listo = !!entendido && (otro !== null ? !!otro.trim() : !sinElegir);
 
+  // Con la sesión iniciada saluda por el nombre que la persona puso al crear la cuenta.
+  const [cuenta, recargarCuenta] = useCuenta();
+  const conCuenta = !!cuenta?.sesion && !cuenta.anonima;
+  const saludo = conCuenta && cuenta.nombre ? `Hola, ${cuenta.nombre}.` : "Hola.";
   const nombreEquipo = entendido ? (entendido.clase !== "otro" ? NOMBRE_CLASE[entendido.clase] : tipo) : "";
   const dice = pensando
     ? "Dejame entender…"
@@ -164,8 +183,11 @@ export default function QueSeRompio() {
           : entendido && sinElegir
             ? "No me quedó claro qué equipo es. Elegilo acá abajo."
             : entendido
-              ? `Entendí: es tu ${nombreEquipo} y “${entendido.sintoma.toLowerCase()}”. ¿Es así?`
-              : "Hola. Contame qué se rompió.";
+              ? `Entendí que es tu ${nombreEquipo}. ¿Es así? Si es otro equipo, elegilo acá abajo.`
+              : `${saludo} ¿Qué se rompió?`;
+  /** Desde que la persona manda algo, la pantalla es una charla: su mensaje y la respuesta de Sayso. */
+  const enCharla = pensando || !!entendido || !!error || noEntendi;
+  const loQueDijo = entendido && !pensando ? sintomaParaCitar(entendido.sintoma) : enviado;
 
   // El experto dice en voz alta lo que entendió (siempre después de que la persona tocó algo,
   // así el navegador deja reproducir audio).
@@ -177,49 +199,43 @@ export default function QueSeRompio() {
 
   return (
     <Pantalla>
-      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} />
+      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
 
-      {/* La marca, solo al empezar (en el resto del recorrido queda el símbolo del encabezado). */}
-      {!entendido && !pensando && !error && !noEntendi && (
-        <div className="aparece flex flex-col gap-2">
-          <Marca tam={44} conSimbolo={false} />
-          <p className="text-sm text-texto-suave">{LEMA}</p>
+      {enCharla ? (
+        // La charla: lo que contó la persona y la respuesta de Sayso (o Sayso pensando).
+        <Hilo>
+          {loQueDijo && <MensajeYo>{loQueDijo}</MensajeYo>}
+          {pensando ? (
+            <Pensando lineas={LINEAS.entender} />
+          ) : (
+            <MensajeIA alerta={!!bloqueo || !!error}>
+              {bloqueo && (
+                <span className="mb-1 flex items-center gap-2 font-semibold text-peligro">
+                  <Alerta /> Riesgo alto
+                </span>
+              )}
+              {dice}
+              {bloqueo && (
+                <span className="mt-1 block text-sm">
+                  {bloqueo.derivacion ?? "Esto lo tiene que ver un técnico. No lo abras ni lo manipules."}
+                </span>
+              )}
+            </MensajeIA>
+          )}
+        </Hilo>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <DiceExperto texto={dice} />
+          {/* Al empezar, qué hace Sayso (en el resto del recorrido queda el símbolo del encabezado). */}
+          <p className="aparece text-base leading-relaxed text-texto-suave">{LEMA}</p>
         </div>
       )}
 
-      <DiceExperto texto={dice} />
-
-      {/* Carga de "entender": la onda de voz y sus palabras, que se iluminan mientras las lee. */}
-      {pensando && <CargaEntender texto={enviado} />}
-
       {!entendido && !pensando && (
         <>
-          <div className="flex flex-1 flex-col gap-5">
-            {/* El cuadro está siempre: se escribe acá o se ve en vivo lo que se va diciendo. */}
-            <textarea
-              value={enVivo}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-              readOnly={dictado.escuchando}
-              rows={3}
-              aria-label="Lo que se rompió"
-              placeholder={
-                dictado.escuchando
-                  ? "Te escucho…"
-                  : "Escribilo acá o tocá el micrófono. Ej.: «la heladera hace ruido y no enfría»"
-              }
-              className={`w-full resize-none rounded-2xl border bg-superficie/90 p-4 text-lg backdrop-blur placeholder:text-texto-suave/70 focus:border-acento focus:outline-none ${
-                dictado.escuchando ? "border-peligro/60" : "border-borde"
-              }`}
-            />
-
+          <div className="flex flex-1 flex-col gap-6">
             {/* El audio primero: el micrófono grande es la forma principal de contarlo. */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3">
               {dictado.escuchando ? (
                 <div className="flex items-center gap-5">
                   <button
@@ -259,7 +275,7 @@ export default function QueSeRompio() {
                       ? "Abriendo el micrófono…"
                       : hayAlgo
                         ? "Tocá para agregar algo más con tu voz"
-                        : "Tocá y contame qué se rompió")}
+                        : "Tocá y contame qué pasó")}
               </p>
             </div>
 
@@ -272,26 +288,60 @@ export default function QueSeRompio() {
                 Mis casos ({cantidadCasos})
               </button>
             )}
+
+            {/* Un toque y arranca, como si lo hubiera escrito. Mientras escribe o habla se van. */}
+            {!hayAlgo && !dictado.escuchando && (
+              <ProblemasFrecuentes
+                alElegir={(p) => {
+                  setTexto(p);
+                  void enviar(p);
+                }}
+              />
+            )}
           </div>
-          {/* "Seguir" aparece recién cuando hay algo escrito o dicho. */}
-          {hayAlgo && (
-            <BarraAccion>
-              <BotonPrincipal onClick={enviar}>
-                Seguir <Flecha />
-              </BotonPrincipal>
-            </BarraAccion>
-          )}
+
+          {/* Abajo, a mano: se escribe acá o se ve en vivo lo que se va diciendo. La flecha manda. */}
+          <BarraAccion>
+            <div
+              className={`flex items-end gap-2 rounded-2xl border bg-superficie/95 p-1.5 pl-4 ${
+                dictado.escuchando ? "border-peligro/60" : "border-borde focus-within:border-acento"
+              }`}
+            >
+              <textarea
+                value={enVivo}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    enviar();
+                  }
+                }}
+                readOnly={dictado.escuchando}
+                rows={hayAlgo ? 3 : 1}
+                aria-label="Lo que pasó"
+                placeholder={dictado.escuchando ? "Te escucho…" : "O escribilo acá"}
+                className="min-h-11 flex-1 resize-none bg-transparent py-2.5 text-base placeholder:text-texto-suave/80 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => void enviar()}
+                disabled={!hayAlgo}
+                aria-label="Seguir"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-acento text-black transition active:scale-95 disabled:bg-borde disabled:text-texto-suave"
+              >
+                <Flecha />
+              </button>
+            </div>
+          </BarraAccion>
         </>
       )}
 
       {entendido && !pensando && (
         <>
           {/* ¿Qué equipo es? En el medio, con el que entendió la IA ya elegido. */}
-          <div className="flex flex-1 flex-col justify-center gap-3">
-            <p className="text-sm text-texto-suave">
-              {sinElegir ? "¿Qué equipo es?" : "Si no es ese, tocá el correcto:"}
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="flex flex-1 flex-col gap-3">
+            {sinElegir && <p className="text-sm text-texto-suave">¿Qué equipo es?</p>}
+            <div className="grid grid-cols-3 gap-2.5">
               {opciones.map((o) => (
                 <button
                   key={o.clave}
@@ -302,19 +352,14 @@ export default function QueSeRompio() {
                     setTipo(o.tipo);
                     setOtro(null);
                   }}
-                  className={`relative flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border text-sm font-medium transition active:scale-[0.98] ${
+                  className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-center text-sm font-medium transition active:scale-[0.98] ${
                     elegida(o)
-                      ? "border-acento bg-acento/15 text-texto"
-                      : "border-borde bg-superficie/70 text-texto-suave hover:border-texto-suave hover:text-texto"
+                      ? "border-2 border-acento bg-acento/10 text-texto [&_svg]:text-acento"
+                      : "border border-borde bg-superficie/80 text-texto-suave hover:border-texto-suave hover:text-texto"
                   }`}
                 >
                   <IconoDeEquipo icono={o.icono} />
                   {o.etiqueta}
-                  {elegida(o) && (
-                    <span className="absolute top-2 right-2.5 text-[10px] font-semibold tracking-wider text-acento uppercase">
-                      Elegido
-                    </span>
-                  )}
                 </button>
               ))}
               <button
@@ -324,14 +369,14 @@ export default function QueSeRompio() {
                   setEntendido({ ...entendido, clase: "otro" });
                   setOtro("");
                 }}
-                className={`flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border text-sm font-medium transition active:scale-[0.98] ${
+                className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-2xl text-sm font-medium transition active:scale-[0.98] ${
                   otro !== null
-                    ? "border-acento bg-acento/15 text-texto"
-                    : "border-dashed border-borde bg-superficie/40 text-texto-suave hover:text-texto"
+                    ? "border-2 border-acento bg-acento/10 text-texto [&_svg]:text-acento"
+                    : "border border-dashed border-borde bg-superficie/40 text-texto-suave hover:text-texto"
                 }`}
               >
                 <IconoDeEquipo icono="otro" />
-                Otro equipo
+                Otro
               </button>
             </div>
             {otro !== null && (
@@ -346,23 +391,15 @@ export default function QueSeRompio() {
             )}
           </div>
           <BarraAccion>
-            {bloqueo && (
-              <div
-                role="alert"
-                className="rounded-2xl border border-peligro/50 bg-peligro/10 p-4 text-peligro"
-              >
-                <p className="flex items-center gap-2 font-semibold">
-                  <Alerta /> Riesgo alto
-                </p>
-                <p className="mt-1 text-sm">
-                  {bloqueo.derivacion ?? "Esto lo tiene que ver un técnico. No lo abras ni lo manipules."}
-                </p>
-              </div>
-            )}
             <BotonPrincipal onClick={confirmar} disabled={!listo}>
-              {bloqueo ? "Entendí, sigamos con cuidado" : "Sí, sigamos"} <Flecha />
+              {bloqueo
+                ? "Entendí, sigamos con cuidado"
+                : otro === null && nombreEquipo
+                  ? `Sí, es mi ${nombreEquipo}`
+                  : "Sí, sigamos"}{" "}
+              <Flecha />
             </BotonPrincipal>
-            <BotonSecundario onClick={contarDeNuevo}>No, te lo cuento de nuevo</BotonSecundario>
+            <BotonSecundario onClick={contarDeNuevo}>Te lo cuento de nuevo</BotonSecundario>
           </BarraAccion>
         </>
       )}

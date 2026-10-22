@@ -1,0 +1,171 @@
+{
+  "tipo": "televisor",
+  "tipoEquipo": "televisor",
+  "equipo": "Samsung UE40MU6409U (40\")",
+  "pack": {
+    "modelo": "Samsung UE40MU6409U (40\")",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "pantalla_panel",
+        "nombre": "pantalla panel",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "retroiluminacion",
+        "nombre": "retroiluminacion",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tira_led_1",
+        "nombre": "tira led 1",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tira_led_2",
+        "nombre": "tira led 2",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "fuente",
+        "nombre": "fuente",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa_control",
+        "nombre": "placa control",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_izquierdo",
+        "nombre": "parlante izquierdo",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_derecho",
+        "nombre": "parlante derecho",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tapa_trasera",
+        "nombre": "tapa trasera",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": [],
+    "rasgos3D": {
+      "televisor": {
+        "apoyo": "central"
+      }
+    }
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 90.37,
+    "y": 51.98,
+    "z": 5.42,
+    "fuente": "https://www.videotesty.pl/produkt/108931/",
+    "nota": "Sin pie (con pie: 90,37 × 57,33 × 30,41 cm). Ficha de Samsung UE40MU6409UXZG publicada por videotesty.pl (no se encontró la ficha del fabricante en línea)."
+  },
+  "fotos": [
+    {
+      "archivo": "televisor-atras.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/77/Samsung_UE40MU6409U_-_case_opened-4622.jpg",
+      "pagina": "https://commons.wikimedia.org/wiki/File:Samsung_UE40MU6409U_-_case_opened-4622.jpg",
+      "licencia": "CC BY-SA 4.0, Raimond Spekking (Wikimedia Commons)",
+      "descripcion": "por atrás, sin la tapa trasera, acostado y fotografiado casi de frente: placa principal, fuente y los dos parlantes",
+      "derecha": "+x",
+      "abajo": "-y",
+      "marco": "carcasa_televisor",
+      "esquinas": {
+        "ai": [
+          145,
+          210
+        ],
+        "ad": [
+          6240,
+          220
+        ],
+        "bd": [
+          6215,
+          3620
+        ],
+        "bi": [
+          160,
+          3640
+        ]
+      },
+      "piezas": {
+        "placa_control": [
+          1677,
+          1704
+        ],
+        "fuente": [
+          4665,
+          1795
+        ],
+        "parlante_derecho": [
+          1477,
+          3314
+        ],
+        "parlante_izquierdo": [
+          4810,
+          3300
+        ]
+      },
+      "nota": "El contorno es la chapa trasera del panel (la tapa trasera está sacada), no la tapa. Izquierdo/derecho como los ve quien mira la pantalla: desde atrás, el parlante izquierdo queda a la derecha de la foto. Equipo de referencia cambiado del LG 43UQ7500PSF sugerido porque no se encontraron fotos de su interior."
+    },
+    {
+      "archivo": "televisor-frente.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Samsung_UE40MU6409U-4613.jpg",
+      "pagina": "https://commons.wikimedia.org/wiki/File:Samsung_UE40MU6409U-4613.jpg",
+      "licencia": "CC BY-SA 4.0, Raimond Spekking (Wikimedia Commons)",
+      "descripcion": "frente, pantalla apagada, con el pie central",
+      "derecha": "-x",
+      "abajo": "-y",
+      "marco": "carcasa_televisor",
+      "esquinas": {
+        "ai": [
+          180,
+          185
+        ],
+        "ad": [
+          5137,
+          143
+        ],
+        "bd": [
+          5115,
+          2950
+        ],
+        "bi": [
+          225,
+          2955
+        ]
+      },
+      "piezas": {
+        "pantalla_panel": [
+          2664,
+          1556
+        ]
+      },
+      "nota": "Contorno sin el pie. Solo se ve la pantalla; leve perspectiva (lado derecho un poco más alto)."
+    }
+  ]
+}

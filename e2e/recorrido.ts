@@ -4,7 +4,7 @@ import { fotoDeEjemplo, type TipoFoto } from "./ayudas";
 /**
  * Atajos para llegar a una pantalla como lo haría una persona, sin las revisiones del recorrido
  * completo (flujo.e2e.ts). Todo con NEXT_PUBLIC_DATOS=fixture: sin IA ni internet.
- * Funcionan con o sin los arreglos pendientes (ej. la ficha con o sin "Confirmar todo").
+ * Funcionan con o sin los arreglos pendientes (ej. la ficha con o sin "Está bien, seguir").
  */
 
 export const SINTOMA = "Mi notebook se apaga sola a los diez minutos";
@@ -15,7 +15,8 @@ export const dice = (page: Page) => page.locator("main p[aria-live=polite]").fir
 export async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton = "Elegir de la galería") {
   const [selector] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByText(boton, { exact: true }).click(),
+    // Con solo un ícono (la galería) el nombre está en aria-label; "Elegir otra" tiene texto.
+    page.getByLabel(boton, { exact: true }).or(page.getByText(boton, { exact: true })).first().click(),
   ]);
   await selector.setFiles(fotoDeEjemplo(tipo, intento));
 }
@@ -24,13 +25,12 @@ export async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton =
 export async function llegarALaFicha(page: Page) {
   await page.goto("/");
   await expect(page.locator(".inicio")).toBeHidden(); // pantalla de carga (~2 s)
-  await page.getByRole("textbox", { name: "Lo que se rompió" }).fill(SINTOMA);
+  await page.getByRole("textbox", { name: "Lo que pasó" }).fill(SINTOMA);
   await page.getByRole("button", { name: /Seguir/ }).click();
-  await page.getByRole("button", { name: /Sí, sigamos/ }).click();
+  await page.getByRole("button", { name: /Sí, (sigamos|es mi )/ }).click();
   await expect(page).toHaveURL(/\/fotos$/);
 
   // Fixture: frente aceptada; la primera etiqueta sale movida y se elige otra.
-  await expect(page.getByText("Foto 1 de", { exact: false })).toBeVisible();
   await subirFoto(page, "frente");
   await expect(dice(page)).toContainText("Dala vuelta");
   await subirFoto(page, "etiqueta", 1);
@@ -38,15 +38,15 @@ export async function llegarALaFicha(page: Page) {
   await subirFoto(page, "etiqueta", 2, "Elegir otra");
   await page.getByRole("button", { name: /Leer la etiqueta|Reconocer el equipo/ }).click();
   await expect(page).toHaveURL(/\/ficha$/);
-  await expect(dice(page)).toContainText("Esto leí en la etiqueta.");
+  await expect(dice(page)).toContainText("Revisá lo que leí");
 }
 
 /**
- * Confirma la ficha como la persona: con "Confirmar todo" si existe (#228); si no, "Correcto" en
+ * Confirma la ficha como la persona: con "Está bien, seguir" si existe (#228); si no, "Correcto" en
  * cada dato y "Sí, es este".
  */
 export async function confirmarFicha(page: Page) {
-  const todo = page.getByRole("button", { name: /Confirmar todo/ });
+  const todo = page.getByRole("button", { name: /Está bien, seguir/ });
   if (await todo.isVisible()) {
     await todo.click();
   } else {

@@ -1,0 +1,13 @@
+{
+ "familia":"tv_variantes",
+ "tipo":"televisor",
+ "dato_pack":"rasgos3D.televisor.apoyo",
+ "variantes":[
+  {"dato":"central","nodo":"carcasa_tv_dato@pie_central"},
+  {"dato":"laterales","nodo":"carcasa_tv_dato@pie_laterales"}
+ ],
+ "sin_dato":"Conservar la carcasa y el apoyo actuales",
+ "activacion":"Solo formaBiblioteca explícita, incluir su nombre en la carga del visor",
+ "tamanos_probados_pulgadas":[46,32],
+ "coordinacion":302
+}

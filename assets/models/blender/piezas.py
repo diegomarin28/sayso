@@ -1707,6 +1707,31 @@ FAMILIAS = {
 #                  `tramo:a:redondo`: además, la sección (los otros dos ejes) escala igual
 # Se busca por nombre exacto (variante), después por el tipo; un alias usa la regla de su forma.
 AJUSTES = {
+    "camara_celular_dato@1": "proporcional",
+    "camara_celular_dato@2": "proporcional",
+    "camara_celular_dato@3": "proporcional",
+    "pantalla_celular_dato@con_muesca": "libre",
+    "pantalla_celular_dato@sin_muesca": "libre",
+    "marco_celular_dato@redondeados": "libre",
+    "marco_celular_dato@rectos": "libre",
+
+    "carcasa_auricular_dato@diadema": "libre",
+    "carcasa_auricular_dato@copa": "libre",
+    "carcasa_auricular_dato@almohadilla": "libre",
+
+    "carcasa_tv_dato@pie_central": "libre",
+    "carcasa_tv_dato@pie_laterales": "libre",
+    "pantalla_tablet_dato@con_boton": "libre",
+    "pantalla_tablet_dato@sin_boton": "libre",
+    "caja_reloj_dato@cuadrada_c1": "proporcional",
+    "caja_reloj_dato@cuadrada_c2": "proporcional",
+    "caja_reloj_dato@cuadrada_s1": "proporcional",
+    "caja_reloj_dato@cuadrada_s2": "proporcional",
+    "caja_reloj_dato@redonda_c1": "redondo:xz",
+    "caja_reloj_dato@redonda_c2": "redondo:xz",
+    "caja_reloj_dato@redonda_s0": "redondo:xz",
+    "caja_reloj_dato@redonda_s1": "redondo:xz",
+    "caja_reloj_dato@redonda_s2": "redondo:xz",
     "bandeja_papel@laser": "libre",
     "bandeja_papel@tinta": "libre",
     "placa@impresora": "libre",

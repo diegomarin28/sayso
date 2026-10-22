@@ -16,6 +16,7 @@ const EQUIPOS: { palabras: RegExp; clase: Caso["clase"]; tipo: string }[] = [
   { palabras: /\b(microondas)\b/i, clase: "otro", tipo: "microondas" },
   { palabras: /\b(tele|televisor|tv|smart tv)\b/i, clase: "otro", tipo: "televisor" },
   { palabras: /\b(impresora)\b/i, clase: "otro", tipo: "impresora" },
+  { palabras: /\b(monitor)\b/i, clase: "otro", tipo: "monitor" },
 ];
 
 /** Una palabra que puede decir algo (tiene vocal y al menos 2 letras): "dddd" no cuenta. */
@@ -46,4 +47,13 @@ const RELLENO = new Set(["mi", "el", "la", "los", "las", "un", "una", "de", "del
 /** La IA (o la simulada) no supo qué equipo es: hay que volver a preguntar. */
 export function sinEntender(clase: Caso["clase"], tipoEquipo: string | null | undefined): boolean {
   return clase === "otro" && (!tipoEquipo?.trim() || tipoEquipo.trim().toLowerCase() === "equipo");
+}
+
+/**
+ * El síntoma para citarlo en «Entendí: es tu … y “…”»: sin la puntuación del final (si no, «“se apaga sola.”.»)
+ * y con minúscula solo en la primera letra (un «HDMI» o un modelo quedan como los escribió la persona).
+ */
+export function sintomaParaCitar(sintoma: string): string {
+  const s = sintoma.trim().replace(/[\s.,;:!?…]+$/u, "");
+  return s.charAt(0).toLocaleLowerCase("es") + s.slice(1);
 }

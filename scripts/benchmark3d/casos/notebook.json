@@ -1,0 +1,165 @@
+{
+  "tipo": "notebook",
+  "tipoEquipo": "notebook",
+  "equipo": "Lenovo IdeaPad 3 15ADA05 (81W1)",
+  "pack": {
+    "modelo": "Lenovo IdeaPad 3 15ADA05 (81W1)",
+    "clase": "notebook",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "placa_madre",
+        "nombre": "placa madre",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ventilador",
+        "nombre": "ventilador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "disipador",
+        "nombre": "disipador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bateria",
+        "nombre": "bateria",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ram",
+        "nombre": "ram",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ssd",
+        "nombre": "ssd",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "wifi",
+        "nombre": "wifi",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_izquierdo",
+        "nombre": "parlante izquierdo",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "parlante_derecho",
+        "nombre": "parlante derecho",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tapa_inferior",
+        "nombre": "tapa inferior",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "teclado_notebook",
+        "nombre": "teclado notebook",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "pantalla",
+        "nombre": "pantalla",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": []
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 36.22,
+    "y": 1.99,
+    "z": 25.34,
+    "fuente": "https://psref.lenovo.com/syspool/Sys/PDF/IdeaPad/IdeaPad_3_15ADA05/IdeaPad_3_15ADA05_Spec.pdf",
+    "nota": "Lenovo PSREF: «Dimensions (WxDxH) 362.2 x 253.4 x 19.9 mm». Cerrada: x = ancho, y = espesor, z = profundidad."
+  },
+  "fotos": [
+    {
+      "archivo": "notebook-abajo-sin-tapa.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/CJItMPlAmBAARSPk.full",
+      "pagina": "https://www.ifixit.com/Guide/Lenovo+IdeaPad+3-15ADA05+Touchpad+Replacement/184087",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit, guía de Andres UKY); solo uso interno, no se sube",
+      "descripcion": "por abajo, sin la tapa inferior, bisagra arriba en la foto: ventilador, placa, wifi, RAM, pila, batería y parlantes",
+      "derecha": "+x",
+      "abajo": "+z",
+      "marco": "base",
+      "esquinas": {
+        "ai": [
+          160,
+          192
+        ],
+        "ad": [
+          3790,
+          235
+        ],
+        "bd": [
+          3870,
+          2800
+        ],
+        "bi": [
+          35,
+          2795
+        ]
+      },
+      "piezas": {
+        "ventilador": [
+          1000,
+          920
+        ],
+        "placa_madre": [
+          2560,
+          1040
+        ],
+        "wifi": [
+          1730,
+          1250
+        ],
+        "ram": [
+          2480,
+          1200
+        ],
+        "pila_bios": [
+          3130,
+          1610
+        ],
+        "bateria": [
+          2010,
+          2140
+        ],
+        "parlante_izquierdo": [
+          3350,
+          2560
+        ],
+        "parlante_derecho": [
+          650,
+          2590
+        ]
+      },
+      "nota": "Vista por abajo: lo que en uso queda a la izquierda del usuario aparece a la DERECHA de la foto (los puertos de carga/HDMI/USB, que la 15ADA05 tiene a la izquierda, se ven a la derecha). Por eso parlante_izquierdo (el del lado izquierdo del usuario) está a la derecha de la foto. ram = el SO-DIMM (hay además memoria soldada al lado, a la derecha). No se anotó ssd (no se distingue el M.2 en la foto) ni disipador (ambiguo: aletas junto al ventilador vs. placa sobre el procesador). placa_madre = centro de la placa verde principal, en parte tapada por el heatpipe. Leve perspectiva (más ancha abajo)."
+    }
+  ]
+}

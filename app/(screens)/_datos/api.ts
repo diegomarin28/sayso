@@ -15,6 +15,7 @@ import {
 import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
 import { pedidosSimulados } from "./pedidos-simulados";
+import { precisarSimulado } from "./precisar-simulado";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -28,12 +29,30 @@ export const USAR_FIXTURE = process.env.NEXT_PUBLIC_DATOS === "fixture";
 /** Error que se le puede mostrar a la persona tal cual. */
 export class ErrorApi extends Error {}
 
+/** El pedido se cortó: tardó más que `TIEMPO_MAXIMO_MS` o se canceló al volver la red (`cancelarPedidosEnCurso`). */
+export class ErrorCortado extends ErrorApi {}
+
+/** Ninguna llamada espera más que esto (la más larga, el manual, tarda hasta ~2 min). */
+export const TIEMPO_MAXIMO_MS = 150_000;
+
+/** Los pedidos en camino, para poder cortarlos si quedaron colgados (el iPhone pausa la red en segundo plano). */
+const enCurso = new Set<AbortController>();
+
+/** ¿Hay algún pedido esperando respuesta? */
+export const hayPedidosEnCurso = () => enCurso.size > 0;
+
+/** Corta los pedidos en camino: fallan con `ErrorCortado` y se pueden volver a pedir. */
+export function cancelarPedidosEnCurso() {
+  for (const c of enCurso) c.abort("cancelado");
+}
+
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Las llamadas que cuestan IA se hacen una sola vez por clave mientras dure la sesión: si la
  * pantalla se monta dos veces, o la persona va atrás y adelante (incluso con la respuesta en
- * camino), se reusa la misma promesa. Si falla, se borra para poder reintentar.
+ * camino), se reusa la misma promesa. Si falla, se corta por tiempo o se cancela, se borra para poder
+ * reintentar (un pedido colgado guardado acá haría que reintentar devuelva la misma promesa colgada).
  */
 const yaPedidas = new Map<string, Promise<unknown>>();
 function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
@@ -41,7 +60,9 @@ function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
   if (previa) return previa as Promise<T>;
   const p = pedir();
   yaPedidas.set(clave, p);
-  p.catch(() => yaPedidas.delete(clave));
+  p.catch(() => {
+    if (yaPedidas.get(clave) === p) yaPedidas.delete(clave);
+  });
   return p;
 }
 
@@ -49,17 +70,34 @@ function unaVez<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
 const claveEquipo = (f: Ficha) => `${f.casoId}|${f.marca.valor ?? ""}|${f.modelo.valor ?? ""}`;
 
 async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): Promise<T> {
+  // Tiempo máximo para todo el pedido (respuesta y cuerpo): sin esto, una red que se cae a mitad deja la
+  // pantalla esperando para siempre.
+  const control = new AbortController();
+  const reloj = setTimeout(() => control.abort("tiempo"), TIEMPO_MAXIMO_MS);
+  enCurso.add(control);
+  const cortado = () =>
+    new ErrorCortado(
+      control.signal.reason === "tiempo" ? "Está tardando demasiado. Probá de nuevo." : "Se cortó la conexión. Probá de nuevo.",
+    );
   let res: Response;
+  let datos: unknown;
   try {
-    res = await fetch(ruta, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cuerpo),
-    });
-  } catch {
-    throw new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+    try {
+      res = await fetch(ruta, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo),
+        signal: control.signal,
+      });
+    } catch {
+      throw control.signal.aborted ? cortado() : new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+    }
+    datos = await res.json().catch(() => null);
+    if (control.signal.aborted) throw cortado();
+  } finally {
+    clearTimeout(reloj);
+    enCurso.delete(control);
   }
-  const datos: unknown = await res.json().catch(() => null);
   const pausa = mensajePausa(res.status, datos);
   if (pausa) throw new ErrorApi(pausa); // freno de gasto: no es un error de la app
   if (!res.ok) {
@@ -83,7 +121,15 @@ const conEventos = <T extends z.ZodRawShape>(forma: T) =>
 const RespPedidos = conEventos({ pedidos: z.array(PedidoDeFoto) });
 const RespCalidad = conEventos({ foto: Foto });
 const RespChapa = conEventos({ ficha: Ficha });
-const RespFicha = conEventos({ ficha: Ficha, listaParaPreparar: z.boolean() });
+const RespFicha = conEventos({
+  ficha: Ficha,
+  listaParaPreparar: z.boolean(),
+  /** Campos que cambiaron de valor (ej. "modelo" al precisarlo): es otro equipo. */
+  cambiados: z.array(z.string()).default([]),
+  /** El modelo es una familia ("MacBook Air"): preguntar la versión antes de buscar el manual (#359). */
+  precisar: z.object({ pregunta: z.string(), dondeMirar: z.string() }).optional(),
+});
+export type Precisar = NonNullable<z.infer<typeof RespFicha>["precisar"]>;
 const RespEntender = conEventos({
   /** El equipo en texto libre (ej. "heladera no frost"): se pasa a pedidos, chapa y al 3D. */
   tipoEquipo: z.string().optional(),
@@ -217,21 +263,32 @@ export async function leerChapa(
 
 type NombreCampo = "marca" | "modelo" | "serie" | "anio";
 
-/** La persona confirma la ficha: lo que miró queda confirmado, lo que corrigió también. */
+/**
+ * La persona confirma la ficha: lo que miró queda confirmado, lo que corrigió también.
+ * `precision`: la respuesta a `precisar.pregunta`, con la ficha que devolvió la llamada anterior ("" = "No sé").
+ */
 export async function confirmarFicha(
   ficha: Ficha,
   confirmados: NombreCampo[],
   correcciones: Partial<Record<NombreCampo, string | null>>,
+  { tipoEquipo, precision }: { tipoEquipo?: string | null; precision?: string } = {},
 ): Promise<z.infer<typeof RespFicha>> {
   if (USAR_FIXTURE) {
-    await esperar(300);
-    const nueva = { ...ficha, confirmadaPorUsuario: true };
+    await esperar(precision === undefined ? 300 : 1200);
+    const p = precisarSimulado({ ...ficha, confirmadaPorUsuario: true }, precision);
     return RespFicha.parse({
-      ficha: nueva,
-      listaParaPreparar: !!ficha.modelo.valor,
+      ficha: p.ficha,
+      listaParaPreparar: !!p.ficha.modelo.valor,
+      cambiados: p.cambiados,
+      ...(p.precisar ? { precisar: p.precisar } : {}),
     });
   }
-  return llamar("/api/ficha", { ficha, confirmados, correcciones }, RespFicha);
+  const tipo = tipoEquipo?.trim().slice(0, 60) || undefined;
+  return llamar(
+    "/api/ficha",
+    { ficha, confirmados, correcciones, tipoEquipo: tipo, ...(precision !== undefined ? { precision: precision.slice(0, 200) } : {}) },
+    RespFicha,
+  );
 }
 
 const RespKnowledge = conEventos({
@@ -252,6 +309,20 @@ const RespKnowledge = conEventos({
 });
 export type Preparado = Omit<z.infer<typeof RespKnowledge>, "eventos">;
 
+/** Solo para el fixture: las sospechas del pack de ejemplo, para ver «Lo que sospechamos» en Preparando. */
+const sospechasEjemplo = [
+  {
+    pieza: "ventilador",
+    porque: "Se calienta y hace ruido: el ventilador puede estar trabado o con polvo.",
+    chequeo: "Con el equipo andando, acercá el oído: si el ventilador raspa o no gira, es él.",
+  },
+  {
+    pieza: "disipador",
+    porque: "Con polvo acumulado el calor no sale y el equipo se apaga solo.",
+    chequeo: "Mirá por las rejillas: si ves una capa de pelusa, hay que limpiarlo.",
+  },
+];
+
 /** Busca y lee el manual del modelo y arma la guía (carril A). Tarda de 30 s a 2 min y cuesta ~1 USD. */
 export function prepararExperto(
   ficha: Ficha,
@@ -263,7 +334,7 @@ export function prepararExperto(
     return unaVez(`knowledge-fixture|${claveEquipo(ficha)}`, async () => {
       await esperar(2500);
       return RespKnowledge.parse({
-        pack: knowledgePackEjemplo,
+        pack: { ...knowledgePackEjemplo, sospechosas: sospechasEjemplo },
         manualUrl: null,
         manualFileId: null,
         paginasVistaExplosionada: [],

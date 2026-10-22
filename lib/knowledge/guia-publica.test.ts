@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fichaEjemplo } from "../../shared";
-import type { EnviarMensaje } from "../ia/claude";
+import { CORTE_POR_TIEMPO, LIMITES, type EnviarMensaje } from "../ia/claude";
 import { armarKnowledgePack, idDeGuiaIfixit, type CachePacks } from "./armar";
 import { enCastellano, lineasConCitas, parsearContenido } from "./lineas";
 import { repoEnMemoria } from "./manuales";
@@ -15,8 +15,10 @@ const INDICE = "https://soporte.ej.com/manual";
 const SECCIONES = ["Safety", "Introduction", "Display", "Battery", "Charging Port", "Speaker", "Camera", "Taptic Engine", "SIM Tray"];
 const urlSeccion = (i: number) => `https://soporte.ej.com/manual/${i}`;
 const GUIA_URL = "https://www.ifixit.com/Guide/Fono+X21+Charging+Port/3";
+const GUIA_FAN_URL = "https://www.ifixit.com/Guide/Fono+X21+Fan/4";
 
-function red(): typeof fetch {
+/** `conVentilador`: el equipo en iFixit también tiene la guía del ventilador. */
+function red(conVentilador = false): typeof fetch {
   return (async (url: string | URL) => {
     const u = String(url);
     if (u === INDICE) {
@@ -28,7 +30,20 @@ function red(): typeof fetch {
     const api = decodeURIComponent(u.replace("https://www.ifixit.com/api/2.0", ""));
     if (/^\/search\/.*x21.*\?filter=category/i.test(api)) return Response.json({ results: [{ title: "Fono X21" }] });
     if (api === "/wikis/CATEGORY/Fono X21") {
-      return Response.json({ title: "Fono X21", description: "Repair guides for the Fono X21 smartphone.", guides: [{ guideid: 3, title: "Fono X21 Charging Port Replacement", subject: "Charging Port", type: "replacement" }] });
+      const guias = [{ guideid: 3, title: "Fono X21 Charging Port Replacement", subject: "Charging Port", type: "replacement" }];
+      if (conVentilador) guias.push({ guideid: 4, title: "Fono X21 Fan Replacement", subject: "Fan", type: "replacement" });
+      return Response.json({ title: "Fono X21", description: "Repair guides for the Fono X21 smartphone.", guides: guias });
+    }
+    if (api === "/guides/4" && conVentilador) {
+      return Response.json({
+        guideid: 4,
+        title: "Fono X21 Fan Replacement",
+        url: GUIA_FAN_URL,
+        category: "Fono X21",
+        subject: "Fan",
+        author: { username: "Autora" },
+        steps: [{ stepid: 400, title: "Remove the fan", lines: [{ bullet: "black", text_raw: "Lift the fan out of its bracket." }] }],
+      });
     }
     if (api === "/guides/3") {
       return Response.json({
@@ -127,6 +142,27 @@ describe("guía pública del síntoma (sin pasos en el manual oficial)", () => {
     expect(r2.eventos.map((e) => e.tipo)).toContain("guia_publica_en_cache");
   });
 
+  it("una guía guardada para otro síntoma no se reusa si no es del tema: busca la del síntoma (batería ≠ ventilador)", async () => {
+    const manuales = repoEnMemoria();
+    const c = claude(false);
+    const deps = { enviar: c.enviar, fetch: red(true), cache: sinCache, manuales, subir: async () => "f" };
+    await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, deps);
+    expect(await manuales.buscar("Fono", "X21")).toMatchObject({ fuentes_publicas: [GUIA_URL] });
+
+    const r2 = await armarKnowledgePack({ ficha, sintoma: "se calienta y el ventilador hace ruido", tipoEquipo: "celular" }, deps);
+    expect(r2.pack.pasos[0].cita?.url).toBe(`${GUIA_FAN_URL}#s400`);
+    expect(r2.eventos.map((e) => e.tipo)).toContain("guia_ifixit_del_tema");
+    expect(r2.eventos.map((e) => e.tipo)).not.toContain("guia_publica_en_cache");
+  });
+
+  it("sin guía del tema en iFixit no usa la de otra pieza: sigue con la guía pública", async () => {
+    const c = claude(false);
+    const r = await armarKnowledgePack({ ficha, sintoma: "el ventilador hace ruido", tipoEquipo: "celular" }, { enviar: c.enviar, fetch: red(), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f" });
+    expect(c.etapas).not.toContain("bibliotecario: guía de iFixit");
+    expect(c.etapas).toContain("bibliotecario: guía pública");
+    expect(r.pack.pasos.some((p) => p.cita?.url?.startsWith(GUIA_URL))).toBe(false);
+  });
+
   it("si el manual solo dio chequeos sin cita (los habituales del tipo), no cuenta como guía del manual: sigue con iFixit", async () => {
     const manuales = repoEnMemoria();
     await manuales.guardar({ marca: "Fono", modelo: "X21", url: INDICE, titulo: "Fono X21 Repair Manual", verificado: true, fuente: "fabricante" });
@@ -135,6 +171,55 @@ describe("guía pública del síntoma (sin pasos en el manual oficial)", () => {
     const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales, subir: async () => "f" });
     expect(c.etapas).toContain("bibliotecario: guía de iFixit");
     expect(r.pack.pasos.some((p) => p.cita?.estado === "VERIFICADO")).toBe(true); // lo del manual adjunto, citado
+  });
+
+  it("triage: las sospechosas eligen la guía, llegan a la lectura y el código saca la reparación de otra pieza", async () => {
+    const etapas: string[] = [];
+    let tarea = "";
+    const enviar: EnviarMensaje = async (p, etapa) => {
+      etapas.push(etapa ?? "");
+      if (String(p.system).includes("bibliotecario")) return mensaje([{ type: "text", text: '{"encontrado":false,"url":null,"titulo":null,"fuente":null,"formato":null}' }]);
+      if (etapa === "bibliotecario: guía de iFixit") {
+        const contenido = p.messages[0].content as Anthropic.ContentBlockParam[];
+        tarea = JSON.stringify(contenido.at(-1));
+        const docs = contenido.filter((b) => b.type === "document").length;
+        const cita = [citaTexto(docs - 1, "Lift the fan out of its bracket.")];
+        return mensaje([
+          { type: "text", text: "PASO|1|Apagalo y prendelo de nuevo.||bajo|chequeo" },
+          { type: "text", text: "\nPASO|2|Para llegar al ventilador, sacá la tapa de atrás.|tapa_trasera|bajo|acceso", citations: cita },
+          { type: "text", text: "\nPASO|3|Cambiá la batería por una nueva.|bateria|medio|reparacion", citations: cita },
+          { type: "text", text: "\nPASO|4|Sacá el ventilador de su soporte y limpialo.|ventilador|bajo|reparacion", citations: cita },
+          { type: "text", text: "\nPASO|5|Poné la tapa y probalo.|tapa_trasera|bajo|armado", citations: cita },
+        ]);
+      }
+      return mensaje([{ type: "text", text: "nada útil" }]);
+    };
+    const sospechosas = [{ pieza: "ventilador", temas: ["fan"], porque: "El zumbido sale de ahí.", chequeo: "Acercá el oído con el celular andando." }];
+    const r = await armarKnowledgePack(
+      { ficha, sintoma: "hace un zumbido raro", tipoEquipo: "celular" },
+      { enviar, fetch: red(true), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f", triar: async () => ({ sospechosas, soloSoftware: false }) },
+    );
+    // Sin el triage, "zumbido" no nombra ningún tema y no había guía de iFixit: con él, la del ventilador.
+    expect(etapas).toContain("bibliotecario: guía de iFixit");
+    expect(r.pack.fuentes[0].url).toBe(GUIA_FAN_URL);
+    expect(tarea).toMatch(/<sospechosas>.*1\. ventilador: El zumbido sale de ahí\./);
+    expect(r.pack.pasos.map((p) => p.texto)).toEqual([
+      "Apagalo y prendelo de nuevo.",
+      "Para llegar al ventilador, sacá la tapa de atrás.",
+      "Sacá el ventilador de su soporte y limpialo.",
+      "Poné la tapa y probalo.",
+    ]);
+    expect(r.pack.pasos.map((p) => p.orden)).toEqual([1, 2, 3, 4]);
+    expect(r.pack.pasos[0]).not.toHaveProperty("rol"); // el rol no va al pack
+    expect(r.pack.sospechosas).toEqual([{ pieza: "ventilador", porque: "El zumbido sale de ahí.", chequeo: "Acercá el oído con el celular andando." }]);
+    expect(r.eventos.map((e) => e.tipo)).toEqual(expect.arrayContaining(["piezas_sospechosas", "pasos_fuera_de_tema"]));
+  });
+
+  it("sin triage (falló o es un test sin `triar`) la guía se arma como antes, sin sospechosas", async () => {
+    const c = claude(false);
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, fetch: red(), cache: sinCache, manuales: repoEnMemoria(), subir: async () => "f", triar: async () => null });
+    expect(r.pack.sospechosas).toBeUndefined();
+    expect(r.pack.pasos).toHaveLength(1);
   });
 
   it("reconoce la URL de una guía de iFixit", () => {
@@ -160,5 +245,92 @@ describe("solo castellano en lo que se dice (#169)", () => {
     );
     expect(c.piezas[0].ubicacion).toBe("cubre el frente del equipo");
     expect(c.advertencias).toEqual([]);
+  });
+});
+
+describe("presupuesto de tiempo de una guía nueva (MacBook Air: 281 s, a 19 s del corte de 300 s)", () => {
+  afterEach(() => vi.useRealTimers());
+  const conManualWeb = async () => {
+    const manuales = repoEnMemoria();
+    await manuales.guardar({ marca: "Fono", modelo: "X21", url: INDICE, titulo: "Fono X21 Repair Manual", verificado: true, fuente: "fabricante" });
+    return manuales;
+  };
+  const llamar = async () => JSON.stringify({ secciones: [urlSeccion(4), urlSeccion(3)] });
+  /** Envuelve el Claude falso: la lectura del manual web responde `lectura` (y puede "tardar" `tarda` ms). */
+  const conLectura = (lectura: Anthropic.Message, tarda = 0) => {
+    const c = claude(true);
+    const plazos: Record<string, number | undefined> = {};
+    const enviar: EnviarMensaje = async (p, etapa, escalada, opciones) => {
+      plazos[etapa ?? ""] = opciones?.hastaMs;
+      if (etapa === "bibliotecario: leer manual web") {
+        c.etapas.push(etapa);
+        c.pedidos.push(p);
+        if (tarda) vi.setSystemTime(Date.now() + tarda);
+        return lectura;
+      }
+      return c.enviar(p, etapa, escalada, opciones);
+    };
+    return { ...c, enviar, plazos };
+  };
+
+  it("la lectura del manual tiene 150 s como máximo y la guía, 200 s en total", async () => {
+    const c = conLectura(mensaje([{ type: "text", text: "nada útil" }]));
+    await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales: await conManualWeb(), subir: async () => "f" });
+    expect(c.plazos["bibliotecario: leer manual web"]).toBeLessThanOrEqual(LIMITES.lectura.presupuestoMs);
+    expect(c.plazos["bibliotecario: leer manual web"]).toBeGreaterThan(LIMITES.lectura.presupuestoMs - 5_000);
+    // Lo que sigue (la guía de iFixit) usa lo que queda de los 200 s.
+    expect(c.plazos["bibliotecario: guía de iFixit"]).toBeLessThanOrEqual(LIMITES.lectura.totalMs);
+  });
+
+  it("cortada por tiempo: usa las líneas que ya salieron, no cae en iFixit ni en la guía pública, y no se guarda", async () => {
+    const parcial = {
+      content: [{ type: "text", text: "PASO|1|Sacá los dos tornillos al lado del conector.|puerto_carga|medio", citations: [citaTexto(0, "Remove the two screws next to the connector and lift it with tweezers.")] }],
+      stop_reason: CORTE_POR_TIEMPO,
+    } as unknown as Anthropic.Message;
+    const c = conLectura(parcial);
+    let guardadas = 0;
+    const cache: CachePacks = { get: async () => undefined, set: async () => void guardadas++ };
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache, manuales: await conManualWeb(), subir: async () => "f" });
+    expect(r.pack.pasos.map((p) => p.texto)).toEqual(["Sacá los dos tornillos al lado del conector."]);
+    expect(r.pack.pasos[0].cita?.estado).toBe("VERIFICADO");
+    expect(c.etapas.filter((e) => /guía de iFixit|guía pública|completar/.test(e))).toEqual([]);
+    expect(r.eventos.map((e) => e.tipo)).toContain("lectura_cortada");
+    expect(guardadas).toBe(0);
+  });
+
+  const conFaltante = () =>
+    mensaje([
+      { type: "text", text: "PASO|1|Sacá los dos tornillos al lado del conector.|puerto_carga|medio", citations: [citaTexto(0, "Remove the two screws next to the connector and lift it with tweezers.")] },
+      { type: "text", text: "\nFALTA|cómo abrir el equipo|1" },
+    ]);
+  const pedidosCompletar = (c: { etapas: string[]; pedidos: Anthropic.MessageCreateParamsNonStreaming[] }) =>
+    c.pedidos.filter((_, i) => c.etapas[i] === "bibliotecario: completar la guía");
+
+  it("«completar la guía» tiene su propio tope de tokens, más bajo que el de la lectura", async () => {
+    const c = conLectura(conFaltante());
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales: await conManualWeb(), subir: async () => "f" });
+    expect(r.eventos.map((e) => e.tipo)).not.toContain("guia_incompleta");
+    // Cada fuente que prueba (el manual y, si no trae pasos, iFixit) usa el tope de completar.
+    const topes = pedidosCompletar(c).map((p) => p.max_tokens);
+    expect(topes.length).toBeGreaterThan(0);
+    expect(new Set(topes)).toEqual(new Set([LIMITES.lectura.maxTokensCompletar]));
+    expect(LIMITES.lectura.maxTokensCompletar).toBeLessThan(LIMITES.lectura.maxTokensPack);
+  });
+
+  it("si la lectura terminó después de ~120 s, saltea «completar la guía» y avisa que quedó incompleta", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const c = conLectura(conFaltante(), LIMITES.lectura.completarHastaMs + 1_000);
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales: await conManualWeb(), subir: async () => "f" });
+    expect(c.etapas).not.toContain("bibliotecario: completar la guía");
+    expect(r.pack.pasos).toHaveLength(1);
+    expect(r.eventos.find((e) => e.tipo === "guia_incompleta")?.mensaje).toMatch(/incompleta.*abrir el equipo/);
+  });
+
+  it("si la lectura sin pasos ya se comió el tiempo, no arranca otra fuente de 2 min (nunca pasa de ~200 s)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const c = conLectura(mensaje([{ type: "text", text: "nada útil" }]), LIMITES.lectura.totalMs - LIMITES.lectura.minRestoMs + 1_000);
+    const r = await armarKnowledgePack({ ficha, sintoma: "no carga", tipoEquipo: "celular" }, { enviar: c.enviar, llamar, fetch: red(), cache: sinCache, manuales: await conManualWeb(), subir: async () => "f" });
+    expect(c.etapas.filter((e) => /guía de iFixit|guía pública|completar/.test(e))).toEqual([]);
+    expect(r.pack.pasos).toEqual([]);
   });
 });

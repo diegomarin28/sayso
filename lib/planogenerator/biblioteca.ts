@@ -196,8 +196,14 @@ export function palabras(texto: string): string[] {
 }
 
 /** ¿El tipo de equipo (texto libre de la recepción) nombra alguno de los equipos de la variante? */
-function esPara(modelo: ModeloPieza, equipo: string[]): boolean {
-  return (modelo.equipos ?? []).some((e) => equipo.some((p) => p.startsWith(e)));
+function esPara(equipos: string[] = [], equipo: string[]): boolean {
+  return equipos.some((e) => equipo.some((p) => p.startsWith(e)));
+}
+
+/** Las variantes que no están marcadas para otro equipo; si no queda ninguna, todas (como si no se supiera el equipo). */
+function aplicablesA<T>(variantes: T[], equiposDe: (v: T) => string[] | undefined, equipo: string[]): T[] {
+  const aplicables = variantes.filter((v) => !equiposDe(v)?.length || esPara(equiposDe(v), equipo));
+  return aplicables.length ? aplicables : variantes;
 }
 
 /**
@@ -219,10 +225,7 @@ export function modeloPara(pieza: string, biblioteca?: BibliotecaPiezas, dim?: V
   let variantes = [...biblioteca].filter(([nombre]) => tipoDe(nombre) === mejor);
   const equipo = tipoEquipo ? palabras(tipoEquipo) : [];
   // Solo si la biblioteca conoce ese equipo (alguna variante lo nombra): "MacBook" no descarta nada.
-  if (equipo.length && [...biblioteca.values()].some((m) => esPara(m, equipo))) {
-    const aplicables = variantes.filter(([, m]) => !m.equipos?.length || esPara(m, equipo));
-    if (aplicables.length) variantes = aplicables;
-  }
+  if (equipo.length && [...biblioteca.values()].some((m) => esPara(m.equipos, equipo))) variantes = aplicablesA(variantes, ([, m]) => m.equipos, equipo);
   if (!dim || variantes.length === 1) return (variantes.find(([nombre]) => nombre === mejor) ?? variantes[0])[1];
   return variantes.reduce((a, b) => (deformacion(b[1], dim) < deformacion(a[1], dim) - EMPATE ? b : a))[1];
 }
@@ -268,6 +271,73 @@ export function deformacion(modelo: ModeloPieza, dim: Vec3): number {
   const tam = ejes(modelo.caja.getSize(new THREE.Vector3()));
   const d = medidas(dim);
   return costo(tam, d, orientacion(tam, d));
+}
+
+/** De una pieza del plano, lo que decide su forma en `modeloPara`. */
+export type PedidoForma = { pieza: string; dim?: Vec3; formaBiblioteca?: string };
+
+/**
+ * Cuánto puede diferir el costo con la caja del índice del costo con la del GLB: comprimir mueve cada eje
+ * hasta 0,5 % o 0,01 cm (lo controla un test de biblioteca.test.ts).
+ */
+const holgura = (tam: number[]) =>
+  tam.reduce((s, t) => {
+    const e = Math.max(0.005 * t, 0.01);
+    return s + Math.log(Math.max(t + e, 0.01) / Math.max(t - e, 0.01));
+  }, 0);
+
+/**
+ * Entre qué valores queda `deformacion` con una caja del índice: como mucho la de la orientación del
+ * modelo (o la mejor, si otra gana con seguridad), y como poco la de la mejor orientación.
+ */
+function deformacionEntre(tam: number[], dim: Vec3): [number, number] {
+  const d = medidas(dim);
+  const h = holgura(tam);
+  const minimo = Math.min(...ORIENTACIONES.map((o) => costo(tam, d, o)));
+  const comoEsta = costo(tam, d, ORIENTACIONES[0]);
+  const gira = comoEsta - minimo > MEJORA_MINIMA + EMPATE + 2 * h;
+  return [minimo - h, (gira ? minimo + EMPATE : comoEsta) + h];
+}
+
+/**
+ * Las formas que `modeloPara` puede elegir para estas piezas, sabiendo solo el índice (sin bajar ningún
+ * GLB): la `formaBiblioteca`, si existe; si no, las variantes de su tipo que deja el tipo de equipo y, con
+ * `dim`, solo las que pueden quedar a un empate de la que menos se deforma. Así una notebook no baja la
+ * pantalla del reloj ni la de la calculadora. El equipo se "conoce" con las mismas familias que baja
+ * `archivosPara`, como lo hacía `modeloPara` cuando el visor bajaba todas.
+ */
+export function formasPara(piezas: PedidoForma[], indice: IndicePiezas, tipoEquipo?: string): Set<string> {
+  const nombres = Object.keys(indice.tipos);
+  const equiposDe = (n: string) => palabras(indice.tipos[n].equipos);
+  const equipo = tipoEquipo ? palabras(tipoEquipo) : [];
+  const archivos = new Set(archivosPara(piezas.flatMap((p) => [p.pieza, ...(p.formaBiblioteca ? [p.formaBiblioteca] : [])]), indice));
+  const conoce = equipo.length > 0 && nombres.some((n) => archivos.has(indice.familias[indice.tipos[n].familia]) && esPara(equiposDe(n), equipo));
+  const formas = new Set<string>();
+  for (const p of piezas) {
+    if (p.formaBiblioteca && indice.tipos[p.formaBiblioteca]) {
+      formas.add(p.formaBiblioteca);
+      continue;
+    }
+    const tipo = tipoPara(p.pieza, nombres);
+    if (!tipo) continue;
+    let variantes = nombres.filter((n) => tipoDe(n) === tipo);
+    if (conoce) variantes = aplicablesA(variantes, equiposDe, equipo);
+    const dim = p.dim;
+    const cajas = dim && variantes.map((n) => indice.tipos[n].caja);
+    if (dim && cajas?.every(Boolean)) {
+      const rangos = cajas.map((c) => deformacionEntre(c!, dim));
+      const tope = Math.min(...rangos.map(([, max]) => max)) + EMPATE;
+      variantes = variantes.filter((_, i) => rangos[i][0] <= tope);
+    }
+    for (const n of variantes) formas.add(n);
+  }
+  return formas;
+}
+
+/** Los GLB de esas formas. */
+export function archivosDeFormas(formas: Iterable<string>, indice: IndicePiezas): string[] {
+  const familias = new Set([...formas].flatMap((n) => (indice.tipos[n] ? [indice.tipos[n].familia] : [])));
+  return [...familias].flatMap((f) => (indice.familias[f] ? [indice.familias[f]] : []));
 }
 
 /** En `tramo`, cada punta es este tanto del largo del modelo: no se estira, solo escala como la sección. */

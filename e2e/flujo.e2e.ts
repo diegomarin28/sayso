@@ -58,7 +58,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       // La pantalla de carga (logo que se arma, ~2 s) tapa todo hasta que se desvanece.
       await expect(page.locator(".inicio")).toBeHidden();
       await expect(dice(page)).toContainText("Hola. Contame qué se rompió.");
-      const campo = page.getByRole("textbox", { name: "Lo que se rompió" });
+      const campo = page.getByRole("textbox", { name: "Lo que pasó" });
       await expect(campo).toBeVisible();
       await expect(page.getByRole("button", { name: "Contalo con tu voz" })).toBeVisible();
       // "Seguir" aparece recién cuando hay algo escrito.
@@ -141,7 +141,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await expect(page.locator("dt", { hasText: "N.º de serie" })).toContainText("Probable");
       await expect(page.locator("dt", { hasText: "Año" })).toContainText("No se sabe");
       // Un solo botón confirma todo lo que está a la vista (#228); editar es solo si un dato está mal.
-      const es = page.getByRole("button", { name: /Confirmar todo/ });
+      const es = page.getByRole("button", { name: /Está bien, seguir/ });
       await expect(es).toBeEnabled();
       await revisarPantalla(page, libreta);
       await captura(page, info, "07-ficha");
@@ -156,7 +156,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await expect(page.getByRole("button", { name: "Editar Año" })).toContainText("2021");
 
       await expect(es).toBeEnabled();
-      await alAlcance(page, es, libreta, "Confirmar todo");
+      await alAlcance(page, es, libreta, "Está bien, seguir");
       await es.click();
       await expect(page).toHaveURL(/\/preparando$/);
     });

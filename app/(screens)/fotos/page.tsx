@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PedidoDeFoto } from "@/shared";
 import { ErrorApi, evaluarFoto, pedidosDeFoto } from "../_datos/api";
+import { instruccionDeToma } from "../_datos/instruccion-foto";
 import { dondeBuscarModelo } from "../_datos/donde-modelo";
 import { ErrorImagen, prepararImagen, vistaPrevia } from "../_datos/imagen";
 import { useFlujo, type Toma } from "../_estado/flujo";
@@ -40,7 +41,17 @@ const DE_TIPO: Record<PedidoDeFoto["tipo"], string> = {
   otro: "que te pedí",
 };
 
+/**
+ * Next guarda las pantallas ya visitadas con su estado (cacheComponents usa <Activity>). El estado de
+ * esta pantalla es del caso: con otro caso arranca de cero (si no, la ficha de un caso nuevo traía las
+ * correcciones del anterior). Con el mismo caso (atrás, el logo) se conserva.
+ */
 export default function CapturaGuiada() {
+  const { caso } = useFlujo();
+  return <CapturaGuiadaDelCaso key={caso?.id ?? "sin-caso"} />;
+}
+
+function CapturaGuiadaDelCaso() {
   const router = useRouter();
   const caso = useRequiereCaso();
   const { agregarFoto, agregarEventos, captura, setCaptura, tipoEquipo } = useFlujo();
@@ -88,7 +99,8 @@ export default function CapturaGuiada() {
     }));
   }
 
-  async function alSacar(archivo: File | undefined) {
+  /** `alternativa`: la que se acaba de elegir (el estado todavía no la tiene); si no, la de la toma. */
+  async function alSacar(archivo: File | undefined, alternativa = toma.alternativa) {
     if (!archivo || !pedido || !caso) return;
     const i = actual;
     const intento = toma.intentos + 1;
@@ -103,7 +115,8 @@ export default function CapturaGuiada() {
       const imagen = await prepararImagen(archivo);
       actualizar(i, { url: vistaPrevia(imagen) });
       // La URL definitiva la pone /api/casos al subir la foto a Supabase.
-      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento, pedido.instruccion);
+      // Se juzga contra lo que se le pidió sacar: la alternativa elegida, si hay (#315).
+      const r = await evaluarFoto(caso.id, pedido.tipo, imagen, intento, instruccionDeToma(pedido.instruccion, alternativa));
       agregarFoto(r.foto, imagen);
       agregarEventos(r.eventos);
       actualizar(i, { revisando: false, resultado: r.foto });
@@ -141,7 +154,7 @@ export default function CapturaGuiada() {
     if (!archivo) return;
     setBuscarOtro(false);
     actualizar(actual, { alternativa });
-    void alSacar(archivo);
+    void alSacar(archivo, alternativa);
   }
 
   // Sin fotos no se puede reconocer el equipo: hace falta la etiqueta o, al menos, el frente.
@@ -155,9 +168,7 @@ export default function CapturaGuiada() {
   // También después de un rechazo (#255): la foto rechazada sigue en `toma.url` y antes el panel no se abría.
   const mostrarOtros = buscarOtro && pedido?.tipo === "etiqueta" && !toma.revisando && !aceptada;
   /** Qué hay que sacar ahora (si es de otro lugar, eso). */
-  const queSacar = toma.alternativa
-    ? `Sacale una foto a ${toma.alternativa.charAt(0).toLowerCase()}${toma.alternativa.slice(1)}, que se lea el modelo.`
-    : pedido?.instruccion;
+  const queSacar = pedido ? instruccionDeToma(pedido.instruccion, toma.alternativa) : undefined;
 
   const dice = errorPedidos
     ? errorPedidos
@@ -205,7 +216,7 @@ export default function CapturaGuiada() {
         </BarraAccion>
       )}
 
-      {pedidos && (
+      {pedidos && !terminado && (
         <ol className="flex gap-2">
           {pedidos.map((p, i) => {
             const t = tomas[i];
@@ -225,7 +236,10 @@ export default function CapturaGuiada() {
                     className="absolute inset-0 h-full w-full object-cover opacity-50"
                   />
                 )}
-                <span className="relative">{t?.alternativa ?? NOMBRE_TIPO[p.tipo]}</span>
+                {/* Sobre la foto, el nombre va en una pastilla oscura: sin fondo no se leía con fotos claras. */}
+                <span className={`relative ${ok && t?.url ? "rounded-md bg-fondo/80 px-1.5 py-0.5" : ""}`}>
+                  {t?.alternativa ?? NOMBRE_TIPO[p.tipo]}
+                </span>
                 {ok && (
                   <span className="absolute top-1.5 right-1.5 rounded-full bg-confirmado p-0.5 text-black">
                     <Check size={12} />
@@ -235,6 +249,39 @@ export default function CapturaGuiada() {
             );
           })}
         </ol>
+      )}
+
+      {/* Al terminar: las fotos que sirven, grandes, para ver qué se va a leer. Las salteadas, en una línea. */}
+      {pedidos && terminado && (
+        <div className="aparece flex flex-col gap-3">
+          <ul className="grid grid-cols-2 gap-3">
+            {pedidos.flatMap((p, i) => {
+              const t = tomas[i];
+              if (!t?.resultado?.aceptada || !t.url) return [];
+              return [
+                <li key={`${p.tipo}-${i}`} className="relative overflow-hidden rounded-2xl border border-confirmado/50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={t.url} alt={`Foto: ${NOMBRE_TIPO[p.tipo]}`} className="aspect-[4/3] w-full object-cover" />
+                  <span className="absolute bottom-2 left-2 rounded-md bg-fondo/85 px-2 py-0.5 text-xs font-medium">
+                    {t.alternativa ?? NOMBRE_TIPO[p.tipo]}
+                  </span>
+                  <span className="absolute top-2 right-2 rounded-full bg-confirmado p-1 text-black">
+                    <Check size={14} />
+                  </span>
+                </li>,
+              ];
+            })}
+          </ul>
+          {pedidos.some((_, i) => tomas[i]?.salteada) && (
+            <p className="text-sm text-texto-suave">
+              Salteaste:{" "}
+              {pedidos
+                .flatMap((p, i) => (tomas[i]?.salteada ? [NOMBRE_TIPO[p.tipo].toLowerCase()] : []))
+                .join(", ")}
+              .
+            </p>
+          )}
+        </div>
       )}
 
       {/* Sin etiqueta: dónde más buscar el modelo y sacarle foto a eso; o seguir sin ninguno. */}
@@ -283,7 +330,7 @@ export default function CapturaGuiada() {
           )}
 
           <label
-            className={`relative block aspect-[4/3] max-h-[55dvh] w-full cursor-pointer overflow-hidden rounded-3xl bg-superficie ${
+            className={`relative block aspect-[4/3] max-h-[40dvh] w-full cursor-pointer overflow-hidden rounded-3xl bg-superficie ${
               toma.revisando ? "pointer-events-none" : ""
             }`}
           >
@@ -306,14 +353,13 @@ export default function CapturaGuiada() {
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-texto-suave">
-                <span className="rounded-full bg-acento p-5 text-black">
-                  <Camara />
-                </span>
+                <Camara size={44} />
                 <span className="text-sm">Tocá para sacar la foto con la cámara</span>
               </div>
             )}
+            {/* Visor en cian (dato/escaneo); verde o rojo cuando ya se revisó. */}
             <Esquinas
-              color={aceptada ? "var(--confirmado)" : rechazada ? "var(--peligro)" : "var(--acento)"}
+              color={aceptada ? "var(--confirmado)" : rechazada ? "var(--peligro)" : "var(--dato)"}
             />
             {/* Carga de "revisar la foto": una rejilla y un cuadro de enfoque que salta por la foto. */}
             {toma.revisando && (
@@ -360,27 +406,35 @@ export default function CapturaGuiada() {
             </div>
           )}
 
-          {/* La foto grande abre la cámara; esto deja elegir una que ya esté en el celular. */}
+          {/* Como en la cámara del celular: galería a la izquierda, el disparador en el medio y saltar
+              a la derecha. (La foto grande también abre la cámara.) */}
           {!toma.revisando && !aceptada && !rechazada && !toma.error && (
-            <InputFoto alElegir={alSacar} className="-mt-4 border border-borde">
-              <Galeria /> Elegir de la galería
-            </InputFoto>
+            <div className="mt-auto grid grid-cols-3 items-center">
+              <InputFoto
+                alElegir={alSacar}
+                etiqueta="Elegir de la galería"
+                className="h-13 w-13 justify-self-start border border-borde bg-superficie px-0"
+              >
+                <Galeria />
+              </InputFoto>
+              <InputFoto
+                camara
+                alElegir={alSacar}
+                etiqueta="Sacar la foto"
+                className="h-19 w-19 justify-self-center rounded-full bg-acento px-0 text-black shadow-[0_0_0_6px_var(--fondo),0_0_0_8px_rgb(255_176_32/0.5)]"
+              >
+                <Camara size={30} />
+              </InputFoto>
+              <BotonSaltar pedido={pedido.tipo} alSaltar={() => (pedido.tipo === "etiqueta" ? setBuscarOtro(true) : saltar())} />
+            </div>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-4 text-sm text-texto-suave">
-            <span>
-              Foto {actual + 1} de {pedidos!.length}
-            </span>
-            {!toma.revisando && !aceptada && (
-              <button
-                onClick={() => (pedido.tipo === "etiqueta" ? setBuscarOtro(true) : saltar())}
-                // 44 px de alto para el dedo sin cambiar cómo se ve el link.
-                className="-my-3 -mr-2 min-h-11 px-2 underline underline-offset-4 hover:text-texto"
-              >
-                {pedido.tipo === "etiqueta" ? "No encuentro la etiqueta" : "No puedo, saltar"}
-              </button>
-            )}
-          </div>
+          {/* Con la foto rechazada, saltar sigue a mano (debajo de "Reintentar"). */}
+          {(rechazada || toma.error) && !toma.revisando && (
+            <div className="mt-auto flex justify-end">
+              <BotonSaltar pedido={pedido.tipo} alSaltar={() => (pedido.tipo === "etiqueta" ? setBuscarOtro(true) : saltar())} />
+            </div>
+          )}
         </>
       )}
 
@@ -467,20 +521,37 @@ function Galeria() {
   );
 }
 
+/** "Saltar" (o, en la etiqueta, buscar el modelo en otro lado). */
+function BotonSaltar({ pedido, alSaltar }: { pedido: string; alSaltar: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={alSaltar}
+      className="min-h-11 justify-self-end text-right text-sm text-texto-suave underline underline-offset-4 hover:text-texto"
+    >
+      {pedido === "etiqueta" ? "No la encuentro" : "Saltar"}
+    </button>
+  );
+}
+
 /** Botón que abre la cámara (`camara`) o la galería y manda la foto elegida. */
 function InputFoto({
   camara = false,
   alElegir,
+  etiqueta,
   className = "",
   children,
 }: {
   camara?: boolean;
   alElegir: (archivo: File | undefined) => void;
+  /** Para los botones que son solo un ícono. */
+  etiqueta?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <label
+      aria-label={etiqueta}
       className={`flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium transition hover:opacity-90 active:scale-[0.98] ${className}`}
     >
       <input

@@ -1,0 +1,164 @@
+{
+  "tipo": "consola",
+  "tipoEquipo": "consola de videojuegos",
+  "equipo": "Sony PlayStation 4 Slim (CUH-2215B)",
+  "pack": {
+    "modelo": "Sony PlayStation 4 Slim (CUH-2215B)",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "placa_consola",
+        "nombre": "placa consola",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "fuente",
+        "nombre": "fuente",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ventilador",
+        "nombre": "ventilador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "unidad_optica",
+        "nombre": "unidad optica",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "disipador",
+        "nombre": "disipador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "disco_duro",
+        "nombre": "disco duro",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "puerto_hdmi",
+        "nombre": "puerto hdmi",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "tapa_consola",
+        "nombre": "tapa consola",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": []
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 26.5,
+    "y": 3.9,
+    "z": 28.8,
+    "fuente": "https://www.playstation.com/en-ca/ps4/tech-specs/",
+    "nota": "Ficha oficial de Sony para la PS4 serie CUH-2000 (chasis Slim; la CUH-22xx usa el mismo): 265 × 39 × 288 mm (ancho × alto × profundidad), sin salientes. Acostada: x = ancho, y = alto, z = profundidad. La página no respondió a la descarga directa (conexión cortada); el dato se leyó en su extracto de búsqueda y coincide con la ficha japonesa (playstation.com/ja-jp/ps4/tech-specs) y con la de Dualshockers."
+  },
+  "fotos": [
+    {
+      "archivo": "consola-arriba-sin-placa.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/TpbxLYxIZmuSsiUd.full",
+      "pagina": "https://www.ifixit.com/Guide/PlayStation+4+Slim+Disc+Rollers+Replacement/172337",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit, guía de David Martinez); solo uso interno, no se sube",
+      "descripcion": "desde arriba, sin la tapa superior ni la chapa: fuente (caja negra, atrás), lectora, disipador y ventilador; frente abajo en la foto",
+      "derecha": "+x",
+      "abajo": "+z",
+      "marco": "tapa_consola",
+      "esquinas": {
+        "ai": [
+          970,
+          285
+        ],
+        "ad": [
+          3160,
+          270
+        ],
+        "bd": [
+          3650,
+          2580
+        ],
+        "bi": [
+          490,
+          2580
+        ]
+      },
+      "piezas": {
+        "fuente": [
+          2065,
+          620
+        ],
+        "unidad_optica": [
+          1450,
+          1750
+        ],
+        "disipador": [
+          2760,
+          1290
+        ],
+        "ventilador": [
+          2980,
+          1790
+        ]
+      },
+      "nota": "Contorno = borde superior del chasis (la tapa superior está sacada); el borde trasero queda bajo la fuente y se tomó en su borde de atrás, alineado con los laterales. Perspectiva moderada (la cámara está hacia el frente)."
+    },
+    {
+      "archivo": "consola-arriba-fuente.jpg",
+      "url": "https://guide-images.cdn.ifixit.com/igi/3AeQgjbtK1pLrGkY.full",
+      "pagina": "https://www.ifixit.com/Guide/PlayStation+4+Slim+Power+Supply+Replacement/103362",
+      "licencia": "CC BY-NC-SA 3.0 (iFixit, guía de Hernan Rodriguez); solo uso interno, no se sube",
+      "descripcion": "desde arriba, sin la tapa superior: fuente bajo la lámina de cobre (atrás) y ventilador bajo la reja de la chapa; la parte de atrás queda abajo en la foto",
+      "derecha": "-x",
+      "abajo": "-z",
+      "marco": "tapa_consola",
+      "esquinas": {
+        "ai": [
+          900,
+          215
+        ],
+        "ad": [
+          3700,
+          290
+        ],
+        "bd": [
+          4500,
+          2660
+        ],
+        "bi": [
+          45,
+          2650
+        ]
+      },
+      "piezas": {
+        "fuente": [
+          2440,
+          1980
+        ],
+        "ventilador": [
+          1430,
+          560
+        ]
+      },
+      "nota": "Vista girada 180° (atrás abajo, se ven los puertos traseros en la foto siguiente de la guía). Perspectiva fuerte; la fuente es la zona cubierta por la lámina de cobre (sus 4 tornillos en las esquinas, paso 3 de la guía)."
+    }
+  ]
+}

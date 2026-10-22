@@ -1,0 +1,172 @@
+{
+  "tipo": "heladera",
+  "tipoEquipo": "heladera",
+  "equipo": "Samsung RT38K5930S8 (freezer arriba)",
+  "pack": {
+    "modelo": "Samsung RT38K5930S8 (freezer arriba)",
+    "clase": "otro",
+    "verificado": false,
+    "fuentes": [
+      {
+        "doc": "pack de prueba del benchmark 3D"
+      }
+    ],
+    "piezas": [
+      {
+        "id": "puerta_freezer",
+        "nombre": "puerta freezer",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "puerta_heladera",
+        "nombre": "puerta heladera",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "compresor",
+        "nombre": "compresor",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "condensador",
+        "nombre": "condensador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "evaporador",
+        "nombre": "evaporador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "ventilador_evaporador",
+        "nombre": "ventilador evaporador",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "resistencia_deshielo",
+        "nombre": "resistencia deshielo",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "sensor_temperatura",
+        "nombre": "sensor temperatura",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "placa_control",
+        "nombre": "placa control",
+        "descripcion": "",
+        "ubicacion": ""
+      },
+      {
+        "id": "bandeja_verduras",
+        "nombre": "bandeja verduras",
+        "descripcion": "",
+        "ubicacion": ""
+      }
+    ],
+    "pasos": [],
+    "advertencias": [],
+    "repuestos": []
+  },
+  "fuera": [],
+  "medidas": {
+    "x": 67.5,
+    "y": 178.5,
+    "z": 66.8,
+    "fuente": "https://www.samsung.com/latin/refrigerators/top-mount-freezer/382l-elegant-inox-rt38k5930s8-ap/",
+    "nota": "Ficha de Samsung (RT38K5930S8/AP): ancho 675, alto 1785 (con bisagras), profundidad 668 mm (con y sin manijas)."
+  },
+  "fotos": [
+    {
+      "archivo": "heladera-frente.png",
+      "url": "https://images.samsung.com/is/image/samsung/latin-top-mount-freezer-rt38k5930s8-rt38k5930s8-ap-frontsilver-63729036?$ORIGIN_PNG$",
+      "pagina": "https://www.samsung.com/latin/refrigerators/top-mount-freezer/382l-elegant-inox-rt38k5930s8-ap/",
+      "licencia": "© Samsung Electronics, uso interno de evaluación, no se sube",
+      "descripcion": "frente, puertas cerradas (foto de producto, casi ortogonal)",
+      "derecha": "-x",
+      "abajo": "-y",
+      "marco": "carcasa_heladera",
+      "esquinas": {
+        "ai": [
+          716,
+          24
+        ],
+        "ad": [
+          1198,
+          24
+        ],
+        "bd": [
+          1198,
+          1222
+        ],
+        "bi": [
+          716,
+          1222
+        ]
+      },
+      "piezas": {
+        "puerta_freezer": [
+          957,
+          228
+        ],
+        "puerta_heladera": [
+          957,
+          827
+        ]
+      },
+      "nota": "Contorno sin las patas niveladoras. En el plano las puertas están en -z, así que el frente real es la cara -z (derecha = -x)."
+    },
+    {
+      "archivo": "heladera-abierta.png",
+      "url": "https://images.samsung.com/is/image/samsung/latin-top-mount-freezer-rt38k5930s8-rt38k5930s8-ap-frontopensilver-63729028?$ORIGIN_PNG$",
+      "pagina": "https://www.samsung.com/latin/refrigerators/top-mount-freezer/382l-elegant-inox-rt38k5930s8-ap/",
+      "licencia": "© Samsung Electronics, uso interno de evaluación, no se sube",
+      "descripcion": "frente con las dos puertas abiertas hacia la derecha (bisagras a la derecha)",
+      "derecha": "-x",
+      "abajo": "-y",
+      "marco": "carcasa_heladera",
+      "esquinas": {
+        "ai": [
+          593,
+          84
+        ],
+        "ad": [
+          1012,
+          84
+        ],
+        "bd": [
+          1012,
+          1200
+        ],
+        "bi": [
+          593,
+          1200
+        ]
+      },
+      "piezas": {
+        "bandeja_verduras": [
+          815,
+          1064
+        ],
+        "bisagra_superior": [
+          1020,
+          75
+        ],
+        "ventilador_evaporador": [
+          818,
+          202
+        ]
+      },
+      "nota": "Contorno = gabinete sin puertas ni patas. Las puertas abiertas no se anotan. ventilador_evaporador = rejilla circular «Twin Cooling» del freezer (el equipo tiene otra igual en el compartimiento de abajo: dos evaporadores con su ventilador)."
+    }
+  ]
+}

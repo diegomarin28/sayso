@@ -1,5 +1,7 @@
 # Experto al lado — Plan v4 (estructura final)
 
+> **Documento de la hackathon (17–18/10/2026), solo referencia.** Los horarios, fases y puertas ya no rigen; cómo se trabaja ahora está en `CLAUDE.md`.
+
 Hackatón Build 101 · 17–18 oct 2026 · equipo de 3 · ~15 h
 Estado: **rubro decidido**. Este documento es el plano final; de acá se arranca a construir, no a iterar la idea.
 
