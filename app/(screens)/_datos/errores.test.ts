@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { ErrorApi, ErrorCortado, MENSAJE_GENERICO, mensajeDeError, mensajeDeEstado } from "./errores";
+import {
+  ErrorApi,
+  ErrorCortado,
+  MENSAJE_GENERICO,
+  mensajeDeCuenta,
+  mensajeDeError,
+  mensajeDeEstado,
+  textoDeFalla,
+} from "./errores";
 import { ErrorImagen } from "./imagen";
 
 describe("mensajeDeEstado", () => {
@@ -31,5 +39,41 @@ describe("mensajeDeError", () => {
     expect(mensajeDeError(new TypeError("Cannot read properties of undefined (reading 'x')"))).toBe(MENSAJE_GENERICO);
     expect(mensajeDeError("boom")).toBe(MENSAJE_GENERICO);
     log.mockRestore();
+  });
+});
+
+describe("mensajeDeCuenta", () => {
+  it("deja pasar la frase que ya mandó el servidor", () => {
+    expect(mensajeDeCuenta(400, "Revisá el email.")).toBe("Revisá el email.");
+    expect(mensajeDeCuenta(401, "Falta iniciar la sesión.")).toBe("Falta iniciar la sesión.");
+  });
+
+  it("el límite de pedidos usa el mensaje de siempre", () => {
+    expect(mensajeDeCuenta(429, "Too many requests")).toBe(mensajeDeEstado(429));
+  });
+
+  it("la validación cruda no le llega a la persona", () => {
+    expect(mensajeDeCuenta(400, "Entrada inválida")).toBe("Revisá los datos y probá de nuevo.");
+    expect(mensajeDeCuenta(422)).toBe("Revisá los datos y probá de nuevo.");
+  });
+
+  it("sin mensaje, se decide por el estado", () => {
+    expect(mensajeDeCuenta(401)).toBe(mensajeDeEstado(401));
+    expect(mensajeDeCuenta(500)).toBe(MENSAJE_GENERICO);
+    expect(mensajeDeCuenta(504, "  ")).toBe(mensajeDeEstado(504));
+  });
+});
+
+describe("textoDeFalla", () => {
+  it("con internet, dice qué se trabó y que no se perdió nada", () => {
+    const t = textoDeFalla(true, "Esta pantalla");
+    expect(t.titulo).toBe("Esta pantalla se trabó.");
+    expect(t.detalle).toContain("No se perdió nada");
+  });
+
+  it("sin internet, dice que es la conexión", () => {
+    const t = textoDeFalla(false, "Sayso");
+    expect(t.titulo).toBe("Sin conexión.");
+    expect(t.detalle).toContain("vuelva internet");
   });
 });

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { contrasenaValida, REGLA_CONTRASENA } from "../../../lib/supabase/credenciales";
-import { ErrorCuenta, recuperar, RUTA_EXPORTAR, verificarCodigo } from "../_datos/cuenta";
+import { descargarCopia, ErrorCuenta, recuperar, verificarCodigo } from "../_datos/cuenta";
 import { useCaptcha } from "../_ui/captcha";
 import { BotonSecundario } from "../_ui/experto";
 
@@ -46,6 +46,7 @@ export function AjustesCuenta({
   const [ver, setVer] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const [descarga, setDescarga] = useState<{ bajando: boolean; error: string | null }>({ bajando: false, error: null });
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
 
   async function hacer(accion: () => Promise<void>) {
@@ -58,6 +59,16 @@ export function AjustesCuenta({
       setMensaje({ tipo: "error", texto: e instanceof ErrorCuenta ? e.message : "No se pudo. Probá de nuevo." });
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function bajarCopia() {
+    setDescarga({ bajando: true, error: null });
+    try {
+      await descargarCopia();
+      setDescarga({ bajando: false, error: null });
+    } catch (e) {
+      setDescarga({ bajando: false, error: e instanceof ErrorCuenta ? e.message : "No se pudo. Probá de nuevo." });
     }
   }
 
@@ -181,13 +192,19 @@ export function AjustesCuenta({
 
       <Seccion titulo="Tus datos">
         <p className="text-sm text-texto-suave">Un archivo con tus casos, fichas y fotos.</p>
-        <a
-          href={RUTA_EXPORTAR}
-          download
-          className="flex h-12 items-center justify-center rounded-xl border border-borde text-sm font-medium"
+        <button
+          type="button"
+          onClick={() => void bajarCopia()}
+          disabled={descarga.bajando}
+          className="flex h-12 items-center justify-center rounded-xl border border-borde text-sm font-medium disabled:opacity-40"
         >
-          Descargar una copia de mis casos
-        </a>
+          {descarga.bajando ? "Preparando el archivo…" : "Descargar una copia de mis casos"}
+        </button>
+        {descarga.error && (
+          <p role="alert" className="rounded-xl border border-peligro/40 bg-peligro/10 p-3 text-sm text-peligro">
+            {descarga.error}
+          </p>
+        )}
       </Seccion>
 
       <Seccion titulo="Borrar cuenta" peligro>

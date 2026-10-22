@@ -1,10 +1,14 @@
 "use client";
 
+import { textoDeFalla } from "./(screens)/_datos/errores";
+import { useEnLinea } from "./(screens)/_ui/en-linea";
+
 /**
  * Último recurso: se rompió el layout de la app. Reemplaza todo el documento, así que no hereda
  * `globals.css`: los colores son los de la identidad (fondo, texto y --acento) escritos acá.
  */
 export default function ErrorGlobal({ retry }: { error: unknown; retry: () => void }) {
+  const { titulo, detalle } = textoDeFalla(useEnLinea(), "Sayso");
   return (
     <html lang="es">
       <body
@@ -22,8 +26,8 @@ export default function ErrorGlobal({ retry }: { error: unknown; retry: () => vo
         }}
       >
         <div role="alert">
-          <h1 style={{ fontSize: 28, margin: "0 0 8px" }}>Sayso se trabó.</h1>
-          <p style={{ margin: 0, color: "#9db3c2" }}>No se perdió nada de lo que hiciste. Probá de nuevo.</p>
+          <h1 style={{ fontSize: 28, margin: "0 0 8px" }}>{titulo}</h1>
+          <p style={{ margin: 0, color: "#9db3c2" }}>{detalle}</p>
         </div>
         <button
           type="button"
