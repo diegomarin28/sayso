@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { fotosDelServidor, guiaDelServidor, sincronizarCasos, type FotoDelCaso, type Sincronizacion } from "../_datos/casos-servidor";
+import { fotosDelServidor, guiaDelServidor, mensajeSinGuia, sincronizarCasos, type FotoDelCaso, type Sincronizacion } from "../_datos/casos-servidor";
 import { leerCuenta } from "../_datos/cuenta";
 import {
   firmaCasos,
@@ -13,7 +13,7 @@ import {
   type CasoGuardado,
 } from "../_datos/mis-casos";
 import { useFlujo } from "../_estado/flujo";
-import { BarraAccion, BotonPrincipal, DiceExperto, Flecha, FlechaAtras, Pantalla, Persona } from "../_ui/experto";
+import { BarraAccion, BotonPrincipal, BotonSecundario, DiceExperto, Flecha, FlechaAtras, Pantalla, Persona } from "../_ui/experto";
 import { Hilo, MensajeIA, MensajeYo } from "../_ui/chat";
 import { charlaDelCaso, nombreDelEquipo } from "./charla";
 
@@ -57,6 +57,8 @@ export default function MisCasos() {
   /** Caso cuya guía se está bajando del servidor. */
   const [bajando, setBajando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** El error es de la sesión: además del mensaje se ofrece iniciar sesión. */
+  const [errorDeSesion, setErrorDeSesion] = useState(false);
   // null = sin saber todavía, o sin login disponible: no se muestra la invitación.
   const [conEmail, setConEmail] = useState<boolean | null>(null);
   useEffect(() => {
@@ -83,14 +85,18 @@ export default function MisCasos() {
   async function abrir(c: CasoGuardado) {
     if (bajando) return;
     setError(null);
+    setErrorDeSesion(false);
     if (!c.guia && c.guiaEnServidor) {
       setBajando(c.caso.id);
-      const guia = await guiaDelServidor(c.caso.id);
+      const r = await guiaDelServidor(c.caso.id);
       setBajando(null);
       // Sin la guía no se sigue: armarla de nuevo gastaría IA.
-      if (!guia) return setError("No pudimos traer la guía de este caso. Revisá la conexión y probá de nuevo.");
-      guardarGuiaBajada(c.caso.id, guia);
-      c = { ...c, guia };
+      if (!("guia" in r)) {
+        setErrorDeSesion(r.motivo === "sesion");
+        return setError(mensajeSinGuia(r.motivo));
+      }
+      guardarGuiaBajada(c.caso.id, r.guia);
+      c = { ...c, guia: r.guia };
     }
     retomar(c);
     // Con guía y plano guardados va directo al experto; si no, sigue desde donde quedó.
@@ -107,6 +113,7 @@ export default function MisCasos() {
             onClick={() => {
               setViendo(null);
               setError(null);
+              setErrorDeSesion(false);
             }}
             aria-label="Volver a Mis casos"
             className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-texto-suave transition hover:text-texto active:scale-95"
@@ -168,8 +175,9 @@ export default function MisCasos() {
               {error}
             </p>
           )}
+          {errorDeSesion && <BotonSecundario onClick={() => router.push("/cuenta")}>Iniciar sesión</BotonSecundario>}
           <BotonPrincipal onClick={() => void abrir(viendo)} disabled={!!bajando}>
-            {bajando ? "Trayendo la guía…" : textoSeguir(viendo)} <Flecha />
+            {bajando ? "Trayendo la guía…" : error ? "Probar de nuevo" : textoSeguir(viendo)} <Flecha />
           </BotonPrincipal>
         </BarraAccion>
       </Pantalla>
@@ -198,7 +206,9 @@ export default function MisCasos() {
         texto={
           casos.length
             ? "Estos son tus casos. Tocá uno para ver la charla y seguir."
-            : "Todavía no tenés casos guardados."
+            : sync === "fallo" || sync === "sesion"
+              ? "No pude traer tus casos."
+              : "Todavía no tenés casos guardados."
         }
       />
 

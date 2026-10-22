@@ -185,7 +185,7 @@ function CapturaGuiadaDelCaso() {
         : toma.revisando
           ? "Dejame ver si se entiende…"
           : toma.error
-            ? `${toma.error} Sacala otra vez.`
+            ? toma.error
             : rechazada
               ? "Esa foto no me sirve. Te explico abajo qué sacar."
               : aceptada

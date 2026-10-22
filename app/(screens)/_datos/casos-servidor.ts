@@ -59,15 +59,33 @@ export async function fotosDelServidor(id: string): Promise<FotoDelCaso[]> {
   }
 }
 
-/** La guía guardada de un caso de la sesión, o null si no está o no se pudo leer. */
-export async function guiaDelServidor(id: string): Promise<GuiaGuardada | null> {
-  if (SIN_SERVIDOR) return null;
+/** Por qué no se pudo traer una guía: "sesion" venció, "fallo" red o servidor, "vacio" no hay guía guardada. */
+export type MotivoSinGuia = Exclude<Sincronizacion, "ok"> | "vacio";
+
+export type ResultadoGuia = { guia: GuiaGuardada } | { motivo: MotivoSinGuia };
+
+/** Qué se le dice a la persona cuando la guía de un caso no baja (sin esa guía no se sigue: armarla de nuevo gastaría IA). */
+export function mensajeSinGuia(motivo: MotivoSinGuia): string {
+  switch (motivo) {
+    case "sesion":
+      return "Tu sesión venció, así que no puedo traer la guía de este caso. Iniciá sesión y probá de nuevo.";
+    case "vacio":
+      return "Este caso no tiene la guía guardada. Podés empezar uno nuevo desde el inicio.";
+    default:
+      return "No pudimos traer la guía de este caso. Revisá la conexión y probá de nuevo.";
+  }
+}
+
+/** La guía guardada de un caso de la sesión, o el motivo por el que no se pudo traer. Nunca tira error. */
+export async function guiaDelServidor(id: string): Promise<ResultadoGuia> {
+  if (SIN_SERVIDOR) return { motivo: "vacio" };
   try {
     const res = await fetch(`/api/casos/${encodeURIComponent(id)}`, { cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) return { motivo: sincronizacionDeEstado(res.status) === "sesion" ? "sesion" : "fallo" };
     const r = z.object({ guia: Guia.nullable() }).safeParse(await res.json());
-    return r.success ? r.data.guia : null;
+    if (!r.success) return { motivo: "fallo" };
+    return r.data.guia ? { guia: r.data.guia } : { motivo: "vacio" };
   } catch {
-    return null;
+    return { motivo: "fallo" };
   }
 }

@@ -16,7 +16,15 @@ import { mensajePausa } from "../../../lib/ia/pausa";
 import { entenderSimulado } from "./entender-simulado";
 import { pedidosSimulados } from "./pedidos-simulados";
 import { precisarSimulado } from "./precisar-simulado";
-import { ErrorApi, ErrorCortado, MENSAJE_GENERICO, mensajeDeEstado } from "./errores";
+import {
+  ErrorApi,
+  ErrorCortado,
+  MENSAJE_CORTADO,
+  MENSAJE_GENERICO,
+  MENSAJE_SIN_RED,
+  MENSAJE_TARDA,
+  mensajeDeEstado,
+} from "./errores";
 import type { ImagenB64 } from "./imagen";
 
 /**
@@ -73,9 +81,7 @@ async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): 
   const reloj = setTimeout(() => control.abort("tiempo"), TIEMPO_MAXIMO_MS);
   enCurso.add(control);
   const cortado = () =>
-    new ErrorCortado(
-      control.signal.reason === "tiempo" ? "Está tardando demasiado. Probá de nuevo." : "Se cortó la conexión. Probá de nuevo.",
-    );
+    new ErrorCortado(control.signal.reason === "tiempo" ? MENSAJE_TARDA : MENSAJE_CORTADO);
   let res: Response;
   let datos: unknown;
   try {
@@ -87,7 +93,7 @@ async function llamar<T>(ruta: string, cuerpo: unknown, esquema: z.ZodType<T>): 
         signal: control.signal,
       });
     } catch {
-      throw control.signal.aborted ? cortado() : new ErrorApi("No hay conexión. Revisá internet y probá de nuevo.");
+      throw control.signal.aborted ? cortado() : new ErrorApi(MENSAJE_SIN_RED);
     }
     datos = await res.json().catch(() => null);
     if (control.signal.aborted) throw cortado();

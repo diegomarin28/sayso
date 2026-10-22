@@ -1,3 +1,5 @@
+import { mensajeDeCuenta } from "./errores";
+
 /**
  * Cuenta y sesión desde las pantallas (docs/login.md). Todo pasa por `/api/cuenta/*`: la sesión
  * vive en cookies httpOnly y el navegador nunca ve el token ni habla con Supabase.
@@ -31,7 +33,7 @@ async function pedir<T>(ruta: string, init?: { metodo?: string; cuerpo?: unknown
   }).catch(() => null);
   if (!res) throw new ErrorCuenta("Sin conexión. Probá de nuevo.", "red");
   const datos = (await res.json().catch(() => ({}))) as T & { error?: string; codigo?: string };
-  if (!res.ok) throw new ErrorCuenta(datos.error ?? "No se pudo. Probá de nuevo.", datos.codigo ?? String(res.status));
+  if (!res.ok) throw new ErrorCuenta(mensajeDeCuenta(res.status, datos.error), datos.codigo ?? String(res.status));
   return datos;
 }
 
@@ -55,7 +57,29 @@ export const verificarCodigo = (
 export const salir = () => pedir<{ salido: true }>("/api/cuenta/salir", { cuerpo: {} });
 export const borrarCuenta = () =>
   pedir<{ borrado: true; casos: number }>("/api/cuenta", { metodo: "DELETE", cuerpo: { confirmar: "borrar" } });
-export const RUTA_EXPORTAR = "/api/cuenta/exportar";
+const RUTA_EXPORTAR = "/api/cuenta/exportar";
+
+/**
+ * Baja la copia de los casos como archivo. Se pide con `fetch` y no con un link: si el servidor falla,
+ * la persona ve el error en la pantalla en vez de un JSON de error descargado o una pestaña rota.
+ */
+export async function descargarCopia(): Promise<void> {
+  const res = await fetch(RUTA_EXPORTAR, { cache: "no-store" }).catch(() => null);
+  if (!res) throw new ErrorCuenta("Sin conexión. Probá de nuevo.", "red");
+  if (!res.ok) {
+    const datos = (await res.json().catch(() => ({}))) as { error?: string; codigo?: string };
+    throw new ErrorCuenta(mensajeDeCuenta(res.status, datos.error), datos.codigo ?? String(res.status));
+  }
+  const nombre = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "sayso-mis-casos.json";
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
 
 // ---------- Sesión anónima desde el primer uso (§1) ----------
 

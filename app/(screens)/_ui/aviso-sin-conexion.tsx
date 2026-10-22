@@ -1,27 +1,14 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEnLinea } from "./en-linea";
 
 /**
  * Una franja arriba cuando el navegador dice que no hay internet: explica por qué los botones que
- * necesitan la red fallan. Se va sola al volver. (El servidor y la primera pintura asumen que hay red.)
+ * necesitan la red fallan. Se va sola al volver.
  */
 
-const suscribir = (aviso: () => void) => {
-  window.addEventListener("online", aviso);
-  window.addEventListener("offline", aviso);
-  return () => {
-    window.removeEventListener("online", aviso);
-    window.removeEventListener("offline", aviso);
-  };
-};
-
 export function AvisoSinConexion() {
-  const conRed = useSyncExternalStore(
-    suscribir,
-    () => navigator.onLine,
-    () => true,
-  );
+  const conRed = useEnLinea();
   if (conRed) return null;
   return (
     <p
