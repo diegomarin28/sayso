@@ -493,3 +493,20 @@ describe("escena: luz de relleno desde la cámara", () => {
     expect(RELLENO.maximo).toBeLessThan(1.4);
   });
 });
+
+describe("escena: menos movimiento", () => {
+  it("con `reducido` la pieza llega al estado final en el primer cuadro; sin pedirlo, todavía va en camino", () => {
+    const { escena, estado } = preparar();
+    const e = con(estado, { t: "desplazar", pieza: "ventilador", vec: [20, 0, 0] });
+    animar(escena, estado, 0);
+    animar(escena, e, 10);
+    const enCamino = escena.nodos.get("ventilador")!.nodo.position.clone();
+    const { escena: otra } = preparar();
+    animar(otra, estado, 0, true);
+    animar(otra, e, 10, true);
+    const final = otra.nodos.get("ventilador")!.nodo.position;
+    animar(escena, e, 5000);
+    expect(final.distanceTo(escena.nodos.get("ventilador")!.nodo.position)).toBeLessThan(1e-6);
+    expect(enCamino.distanceTo(final)).toBeGreaterThan(1e-3);
+  });
+});
