@@ -64,13 +64,31 @@ export async function llegarAlExperto(page: Page) {
   await confirmarFicha(page);
   await page.getByRole("button", { name: /Ver al experto/ }).click();
   await expect(page).toHaveURL(/\/experto$/);
+  await cerrarAyudaDelExperto(page);
   await expect(page.getByText(/^Paso 1 de \d+$/)).toBeVisible();
 }
 
-/** Hace una pregunta por texto y espera a que el experto termine de pensar. */
+/** La primera vez que se entra al experto, «Así se usa esta pantalla» tapa todo: se cierra con «Entendido». */
+export async function cerrarAyudaDelExperto(page: Page) {
+  const ayuda = page.getByRole("dialog", { name: "Así se usa esta pantalla" });
+  await expect(ayuda).toBeVisible();
+  // El 3D por software ocupa el hilo mientras carga: el toque puede tardar más que los 15 s de siempre.
+  await ayuda.getByRole("button", { name: "Entendido" }).click({ timeout: 60_000 });
+  await expect(ayuda).toBeHidden();
+}
+
+/** El chat (uno solo) se abre con el ícono de mensajes, que suma las preguntas hechas: «Hablar con el experto (N)». */
+export const botonChat = (page: Page) => page.getByRole("button", { name: /^Hablar con el experto/ });
+export const chat = (page: Page) => page.getByRole("dialog", { name: "Hablar con el experto" });
+
+/**
+ * Hace una pregunta por texto: abre el chat, escribe y pregunta. En el celular el chat se cierra solo
+ * al preguntar (para ver la respuesta en la hoja y el 3D).
+ */
 export async function preguntar(page: Page, pregunta: string) {
-  const campo = page.getByRole("textbox", { name: "Pregunta para el experto" });
+  await botonChat(page).click({ timeout: 60_000 });
+  const campo = chat(page).getByRole("textbox", { name: "Pregunta para el experto" });
   await campo.fill(pregunta);
-  await page.getByRole("button", { name: "Preguntar", exact: true }).click();
-  await expect(campo).toHaveValue("");
+  await chat(page).getByRole("button", { name: "Preguntar", exact: true }).click();
+  await expect(chat(page)).toBeHidden();
 }

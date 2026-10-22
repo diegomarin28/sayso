@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { Libreta, captura, detalle3D, escucharConsola, lienzo3D, pantallaCongelada, prepararNavegador, revisarPantalla, sinRedNiIA } from "./ayudas";
-import { llegarALaFicha, llegarAlExperto, preguntar } from "./recorrido";
+import { botonChat, chat, llegarALaFicha, llegarAlExperto, preguntar } from "./recorrido";
 
 /**
  * Tests de los issues de la prueba real (18/10) cuyo arreglo todavía no está en main.
@@ -42,7 +42,7 @@ async function sinProblemas(libreta: Libreta) {
 
 // ---------- #227: la conversación se cierra siempre y la pantalla no queda congelada ----------
 
-test("#227 · «Conversación con el experto» se cierra con Cerrar y con atrás, y la pantalla no se congela @webkit", async ({
+test("#227 · «Hablar con el experto» (el chat) se cierra con Cerrar y con atrás, y la pantalla no se congela @webkit", async ({
   page,
   context,
 }, info) => {
@@ -51,9 +51,9 @@ test("#227 · «Conversación con el experto» se cierra con Cerrar y con atrás
   await llegarAlExperto(page);
   libreta.pantalla = "5 · Experto";
 
-  const charla = page.getByRole("dialog", { name: "Conversación con el experto" });
+  const charla = chat(page);
   const abrir = async () => {
-    await tocar(page.getByRole("button", { name: /^Conversación/ }));
+    await tocar(botonChat(page));
     await expect(charla).toBeVisible();
   };
 

@@ -36,7 +36,8 @@ async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton = "Elegi
   // Como la persona: toca el botón de la galería y elige una foto.
   const [selector] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByText(boton, { exact: true }).click(),
+    // La galería es un botón de solo ícono (se nombra por aria-label); "Elegir otra" tiene texto.
+    (boton === "Elegir de la galería" ? page.locator(`label[aria-label="${boton}"]`) : page.getByText(boton, { exact: true })).click(),
   ]);
   await selector.setFiles(fotoDeEjemplo(tipo, intento));
 }
@@ -57,28 +58,28 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await page.goto("/");
       // La pantalla de carga (logo que se arma, ~2 s) tapa todo hasta que se desvanece.
       await expect(page.locator(".inicio")).toBeHidden();
-      await expect(dice(page)).toContainText("Hola. Contame qué se rompió.");
+      await expect(dice(page)).toContainText("Hola. ¿Qué se rompió?");
       const campo = page.getByRole("textbox", { name: "Lo que pasó" });
       await expect(campo).toBeVisible();
       await expect(page.getByRole("button", { name: "Contalo con tu voz" })).toBeVisible();
-      // "Seguir" aparece recién cuando hay algo escrito.
-      const seguir = page.getByRole("button", { name: /Seguir/ });
-      await expect(seguir).toHaveCount(0);
+      // "Seguir" está siempre, pero apagado hasta que hay algo escrito.
+      const seguir = page.getByRole("button", { name: "Seguir", exact: true });
+      await expect(seguir).toBeDisabled();
       await revisarPantalla(page, libreta);
       await captura(page, info, "01-problema-vacia");
 
       await campo.click();
       await campo.pressSequentially(SINTOMA, { delay: 15, timeout: 90_000 });
-      await expect(seguir).toBeVisible();
+      await expect(seguir).toBeEnabled();
       await alAlcance(page, seguir, libreta, "Seguir");
       await seguir.click();
 
-      await expect(dice(page)).toContainText(
-        `Entendí: es tu notebook y “${SINTOMA.toLowerCase()}”. ¿Es así?`,
-      );
+      // Ahora es una charla: lo que contó la persona y la respuesta de Sayso (ya no es la frase grande).
+      await expect(page.locator("main")).toContainText(SINTOMA.toLowerCase());
+      await expect(page.locator("main")).toContainText("Entendí que es tu notebook. ¿Es así?");
       await expect(page.getByRole("button", { name: /^Notebook/ })).toHaveAttribute("aria-pressed", "true");
-      const si = page.getByRole("button", { name: /Sí, sigamos/ });
-      await alAlcance(page, si, libreta, "Sí, sigamos");
+      const si = page.getByRole("button", { name: /Sí, es mi notebook/ });
+      await alAlcance(page, si, libreta, "Sí, es mi notebook");
       await revisarPantalla(page, libreta);
       await captura(page, info, "02-problema-entendido");
       await si.click();
@@ -90,7 +91,9 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     await test.step("2 · sube las fotos (la etiqueta sale movida y la saca de nuevo)", async () => {
       // Notebook que se apaga sola: frente y etiqueta (los puertos solo se piden si el síntoma es de carga o conexión).
       await expect(dice(page)).toContainText("Sacá una foto de frente a tu notebook");
-      await expect(page.getByText("Foto 1 de 2")).toBeVisible();
+      await expect(page.getByText("2/6 · Fotos")).toBeVisible();
+      await expect(page.getByRole("listitem").filter({ hasText: /^Frente$/ })).toBeVisible();
+      await expect(page.getByRole("listitem").filter({ hasText: /^Etiqueta$/ })).toBeVisible();
       await revisarPantalla(page, libreta);
       await captura(page, info, "03-fotos-frente");
 
@@ -101,7 +104,6 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       // Etiqueta: aviso de seguridad antes de darla vuelta.
       await expect(dice(page)).toContainText("Dala vuelta y sacale una foto de cerca a la etiqueta de abajo.");
       await expect(page.getByText("Apagala y desenchufala antes de darla vuelta.")).toBeVisible();
-      await expect(page.getByText("Foto 2 de 2")).toBeVisible();
       await revisarPantalla(page, libreta);
       await captura(page, info, "04-fotos-etiqueta");
 
@@ -119,7 +121,7 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
 
       await expect(dice(page)).toContainText("Listo, ya tengo lo que necesito. Vamos a leer la etiqueta.");
       // Las dos miniaturas quedan con su tilde.
-      await expect(page.locator("ol li img")).toHaveCount(2);
+      await expect(page.locator("ul li img")).toHaveCount(2);
       const leer = page.getByRole("button", { name: /Leer la etiqueta/ });
       await alAlcance(page, leer, libreta, "Leer la etiqueta");
       await revisarPantalla(page, libreta);
@@ -132,14 +134,15 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     libreta.pantalla = "3 · Ficha";
     await test.step("3 · revisa la ficha, completa el año y confirma", async () => {
       await expect(dice(page)).toContainText("Leyendo la etiqueta…");
-      await expect(dice(page)).toContainText("Esto leí en la etiqueta.");
+      await expect(dice(page)).toContainText("Revisá lo que leí");
       await expect(page.getByRole("button", { name: "Editar Marca" })).toContainText("EJEMPLO");
       await expect(page.getByRole("button", { name: "Editar Modelo" })).toContainText("NB-15 (ficticio)");
       await expect(page.getByRole("button", { name: "Editar N.º de serie" })).toContainText("SN-0000-DEMO");
-      // Lo que leyó la IA no queda confirmado hasta que la persona lo revisa.
-      await expect(page.locator("dt", { hasText: "Marca" })).toContainText("Leído · revisalo");
-      await expect(page.locator("dt", { hasText: "N.º de serie" })).toContainText("Probable");
-      await expect(page.locator("dt", { hasText: "Año" })).toContainText("No se sabe");
+      // Lo que leyó la IA no queda confirmado hasta que la persona lo revisa: cada fila dice su estado.
+      const fila = (dato: string) => page.getByRole("button", { name: new RegExp(`^(Editar|Completar) ${dato}$`) });
+      await expect(fila("Marca").getByRole("img", { name: "Leído" })).toBeVisible();
+      await expect(fila("N.º de serie")).toContainText("Revisalo");
+      await expect(fila("Año")).toContainText("No lo encontré");
       // Un solo botón confirma todo lo que está a la vista (#228); editar es solo si un dato está mal.
       const es = page.getByRole("button", { name: /Está bien, seguir/ });
       await expect(es).toBeEnabled();
@@ -167,9 +170,8 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       await expect(dice(page)).toContainText("Busco el manual oficial de tu EJEMPLO NB-15 (ficticio)");
       await revisarPantalla(page, libreta);
       await captura(page, info, "09-preparando-buscando");
-      await expect(dice(page)).toContainText(
-        "Listo. Tengo el manual de tu EJEMPLO NB-15 (ficticio) y las piezas ubicadas.",
-      );
+      await expect(dice(page)).toContainText("Listo, ya tengo tu guía.");
+      await expect(page.getByText("EJEMPLO NB-15 (ficticio)", { exact: true })).toBeVisible();
       await expect(page.getByText("Manual de mantenimiento (ficticio)").first()).toBeVisible();
       await expect(page.getByText("No abras ni perfores la batería.")).toBeVisible();
       const ver = page.getByRole("button", { name: /Ver al experto/ });
@@ -185,6 +187,14 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     await test.step("5 · el experto arranca solo y el 3D dibuja algo", async () => {
       const lienzo = lienzo3D(page);
       await expect(lienzo).toBeVisible();
+
+      // La primera vez que se entra, "Así se usa esta pantalla" explica los íconos; se cierra con «Entendido».
+      const ayuda = page.getByRole("dialog", { name: "Así se usa esta pantalla" });
+      await expect(ayuda).toBeVisible();
+      await captura(page, info, "10b-experto-ayuda");
+      // El 3D por software ocupa el hilo mientras carga: el toque puede tardar más que los 15 s de siempre.
+      await ayuda.getByRole("button", { name: "Entendido" }).click({ timeout: 60_000 });
+      await expect(ayuda).toBeHidden();
 
       // Arranca solo con el síntoma de la pantalla 1: el paso a paso sale del pack del caso (fixture).
       const primerPaso = "Apagá, desenchufá y quitá la tapa inferior.";
@@ -263,20 +273,26 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
     libreta.pantalla = "6 · Pregunta";
     // Después de girar, la guía puede haber quedado esperando: la pregunta nueva la reemplaza.
     await test.step("6 · pregunta por texto y recibe respuesta", async () => {
-      const campo = page.getByRole("textbox", { name: "Pregunta para el experto" });
+      // Un solo chat: se abre con el ícono de mensajes (abajo a la derecha del 3D) y trae el campo para preguntar.
+      // Ya cuenta 1: el experto arrancó solo con el síntoma de la pantalla 1.
+      await page.getByRole("button", { name: /^Hablar con el experto \(1\)$/ }).click({ timeout: 60_000 });
+      const charla = page.getByRole("dialog", { name: "Hablar con el experto" });
+      await expect(charla).toBeVisible();
+      const campo = charla.getByRole("textbox", { name: "Pregunta para el experto" });
       await expect(campo).toBeVisible();
       await expect(campo).toBeInViewport();
+      await captura(page, info, "12a-chat-vacio");
       await campo.click();
       await campo.pressSequentially(PREGUNTA, { delay: 15, timeout: 90_000 });
-      const preguntar = page.getByRole("button", { name: "Preguntar", exact: true });
+      const preguntar = charla.getByRole("button", { name: "Preguntar", exact: true });
       await expect(preguntar).toBeEnabled();
       await preguntar.click();
-      await expect(campo).toHaveValue("");
 
+      // Al preguntar, el chat se cierra para ver la respuesta en la hoja y el 3D.
+      await expect(charla).toBeHidden();
       await expect(page.getByText("Batería: parte delantera. Te la marco en el 3D.")).toBeVisible();
       // Mientras llega dice "El experto dice"; cuando terminó, "Paso 1 de 1".
       await expect(page.getByText(/^(El experto dice|Paso 1 de 1)$/)).toBeVisible();
-      await expect(page.getByRole("button", { name: /Conversación/ })).toBeVisible();
       await page.waitForTimeout(1_500); // la cámara va a la pieza
       await revisarPantalla(page, libreta);
       await captura(page, info, "12-experto-respuesta");
@@ -286,9 +302,8 @@ test("recorrido completo: síntoma, fotos, ficha, preparando, experto 3D y una p
       if (!medida || medida.fraccionNoNegra <= 0.03)
         libreta.anotar("problema", `Después de la respuesta el 3D se ve negro (${JSON.stringify(medida)})`);
 
-      // La conversación queda guardada.
-      await page.getByRole("button", { name: /Conversación/ }).click();
-      const charla = page.getByRole("dialog", { name: "Conversación con el experto" });
+      // La conversación queda guardada; el ícono cuenta las preguntas (la del síntoma, que el experto hizo solo, y esta).
+      await page.getByRole("button", { name: "Hablar con el experto (2)" }).click({ timeout: 60_000 });
       await expect(charla).toBeVisible();
       await expect(charla).toContainText(PREGUNTA);
       await expect(charla).toContainText("Batería: parte delantera.");

@@ -123,7 +123,7 @@ export class Libreta {
 
 /**
  * Corta todo lo que no sea el servidor local y cualquier /api/* (en modo fixture las pantallas
- * no deberían llamar a ninguna). Lo cortado queda anotado como problema.
+ * no deberían llamar a ninguna). Lo cortado queda anotado como problema (salvo /api/cuenta, esperado y sin gasto).
  */
 export async function sinRedNiIA(context: BrowserContext, libreta: Libreta) {
   await context.route("**/*", (route) => {
@@ -134,6 +134,9 @@ export async function sinRedNiIA(context: BrowserContext, libreta: Libreta) {
       return route.abort("blockedbyclient");
     }
     if (url.pathname.startsWith("/api/")) {
+      // /api/cuenta lo pregunta la pantalla de inicio para saludar por el nombre (¿hay sesión?). En fixture se
+      // espera y se corta a propósito: no llama a IA ni gasta nada, así que no cuenta como problema.
+      if (url.pathname === "/api/cuenta") return route.abort("blockedbyclient");
       libreta.anotar("problema", `Pedido a ${url.pathname} en modo fixture (cortado: gastaría IA/servicios)`);
       return route.abort("blockedbyclient");
     }
@@ -289,7 +292,7 @@ export async function alAlcance(page: Page, boton: Locator, libreta: Libreta, no
 
 export async function captura(page: Page, info: TestInfo, nombre: string) {
   const ruta = info.outputPath(`${nombre}.png`);
-  await page.screenshot({ path: ruta, fullPage: true, animations: "disabled" });
+  await page.screenshot({ path: ruta, fullPage: true, animations: "disabled", timeout: 60_000 });
   await info.attach(nombre, { path: ruta, contentType: "image/png" });
 }
 
@@ -638,7 +641,7 @@ export async function detalle3D(page: Page, lienzo: Locator) {
 
 /**
  * Después de cerrar un modal: el navegador sigue dibujando, no quedó ningún modal ni bloqueo de
- * toques o scroll, y la caja de pregunta recibe el toque y deja escribir.
+ * toques o scroll, y la caja de pregunta (en el chat) recibe el toque y deja escribir.
  * Devuelve la lista de lo que falló (vacía = la pantalla responde).
  */
 export async function pantallaCongelada(page: Page): Promise<string[]> {
@@ -669,12 +672,17 @@ export async function pantallaCongelada(page: Page): Promise<string[]> {
   if (estado.modales > 0) fallas.push(`quedó ${estado.modales} modal abierto`);
   if (estado.bodyBloqueado) fallas.push("la página quedó con toques o scroll bloqueados");
 
-  const campo = page.getByRole("textbox", { name: "Pregunta para el experto" });
+  // El campo vive adentro del chat: se abre con el ícono de mensajes, se escribe y se vuelve a cerrar.
+  const charla = page.getByRole("dialog", { name: "Hablar con el experto" });
+  const campo = charla.getByRole("textbox", { name: "Pregunta para el experto" });
   try {
+    await page.getByRole("button", { name: /^Hablar con el experto/ }).tap({ timeout: 3000 });
     await campo.tap({ timeout: 3000 });
     await campo.fill("hola", { timeout: 3000 });
     if ((await campo.inputValue()) !== "hola") fallas.push("la caja de pregunta no deja escribir");
     await campo.fill("");
+    await charla.getByRole("button", { name: "Cerrar" }).tap({ timeout: 3000 });
+    await charla.waitFor({ state: "hidden", timeout: 3000 });
   } catch (e) {
     fallas.push(`la caja de pregunta no recibe el toque (${String(e).split("\n")[0].slice(0, 120)})`);
   }
