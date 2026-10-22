@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fuenteApi, GuiaExperto } from "@/components/viewer";
+import type { Ficha } from "@/shared";
 import { fuenteSimulada } from "@/components/viewer/guia/simulada";
 import { callar, desbloquearAudio, hablar } from "@/lib/voice/hablar";
 import { avisoRiesgoAlto } from "./aviso-riesgo";
@@ -11,6 +12,7 @@ import { USAR_FIXTURE } from "../_datos/api";
 import { useFlujo } from "../_estado/flujo";
 import { useRequiereCaso } from "../_estado/requiere-caso";
 import { Detener, Encabezado, Microfono, Papelera } from "../_ui/experto";
+import { Volviendo } from "../_ui/volviendo";
 import {
   fuenteConCierre,
   fuenteConRetomar,
@@ -33,6 +35,12 @@ async function decir(texto: string, senal: AbortSignal) {
   const voz = hablar(texto);
   senal.addEventListener("abort", voz.detener, { once: true });
   await voz.termino;
+}
+
+/** «Marca modelo» de la ficha, solo con lo que la persona confirmó o leyó. */
+function equipoDeFicha(ficha: Ficha | null): string | null {
+  const partes = [ficha?.marca.valor, ficha?.modelo.valor].filter(Boolean);
+  return partes.length ? partes.join(" ") : null;
 }
 
 /**
@@ -100,7 +108,9 @@ function ExpertoDelCaso() {
   const [destinoChat, setDestinoChat] = useState<HTMLDivElement | null>(null);
   const dictado = useDictado((texto) => setDictada({ texto, id: Date.now() }));
 
-  if (!caso || !preparado || !plano) return null;
+  if (!caso) return <Volviendo />;
+  if (!preparado || !plano)
+    return <Volviendo texto="Todavía falta preparar tu guía. Te llevo ahí…" destino="/preparando" boton="Ir a la guía" />;
   // Antes del primer paso: hasta dónde llega la guía si el pack tiene un paso de riesgo alto (sin IA).
   const aviso = avisoRiesgoAlto(preparado.pack);
 
@@ -115,6 +125,7 @@ function ExpertoDelCaso() {
             <div className="min-w-0 flex-1">
               <Encabezado
                 paso={5}
+                conSilencio
                 alVolver={() => router.push("/preparando")}
                 accion={
                   ficha && (
@@ -132,7 +143,10 @@ function ExpertoDelCaso() {
             </div>
             <button
               type="button"
-              onClick={() => setCerrando(true)}
+              onClick={() => {
+                callar(); // el experto se calla al terminar
+                setCerrando(true);
+              }}
               className="flex h-11 shrink-0 items-center rounded-full bg-acento px-4 text-sm font-semibold text-black active:scale-95"
             >
               Terminar
@@ -228,6 +242,8 @@ function ExpertoDelCaso() {
       {cerrando && (
         <PanelCierre
           pack={preparado.pack}
+          equipo={equipoDeFicha(ficha)}
+          sintoma={caso.sintoma}
           piezaSugerida={piezaACambiar ?? cierre?.pieza ?? null}
           compra={ultimaCompra}
           onCancelar={() => setCerrando(false)}

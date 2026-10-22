@@ -131,8 +131,10 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
   };
 
   if (envuelve(tapa, plantilla.plano)) {
-    const min = [0, 1, 2].map((i) => Math.min(...piezas.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
-    const max = [0, 1, 2].map((i) => Math.max(...piezas.map((p) => p.pos[i] + p.dim[i] / 2)) + MARGEN_TAPA);
+    // Sin las opcionales (el tanque de tinta, los joysticks de una consola): van afuera, a un costado.
+    const dentro = piezas.filter((p) => !plantilla.opcionales.includes(p.pieza));
+    const min = [0, 1, 2].map((i) => Math.min(...dentro.map((p) => p.pos[i] - p.dim[i] / 2)) - MARGEN_TAPA);
+    const max = [0, 1, 2].map((i) => Math.max(...dentro.map((p) => p.pos[i] + p.dim[i] / 2)) + MARGEN_TAPA);
     min[1] = piso; // apoyada en el piso
     const dim = max.map((v, i) => v - min[i]) as Vec3;
     return { ...plano, piezas: [...piezas, { ...base, dim, pos: max.map((v, i) => (v + min[i]) / 2) as Vec3, pivote: [0, 0, 0] }] };
@@ -148,6 +150,33 @@ export function conTapa(plano: PlanoDePiezas, plantilla: PlantillaDeEquipo): Pla
     pivote: [tapa.pivote[0] * escala[0], tapa.pivote[1], tapa.pivote[2] * escala[2]],
   };
   return { ...plano, piezas: [...piezas, nueva] };
+}
+
+/** Grosor (cm) de la chapa de una tapa de un equipo parado. */
+const GROSOR_TAPA_PARADA = 0.4;
+
+/**
+ * Las tapas que nombra el pack en un equipo PARADO (TV, heladera, microondas…) y el plano no ubicó: cada una es la
+ * chapa de la cara de atrás de la carcasa (+z, el lado de la cámara: ver `pararPlano`), del tamaño de esa cara y
+ * apenas afuera de lo que hay. Sin esto entraban como piezas sueltas con la medida de la tapa de otro equipo (la
+ * de un celular, en un TV de 100 cm: #340). Por TIPO, nunca por modelo. Sin tapas nombradas, no agrega nada.
+ */
+export function conTapaTrasera(plano: PlanoDePiezas, ids: string[], plantilla: PlantillaDeEquipo): PlanoDePiezas {
+  const raiz = plano.piezas.find((p) => !p.padre);
+  if (!plantilla.parado || !raiz) return plano;
+  const faltan = [...new Set(ids)].filter((id) => ES_TAPA.test(id) && !plano.piezas.some((p) => p.pieza === id));
+  if (!faltan.length) return plano;
+  const atras = Math.max(...plano.piezas.map((p) => p.pos[2] + p.dim[2] / 2));
+  const nuevas = faltan.map((id, k): PiezaPlano => ({
+    pieza: id,
+    forma: "caja",
+    dim: [raiz.dim[0], raiz.dim[1], GROSOR_TAPA_PARADA],
+    pos: [raiz.pos[0], raiz.pos[1], +(atras + GROSOR_TAPA_PARADA * (k + 0.5)).toFixed(3)],
+    pivote: [0, 0, 0],
+    padre: raiz.pieza,
+    origen: "plantilla",
+  }));
+  return { ...plano, piezas: [...plano.piezas, ...nuevas] };
 }
 
 /**

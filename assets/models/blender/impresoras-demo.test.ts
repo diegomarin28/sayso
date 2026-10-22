@@ -16,7 +16,7 @@ beforeAll(async()=>{
 });
 for(const [tipo,plano] of [['laser',planoImpresoraLaser],['tinta',planoImpresora]] as const){
   it(`${tipo}: interior completo por tecnología y bandeja de papel, sin cajón de heladera`,()=>{
-    for(const p of plano.piezas.filter(p=>p.pieza!=='tapa_impresora')) {
+    for(const p of plano.piezas.filter(p=>p.pieza!=='tapa_impresora'&&p.pieza!=='tanque_tinta')/* tanque_tinta: opcional, aún sin modelo (pedido a B) */) {
       expect(modeloPara(p.pieza,bib,p.dim,'impresora '+tipo),p.pieza).toBeDefined();
       expect(recetaPara(p.pieza),p.pieza).not.toBe(recetaPara('pieza_sin_tipo'));
     }

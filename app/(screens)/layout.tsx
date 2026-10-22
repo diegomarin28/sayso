@@ -1,4 +1,5 @@
 import { ProveedorFlujo } from "./_estado/flujo";
+import { AvisoSinConexion } from "./_ui/aviso-sin-conexion";
 import { PantallaInicio } from "./_ui/pantalla-inicio";
 import { SesionInicial } from "./_ui/sesion-inicial";
 
@@ -10,6 +11,7 @@ export default function LayoutPantallas({ children }: { children: React.ReactNod
       <PantallaInicio />
       {/* La sesión anónima (cookie httpOnly) desde el primer uso, sin pedirle nada a la persona. */}
       <SesionInicial />
+      <AvisoSinConexion />
       {children}
     </ProveedorFlujo>
   );

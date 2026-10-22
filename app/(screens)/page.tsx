@@ -10,7 +10,8 @@ import { IconoDeEquipo, type IconoEquipo } from "./_ui/iconos-equipo";
 import { LEMA } from "./_ui/marca";
 import { ProblemasFrecuentes } from "./_ui/problemas-frecuentes";
 import type { Caso, Evento } from "@/shared";
-import { ErrorApi, entenderSintoma, type Bloqueo } from "./_datos/api";
+import { entenderSintoma, type Bloqueo } from "./_datos/api";
+import { mensajeDeError } from "./_datos/errores";
 import { sinEntender, sintomaParaCitar } from "./_datos/entender-simulado";
 import { useFlujo } from "./_estado/flujo";
 import { useDictado } from "@/lib/voice/useDictado";
@@ -128,7 +129,7 @@ function QueSeRompioDelCaso() {
       setEventos(r.eventos);
       setBloqueo(r.bloqueo ?? null);
     } catch (e) {
-      setError(e instanceof ErrorApi ? e.message : "Algo salió mal. Probá de nuevo.");
+      setError(mensajeDeError(e));
     } finally {
       setPensando(false);
     }
@@ -199,7 +200,7 @@ function QueSeRompioDelCaso() {
 
   return (
     <Pantalla>
-      <Encabezado paso={1} orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
+      <Encabezado paso={1} conSilencio orbe={pensando ? "pensando" : "quieto"} accion={<BotonSesion cuenta={cuenta} alCambiar={recargarCuenta} />} />
 
       {enCharla ? (
         // La charla: lo que contó la persona y la respuesta de Sayso (o Sayso pensando).

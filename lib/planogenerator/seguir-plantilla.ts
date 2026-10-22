@@ -70,8 +70,10 @@ export function seguirPlantilla(original: PlanoDePiezas, ids: string[], plantill
     .filter((idT) => !plantilla.opcionales.includes(idT));
 
   // Un equipo parado se ve desde atrás, abierto (+z, hacia la cámara, es la espalda: ver `pararPlano`); el
-  // esqueleto lo dibuja de frente (+z es la pantalla). Por eso en un parado la profundidad va espejada.
-  const escala = raizT.dim.map((v, i) => (raiz.dim[i] / Math.max(v, 1e-6)) * (plantilla.parado && i === 2 ? -1 : 1));
+  // esqueleto lo dibuja de frente (+z es la pantalla). Por eso en un parado se lo da vuelta (giro de 180° sobre y):
+  // la profundidad Y x van espejadas. Con solo z queda la imagen especular: el parlante derecho (el de quien mira
+  // la pantalla) se vería a la derecha desde atrás, y desde atrás está a la izquierda (#339).
+  const escala = raizT.dim.map((v, i) => (raiz.dim[i] / Math.max(v, 1e-6)) * (plantilla.parado && i !== 1 ? -1 : 1));
   const lugar = (t: PiezaPlano) => ({
     pos: t.pos.map((v, i) => +(raiz.pos[i] + (v - raizT.pos[i]) * escala[i]).toFixed(2)) as Vec3,
     dim: t.dim.map((v, i) => +(v * Math.abs(escala[i])).toFixed(2)) as Vec3,

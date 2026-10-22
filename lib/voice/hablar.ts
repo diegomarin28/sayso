@@ -61,8 +61,47 @@ export function callar() {
   actual = null;
 }
 
+/** Silencio de la voz de la IA (no toca el dictado). Se recuerda en este navegador. */
+const CLAVE_SILENCIO = "sayso:voz-silenciada";
+let silenciado = false;
+let leido = false;
+const oyentes = new Set<() => void>();
+
+export function estaSilenciado(): boolean {
+  if (!leido && typeof window !== "undefined") {
+    leido = true;
+    try {
+      silenciado = window.localStorage.getItem(CLAVE_SILENCIO) === "1";
+    } catch {
+      // sin localStorage (modo privado, bloqueado): queda en memoria
+    }
+  }
+  return silenciado;
+}
+
+/** Activa o quita el silencio; al activarlo corta lo que esté sonando. */
+export function silenciar(valor: boolean) {
+  leido = true;
+  silenciado = valor;
+  try {
+    if (valor) window.localStorage.setItem(CLAVE_SILENCIO, "1");
+    else window.localStorage.removeItem(CLAVE_SILENCIO);
+  } catch {
+    // no se pudo recordar: vale solo para esta visita
+  }
+  if (valor) callar();
+  oyentes.forEach((o) => o());
+}
+
+/** Para `useSyncExternalStore`: avisa cuando cambia el silencio. */
+export function suscribirSilencio(oyente: () => void): () => void {
+  oyentes.add(oyente);
+  return () => void oyentes.delete(oyente);
+}
+
 export function hablar(texto: string): Hablando {
   callar();
+  if (estaSilenciado()) return { detener: () => {}, termino: Promise.resolve() };
   const control = new AbortController();
   let audio: HTMLAudioElement | null = null;
   let detenido = false;

@@ -83,9 +83,10 @@ const CARA: Record<string, string[]> = {
   tablet: ["pantalla"],
 };
 
-/** Ver `opcionales`: una PS4 no trae joysticks; si el pack los nombra (un mando con drift), van al costado. */
+/** Ver `opcionales`: una PS4 no trae joysticks; si el pack los nombra (un mando con drift), van al costado. Una impresora de cartuchos no trae tanque. */
 const OPCIONALES: Record<string, string[]> = {
   consola: ["joystick_analogico_izquierdo", "joystick_analogico_derecho", "boton_gatillo_izquierdo", "boton_gatillo_derecho"],
+  impresora: ["tanque_tinta"],
 };
 
 /** Ver `raizVisible`: de la vincha se ve el arco de atrás, no una placa del tamaño de los auriculares. */

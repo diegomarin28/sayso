@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Guia } from "@/lib/supabase/guia";
+import { Guia } from "../../../lib/supabase/guia";
 import { mezclarDelServidor, ResumenServidor, type GuiaGuardada } from "./mis-casos";
 
 /**
@@ -11,12 +11,19 @@ import { mezclarDelServidor, ResumenServidor, type GuiaGuardada } from "./mis-ca
 /** Modo de prueba (NEXT_PUBLIC_DATOS=fixture): no se lee el servidor. */
 const SIN_SERVIDOR = process.env.NEXT_PUBLIC_DATOS === "fixture";
 
-/** Trae los casos de la sesión y los mezcla con los del celular. Nunca tira error. */
-export async function sincronizarCasos(): Promise<void> {
-  if (SIN_SERVIDOR) return;
+/** Cómo salió traer los casos del servidor: "sesion" = no hay sesión (venció); "fallo" = red o servidor. */
+export type Sincronizacion = "ok" | "sesion" | "fallo";
+
+/** El estado de la lista según el estado HTTP de `GET /api/casos`. */
+export const sincronizacionDeEstado = (status: number): Sincronizacion =>
+  status >= 200 && status < 300 ? "ok" : status === 401 ? "sesion" : "fallo";
+
+/** Trae los casos de la sesión y los mezcla con los del celular. Nunca tira error: dice cómo salió. */
+export async function sincronizarCasos(): Promise<Sincronizacion> {
+  if (SIN_SERVIDOR) return "ok";
   try {
     const res = await fetch("/api/casos", { cache: "no-store" });
-    if (!res.ok) return;
+    if (!res.ok) return sincronizacionDeEstado(res.status);
     const datos = (await res.json()) as { casos?: unknown };
     // Uno que no valida (de una versión vieja) se saltea en vez de descartar la lista.
     const casos = (Array.isArray(datos.casos) ? datos.casos : []).flatMap((c) => {
@@ -24,8 +31,10 @@ export async function sincronizarCasos(): Promise<void> {
       return r.success ? [r.data] : [];
     });
     mezclarDelServidor(casos);
+    return "ok";
   } catch (e) {
     console.warn("[mis-casos] no se pudo leer el servidor", e);
+    return "fallo";
   }
 }
 

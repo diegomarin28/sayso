@@ -17,7 +17,7 @@ import {
 import { leerManual } from "../knowledge/lector";
 import { resolverMedidas, type MedidasBase } from "./medidas";
 import { planoNotebookBase } from "./plantillas/notebook";
-import { ajustarPlanoAlTipo, conTapa, conTapaDePantalla, FACTOR_ALTO_DUDOSO } from "./carcasa";
+import { ajustarPlanoAlTipo, conTapa, conTapaDePantalla, conTapaTrasera, FACTOR_ALTO_DUDOSO } from "./carcasa";
 import {
   caraTipica,
   elegirPlantilla,
@@ -555,7 +555,7 @@ export function planoDesdePlantilla(kp: KnowledgePack, plantilla: PlanoDePiezas 
  * 2b. si el plano trae teclado, cada tecla nombrada va en su lugar del teclado, no donde la estimó la IA (`ubicarTeclas`);
  * 2c. lo que no se vio no queda encima de lo que se vio en el manual o en una foto: va al lugar libre más cercano (`sinPisarLoVisto`);
  * 3. lo que todavía no tiene lugar se suma suelto (`sumarSueltas`): la guía nunca nombra algo que el 3D no tiene;
- * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado; y la tapa de pantalla de una notebook (`conTapaDePantalla`);
+ * 4. la tapa del tipo, si le falta (`conTapa`): arranca cerrado; en un equipo parado, la que nombra el pack va en la cara de atrás (`conTapaTrasera`); y la tapa de pantalla de una notebook (`conTapaDePantalla`);
  * 5. si el tipo tiene varias formas de pantalla y el pack no trajo la suya, la común queda estimada (`marcarFormaEstimada`).
  * La estructura (la base y la tapa inferior de notebook) no: un equipo de otro tipo ya tiene la suya.
  */
@@ -568,9 +568,10 @@ export function terminarPlano(plano: PlanoDePiezas, kp: KnowledgePack, tipo?: Pl
   const teclas = ubicarTeclas(acotado.plano, ids);
   const libre = sinPisarLoVisto(teclas.plano);
   // Una tapa que falta no va suelta: la pone `conTapa`, donde va (si el tipo no tiene tapa, sí va suelta).
-  const sinTapa = tipo && !tipo.parado && tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza)) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
+  // En un equipo parado la tapa que nombra el pack tampoco va suelta: es la chapa de atrás (`conTapaTrasera`).
+  const sinTapa = tipo && (tipo.parado || tipo.plano.piezas.some((p) => ES_TAPA.test(p.pieza))) ? ids.filter((id) => !ES_TAPA.test(id)) : ids;
   const sueltas = sumarSueltas(libre.plano, sinTapa, [...(tipo?.equipos ?? []), ...palabras(kp.clase)]);
-  const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(sueltas.plano, tipo), tipo) : sueltas.plano, tipo, kp);
+  const forma = marcarFormaEstimada(tipo ? conTapaDePantalla(conTapa(conTapaTrasera(sueltas.plano, ids, tipo), tipo), tipo) : sueltas.plano, tipo, kp);
   return { plano: aplicarRasgos3D(forma.plano, kp, tipo?.id), avisos: [...limpio.avisos, ...seguido.avisos, ...acotado.avisos, ...teclas.avisos, ...libre.avisos, ...sueltas.avisos, ...forma.avisos] };
 }
 

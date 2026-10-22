@@ -227,7 +227,7 @@ describe("auriculares de vincha: la carcasa y la almohadilla del pack van en la 
   it("si el pack dice el lado, va de ese lado", async () => {
     const plano = await leer(planoViejo(17, 15, []), pack("Bose QuietComfort 45", ["almohadilla_oreja_derecha", "carcasa_auricular_derecho"]), "auriculares de vincha");
     const de = (id: string) => plano.piezas.find((p) => p.pieza === id)!;
-    expect(de("almohadilla_oreja_derecha").pos[0]).toBeGreaterThan(0);
+    expect(de("almohadilla_oreja_derecha").pos[0]).toBeLessThan(0); // la derecha de quien los usa, vista desde arriba: -x (#339)
     expect(centro(de("carcasa_auricular_derecho"))).toEqual(centro(de("copa_derecha")));
     expect(ids(plano)).toContain("almohadilla_copa_izquierda");
   });
