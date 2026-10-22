@@ -9,8 +9,8 @@ import { fotoDeEjemplo, type TipoFoto } from "./ayudas";
 
 export const SINTOMA = "Mi notebook se apaga sola a los diez minutos";
 
-/** Lo que dice el experto en las pantallas 1–4 (frase grande, palabra por palabra). */
-export const dice = (page: Page) => page.locator("main p[aria-live=polite]").first();
+/** Lo que dice el experto en las pantallas 1–4 (el título h1, palabra por palabra; #397). */
+export const dice = (page: Page) => page.locator("main h1[aria-live=polite]").first();
 
 export async function subirFoto(page: Page, tipo: TipoFoto, intento = 1, boton = "Elegir de la galería") {
   const [selector] = await Promise.all([

@@ -54,9 +54,14 @@ test("Cierre: opciones, resumen y botón a la vista sin scroll de más", async (
   await cierre.getByRole("radio", { name: /Pedí el repuesto/ }).click();
   await expect(cierre.getByLabel("¿Qué pieza pediste?")).toBeVisible();
   await expect(guardar).toBeEnabled();
+  // Con el selector abierto puede haber que scrollear: el botón fijo tapa lo de abajo hasta el
+  // final, así que se revisa con el panel al final, donde nada queda tapado.
+  await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>("[role=dialog][aria-label='Terminar el caso']")!;
+    panel.scrollTop = panel.scrollHeight;
+  });
   await revisarPantalla(page, libreta);
   await captura(page, info, "cierre-repuesto");
-  await guardar.scrollIntoViewIfNeeded();
   expect((await medir(page)).guardarDentro).toBe(true);
 
   await libreta.guardar();
