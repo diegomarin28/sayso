@@ -3,8 +3,8 @@ import { Libreta, escucharConsola, prepararNavegador, sinRedNiIA } from "./ayuda
 import { llegarAlExperto } from "./recorrido";
 
 /**
- * Accesibilidad del visor 3D (#396): región con nombre, cámara por teclado, aviso de la pieza
- * resaltada y menos movimiento. Todo con NEXT_PUBLIC_DATOS=fixture: sin IA ni internet.
+ * Accesibilidad del visor 3D (#396, #403): región con nombre, cámara por teclado, elegir pieza con Tab
+ * y Enter, aviso de la pieza resaltada y menos movimiento. Todo con NEXT_PUBLIC_DATOS=fixture: sin IA ni internet.
  */
 
 for (const reducido of [false, true]) {
@@ -28,12 +28,31 @@ for (const reducido of [false, true]) {
     await visor.focus();
     await expect(visor).toBeFocused();
     const antes = await page.evaluate(() => window.scrollY);
-    for (const tecla of ["ArrowLeft", "ArrowUp", "+", "-", "Escape"]) await page.keyboard.press(tecla);
+    for (const tecla of ["ArrowLeft", "ArrowUp", "+", "-"]) await page.keyboard.press(tecla);
     expect(await page.evaluate(() => window.scrollY)).toBe(antes);
 
-    // Tab sigue de largo: el visor no atrapa el foco.
+    // Tab lleva a la lista de piezas; Enter elige la primera y el aviso lo dice.
+    const lista = page.getByRole("list", { name: "Piezas del 3D" });
     await page.keyboard.press("Tab");
-    await expect(visor).not.toBeFocused();
+    const primera = lista.getByRole("button").first();
+    await expect(primera).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(primera).toHaveAttribute("aria-pressed", "true");
+    await expect(visor.getByRole("status")).toContainText("Elegida:");
+
+    // Escape suelta la pieza (sigue el foco); el siguiente vuelve a la guía y el último suelta el foco.
+    await page.keyboard.press("Escape");
+    await expect(primera).toHaveAttribute("aria-pressed", "false");
+    await expect(primera).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(primera).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(primera).not.toBeFocused();
+
+    // Tab sigue de largo: desde la última pieza, el foco pasa a los controles del 3D y no queda atrapado.
+    await lista.getByRole("button").last().focus();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: /Opciones del 3D/ })).toBeFocused();
 
     await libreta.guardar();
     expect.soft(libreta.hallazgos.filter((h) => h.tipo === "problema"), "Problemas anotados").toEqual([]);

@@ -6,7 +6,12 @@
 /** Descripción de la región del 3D para un lector de pantalla: qué es, de dónde salen las ubicaciones y cómo moverlo. */
 export function descripcionVisor(origen: string, piezas: number): string {
   const cuantas = piezas === 1 ? "1 pieza" : `${piezas} piezas`;
-  return `Modelo 3D del equipo con ${cuantas}. Ubicaciones: ${origen}. Con el teclado: flechas para girar, más y menos para acercar o alejar, Escape para volver a la vista de la guía.`;
+  return `Modelo 3D del equipo con ${cuantas}. Ubicaciones: ${origen}. Con el teclado: Tab lleva a la lista de piezas, flechas para girar, más y menos para acercar o alejar. Escape suelta la pieza, vuelve a la vista de la guía o suelta el foco.`;
+}
+
+/** Una pieza como se lee: el nombre y, si hay, de dónde sale su ubicación. */
+export function opcionPieza(nombre: string, origen: string | null): string {
+  return origen ? `${nombre} (${origen})` : nombre;
 }
 
 /**
@@ -15,8 +20,18 @@ export function descripcionVisor(origen: string, piezas: number): string {
  */
 export function anuncioResaltadas(piezas: { nombre: string; origen: string | null }[]): string {
   if (!piezas.length) return "";
-  const lista = piezas.map((p) => (p.origen ? `${p.nombre} (${p.origen})` : p.nombre)).join(", ");
+  const lista = piezas.map((p) => opcionPieza(p.nombre, p.origen)).join(", ");
   return `${piezas.length === 1 ? "Pieza resaltada" : "Piezas resaltadas"} en el 3D: ${lista}.`;
+}
+
+/** Lo que se anuncia al cambiar la vista (perspectiva o isométrica). */
+export function anuncioVista(vista: "perspectiva" | "isometrica"): string {
+  return `Vista ${vista === "perspectiva" ? "en perspectiva" : "isométrica"}.`;
+}
+
+/** Lo que se anuncia al elegir una pieza con el teclado. */
+export function anuncioElegida(nombre: string): string {
+  return `Elegida: ${nombre}. Escape la suelta.`;
 }
 
 /** Cuánto gira o se acerca la cámara con cada toque de tecla. */
@@ -26,6 +41,9 @@ export type AccionTeclado =
   | { t: "girar"; horizontal: number; vertical: number }
   | { t: "acercar"; delta: number }
   | { t: "volver" };
+
+/** Quien atiende las teclas del visor. "volver" devuelve `true` si movió la cámara (si ya estaba en la guía, `false`). */
+export type FuncionTeclado = (a: AccionTeclado) => boolean | void;
 
 /** Qué hace una tecla con la cámara; null si no es de las nuestras (ej. Tab, que debe seguir de largo). */
 export function accionDeTecla(tecla: string): AccionTeclado | null {
