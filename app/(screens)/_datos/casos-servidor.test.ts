@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { mensajeSinGuia, sincronizacionDeEstado } from "./casos-servidor";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { guiaDelServidor, mensajeSinGuia, sincronizacionDeEstado, sincronizarCasos } from "./casos-servidor";
+import { TIEMPO_CUENTA_MS } from "./con-tiempo";
 
 describe("sincronizacionDeEstado", () => {
   it("2xx está bien", () => {
@@ -23,5 +24,32 @@ describe("mensajeSinGuia", () => {
   });
   it("red o servidor piden reintentar", () => {
     expect(mensajeSinGuia("fallo")).toContain("Revisá la conexión");
+  });
+});
+
+describe("pedidos colgados", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", (_ruta: string, init?: RequestInit) =>
+      new Promise<Response>((_ok, no) => {
+        init?.signal?.addEventListener("abort", () => no(new DOMException("cortado", "AbortError")));
+      }),
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("la lista de casos termina en «fallo» para ofrecer Reintentar", async () => {
+    const r = sincronizarCasos();
+    await vi.advanceTimersByTimeAsync(TIEMPO_CUENTA_MS);
+    expect(await r).toBe("fallo");
+  });
+
+  it("la guía que no baja termina en «fallo»: el caso no queda bloqueado", async () => {
+    const r = guiaDelServidor("caso-1");
+    await vi.advanceTimersByTimeAsync(TIEMPO_CUENTA_MS);
+    expect(await r).toEqual({ motivo: "fallo" });
   });
 });
