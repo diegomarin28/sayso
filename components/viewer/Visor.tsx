@@ -17,7 +17,16 @@ import * as THREE from "three";
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Coreografia, Evento, Pieza, PlanoDePiezas } from "../../shared";
 import type { BibliotecaPiezas, DatosPieza } from "../../lib/planogenerator";
-import { accionDeTecla, anuncioResaltadas, CONSULTA_MENOS_MOVIMIENTO, descripcionVisor, type AccionTeclado } from "./accesibilidad";
+import {
+  accionDeTecla,
+  anuncioElegida,
+  anuncioResaltadas,
+  anuncioVista,
+  CONSULTA_MENOS_MOVIMIENTO,
+  descripcionVisor,
+  opcionPieza,
+  type FuncionTeclado,
+} from "./accesibilidad";
 import { useBibliotecaPiezas } from "./biblioteca";
 import {
   animar,
@@ -137,10 +146,31 @@ export function Visor({
   const menosMovimiento = useMenosMovimiento();
   // Lo que anuncia el lector de pantalla al resaltar piezas (ver `anuncioResaltadas`) y la cámara por teclado.
   const [anuncio, setAnuncio] = useState("");
-  const tecladoRef = useRef<((a: AccionTeclado) => void) | null>(null);
-  const registrarTeclado = useCallback((f: ((a: AccionTeclado) => void) | null) => {
+  const tecladoRef = useRef<FuncionTeclado | null>(null);
+  const registrarTeclado = useCallback((f: FuncionTeclado | null) => {
     tecladoRef.current = f;
   }, []);
+  // Pieza elegida con Tab y Enter (la lista del visor): la cámara va a ella y se ve su etiqueta.
+  const [elegida, setElegida] = useState<string | null>(null);
+  const nombres = useMemo(() => new Map(piezas?.map((p) => [p.id, p.nombre]) ?? []), [piezas]);
+  const piezasElegibles = useMemo(
+    () => plano.piezas.map((p) => ({ id: p.pieza, texto: opcionPieza(nombres.get(p.pieza) ?? nombreLegible(p.pieza), textoEtiquetaPieza(p)) })),
+    [plano, nombres],
+  );
+  // Al cambiar la vista se anuncia (no al montar).
+  const vistaPrevia = useRef(vista);
+  useEffect(() => {
+    if (vistaPrevia.current === vista) return;
+    vistaPrevia.current = vista;
+    setAnuncio(anuncioVista(vista));
+  }, [vista]);
+  const elegir = useCallback(
+    (id: string) => {
+      setElegida(id);
+      setAnuncio(anuncioElegida(nombres.get(id) ?? nombreLegible(id)));
+    },
+    [nombres],
+  );
   // Una vez al montar (el lienzo solo existe en el cliente) y antes de preparar la escena: ver tema.ts.
   useState(() => usarColorActivo(colorActivoDelDocumento()));
   // Un plano mixto no se muestra como verificado entero (ver origen.ts).
@@ -230,8 +260,19 @@ export function Visor({
       aria-label={descripcionVisor(origen.texto, plano.piezas.length)}
       tabIndex={falla ? undefined : 0}
       onKeyDown={(e) => {
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        // Escape vale también desde la lista de piezas: suelta la pieza, vuelve a la guía o suelta el foco.
+        if (e.key === "Escape") {
+          e.preventDefault();
+          if (elegida) {
+            setElegida(null);
+            return;
+          }
+          if (tecladoRef.current?.({ t: "volver" }) !== true) (e.target as HTMLElement).blur();
+          return;
+        }
         // Solo cuando el foco está en el visor mismo: los botones de adentro conservan sus teclas.
-        if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.target !== e.currentTarget) return;
         const accion = accionDeTecla(e.key);
         if (!accion) return;
         e.preventDefault();
@@ -264,6 +305,7 @@ export function Visor({
               menosMovimiento={menosMovimiento}
               onAnuncio={setAnuncio}
               registrarTeclado={registrarTeclado}
+              elegida={elegida}
             />
           )}
           {/* Con el contexto perdido todo se lee negro: el vigía espera al lienzo nuevo. */}
@@ -287,6 +329,26 @@ export function Visor({
       <p role="status" aria-live="polite" className="sr-only">
         {anuncio}
       </p>
+      {/* Elegir pieza con Tab y Enter: la lista está oculta hasta que el foco llega a ella (así se ve dónde está). */}
+      {!falla && piezasElegibles.length > 0 && (
+        <ul
+          aria-label="Piezas del 3D"
+          className="sr-only absolute top-3 left-3 flex max-h-[45%] max-w-[60%] flex-col gap-1 overflow-y-auto rounded-xl bg-superficie/95 p-2 text-xs text-texto shadow-xl focus-within:not-sr-only"
+        >
+          {piezasElegibles.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                aria-pressed={elegida === p.id}
+                onClick={() => elegir(p.id)}
+                className={`block w-full rounded-lg px-2 py-1 text-left focus-visible:outline-2 focus-visible:outline-[var(--dato)] ${elegida === p.id ? "bg-fondo font-medium" : ""}`}
+              >
+                {p.texto}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {/* Un solo botón de ícono en la esquina (prueba real: el 3D se veía chico): abre la vista y de dónde sale cada ubicación. */}
       {controles && (
         <div className="absolute bottom-3 left-3 flex flex-col items-start gap-2">
@@ -490,10 +552,11 @@ type EscenaProps = Required<Pick<VisorProps, "plano" | "casoId">> &
     biblioteca: BibliotecaPiezas | null;
     menosMovimiento: boolean;
     onAnuncio: (texto: string) => void;
-    registrarTeclado: (f: ((a: AccionTeclado) => void) | null) => void;
+    registrarTeclado: (f: FuncionTeclado | null) => void;
+    elegida: string | null;
   };
 
-function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo, reservadoArriba, menosMovimiento, onAnuncio, registrarTeclado }: EscenaProps) {
+function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, onEvento, onPaso, sombrasEnVivo, reservadoArriba, menosMovimiento, onAnuncio, registrarTeclado, elegida }: EscenaProps) {
   // Por ref: la frase cambia de alto seguido y no hace falta re-renderizar; se usa al encuadrar y en cada cuadro.
   const reservado = useRef(reservadoArriba);
   const controles = useRef<CameraControls>(null);
@@ -592,9 +655,28 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     acciones.current.mirar(objetivo, zoom, true);
   }, [reservadoArriba]);
 
+  // La cámara salió de la vista de la guía (la movió la persona o eligió una pieza): Escape la vuelve ahí antes de soltar el foco.
+  const camaraMovida = useRef(false);
+  useEffect(() => {
+    const c = controles.current;
+    if (!c) return;
+    const alTocar = () => {
+      camaraMovida.current = true;
+    };
+    c.addEventListener("controlstart", alTocar);
+    return () => c.removeEventListener("controlstart", alTocar);
+  }, []);
+  // Pieza elegida con el teclado: la cámara va a ella (si se suelta, la cámara queda ahí hasta volver a la guía).
+  useEffect(() => {
+    if (!elegida) return;
+    camaraMovida.current = true;
+    acciones.current.mirar(elegida, 1, true);
+  }, [elegida]);
+
   // Coreografía nueva: filtro de seguridad, limpia resaltados y aplica las acciones una por una.
   useEffect(() => {
     if (!coreografia) return;
+    camaraMovida.current = false; // el paso encuadra la guía de nuevo
     const paso = prepararPaso(coreografia, { casoId, tipoEquipo });
     paso.eventos.forEach((e) => onEventoRef.current?.(e));
     onPasoRef.current?.(paso);
@@ -626,9 +708,11 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
 
   // Etiquetas de las piezas resaltadas: cada una dice dónde quiere ir y acá se acomodan juntas, en el
   // orden en que se resaltaron, para que no se pisen (#179). Se escribe directo en el DOM (no tiembla).
+  // La pieza elegida con el teclado también lleva su etiqueta, aunque no esté resaltada.
+  const etiquetados = elegida && !activos.includes(elegida) ? [...activos, elegida] : activos;
   const etiquetas = useRef(new Map<string, RegistroEtiqueta>());
   useFrame(() => {
-    const medidas = activos.flatMap((id) => {
+    const medidas = etiquetados.flatMap((id) => {
       const r = etiquetas.current.get(id);
       const m = r?.medir();
       return r && m ? [{ r, m }] : [];
@@ -654,17 +738,25 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
     );
   }, [activos, delKp, delPlano, onAnuncio]);
 
-  // Teclado: la cámara gira, se acerca o vuelve a la vista de la guía (la del último paso).
+  // Teclado: la cámara gira, se acerca o vuelve a la vista de la guía (la del último paso). Devuelve si la
+  // vuelta movió algo: si no, el visor suelta el foco.
   useEffect(() => {
     registrarTeclado((a) => {
       const c = controles.current;
       if (!c) return;
       const animado = !reducido.current;
-      if (a.t === "girar") void c.rotate(a.horizontal, a.vertical, animado);
-      else if (a.t === "acercar") void c.dolly(a.delta, animado);
-      else {
+      if (a.t === "girar") {
+        camaraMovida.current = true;
+        void c.rotate(a.horizontal, a.vertical, animado);
+      } else if (a.t === "acercar") {
+        camaraMovida.current = true;
+        void c.dolly(a.delta, animado);
+      } else {
+        if (!camaraMovida.current) return false;
+        camaraMovida.current = false;
         const { objetivo, zoom } = estado.current.camara;
         acciones.current.mirar(objetivo, zoom, true);
+        return true;
       }
     });
     return () => registrarTeclado(null);
@@ -673,7 +765,7 @@ function Escena({ plano, biblioteca, tipoEquipo, coreografia, piezas, casoId, on
   return (
     <>
       <primitive object={escena.raiz} />
-      {activos.map((id) => {
+      {etiquetados.map((id) => {
         const a = escena.nodos.get(id);
         const kp = delKp.get(id);
         return a ? (
