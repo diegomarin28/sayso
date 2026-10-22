@@ -165,7 +165,7 @@ export function ControlesGuia({
   // Hasta 400 px (iPhone SE, 320) todo más apretado y "Auto" en vez de "Automático": si no, la fila
   // mide ~355 px, se sale de la tarjeta y corre la pantalla de costado.
   const boton =
-    "flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30 max-[400px]:px-2.5";
+    "flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 disabled:opacity-30 max-[400px]:px-2.5";
   const auto = c.modo === "auto";
   return (
     <div className="mt-2 flex items-center gap-2 max-[400px]:gap-1.5" role="group" aria-label="Controles de la guía">

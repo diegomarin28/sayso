@@ -201,12 +201,16 @@ export function escucharConsola(page: Page, libreta: Libreta) {
  * Revisa la pantalla como la vería alguien en el celular:
  * - nada se sale de costado ni hay scroll horizontal (problema; en filas deslizables, observación),
  * - el cartel "Girá el celular" no aparece en vertical (problema),
+ * - ningún botón queda tapado por la barra de abajo, otro elemento o el borde (problema),
  * - botones con área de toque menor a 44×44 px (observación: guía de Apple/Google),
  * - texto cortado dentro de su caja (observación).
  */
 export async function revisarPantalla(page: Page, libreta: Libreta) {
-  const r = await page.evaluate(() => {
-    const vw = window.innerWidth;
+  // El ancho del celular, no `innerWidth`: en celular, si algo es más ancho que la pantalla, el
+  // navegador agranda la página entera (innerWidth crece) y el desborde no se vería.
+  const anchoCelular = page.viewportSize()?.width ?? 0;
+  const r = await page.evaluate((anchoCelular) => {
+    const vw = anchoCelular || window.innerWidth;
     const nombreDe = (el: Element) =>
       (el.getAttribute("aria-label") || el.textContent || el.getAttribute("placeholder") || el.tagName)
         .replace(/\s+/g, " ")
@@ -258,18 +262,19 @@ export async function revisarPantalla(page: Page, libreta: Libreta) {
     const girar = document.querySelector(".solo-vertical");
     return {
       vw,
-      desborde: document.documentElement.scrollWidth - vw,
+      desborde: Math.max(document.documentElement.scrollWidth, window.innerWidth) - vw,
       fuera,
       deslizar,
       chicos,
       cortados,
       cartelGirar: !!girar && getComputedStyle(girar).display !== "none",
     };
-  });
+  }, anchoCelular);
   if (r.desborde > 1) libreta.anotar("problema", `Scroll horizontal: la página mide ${r.desborde}px más que la pantalla (${r.vw}px)`);
   for (const f of r.fuera) libreta.anotar("problema", `Se sale de la pantalla: ${f}`);
   for (const f of r.deslizar) libreta.anotar("observación", `Hay que deslizar de costado para verlo: ${f}`);
   if (r.cartelGirar) libreta.anotar("problema", `Aparece "Girá el celular a vertical" estando en vertical`);
+  for (const t of await botonesTapados(page)) libreta.anotar("problema", `Botón tapado: ${t}`);
   for (const c of r.chicos) libreta.anotar("observación", `Área de toque menor a 44×44 px: ${c}`);
   for (const c of r.cortados) libreta.anotar("observación", `Texto cortado: "${c}"`);
 }
@@ -326,4 +331,352 @@ export async function medir3D(page: Page, lienzo: Locator) {
     }
     return { fraccionNoNegra: claros / total, colores: colores.size };
   }, foto.toString("base64"));
+}
+
+// ---------- Botones tapados ----------
+
+/**
+ * Ningún botón queda tapado por la barra de abajo, otro elemento o el borde de la pantalla.
+ * 1) Rápido, en el navegador: a cada botón visible lo lleva a la vista y mira qué hay arriba en
+ *    5 puntos. Si se sale por el borde, es un problema; si algo lo tapa, queda "sospechoso".
+ * 2) Cada sospechoso se confirma con un click de prueba de Playwright (scrollea como la persona,
+ *    no toca nada): si otro elemento se queda con el toque, está tapado de verdad.
+ * Al terminar deja el scroll como estaba. Devuelve la lista de tapados: cada uno es un problema.
+ */
+export async function botonesTapados(page: Page): Promise<string[]> {
+  const ancho = page.viewportSize()?.width ?? 0;
+  const alto = page.viewportSize()?.height ?? 0;
+  const resultado = await page.evaluate(
+    ({ ancho, alto }) => {
+      const vw = ancho || window.innerWidth;
+      const vh = alto || window.innerHeight;
+      const nombreDe = (el: Element) =>
+        (el.getAttribute("aria-label") || el.textContent || el.tagName).replace(/\s+/g, " ").trim().slice(0, 50);
+      const describir = (el: Element) => {
+        const t = (el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 30);
+        return `${el.tagName.toLowerCase()}${t ? ` "${t}"` : ""}`;
+      };
+      // Para dejar todo como estaba: posición de scroll de la página y de las filas que se deslizan.
+      const guardados = new Map<Element, [number, number]>();
+      const guardar = (el: Element) => {
+        for (let p: Element | null = el.parentElement; p; p = p.parentElement)
+          if (!guardados.has(p)) guardados.set(p, [p.scrollLeft, p.scrollTop]);
+      };
+      const ventana: [number, number] = [window.scrollX, window.scrollY];
+
+      // Con un modal abierto (ej. la conversación) lo de atrás queda tapado a propósito: solo se miran sus botones.
+      const modal = [...document.querySelectorAll("[aria-modal=true]")].at(-1) ?? document;
+      const candidatos = [
+        ...modal.querySelectorAll("button, a[href], [role=button], label:has(> input[type=file])"),
+      ].filter((el) => {
+        const s = getComputedStyle(el);
+        const b = el.getBoundingClientRect();
+        return (
+          s.visibility !== "hidden" &&
+          s.display !== "none" &&
+          Number(s.opacity) > 0.05 &&
+          b.width > 2 &&
+          b.height > 2 &&
+          !el.closest("[aria-hidden=true], [inert]")
+        );
+      });
+
+      const tapados: string[] = [];
+      const sospechosos: string[] = [];
+      for (const el of candidatos) {
+        // Solo se scrollea si el botón no está entero a la vista, y lo justo ("nearest"): centrarlo
+        // movía contenedores que la persona no puede scrollear y daba tapados que no existen.
+        const antes = el.getBoundingClientRect();
+        const aLaVista = antes.top >= 0 && antes.left >= 0 && antes.bottom <= vh && antes.right <= vw;
+        if (!aLaVista) {
+          guardar(el);
+          el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+        }
+        const b = el.getBoundingClientRect();
+        if (b.top < -1 || b.left < -1 || b.bottom > vh + 1 || b.right > vw + 1) {
+          tapados.push(
+            `${nombreDe(el)}: se sale por el borde (${Math.round(b.left)},${Math.round(b.top)} → ${Math.round(b.right)},${Math.round(b.bottom)} en ${vw}×${vh})`,
+          );
+          continue;
+        }
+        const puntos: Array<[number, number]> = [
+          [0.5, 0.5],
+          [0.25, 0.5],
+          [0.75, 0.5],
+          [0.5, 0.25],
+          [0.5, 0.75],
+        ];
+        for (const [fx, fy] of puntos) {
+          const x = b.left + b.width * fx;
+          const y = b.top + b.height * fy;
+          const arriba = document.elementFromPoint(x, y);
+          if (arriba && arriba !== el && !el.contains(arriba) && !arriba.contains(el)) {
+            // Sospechoso: lo confirma Playwright afuera (puede ser algo que se va al scrollear).
+            el.setAttribute("data-e2e-sospechoso", String(sospechosos.length));
+            sospechosos.push(`${nombreDe(el)}: lo tapa ${describir(arriba)}`);
+            break;
+          }
+        }
+      }
+
+      for (const [el, [l, t]] of guardados) {
+        el.scrollLeft = l;
+        el.scrollTop = t;
+      }
+      window.scrollTo({ left: ventana[0], top: ventana[1], behavior: "instant" });
+      return { tapados, sospechosos };
+    },
+    { ancho, alto },
+  );
+
+  // Confirmación con Playwright: un "click de prueba" (no toca nada) scrollea como haría la persona
+  // y falla solo si otro elemento se queda con el toque. Eso es un botón tapado de verdad.
+  const confirmados = [...resultado.tapados];
+  const scroll = await page.evaluate(() => [window.scrollX, window.scrollY] as const);
+  for (let i = 0; i < resultado.sospechosos.length; i++) {
+    const boton = page.locator(`[data-e2e-sospechoso="${i}"]`);
+    try {
+      await boton.click({ trial: true, timeout: 2_000 });
+    } catch (e) {
+      const motivo = /<([^>]{1,80})>[^\n]*intercepts pointer events/.exec(String(e))?.[1];
+      confirmados.push(motivo ? `${resultado.sospechosos[i].split(":")[0]}: lo tapa <${motivo}>` : resultado.sospechosos[i]);
+    }
+  }
+  await page.evaluate(([x, y]) => {
+    for (const el of document.querySelectorAll("[data-e2e-sospechoso]")) el.removeAttribute("data-e2e-sospechoso");
+    window.scrollTo({ left: x, top: y, behavior: "instant" });
+  }, scroll);
+  return confirmados;
+}
+
+// ---------- Alto del 3D ----------
+
+/**
+ * Qué fracción del alto de la pantalla ocupa el 3D QUE SE VE: el lienzo puede estar detrás de
+ * todo (encabezado, tarjeta del paso, barra de abajo), así que su alto no dice nada. Recorre de
+ * arriba abajo 3 columnas (25 %, 50 %, 75 % del ancho) y cuenta en qué puntos lo de arriba es el
+ * lienzo. Lo que no recibe toques (degradés, etiquetas) no tapa.
+ */
+export async function altoDel3D(page: Page) {
+  return page.evaluate(() => {
+    // Hay más de un <canvas> (el fondo animado de Sayso ocupa toda la pantalla): el del 3D es el del visor.
+    const lienzo = document.querySelector('div[style*="touch-action: none"] canvas');
+    if (!lienzo) return null;
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const columnas = [0.25, 0.5, 0.75];
+    const PASO = 4;
+    const area = (r: DOMRect) => r.width * r.height;
+    const areaLienzo = area(lienzo.getBoundingClientRect());
+    // R3F envuelve el lienzo en un div que recibe los toques: ese div (del mismo tamaño) también es "el 3D".
+    const esEl3D = (el: Element | null) =>
+      !!el && (el === lienzo || (el.contains(lienzo) && area(el.getBoundingClientRect()) <= areaLienzo * 1.05));
+    let filasConTresD = 0;
+    let filas = 0;
+    for (let y = PASO / 2; y < vh; y += PASO) {
+      filas++;
+      // Una fila cuenta si en la mayoría de las columnas se ve el 3D.
+      const visibles = columnas.filter((fx) => esEl3D(document.elementFromPoint(vw * fx, y))).length;
+      if (visibles >= 2) filasConTresD++;
+    }
+    const b = lienzo.getBoundingClientRect();
+    // Qué hay arriba en el centro a distintas alturas (para entender la medida si falla).
+    const arriba = [0.1, 0.3, 0.5, 0.7, 0.9].map((fy) => {
+      const el = document.elementFromPoint(vw / 2, vh * fy);
+      if (!el) return `${fy}: nada`;
+      const clase = (el.getAttribute("class") ?? "").split(/\s+/).slice(0, 4).join(".");
+      return `${fy}: ${el.tagName.toLowerCase()}${clase ? `.${clase}` : ""}${esEl3D(el) ? " (3D)" : ""}`;
+    });
+    return {
+      arriba,
+      pantalla: vh,
+      lienzo: Math.round(b.height),
+      visible: Math.round((filasConTresD / filas) * vh),
+      fraccion: filasConTresD / filas,
+    };
+  });
+}
+
+// ---------- La etiqueta no salta de lado ----------
+
+export type CambioDeLado = { pieza: string; t: number; de: string; a: string };
+
+/**
+ * Muestrea durante `ms` (cada `cada` ms) de qué lado de su pieza está cada etiqueta del 3D
+ * (derecha/izquierda y arriba/abajo, respecto del punto de la pieza). Devuelve los cambios de
+ * lado con su momento, para ver si alguna salta más de una vez por segundo.
+ * Mientras tanto se puede mover el 3D (ver `girar3D`).
+ */
+export async function muestrearLadosEtiqueta(page: Page, ms = 3000, cada = 100) {
+  return page.evaluate(
+    ({ ms, cada }) =>
+      new Promise<{ muestras: number; etiquetas: string[]; cambios: CambioDeLado[] }>((listo) => {
+        const ultimo = new Map<string, string>();
+        const cambios: CambioDeLado[] = [];
+        const vistas = new Set<string>();
+        let muestras = 0;
+        const t0 = performance.now();
+        const mirar = () => {
+          muestras++;
+          // El recuadro de la etiqueta está junto al punto de la pieza (svg con un círculo, en 0,0).
+          for (const caja of document.querySelectorAll<HTMLElement>("div.whitespace-nowrap.rounded-md")) {
+            const ancla = caja.parentElement?.querySelector(":scope > svg circle");
+            if (!ancla || caja.offsetWidth === 0) continue;
+            const pieza = (caja.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+            vistas.add(pieza);
+            const h = caja.offsetLeft + caja.offsetWidth / 2 >= 0 ? "derecha" : "izquierda";
+            const v = caja.offsetTop + caja.offsetHeight / 2 < 0 ? "arriba" : "abajo";
+            const lado = `${v}-${h}`;
+            const antes = ultimo.get(pieza);
+            if (antes && antes !== lado) cambios.push({ pieza, t: Math.round(performance.now() - t0), de: antes, a: lado });
+            ultimo.set(pieza, lado);
+          }
+        };
+        mirar();
+        const id = setInterval(mirar, cada);
+        setTimeout(() => {
+          clearInterval(id);
+          mirar();
+          listo({ muestras, etiquetas: [...vistas], cambios });
+        }, ms);
+      }),
+    { ms, cada },
+  );
+}
+
+/** Dos cambios de lado de la misma etiqueta a menos de 1 s: salta de lado más de una vez por segundo. */
+export function saltosRapidos(cambios: CambioDeLado[], ventanaMs = 1000): string[] {
+  const porPieza = new Map<string, CambioDeLado[]>();
+  for (const c of cambios) porPieza.set(c.pieza, [...(porPieza.get(c.pieza) ?? []), c]);
+  const saltos: string[] = [];
+  for (const [pieza, lista] of porPieza)
+    for (let i = 1; i < lista.length; i++)
+      if (lista[i].t - lista[i - 1].t < ventanaMs)
+        saltos.push(
+          `"${pieza}" cambió de lado 2 veces en ${lista[i].t - lista[i - 1].t} ms (${lista[i - 1].de} → ${lista[i - 1].a} → ${lista[i].a})`,
+        );
+  return saltos;
+}
+
+/** Gira el 3D despacio arrastrando de un lado al otro (como una persona con el dedo), durante ~`ms`. */
+export async function girar3D(page: Page, lienzo: Locator, ms = 2800) {
+  const b = await lienzo.boundingBox();
+  if (!b) return;
+  const y = b.y + b.height * 0.7;
+  const x0 = b.x + b.width * 0.3;
+  const x1 = b.x + b.width * 0.7;
+  const pasos = 28;
+  await page.mouse.move(x0, y);
+  await page.mouse.down();
+  for (let i = 1; i <= pasos; i++) {
+    // Ida y vuelta: primero a la derecha, después vuelve.
+    const f = i <= pasos / 2 ? i / (pasos / 2) : 2 - i / (pasos / 2);
+    await page.mouse.move(x0 + (x1 - x0) * f, y, { steps: 2 });
+    await page.waitForTimeout(ms / pasos);
+  }
+  await page.mouse.up();
+}
+
+/** El lienzo del visor 3D: el `<canvas>` que está dentro del visor (fondo negro, `touch-action: none`), no otros de la página. */
+export function lienzo3D(page: Page): Locator {
+  return page.locator('div[style*="touch-action: none"] canvas').first();
+}
+
+// ---------- Detalle del 3D (piezas de adentro visibles) ----------
+
+/**
+ * Cuánto detalle tiene el centro del 3D y cuánto está pintado del color de resaltado (cian
+ * `--dato`). Si una pieza grande se resalta con relleno opaco, tapa todo: el detalle (bordes,
+ * piezas de adentro) cae y el cian (o un solo color) llena la imagen.
+ * - `bordes`: fracción de píxeles con un cambio fuerte de luz respecto del vecino (detalle).
+ * - `cian`: fracción de píxeles parecidos al color de resaltado.
+ * - `dominante`: fracción del color más repetido (un relleno parejo de cualquier color).
+ */
+export async function detalle3D(page: Page, lienzo: Locator) {
+  const caja = await lienzo.boundingBox();
+  if (!caja) return null;
+  const clip = {
+    x: caja.x + caja.width * 0.1,
+    y: caja.y + caja.height * 0.42,
+    width: caja.width * 0.8,
+    height: caja.height * 0.4,
+  };
+  const foto = await page.screenshot({ clip, animations: "disabled" });
+  return page.evaluate(async (b64) => {
+    const hex = getComputedStyle(document.documentElement).getPropertyValue("--dato").trim() || "#4fd1e0";
+    const [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    const { data: d, width: w, height: h } = ctx.getImageData(0, 0, c.width, c.height);
+    const luz = (i: number) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    let bordes = 0;
+    let cian = 0;
+    let total = 0;
+    const cuenta = new Map<number, number>();
+    for (let y = 0; y < h - 1; y += 2)
+      for (let x = 0; x < w - 1; x += 2) {
+        const i = (y * w + x) * 4;
+        total++;
+        const l = luz(i);
+        if (Math.abs(l - luz(i + 4)) + Math.abs(l - luz(i + w * 4)) > 24) bordes++;
+        if (Math.abs(d[i] - cr) + Math.abs(d[i + 1] - cg) + Math.abs(d[i + 2] - cb) < 90) cian++;
+        const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+        cuenta.set(k, (cuenta.get(k) ?? 0) + 1);
+      }
+    const dominante = Math.max(...cuenta.values()) / total;
+    return { bordes: bordes / total, cian: cian / total, dominante, colores: cuenta.size };
+  }, foto.toString("base64"));
+}
+
+// ---------- La pantalla no quedó congelada ----------
+
+/**
+ * Después de cerrar un modal: el navegador sigue dibujando, no quedó ningún modal ni bloqueo de
+ * toques o scroll, y la caja de pregunta recibe el toque y deja escribir.
+ * Devuelve la lista de lo que falló (vacía = la pantalla responde).
+ */
+export async function pantallaCongelada(page: Page): Promise<string[]> {
+  const fallas: string[] = [];
+  const dibuja = await page
+    .evaluate(
+      () =>
+        new Promise<boolean>((listo) => {
+          const t = setTimeout(() => listo(false), 1500);
+          requestAnimationFrame(() => requestAnimationFrame(() => (clearTimeout(t), listo(true))));
+        }),
+    )
+    .catch(() => false);
+  if (!dibuja) fallas.push("el navegador no dibuja (requestAnimationFrame no responde)");
+
+  const estado = await page.evaluate(() => {
+    const visible = (el: Element) => {
+      const s = getComputedStyle(el);
+      const b = el.getBoundingClientRect();
+      return s.display !== "none" && s.visibility !== "hidden" && b.width > 0 && b.height > 0;
+    };
+    return {
+      modales: [...document.querySelectorAll("[aria-modal=true], [role=dialog]")].filter(visible).length,
+      bodyBloqueado:
+        getComputedStyle(document.body).pointerEvents === "none" || document.body.style.overflow === "hidden",
+    };
+  });
+  if (estado.modales > 0) fallas.push(`quedó ${estado.modales} modal abierto`);
+  if (estado.bodyBloqueado) fallas.push("la página quedó con toques o scroll bloqueados");
+
+  const campo = page.getByRole("textbox", { name: "Pregunta para el experto" });
+  try {
+    await campo.tap({ timeout: 3000 });
+    await campo.fill("hola", { timeout: 3000 });
+    if ((await campo.inputValue()) !== "hola") fallas.push("la caja de pregunta no deja escribir");
+    await campo.fill("");
+  } catch (e) {
+    fallas.push(`la caja de pregunta no recibe el toque (${String(e).split("\n")[0].slice(0, 120)})`);
+  }
+  return fallas;
 }
