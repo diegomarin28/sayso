@@ -78,6 +78,10 @@ export async function cerrarAyudaDelExperto(page: Page) {
 }
 
 /** El chat (uno solo) se abre con el ícono de mensajes, que suma las preguntas hechas: «Hablar con el experto (N)». */
+/** Fila de la ficha: su nombre es «<Dato> <valor> <estado> . Editar|Completar» (el final es solo para el lector). */
+export const filaFicha = (page: Page, dato: string, accion = "Editar|Completar") =>
+  page.getByRole("button", { name: new RegExp(`^${dato.replace(/\./g, "\\.")} .*\\. (${accion})$`) });
+
 export const botonChat = (page: Page) => page.getByRole("button", { name: /^Hablar con el experto/ });
 export const chat = (page: Page) => page.getByRole("dialog", { name: "Hablar con el experto" });
 
