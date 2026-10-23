@@ -31,7 +31,10 @@ const CAMPOS: { clave: ClaveCampo; etiqueta: string; ejemplo: string }[] = [
  * "confirmado" de la IA se muestra como "Leído": la persona lo confirma todo junto ("Confirmar
  * todo", #228) y corrige con Editar solo el dato que esté mal (lo corregido queda confirmado).
  */
-/** Cómo se marca cada dato a la derecha de su fila: un tilde si se leyó, "Revisalo" si es dudoso. */
+/**
+ * Cómo se marca cada dato a la derecha de su fila: un tilde si se leyó. El "Revisalo" de lo dudoso va
+ * debajo del valor (`Revisalo`): a la derecha le quitaba el ancho al número de serie y al modelo.
+ */
 function EstadoDelDato({ estado, corregido }: { estado: EstadoDato; corregido: boolean }) {
   if (corregido)
     return (
@@ -45,8 +48,12 @@ function EstadoDelDato({ estado, corregido }: { estado: EstadoDato; corregido: b
         <Check size={20} />
       </span>
     );
+  return null;
+}
+
+function Revisalo() {
   return (
-    <span className="shrink-0 rounded-full border border-probable/40 px-2 py-0.5 text-xs font-medium text-probable">
+    <span className="mt-1 self-start rounded-full border border-probable/40 px-2 py-0.5 text-xs font-medium text-probable">
       Revisalo
     </span>
   );
@@ -354,6 +361,7 @@ function FichaDelEquipoDelCaso() {
                             <span className={`break-words ${vacio ? "text-[15px] text-texto-suave" : "font-mono text-base"}`}>
                               {campo.valor ?? "No lo encontré"}
                             </span>
+                            {!vacio && !ok && campo.estado !== "confirmado" && <Revisalo />}
                             {!vacio && !ok && campo.fuente === "foto" && (
                               <span className="text-xs text-texto-suave">por la foto</span>
                             )}

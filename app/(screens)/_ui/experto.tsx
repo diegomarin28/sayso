@@ -81,7 +81,7 @@ export function Encabezado({
         </Link>
       )}
       {/* min-w-0: el progreso se achica en vez de empujar la acción de la derecha. */}
-      <div className="min-w-0 flex-1">
+      <div className="@container min-w-0 flex-1">
         <div className="flex gap-1.5" aria-hidden>
           {PASOS.map((_, i) => (
             <div
@@ -92,8 +92,18 @@ export function Encabezado({
             />
           ))}
         </div>
-        <p className="mt-1.5 truncate text-xs font-medium tracking-wide text-texto-suave">
-          {paso}/6 · {PASOS[paso - 1]}
+        {/*
+          La etapa se dice completa («5/6 · Experto») o no se dice: un «5/6» suelto, o «5/6 …» cortado, se
+          confunde con «Paso 1 de 6» de la hoja del Experto. Con poco lugar (carrito y «Terminar») quedan
+          solo las barras, y la etapa se lee igual con el lector de pantalla.
+        */}
+        <p className="mt-1.5 text-xs font-medium tracking-wide whitespace-nowrap text-texto-suave">
+          <span className="hidden @[7rem]:inline">
+            {paso}/6 · {PASOS[paso - 1]}
+          </span>
+          <span className="sr-only @[7rem]:hidden">
+            Etapa {paso} de 6: {PASOS[paso - 1]}
+          </span>
         </p>
       </div>
       <div className="flex h-11 shrink-0 items-center justify-end">
