@@ -70,6 +70,22 @@ export default function Cuenta() {
   /** La verificación de Cloudflare falló (en el navegador o al revisarla Supabase): aviso aparte, no error. */
   const [falloCaptcha, setFalloCaptcha] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  /** Quiso crear una cuenta con un email que ya tiene: no es un error, se le ofrece entrar o recuperar. */
+  const [emailConCuenta, setEmailConCuenta] = useState(false);
+  /** Segundos que faltan para poder pedir otro código (Supabase limita los envíos seguidos). */
+  const [esperaCodigo, setEsperaCodigo] = useState(0);
+  useEffect(() => {
+    if (esperaCodigo <= 0) return;
+    const t = setTimeout(() => setEsperaCodigo((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [esperaCodigo]);
+
+  /** Escribir en un campo borra el aviso o el error de antes: ya no hablan de lo que hay en pantalla. */
+  const editando = <T,>(poner: (v: T) => void) => (v: T) => {
+    poner(v);
+    setError(null);
+    setEmailConCuenta(false);
+  };
 
   /** No se pudo leer la cuenta (sin red o el servidor falló): no es lo mismo que "sin cuentas". */
   const [sinConexion, setSinConexion] = useState(false);
@@ -99,12 +115,14 @@ export default function Cuenta() {
     setRepetida("");
     if (limpiarError) setError(null);
     setAviso(null);
+    setEmailConCuenta(false);
   }
 
   async function hacer(accion: () => Promise<void>) {
     setOcupado(true);
     setError(null);
     setAviso(null);
+    setEmailConCuenta(false);
     setFalloCaptcha(false);
     try {
       await accion();
@@ -114,9 +132,14 @@ export default function Cuenta() {
         captcha.reintentar();
         return;
       }
+      // "Ese email ya tiene cuenta" no es un error de la persona: pasa a entrar con el email ya escrito
+      // y se le ofrece recuperar la contraseña.
+      if (e instanceof ErrorCuenta && e.codigo === "existe") {
+        cambiarModo("entrar");
+        setEmailConCuenta(true);
+        return;
+      }
       setError(e instanceof ErrorCuenta ? e.message : "No se pudo. Probá de nuevo.");
-      // "Ese email ya tiene cuenta": pasa a entrar con el email ya escrito.
-      if (e instanceof ErrorCuenta && e.codigo === "existe") cambiarModo("entrar", { limpiarError: false });
     } finally {
       setOcupado(false);
     }
@@ -136,7 +159,7 @@ export default function Cuenta() {
 
 
 
-  const enviarDatos = () =>
+  const enviarDatos = (otroCodigo = false) =>
     hacer(async () => {
       if (modo === "entrar") {
         await entrar(email, contrasena, await captcha.obtener());
@@ -150,6 +173,8 @@ export default function Cuenta() {
         await recuperar(email, await captcha.obtener());
         setPaso("codigo");
       }
+      setEsperaCodigo(30);
+      if (otroCodigo) setAviso(`Te mandamos otro código a ${email}.`);
     });
 
   const confirmarCodigo = () =>
@@ -202,7 +227,7 @@ export default function Cuenta() {
 
   const texto = !cuenta
     ? sinConexion
-      ? "No pude conectar para ver tu cuenta. Revisá internet y probá de nuevo."
+      ? "No pudimos conectar para ver tu cuenta. Revisá internet y probá de nuevo."
       : "Un segundo…"
     : !cuenta.configurado
       ? "Las cuentas todavía no están disponibles. Podés usar la app igual: tus casos quedan en este dispositivo."
@@ -237,6 +262,15 @@ export default function Cuenta() {
           {aviso}
         </p>
       )}
+      {emailConCuenta && (
+        <div role="status" className="flex flex-col gap-2 rounded-2xl border border-probable/40 bg-probable/10 p-4 text-sm">
+          <p className="font-medium text-probable">Ese email ya tiene una cuenta</p>
+          <p className="text-texto-suave">Entrá con tu contraseña. Si no te acordás, podés elegir una nueva.</p>
+          <button type="button" className="self-start font-medium text-texto underline" onClick={() => cambiarModo("recuperar")}>
+            Olvidé mi contraseña
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="rounded-2xl border border-peligro/40 bg-peligro/10 p-4 text-sm text-peligro">
           {error}
@@ -266,7 +300,7 @@ export default function Cuenta() {
                     autoComplete="given-name"
                     placeholder="Ana"
                     value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
+                    onChange={(e) => editando(setNombre)(e.target.value)}
                     onBlur={() => setTocado((t) => ({ ...t, nombre: true }))}
                     className={`${ENTRADA} ${nombreMal && !nombreValido(nombre) ? "border-peligro/60" : ""}`}
                   />
@@ -277,7 +311,7 @@ export default function Cuenta() {
                     autoComplete="family-name"
                     placeholder="Pérez"
                     value={apellido}
-                    onChange={(e) => setApellido(e.target.value)}
+                    onChange={(e) => editando(setApellido)(e.target.value)}
                     onBlur={() => setTocado((t) => ({ ...t, nombre: true }))}
                     className={`${ENTRADA} ${nombreMal && !nombreValido(apellido) ? "border-peligro/60" : ""}`}
                   />
@@ -295,7 +329,7 @@ export default function Cuenta() {
                 inputMode="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => editando(setEmail)(e.target.value)}
                 onBlur={() => setTocado((t) => ({ ...t, email: true }))}
                 placeholder="nombre@ejemplo.com"
                 aria-invalid={emailMal}
@@ -314,7 +348,7 @@ export default function Cuenta() {
                 pattern="[0-9]*"
                 maxLength={10}
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => editando(setCodigo)(e.target.value.replace(/\D/g, ""))}
                 placeholder="123456"
                 className={`${ENTRADA} tracking-[0.4em]`}
               />
@@ -330,7 +364,7 @@ export default function Cuenta() {
                   placeholder="••••••••"
                   autoComplete={contrasenaNueva ? "new-password" : "current-password"}
                   value={contrasena}
-                  onChange={(e) => setContrasena(e.target.value)}
+                  onChange={(e) => editando(setContrasena)(e.target.value)}
                   onBlur={() => setTocado((t) => ({ ...t, contrasena: true }))}
                   aria-invalid={contrasenaMal}
                   className={`${ENTRADA} pr-20 ${contrasenaMal ? "border-peligro/60" : ""}`}
@@ -358,7 +392,7 @@ export default function Cuenta() {
                   placeholder="••••••••"
                   autoComplete="new-password"
                   value={repetida}
-                  onChange={(e) => setRepetida(e.target.value)}
+                  onChange={(e) => editando(setRepetida)(e.target.value)}
                   onBlur={() => setTocado((t) => ({ ...t, repetida: true }))}
                   aria-invalid={repetidaMal}
                   className={`${ENTRADA} pr-20 ${repetidaMal ? "border-peligro/60" : ""}`}
@@ -434,9 +468,28 @@ export default function Cuenta() {
 
           <div className="flex flex-col items-center gap-3 text-sm">
             {paso === "codigo" && (
-              <button type="button" className="underline" disabled={ocupado} onClick={() => void enviarDatos()}>
-                Mandar otro código
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="underline disabled:no-underline disabled:opacity-60"
+                  disabled={ocupado || esperaCodigo > 0}
+                  onClick={() => void enviarDatos(true)}
+                >
+                  {esperaCodigo > 0 ? `Mandar otro código (en ${esperaCodigo} s)` : "Mandar otro código"}
+                </button>
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => {
+                    setPaso("datos");
+                    setCodigo("");
+                    setError(null);
+                    setAviso(null);
+                  }}
+                >
+                  Cambiar email
+                </button>
+              </>
             )}
             {modo === "entrar" && (
               <>
