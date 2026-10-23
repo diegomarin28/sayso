@@ -7,7 +7,6 @@ import { BotonSesion, useCuenta } from "./_ui/boton-sesion";
 import { Hilo, MensajeIA, MensajeYo, Pensando } from "./_ui/chat";
 import { LINEAS } from "./_ui/linea-pensando";
 import { IconoDeEquipo, type IconoEquipo } from "./_ui/iconos-equipo";
-import { LEMA } from "./_ui/marca";
 import { ProblemasFrecuentes } from "./_ui/problemas-frecuentes";
 import type { Caso, Evento } from "@/shared";
 import { entenderSintoma, type Bloqueo } from "./_datos/api";
@@ -230,7 +229,7 @@ function QueSeRompioDelCaso() {
         <div className="flex flex-col gap-3">
           <DiceExperto texto={dice} />
           {/* Al empezar, qué hace Sayso (en el resto del recorrido queda el símbolo del encabezado). */}
-          <p className="aparece text-base leading-relaxed text-texto-suave">{LEMA}</p>
+          <p className="aparece text-base leading-relaxed text-texto-suave">Contalo con tu voz o escribilo. Te guío con el manual de tu equipo, en 3D.</p>
         </div>
       )}
 

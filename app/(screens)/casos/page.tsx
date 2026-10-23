@@ -217,7 +217,7 @@ export default function MisCasos() {
         >
           <FlechaAtras /> Inicio
         </button>
-        <p className="text-xs font-medium tracking-widest text-texto-suave uppercase">Mis casos</p>
+        <p className="text-xs font-medium tracking-wider whitespace-nowrap text-texto-suave uppercase">Mis casos</p>
         <button
           onClick={() => router.push("/cuenta")}
           className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-borde bg-superficie pr-4 pl-3 text-sm font-medium"
