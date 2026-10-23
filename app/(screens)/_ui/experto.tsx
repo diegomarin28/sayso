@@ -81,7 +81,7 @@ export function Encabezado({
         </Link>
       )}
       {/* min-w-0: el progreso se achica en vez de empujar la acción de la derecha. */}
-      <div className="min-w-0 flex-1">
+      <div className="@container min-w-0 flex-1">
         <div className="flex gap-1.5" aria-hidden>
           {PASOS.map((_, i) => (
             <div
@@ -92,8 +92,9 @@ export function Encabezado({
             />
           ))}
         </div>
-        <p className="mt-1.5 truncate text-xs font-medium tracking-wide text-texto-suave">
-          {paso}/6 · {PASOS[paso - 1]}
+        {/* Con poco lugar (el Experto tiene carrito y «Terminar») queda «5/6» entero, no «5/6 …». */}
+        <p className="mt-1.5 overflow-hidden text-xs font-medium tracking-wide whitespace-nowrap text-texto-suave">
+          {paso}/6<span className="hidden @[7rem]:inline"> · {PASOS[paso - 1]}</span>
         </p>
       </div>
       <div className="flex h-11 shrink-0 items-center justify-end">
