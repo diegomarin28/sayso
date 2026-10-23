@@ -4,8 +4,11 @@
 
 El texto para la persona está en un solo lugar: **`app/(screens)/privacidad/page.tsx`** (`/privacidad`).
 Antes era también este archivo (#350) y los dos se desalinearon; desde Login 3/3 (#347) acá quedan
-solo las notas para revisarlo, que no van al texto publicado. Lo marcado `[COMPLETAR]` en la página
-falta decidirlo entre los tres.
+solo las notas para revisarlo, que no van al texto publicado. Desde el 21/10/2026 la página ya no tiene
+`[COMPLETAR]`: mientras Sayso sea una demo de prueba (sin empresa ni datos legales propios), los textos lo dicen.
+Antes de una versión comercial hay que completar: responsable y contacto reales, plazos de respuesta y la
+autoridad de control (Ley 25.326), transferencia internacional por proveedor, borrado programado, limitación de
+responsabilidad (Ley 24.240), licencias (iFixit CC BY-NC-SA, manuales, 3D), ley aplicable y jurisdicción.
 
 ## Evidencia de lo que el texto da por hecho
 
@@ -18,7 +21,7 @@ falta decidirlo entre los tres.
 - Copia local de 30 casos: `app/(screens)/_datos/mis-casos.ts` (`MAX_CASOS`). Se mezcla con la del
   servidor al abrir «Mis casos» y se borra al salir de la cuenta o al borrarla (`cuenta/page.tsx`).
 - Borrar cuenta y retención de 90 días: `lib/supabase/borrar.ts` y `scripts/retencion` (hoy se corre
-  a mano; la página lo marca con `[COMPLETAR]`).
+  a mano; la página lo dice así).
 - Exportar: `app/api/cuenta/exportar/route.ts`.
 - Proveedores: `lib/ia/claude.ts` (Anthropic), `lib/voice/elevenlabs.ts` (ElevenLabs), Supabase
   (datos y cuentas), Resend (mails de Supabase), Cloudflare Turnstile y Vercel.

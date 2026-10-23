@@ -21,9 +21,10 @@ export default function Terminos() {
         .
       </p>
       <p>
-        <strong>Quién ofrece Sayso:</strong> [COMPLETAR: razón social, CUIT y domicilio]
+        <strong>Quién ofrece Sayso:</strong> Sayso es hoy una <strong>demo de prueba</strong> de un proyecto en
+        desarrollo, para ver si puede ser un producto. Todavía no hay una empresa constituida detrás.
         <br />
-        <strong>Contacto:</strong> [COMPLETAR: email]
+        <strong>Contacto:</strong> durante la demo, podés borrar tu cuenta y tus datos desde Cuenta.
       </p>
 
       <h2>Qué es Sayso</h2>
@@ -56,8 +57,8 @@ export default function Terminos() {
         esos pasos por tu cuenta. Antes de abrir un equipo, desenchufalo y seguí las indicaciones del fabricante.
       </p>
       <p>
-        Hacés cada reparación bajo tu responsabilidad. [COMPLETAR: limitación de responsabilidad, garantías y
-        exclusiones según la ley de Defensa del Consumidor (Ley 24.240), revisado por un abogado]
+        Hacés cada reparación bajo tu responsabilidad. Como es una demo gratuita, Sayso se ofrece tal cual está, sin
+        garantías.
       </p>
 
       <h2>Tu cuenta</h2>
@@ -79,20 +80,19 @@ export default function Terminos() {
       <h2>Contenido de terceros</h2>
       <p>
         Las guías pueden usar manuales de fabricantes y fuentes públicas, cada una con su propia licencia, que se cita
-        en la app. [COMPLETAR: revisar licencias de manuales, iFixit (CC BY-NC-SA) y modelos 3D antes de un uso
-        comercial]
+        en la app. Al ser una demo sin fines comerciales, no se vende nada con ese contenido.
       </p>
 
       <h2>Precio</h2>
-      <p>[COMPLETAR: hoy Sayso es gratis; si eso cambia, se avisa antes]</p>
+      <p>Hoy Sayso es gratis. Si eso cambia, se avisa antes.</p>
 
       <h2>Cambios</h2>
       <p>
-        Si cambiamos estos términos, lo avisamos en la app y te pedimos que los aceptes de nuevo. [COMPLETAR: plazo]
+        Si cambiamos estos términos, lo avisamos en la app y te pedimos que los aceptes de nuevo.
       </p>
 
       <h2>Ley aplicable</h2>
-      <p>[COMPLETAR: ley argentina y jurisdicción]</p>
+      <p>Al ser una demo sin empresa constituida, todavía no se define una ley aplicable ni una jurisdicción.</p>
     </PaginaLegal>
   );
 }

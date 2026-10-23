@@ -18,9 +18,10 @@ export default function Privacidad() {
         qué, dónde, cuánto tiempo y cómo borrarlos.
       </p>
       <p>
-        <strong>Responsable de los datos:</strong> [COMPLETAR: razón social, CUIT y domicilio]
+        <strong>Importante:</strong> Sayso es hoy una <strong>demo de prueba</strong> de un proyecto en desarrollo.
+        Todavía no hay una empresa constituida detrás ni un responsable legal de los datos.
         <br />
-        <strong>Contacto:</strong> [COMPLETAR: email]
+        <strong>Contacto:</strong> durante la demo, podés borrar tu cuenta y tus datos desde Cuenta.
       </p>
 
       <h2>Lo que no guardamos</h2>
@@ -115,15 +116,15 @@ export default function Privacidad() {
         </li>
       </ul>
       <p>
-        [COMPLETAR: transferencia internacional de datos y qué hace cada proveedor con lo que recibe, según sus
-        términos] No vendemos tus datos ni los usamos para publicidad. [COMPLETAR: confirmar]
+        Estos servicios pueden procesar los datos fuera de Argentina, cada uno según sus propios términos. No vendemos
+        tus datos ni los usamos para publicidad.
       </p>
 
       <h2>Cuánto tiempo los guardamos</h2>
       <ul>
         <li>
           <strong>Sin cuenta</strong> (sesión anónima): se borra con sus casos y fotos después de 90 días sin
-          actividad. [COMPLETAR: hoy el borrado se corre a mano; programarlo antes de publicar]
+          actividad. En esta demo ese borrado se hace de forma manual, no automática.
         </li>
         <li>
           <strong>Con cuenta</strong>: hasta que la borres.
@@ -149,12 +150,12 @@ export default function Privacidad() {
         </li>
       </ul>
       <p>
-        También podés pedir acceso, corrección o borrado escribiendo a [COMPLETAR: email]. [COMPLETAR: plazo de
-        respuesta, derechos de la Ley 25.326 y la autoridad de control (Agencia de Acceso a la Información Pública)]
+        Como es una demo, el acceso y el borrado de tus datos los hacés vos mismo desde Cuenta; todavía no hay un
+        canal para pedírselos a una persona.
       </p>
 
       <h2>Cambios</h2>
-      <p>Si cambiamos esta política, lo avisamos en la app. [COMPLETAR: cómo y con cuánta anticipación]</p>
+      <p>Si cambiamos esta política, lo avisamos en la app.</p>
     </PaginaLegal>
   );
 }
