@@ -4,6 +4,12 @@ Hackatón Build 101 (17–18 oct 2026). Guía de reparación con IA: captura gui
 
 **Agentes (Claude Code / Codex): empezá por `CLAUDE.md` (cómo se trabaja) y `CONTEXT.md` (contexto y reglas).**
 
+## Demo
+
+<video src="https://github.com/diegomarin28/sayso/raw/main/docs/video/sayso-demo.mp4" poster="https://github.com/diegomarin28/sayso/raw/main/docs/video/sayso-demo-poster.jpg" controls muted playsinline width="320"></video>
+
+Video de 75 s del recorrido completo con la app real (modo de ejemplo, sin IA ni servicios pagos). Si el reproductor no carga, [abrilo acá](docs/video/sayso-demo.mp4). Es una demo de prueba: el 3D es una aproximación para orientar, no una copia exacta del equipo.
+
 ## Arrancar
 
 Hace falta **Node 22 o más nuevo** (`.nvmrc`; con nvm: `nvm use`). Con Node 20 fallan `@supabase/supabase-js` en los scripts y algunos tests de `lib/knowledge`.
